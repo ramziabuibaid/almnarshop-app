@@ -20,7 +20,7 @@ export default function QuotationPrintPage() {
     quotationID: string;
     date: string;
     customerId: string | null;
-    customer?: { name?: string; phone?: string; address?: string };
+    customer?: { name?: string; phone?: string; address?: string; shamelNo?: string };
     status: string;
     notes?: string;
     items: QuotationItem[];
