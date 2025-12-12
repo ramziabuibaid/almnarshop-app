@@ -43,8 +43,9 @@ export function getTokenFromRequest(req: NextRequest): string | null {
   return null;
 }
 
-export function setAdminCookie(token: string) {
-  cookies().set(ADMIN_TOKEN_COOKIE, token, {
+export async function setAdminCookie(token: string) {
+  const cookieStore = await cookies();
+  cookieStore.set(ADMIN_TOKEN_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -60,8 +61,9 @@ export function setAdminCookieInResponse(response: Response, token: string) {
   );
 }
 
-export function clearAdminCookie() {
-  cookies().set(ADMIN_TOKEN_COOKIE, '', {
+export async function clearAdminCookie() {
+  const cookieStore = await cookies();
+  cookieStore.set(ADMIN_TOKEN_COOKIE, '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
