@@ -294,11 +294,11 @@ export default function MaintenancePrintPage() {
           {/* Purchase Date and Receive Date */}
           <div className="cell">
             <span className="lbl">تاريخ الشراء</span>
-            {formatDate(maintenanceData.DateOfPurchase) || ''}
+            {formatDate(maintenanceData.DateOfPurchase || '') || ''}
           </div>
           <div className="cell">
             <span className="lbl">تاريخ الاستلام</span>
-            {formatDate(maintenanceData.DateOfReceive) || ''}
+            {formatDate(maintenanceData.DateOfReceive || '') || ''}
           </div>
 
           {/* Arrival Number and Serial No */}
