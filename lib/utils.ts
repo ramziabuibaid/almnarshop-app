@@ -1,6 +1,7 @@
 /**
- * Convert Google Drive preview/view URLs to direct image URLs
- * Handles various Google Drive URL formats and converts them to direct image links
+ * Get direct image URL from Supabase Storage or any other source
+ * Now primarily handles Supabase Storage URLs (full URLs)
+ * Legacy support for Google Drive URLs is kept for backward compatibility
  */
 export function getDirectImageUrl(url: string | null | undefined): string {
   if (!url || url.trim() === '') {
@@ -9,19 +10,13 @@ export function getDirectImageUrl(url: string | null | undefined): string {
 
   const trimmedUrl = url.trim();
 
-  // If it's already a direct lh3.googleusercontent.com link, return as is
-  if (trimmedUrl.includes('lh3.googleusercontent.com') || trimmedUrl.includes('drive.googleusercontent.com')) {
-    return trimmedUrl;
-  }
-
-  // If it's already a normal URL (not Google Drive), return as is
-  // This includes Supabase Storage URLs and other direct image URLs
-  if ((trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) && 
-      !trimmedUrl.includes('drive.google.com')) {
+  // If it's already a full URL (Supabase Storage or any HTTP/HTTPS URL), return as is
+  if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
     // Supabase Storage URLs or any other direct image URLs
     return trimmedUrl;
   }
 
+  // Legacy support: Handle Google Drive URLs (for backward compatibility)
   // Extract File ID from Google Drive URLs
   let fileId: string | null = null;
 
@@ -55,14 +50,9 @@ export function getDirectImageUrl(url: string | null | undefined): string {
     }
   }
 
-  // If we found a file ID, convert to direct viewable link
+  // If we found a file ID, convert to direct viewable link (legacy support)
   if (fileId) {
     return `https://lh3.googleusercontent.com/d/${fileId}`;
-  }
-
-  // If it's already a full URL but we couldn't extract ID, try to use as-is
-  if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
-    return trimmedUrl;
   }
 
   // If all else fails, return empty (component will show placeholder)

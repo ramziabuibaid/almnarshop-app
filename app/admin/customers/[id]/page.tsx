@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import CustomerFormModal from '@/components/admin/CustomerFormModal';
-import { getCustomerData, getAllCustomers, getCustomerChecks, saveCheck } from '@/lib/api';
+import { getCustomerData, getAllCustomers, getCustomerChecks, saveCheck, deleteCustomer } from '@/lib/api';
 import {
   Loader2,
   User,
@@ -20,6 +20,7 @@ import {
   Image as ImageIcon,
   X,
   Save,
+  Trash2,
 } from 'lucide-react';
 
 interface TimelineItem {
@@ -68,6 +69,7 @@ export default function CustomerProfilePage() {
     notes: '',
   });
   const [checkSaving, setCheckSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (customerId) {
@@ -351,8 +353,32 @@ export default function CustomerProfilePage() {
     }
   };
 
-  const handleEditSuccess = () => {
+  const handleEditSuccess = (customerId?: string) => {
     loadCustomerData();
+    // customerId is available if needed for future enhancements
+  };
+
+  const handleDeleteCustomer = async () => {
+    if (!customerId) return;
+
+    const customerName = customer?.Name || customer?.name || 'هذا الزبون';
+    const confirmMessage = `هل أنت متأكد من حذف الزبون "${customerName}"؟\n\nهذا الإجراء لا يمكن التراجع عنه.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await deleteCustomer(customerId);
+      alert('تم حذف الزبون بنجاح');
+      router.push('/admin/customers');
+    } catch (error: any) {
+      console.error('[CustomerProfile] Error deleting customer:', error);
+      alert('فشل حذف الزبون: ' + (error?.message || 'خطأ غير معروف'));
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleSaveCheck = async () => {
@@ -528,6 +554,25 @@ export default function CustomerProfilePage() {
             >
               <Edit size={18} />
               Edit Profile
+            </button>
+
+            {/* Delete Customer Button */}
+            <button
+              onClick={handleDeleteCustomer}
+              disabled={deleting}
+              className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  جاري الحذف...
+                </>
+              ) : (
+                <>
+                  <Trash2 size={18} />
+                  حذف الزبون
+                </>
+              )}
             </button>
 
             {/* Checks Section (Compact summary) */}

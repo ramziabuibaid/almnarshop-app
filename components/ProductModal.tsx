@@ -200,45 +200,45 @@ export default function ProductModal({ product, isOpen, onClose }: ProductModalP
               {/* Product Details with Arabic labels */}
               <div className="mb-4 space-y-2">
                 {product.type && (
-                  <div className="flex items-center gap-2 justify-end">
+                  <div className="text-right">
+                    <span className="text-sm font-semibold text-gray-700">النوع: </span>
                     <span className="text-sm text-gray-900">{product.type}</span>
-                    <span className="text-sm font-semibold text-gray-700">النوع:</span>
                   </div>
                 )}
                 {product.brand && (
-                  <div className="flex items-center gap-2 justify-end">
+                  <div className="text-right">
+                    <span className="text-sm font-semibold text-gray-700">العلامة التجارية: </span>
                     <span className="text-sm text-gray-900">{product.brand}</span>
-                    <span className="text-sm font-semibold text-gray-700">العلامة التجارية:</span>
                   </div>
                 )}
                 {product.size && (
-                  <div className="flex items-center gap-2 justify-end">
+                  <div className="text-right">
+                    <span className="text-sm font-semibold text-gray-700">الحجم: </span>
                     <span className="text-sm text-gray-900">{product.size}</span>
-                    <span className="text-sm font-semibold text-gray-700">الحجم:</span>
                   </div>
                 )}
                 {product.color && (
-                  <div className="flex items-center gap-2 justify-end">
+                  <div className="text-right">
+                    <span className="text-sm font-semibold text-gray-700">اللون: </span>
                     <span className="text-sm text-gray-900">{product.color}</span>
-                    <span className="text-sm font-semibold text-gray-700">اللون:</span>
                   </div>
                 )}
                 {product.Origin && (
-                  <div className="flex items-center gap-2 justify-end">
+                  <div className="text-right">
+                    <span className="text-sm font-semibold text-gray-700">المنشأ: </span>
                     <span className="text-sm text-gray-900">{product.Origin}</span>
-                    <span className="text-sm font-semibold text-gray-700">المنشأ:</span>
                   </div>
                 )}
                 {product.Dimention && (
-                  <div className="flex items-center gap-2 justify-end">
+                  <div className="text-right">
+                    <span className="text-sm font-semibold text-gray-700">الأبعاد: </span>
                     <span className="text-sm text-gray-900">{product.Dimention}</span>
-                    <span className="text-sm font-semibold text-gray-700">الأبعاد:</span>
                   </div>
                 )}
                 {product.Warranty && (
-                  <div className="flex items-center gap-2 justify-end">
+                  <div className="text-right">
+                    <span className="text-sm font-semibold text-gray-700">الضمان: </span>
                     <span className="text-sm text-gray-900">{product.Warranty}</span>
-                    <span className="text-sm font-semibold text-gray-700">الضمان:</span>
                   </div>
                 )}
               </div>

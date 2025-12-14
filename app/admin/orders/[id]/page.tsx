@@ -24,6 +24,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
+import CustomerFormModal from '@/components/admin/CustomerFormModal';
 
 interface OrderDetail {
   detailID: string;
@@ -71,6 +72,11 @@ export default function EditOrderPage() {
   const [converting, setConverting] = useState<'shop' | 'warehouse' | null>(null);
   const [convertMessage, setConvertMessage] = useState<string | null>(null);
   const [showCosts, setShowCosts] = useState(false);
+  const [showCustomerSelectModal, setShowCustomerSelectModal] = useState(false);
+  const [pendingConvertTarget, setPendingConvertTarget] = useState<'shop' | 'warehouse' | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const productDropdownRef = useRef<HTMLDivElement>(null);
 
   const canViewCost = admin?.is_super_admin || admin?.permissions?.viewCost === true;
@@ -302,13 +308,27 @@ export default function EditOrderPage() {
   };
 
   const handleConvertToInvoice = async (target: 'shop' | 'warehouse') => {
+    if (details.length === 0) {
+      alert('لا يمكن التحويل بدون بنود');
+      return;
+    }
+
     const customerId = findCustomerByOrderInfo();
     
     if (!customerId) {
-      alert('لم يتم العثور على الزبون في قاعدة البيانات. يرجى التأكد من وجود الزبون في جدول الزبائن قبل التحويل.');
+      // Customer not found - show selection modal
+      setPendingConvertTarget(target);
+      setShowCustomerSelectModal(true);
+      setSelectedCustomerId('');
+      setCustomerSearchQuery('');
       return;
     }
     
+    // Customer found - proceed with conversion
+    await performConvertToInvoice(target, customerId);
+  };
+
+  const performConvertToInvoice = async (target: 'shop' | 'warehouse', customerId: string) => {
     if (details.length === 0) {
       alert('لا يمكن التحويل بدون بنود');
       return;
@@ -347,6 +367,8 @@ export default function EditOrderPage() {
         });
         setConvertMessage(`تم التحويل إلى فاتورة المخزن بنجاح (رقم: ${res?.invoiceID || '—'})`);
       }
+      setShowCustomerSelectModal(false);
+      setPendingConvertTarget(null);
     } catch (err: any) {
       console.error('[EditOrderPage] convert to invoice error:', err);
       alert(err?.message || 'فشل التحويل إلى فاتورة');
@@ -354,6 +376,46 @@ export default function EditOrderPage() {
       setConverting(null);
     }
   };
+
+  const handleCustomerSelected = () => {
+    if (selectedCustomerId && pendingConvertTarget) {
+      performConvertToInvoice(pendingConvertTarget, selectedCustomerId);
+    }
+  };
+
+  const handleAddNewCustomer = () => {
+    setShowAddCustomerModal(true);
+  };
+
+  const handleCustomerAdded = async (customerId?: string) => {
+    // Reload customers list
+    await loadCustomers();
+    setShowAddCustomerModal(false);
+    // customerId is available if needed for future enhancements
+    // Keep the selection modal open so user can select the newly added customer
+  };
+
+  const filteredCustomersForSelect = useMemo(() => {
+    if (!customerSearchQuery.trim()) {
+      return customers.slice(0, 50);
+    }
+
+    const searchWords = customerSearchQuery
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    return customers
+      .filter((c) => {
+        const name = String(c.Name || c.name || '').toLowerCase();
+        const phone = String(c.Phone || c.phone || '').toLowerCase();
+        const customerID = String(c.CustomerID || c.id || c.customer_id || '').toLowerCase();
+        const searchableText = `${name} ${phone} ${customerID}`;
+        return searchWords.every((word) => searchableText.includes(word));
+      })
+      .slice(0, 50);
+  }, [customers, customerSearchQuery]);
 
   if (loading) {
     return (
@@ -479,8 +541,8 @@ export default function EditOrderPage() {
                 type="number"
                 value={discount}
                 onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                min="0"
-                step="0.01"
+                step="1"
+                onWheel={(e) => e.currentTarget.blur()}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
               />
             </div>
@@ -549,9 +611,10 @@ export default function EditOrderPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الكمية</label>
                     <input
                       type="number"
-                      step="0.01"
+                      step="1"
                       value={newProductQuantity}
                       onChange={(e) => setNewProductQuantity(parseFloat(e.target.value) || 1)}
+                      onWheel={(e) => e.currentTarget.blur()}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
                     />
                   </div>
@@ -559,9 +622,10 @@ export default function EditOrderPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">سعر الوحدة</label>
                     <input
                       type="number"
-                      step="0.01"
+                      step="1"
                       value={newProductPrice}
                       onChange={(e) => setNewProductPrice(parseFloat(e.target.value) || 0)}
+                      onWheel={(e) => e.currentTarget.blur()}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
                     />
                   </div>
@@ -611,18 +675,20 @@ export default function EditOrderPage() {
                         <td className="px-4 py-3">
                           <input
                             type="number"
-                            step="0.01"
+                            step="1"
                             value={item.quantity}
                             onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
+                            onWheel={(e) => e.currentTarget.blur()}
                             className="w-20 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
                           />
                         </td>
                         <td className="px-4 py-3">
                           <input
                             type="number"
-                            step="0.01"
+                            step="1"
                             value={item.unitPrice}
                             onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
+                            onWheel={(e) => e.currentTarget.blur()}
                             className="w-24 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
                           />
                         </td>
@@ -717,6 +783,146 @@ export default function EditOrderPage() {
             </button>
           </div>
         </div>
+
+        {/* Customer Selection Modal */}
+        {showCustomerSelectModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" dir="rtl">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+              {/* Header */}
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 font-cairo">
+                    اختر الزبون للتحويل
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1 font-cairo">
+                    لم يتم العثور على الزبون في قاعدة البيانات. يرجى اختيار زبون أو إضافة زبون جديد.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowCustomerSelectModal(false);
+                    setPendingConvertTarget(null);
+                    setSelectedCustomerId('');
+                    setCustomerSearchQuery('');
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  disabled={converting !== null}
+                >
+                  <X size={20} className="text-gray-600" />
+                </button>
+              </div>
+
+              {/* Search */}
+              <div className="p-4 border-b border-gray-200">
+                <div className="relative">
+                  <Search
+                    size={18}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  />
+                  <input
+                    type="text"
+                    placeholder="ابحث عن زبون..."
+                    value={customerSearchQuery}
+                    onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                    className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo"
+                    dir="rtl"
+                  />
+                </div>
+              </div>
+
+              {/* Customer List */}
+              <div className="overflow-y-auto max-h-96 p-4">
+                {filteredCustomersForSelect.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 font-cairo">
+                    {customerSearchQuery ? 'لا توجد نتائج' : 'لا يوجد زبائن'}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredCustomersForSelect.map((customer) => {
+                      const customerID = customer.CustomerID || customer.id || customer.customer_id || '';
+                      const isSelected = customerID === selectedCustomerId;
+                      return (
+                        <button
+                          key={customerID}
+                          type="button"
+                          onClick={() => setSelectedCustomerId(customerID)}
+                          className={`w-full text-right px-4 py-3 border-2 rounded-lg transition-colors font-cairo ${
+                            isSelected
+                              ? 'border-gray-900 bg-gray-50'
+                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="text-sm font-semibold text-gray-900">
+                            {customer.Name || customer.name || 'بدون اسم'}
+                          </div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            {customerID}
+                            {customer.Phone || customer.phone ? ` - ${customer.Phone || customer.phone}` : ''}
+                            {customer.Email || customer.email ? ` - ${customer.Email || customer.email}` : ''}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex items-center gap-3">
+                <button
+                  onClick={handleAddNewCustomer}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900"
+                >
+                  <Plus size={18} />
+                  إضافة زبون جديد
+                </button>
+                <div className="flex-1" />
+                <button
+                  onClick={() => {
+                    setShowCustomerSelectModal(false);
+                    setPendingConvertTarget(null);
+                    setSelectedCustomerId('');
+                    setCustomerSearchQuery('');
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900"
+                  disabled={converting !== null}
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleCustomerSelected}
+                  disabled={!selectedCustomerId || converting !== null}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {converting !== null ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      جاري التحويل...
+                    </>
+                  ) : (
+                    'تحويل'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Customer Modal */}
+        {showAddCustomerModal && (
+          <CustomerFormModal
+            isOpen={showAddCustomerModal}
+            onClose={() => {
+              setShowAddCustomerModal(false);
+            }}
+            customer={{
+              Name: order?.CustomerName || '',
+              Phone: order?.CustomerPhone || '',
+              Email: order?.CustomerEmail || '',
+            }}
+            onSuccess={handleCustomerAdded}
+          />
+        )}
       </div>
     </AdminLayout>
   );

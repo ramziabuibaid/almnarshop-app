@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import CustomerSelect from '@/components/admin/CustomerSelect';
+import CustomerFormModal from '@/components/admin/CustomerFormModal';
 import ImageUploadField from '@/components/admin/ImageUploadField';
 import { saveMaintenance, getAllCustomers } from '@/lib/api';
 import {
@@ -11,6 +12,7 @@ import {
   Save,
   ArrowLeft,
   Camera,
+  UserPlus,
 } from 'lucide-react';
 
 const companyOptions = [
@@ -39,6 +41,7 @@ export default function NewMaintenancePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     customerID: '',
     itemName: '',
@@ -69,6 +72,19 @@ export default function NewMaintenancePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCustomerAdded = async (newCustomerId?: string) => {
+    // Reload customers list to get the newly added customer
+    const updatedCustomers = await getAllCustomers();
+    setCustomers(updatedCustomers);
+    
+    // If customer ID is provided, select it automatically
+    if (newCustomerId) {
+      setFormData((prev) => ({ ...prev, customerID: newCustomerId }));
+    }
+    
+    setIsCustomerModalOpen(false);
   };
 
   const handleImageUpload = (field: 'imageOfItem' | 'imageOfProblem' | 'imageOfWarranty', filePath: string) => {
@@ -164,6 +180,20 @@ export default function NewMaintenancePage() {
         <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
           {/* Customer Selection */}
           <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-900">
+                العميل <span className="text-red-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsCustomerModalOpen(true)}
+                className="flex items-center gap-1 px-2 py-1 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                title="إضافة زبون جديد"
+              >
+                <UserPlus size={16} />
+                <span>إضافة زبون</span>
+              </button>
+            </div>
             <CustomerSelect
               value={formData.customerID}
               onChange={(customerID) => setFormData({ ...formData, customerID })}
@@ -361,6 +391,14 @@ export default function NewMaintenancePage() {
             </button>
           </div>
         </form>
+
+        {/* Customer Form Modal */}
+        <CustomerFormModal
+          isOpen={isCustomerModalOpen}
+          onClose={() => setIsCustomerModalOpen(false)}
+          customer={null}
+          onSuccess={handleCustomerAdded}
+        />
       </div>
     </AdminLayout>
   );

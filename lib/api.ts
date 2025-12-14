@@ -334,44 +334,18 @@ async function convertImagePathToUrl(imagePath: string | null | undefined): Prom
 
 /**
  * Map Supabase product (snake_case) to app format (PascalCase)
- * Note: This function is async now because it needs to fetch image cache
+ * Now uses image_url, image_url_2, image_url_3 from Supabase Storage directly
  */
-async function mapProductFromSupabase(product: any): Promise<any> {
-  console.log(`[API] Mapping product: ${product.product_id || product.id}, image path: "${product.image}"`);
+function mapProductFromSupabase(product: any): any {
+  console.log(`[API] Mapping product: ${product.product_id || product.id}`);
   
-  // Helper function to get image URL
-  // If it's already a full URL (Supabase Storage), use it directly
-  // Otherwise, convert from Google Drive path
-  const getImageUrl = async (imagePath: string | null | undefined): Promise<string> => {
-    if (!imagePath || imagePath.trim() === '') {
-      return '';
-    }
-    
-    const trimmed = imagePath.trim();
-    
-    // If it's already a full URL (Supabase Storage or any HTTP URL), use it directly
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      // Check if it's a Supabase Storage URL
-      if (trimmed.includes('.supabase.co') || trimmed.includes('supabase')) {
-        console.log(`[API] Using Supabase Storage URL directly: ${trimmed.substring(0, 80)}...`);
-        return trimmed;
-      }
-      // Otherwise, it might be a Google Drive URL, convert it
-      return convertDriveImageUrl(trimmed);
-    }
-    
-    // Otherwise, it's a path (old Google Drive format), convert it
-    return convertImagePathToUrl(trimmed);
-  };
+  // Get image URLs directly from Supabase Storage fields
+  // No conversion needed - these are already full URLs from Supabase Storage
+  const imageUrl = product.image_url ? product.image_url.trim() : '';
+  const image2Url = product.image_url_2 ? product.image_url_2.trim() : '';
+  const image3Url = product.image_url_3 ? product.image_url_3.trim() : '';
   
-  // Convert image paths to URLs (await all conversions)
-  const [imageUrl, image2Url, image3Url] = await Promise.all([
-    getImageUrl(product.image),
-    getImageUrl(product.image_2),
-    getImageUrl(product.image_3),
-  ]);
-  
-  console.log(`[API] Product ${product.product_id || product.id} - Converted image URL: "${imageUrl}"`);
+  console.log(`[API] Product ${product.product_id || product.id} - Image URL: "${imageUrl ? imageUrl.substring(0, 80) + '...' : 'No image'}"`);
 
   return {
     // Keep all original fields first
@@ -404,7 +378,7 @@ async function mapProductFromSupabase(product: any): Promise<any> {
     T1Price: parseFloat(String(product.t1_price || 0)) || 0,
     T2Price: parseFloat(String(product.t2_price || 0)) || 0,
     
-    // Images - Use converted URLs from image cache (MUST be after ...product to override)
+    // Images - Use Supabase Storage URLs directly (MUST be after ...product to override)
     Image: imageUrl,
     'Image 2': image2Url,
     'image 3': image3Url,
@@ -536,10 +510,8 @@ export async function getProducts(): Promise<any[]> {
       return hasId && hasName;
     });
     
-    // Map products (async mapping)
-    const mappedProducts = await Promise.all(
-      filteredProducts.map((product: any) => mapProductFromSupabase(product))
-    );
+    // Map products (synchronous mapping - no longer async)
+    const mappedProducts = filteredProducts.map((product: any) => mapProductFromSupabase(product));
     
     const totalTime = Date.now() - startTime;
     console.log(`[API] Products loaded from Supabase: ${mappedProducts.length} in ${totalTime}ms`);
@@ -632,16 +604,16 @@ export async function saveProduct(productData: any): Promise<any> {
       sale_price: productData.SalePrice !== undefined ? productData.SalePrice : null,
       t1_price: productData.T1Price !== undefined ? productData.T1Price : null,
       t2_price: productData.T2Price !== undefined ? productData.T2Price : null,
-      // Images - store full URLs from Supabase Storage
-      // Explicitly handle empty strings to allow deletion
-      image: productData.Image !== undefined ? (productData.Image || null) : (productData.image !== undefined ? (productData.image || null) : null),
-      image_2: productData['Image 2'] !== undefined ? (productData['Image 2'] || null) : (productData.image2 !== undefined ? (productData.image2 || null) : (productData['image_2'] !== undefined ? (productData['image_2'] || null) : null)),
-      image_3: productData['image 3'] !== undefined ? (productData['image 3'] || null) : (productData.image3 !== undefined ? (productData.image3 || null) : (productData['image_3'] !== undefined ? (productData['image_3'] || null) : null)),
+      // Images - store full URLs from Supabase Storage using new fields
+      // Use image_url, image_url_2, image_url_3 (new Supabase Storage fields)
+      image_url: productData.Image !== undefined ? (productData.Image || null) : (productData.image !== undefined ? (productData.image || null) : (productData.image_url !== undefined ? (productData.image_url || null) : null)),
+      image_url_2: productData['Image 2'] !== undefined ? (productData['Image 2'] || null) : (productData.image2 !== undefined ? (productData.image2 || null) : (productData.image_url_2 !== undefined ? (productData.image_url_2 || null) : null)),
+      image_url_3: productData['image 3'] !== undefined ? (productData['image 3'] || null) : (productData.image3 !== undefined ? (productData.image3 || null) : (productData.image_url_3 !== undefined ? (productData.image_url_3 || null) : null)),
     };
 
     // Remove null/undefined/empty string values, but keep null for image fields to allow deletion
     Object.keys(supabaseData).forEach((key) => {
-      const isImageField = key === 'image' || key === 'image_2' || key === 'image_3';
+      const isImageField = key === 'image_url' || key === 'image_url_2' || key === 'image_url_3';
       // For image fields, keep null values to allow clearing images
       // For other fields, remove null/undefined/empty values
       if (!isImageField && (supabaseData[key] === null || supabaseData[key] === undefined || supabaseData[key] === '')) {
@@ -653,9 +625,9 @@ export async function saveProduct(productData: any): Promise<any> {
 
     console.log('[API] Supabase data (snake_case):', JSON.stringify(supabaseData, null, 2));
     console.log('[API] Image fields in supabaseData:', {
-      image: supabaseData.image,
-      image_2: supabaseData.image_2,
-      image_3: supabaseData.image_3,
+      image_url: supabaseData.image_url,
+      image_url_2: supabaseData.image_url_2,
+      image_url_3: supabaseData.image_url_3,
     });
 
     // Check if product exists (by product_id)
@@ -958,13 +930,8 @@ export async function saveCustomer(customerData: {
     // Generate customer ID if not provided
     let customerId = customerData.CustomerID;
     if (!customerId) {
-      // Get current count for ID generation
-      const { count } = await supabase
-        .from('customers')
-        .select('*', { count: 'exact', head: true });
-      
-      const paddedCount = String((count || 0) + 1).padStart(4, '0');
-      customerId = `CUST-${paddedCount}`;
+      // Use the generateCustomerID function to ensure consistency
+      customerId = await generateCustomerID();
     }
 
     // Get ShamelNo from various possible field names
@@ -1033,7 +1000,65 @@ export async function saveCustomer(customerData: {
     console.error('[API] saveCustomer error:', error);
     throw error;
   }
+}
 
+/**
+ * Generate a new customer ID
+ * Uses the same approach as invoice IDs: count + 1
+ */
+export async function generateCustomerID(): Promise<string> {
+  try {
+    // Get count of existing customers (same approach as invoices)
+    const { count, error: countError } = await supabase
+      .from('customers')
+      .select('*', { count: 'exact', head: true });
+    
+    if (countError) {
+      console.error('[API] Failed to get customer count:', countError);
+      throw new Error(`Failed to get customer count: ${countError.message}`);
+    }
+    
+    const customerCount = count || 0;
+    console.log('[API] Current customer count:', customerCount);
+    
+    // Generate new customer ID: CUS-XXXX-YYY
+    // Format: CUS-XXXX-YYY where XXXX is (count + 1) padded to 4 digits
+    const nextRowNumber = customerCount + 1;
+    const paddedCount = String(nextRowNumber).padStart(4, '0');
+    const randomNumber = Math.floor(Math.random() * (999 - 10 + 1)) + 10; // Random between 10 and 999
+    const customerId = `CUS-${paddedCount}-${randomNumber}`;
+    
+    console.log('[API] Generated customer ID:', customerId, '(next row number:', nextRowNumber, ')');
+    return customerId;
+  } catch (error: any) {
+    console.error('[API] generateCustomerID error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a customer from Supabase
+ */
+export async function deleteCustomer(customerID: string): Promise<any> {
+  try {
+    console.log('[API] Deleting customer from Supabase:', customerID);
+
+    const { error } = await supabase
+      .from('customers')
+      .delete()
+      .eq('customer_id', customerID);
+
+    if (error) {
+      console.error('[API] Failed to delete customer:', error);
+      throw new Error(`Failed to delete customer: ${error.message}`);
+    }
+
+    console.log('[API] Customer deleted successfully');
+    return { status: 'success' };
+  } catch (error: any) {
+    console.error('[API] deleteCustomer error:', error);
+    throw error;
+  }
 }
 
 // ==========================================

@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Save, Loader2 } from 'lucide-react';
-import { saveCustomer } from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import { X, Save, Loader2, Trash2 } from 'lucide-react';
+import { saveCustomer, deleteCustomer, generateCustomerID } from '@/lib/api';
 
 interface CustomerFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   customer?: any | null;
-  onSuccess: () => void;
+  onSuccess: (customerId?: string) => void;
 }
 
 export default function CustomerFormModal({
@@ -17,6 +18,7 @@ export default function CustomerFormModal({
   customer,
   onSuccess,
 }: CustomerFormModalProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     CustomerID: '',
     Name: '',
@@ -31,6 +33,9 @@ export default function CustomerFormModal({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [generatedCustomerID, setGeneratedCustomerID] = useState<string>('');
+  const [isGeneratingID, setIsGeneratingID] = useState(false);
 
   // Initialize form data when modal opens or customer changes
   useEffect(() => {
@@ -56,10 +61,12 @@ export default function CustomerFormModal({
                         customer.shamelNO || 
                         '';
         
+        const customerID = customer.CustomerID || customer.id || customer.customerID || '';
+        
         console.log('[CustomerFormModal] Resolved ShamelNo value:', shamelNo);
         
         setFormData({
-          CustomerID: customer.CustomerID || customer.id || customer.customerID || '',
+          CustomerID: customerID,
           Name: customer.Name || customer.name || '',
           ShamelNo: String(shamelNo || ''), // Ensure it's a string
           Phone: customer.Phone || customer.phone || '',
@@ -71,13 +78,16 @@ export default function CustomerFormModal({
           Balance: customer.Balance !== undefined && customer.Balance !== null ? String(customer.Balance) : '',
         });
         
+        // Set generated ID to current customer ID for edit mode
+        setGeneratedCustomerID(customerID);
+        
         console.log('[CustomerFormModal] Form data initialized:', {
-          CustomerID: customer.CustomerID || customer.id || customer.customerID || '',
+          CustomerID: customerID,
           Name: customer.Name || customer.name || '',
           ShamelNo: shamelNo,
         });
       } else {
-        // Add mode - empty form
+        // Add mode - empty form and generate new customer ID
         setFormData({
           CustomerID: '',
           Name: '',
@@ -90,6 +100,21 @@ export default function CustomerFormModal({
           Notes: '',
           Balance: '',
         });
+        
+        // Generate new customer ID
+        setIsGeneratingID(true);
+        generateCustomerID()
+          .then((newID) => {
+            setGeneratedCustomerID(newID);
+            setFormData((prev) => ({ ...prev, CustomerID: newID }));
+          })
+          .catch((err) => {
+            console.error('[CustomerFormModal] Error generating customer ID:', err);
+            setError('فشل توليد رقم الزبون. يرجى المحاولة مرة أخرى.');
+          })
+          .finally(() => {
+            setIsGeneratingID(false);
+          });
       }
       setError('');
     }
@@ -120,9 +145,14 @@ export default function CustomerFormModal({
         Name: formData.Name.trim(),
       };
 
+      // Set CustomerID - use generated ID for new customers, or existing ID for editing
+      const customerIDToUse = generatedCustomerID || formData.CustomerID;
+      if (customerIDToUse) {
+        customerData.CustomerID = customerIDToUse;
+      }
+
       // If editing, preserve all original fields to avoid data loss
       if (customer && formData.CustomerID) {
-        customerData.CustomerID = formData.CustomerID;
         
         // Balance can be edited - use form value if provided, otherwise preserve original
         // If form has Balance value, use it; otherwise preserve original
@@ -203,16 +233,53 @@ export default function CustomerFormModal({
       console.log('[CustomerFormModal] LastInvoiceDate preserved:', customerData.LastInvoiceDate);
       console.log('[CustomerFormModal] LastPaymentDate preserved:', customerData.LastPaymentDate);
 
-      await saveCustomer(customerData);
+      const result = await saveCustomer(customerData);
 
       // Success - close modal and refresh
-      onSuccess();
+      // Pass the customer ID to onSuccess callback
+      const savedCustomerId = result?.data?.customer_id || customerIDToUse || generatedCustomerID;
+      onSuccess(savedCustomerId);
       onClose();
     } catch (err: any) {
       console.error('[CustomerFormModal] Error saving customer:', err);
       setError(err?.message || 'فشل حفظ العميل. يرجى المحاولة مرة أخرى.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!customer) return;
+
+    const customerId = customer.CustomerID || customer.id || customer.customerID || '';
+    if (!customerId) {
+      alert('لا يمكن حذف هذا الزبون: رقم الزبون غير موجود');
+      return;
+    }
+
+    const customerName = customer.Name || customer.name || 'هذا الزبون';
+    const confirmMessage = `هل أنت متأكد من حذف الزبون "${customerName}"؟\n\nهذا الإجراء لا يمكن التراجع عنه.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setError('');
+    try {
+      await deleteCustomer(customerId);
+      alert('تم حذف الزبون بنجاح');
+      onSuccess();
+      onClose();
+      // Redirect to customers list if we're on a customer profile page
+      if (typeof window !== 'undefined' && window.location.pathname.includes('/admin/customers/')) {
+        router.push('/admin/customers');
+      }
+    } catch (err: any) {
+      console.error('[CustomerFormModal] Error deleting customer:', err);
+      setError(err?.message || 'فشل حذف العميل. يرجى المحاولة مرة أخرى.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -256,6 +323,23 @@ export default function CustomerFormModal({
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Customer ID */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  رقم الزبون
+                </label>
+                <input
+                  type="text"
+                  value={isGeneratingID ? 'جاري التوليد...' : (generatedCustomerID || formData.CustomerID)}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed font-mono"
+                  dir="ltr"
+                />
+                {isGeneratingID && (
+                  <p className="text-xs text-gray-500 mt-1">يرجى الانتظار...</p>
+                )}
+              </div>
+
               {/* Name */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-900 mb-2">
@@ -386,17 +470,37 @@ export default function CustomerFormModal({
 
             {/* Actions */}
             <div className="flex items-center gap-3 pt-4">
+              {customer && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isDeleting || isSubmitting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      جاري الحذف...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} />
+                      حذف
+                    </>
+                  )}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onClose}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDeleting}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
               >
                 إلغاء
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDeleting}
                 className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (

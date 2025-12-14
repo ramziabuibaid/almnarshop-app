@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
+import CustomerFormModal from '@/components/admin/CustomerFormModal';
 import {
   saveWarehouseSalesInvoice,
   getProducts,
@@ -17,6 +18,7 @@ import {
   ArrowLeft,
   Eye,
   EyeOff,
+  UserPlus,
 } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 
@@ -27,6 +29,7 @@ interface InvoiceDetail {
   quantity: number;
   unitPrice: number;
   costPrice?: number;
+  productImage?: string;
 }
 
 const STATUS_OPTIONS = [
@@ -60,6 +63,7 @@ export default function NewWarehouseSalesInvoicePage() {
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
   const [showCosts, setShowCosts] = useState(false);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const productDropdownRef = useRef<HTMLDivElement>(null);
   const customerDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -101,6 +105,27 @@ export default function NewWarehouseSalesInvoicePage() {
     } catch (err: any) {
       console.error('[NewWarehouseSalesInvoicePage] Failed to load customers:', err);
     }
+  };
+
+  const handleCustomerAdded = async (newCustomerId?: string) => {
+    // Reload customers list to get the newly added customer
+    const updatedCustomers = await getAllCustomers();
+    setCustomers(updatedCustomers);
+    
+    // If customer ID is provided, find and select it
+    if (newCustomerId) {
+      const newCustomer = updatedCustomers.find(
+        (c) => (c.customer_id || c.CustomerID || c.id) === newCustomerId
+      );
+      if (newCustomer) {
+        setCustomerId(newCustomerId);
+        setSelectedCustomer(newCustomer);
+        setCustomerSearchQuery(newCustomer.name || newCustomer.Name || '');
+        setIsCustomerDropdownOpen(false);
+      }
+    }
+    
+    setIsCustomerModalOpen(false);
   };
 
   const filteredProducts = useMemo(() => {
@@ -184,6 +209,7 @@ export default function NewWarehouseSalesInvoicePage() {
       quantity: newProductQuantity,
       unitPrice: (newProductPrice != null && newProductPrice > 0) ? newProductPrice : (product.SalePrice || product.sale_price || product.price || 0),
       costPrice: product.CostPrice || product.cost_price || product.costPrice || 0,
+      productImage: product.Image || product.image || '',
     };
 
     setDetails((prev) => [...prev, newDetail]);
@@ -311,7 +337,18 @@ export default function NewWarehouseSalesInvoicePage() {
                 />
               </div>
             <div className="relative" ref={customerDropdownRef}>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الزبون</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700 font-cairo">الزبون</label>
+                <button
+                  type="button"
+                  onClick={() => setIsCustomerModalOpen(true)}
+                  className="flex items-center gap-1 px-2 py-1 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors font-cairo"
+                  title="إضافة زبون جديد"
+                >
+                  <UserPlus size={16} />
+                  <span>إضافة زبون</span>
+                </button>
+              </div>
               <div className="relative">
                 <input
                   type="text"
@@ -392,9 +429,10 @@ export default function NewWarehouseSalesInvoicePage() {
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الخصم</label>
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 value={discount}
                 onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                onWheel={(e) => e.currentTarget.blur()}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
               />
             </div>
@@ -441,7 +479,9 @@ export default function NewWarehouseSalesInvoicePage() {
                     />
                     {isProductDropdownOpen && filteredProducts.length > 0 && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {filteredProducts.map((product) => (
+                        {filteredProducts.map((product) => {
+                          const imageUrl = product.Image || product.image || '';
+                          return (
                           <button
                             key={product.ProductID || product.id || product.product_id}
                             type="button"
@@ -453,17 +493,36 @@ export default function NewWarehouseSalesInvoicePage() {
                             }}
                             className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
                           >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="flex-1 text-right">{product.Name || product.name}</span>
-                              <span className="flex items-center gap-2 text-left" dir="ltr">
-                                <span className="text-gray-600 text-sm">
-                                  (محل: {product.CS_Shop || product.cs_shop || 0} | مخزن: {product.CS_War || product.cs_war || 0})
-                                </span>
-                                <span className="font-semibold">₪{product.SalePrice || product.sale_price || product.price || 0}</span>
-                              </span>
+                            <div className="flex items-center gap-3">
+                              {imageUrl ? (
+                                <img
+                                  src={imageUrl}
+                                  alt={product.Name || product.name}
+                                  className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                                  <span className="text-gray-400 text-xs">—</span>
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="flex-1 text-right truncate">{product.Name || product.name}</span>
+                                  <span className="flex items-center gap-2 text-left flex-shrink-0" dir="ltr">
+                                    <span className="text-gray-600 text-xs">
+                                      (محل: {product.CS_Shop || product.cs_shop || 0} | مخزن: {product.CS_War || product.cs_war || 0})
+                                    </span>
+                                    <span className="font-semibold">₪{product.SalePrice || product.sale_price || product.price || 0}</span>
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                           </button>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -473,9 +532,10 @@ export default function NewWarehouseSalesInvoicePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الكمية</label>
                     <input
                       type="number"
-                      step="0.01"
+                      step="1"
                       value={newProductQuantity}
                       onChange={(e) => setNewProductQuantity(parseFloat(e.target.value) || 1)}
+                      onWheel={(e) => e.currentTarget.blur()}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
                 />
               </div>
@@ -483,9 +543,10 @@ export default function NewWarehouseSalesInvoicePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">سعر الوحدة</label>
                     <input
                       type="number"
-                      step="0.01"
+                      step="1"
                       value={newProductPrice}
                       onChange={(e) => setNewProductPrice(parseFloat(e.target.value) || 0)}
+                      onWheel={(e) => e.currentTarget.blur()}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
                     />
                   </div>
@@ -529,24 +590,53 @@ export default function NewWarehouseSalesInvoicePage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {details.map((item, index) => (
+                    {details.map((item, index) => {
+                      const imageUrl = item.productImage && item.productImage.trim() !== '' ? item.productImage.trim() : '';
+                      return (
                       <tr key={item.detailID || index}>
-                        <td className="px-4 py-3 text-sm text-gray-900 font-cairo">{item.productName}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 font-cairo">
+                          <div className="flex items-center gap-2">
+                            {imageUrl ? (
+                              <>
+                                <img
+                                  src={imageUrl}
+                                  alt={item.productName}
+                                  className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                    if (placeholder) placeholder.style.display = 'flex';
+                                  }}
+                                />
+                                <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
+                                  <span className="text-gray-400 text-xs">—</span>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                                <span className="text-gray-400 text-xs">—</span>
+                              </div>
+                            )}
+                            <span>{item.productName}</span>
+                          </div>
+                        </td>
                         <td className="px-4 py-3">
                           <input
                             type="number"
-                            step="0.01"
+                            step="1"
                             value={item.quantity}
                             onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
+                            onWheel={(e) => e.currentTarget.blur()}
                             className="w-20 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
                           />
                         </td>
                         <td className="px-4 py-3">
                           <input
                             type="number"
-                            step="0.01"
+                            step="1"
                             value={item.unitPrice}
                             onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
+                            onWheel={(e) => e.currentTarget.blur()}
                             className="w-24 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
                           />
                         </td>
@@ -567,7 +657,8 @@ export default function NewWarehouseSalesInvoicePage() {
                         </button>
                         </td>
                       </tr>
-                  ))}
+                      );
+                    })}
                   </tbody>
                 </table>
                 </div>
@@ -611,8 +702,8 @@ export default function NewWarehouseSalesInvoicePage() {
                   </>
                 )}
               </div>
-                </div>
-              </div>
+            </div>
+          </div>
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200">
@@ -639,9 +730,17 @@ export default function NewWarehouseSalesInvoicePage() {
                   </>
                 )}
               </button>
-            </div>
           </div>
         </div>
+      </div>
+
+      {/* Customer Form Modal */}
+      <CustomerFormModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        customer={null}
+        onSuccess={handleCustomerAdded}
+      />
     </AdminLayout>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import CustomerFormModal from '@/components/admin/CustomerFormModal';
 import {
   getChecks,
   getAllCustomers,
@@ -23,6 +24,7 @@ import {
   FileText,
   Edit,
   Trash2,
+  UserPlus,
 } from 'lucide-react';
 
 interface CheckRecord {
@@ -75,6 +77,7 @@ export default function ChecksPage() {
   });
   const [editingCheck, setEditingCheck] = useState<CheckRecord | null>(null);
   const [customerQuery, setCustomerQuery] = useState('');
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
   const filteredChecks = useMemo(() => {
     if (!search.trim()) return checks;
@@ -243,6 +246,25 @@ export default function ChecksPage() {
     } catch (err: any) {
       alert(err?.message || 'فشل حذف الشيك');
     }
+  };
+
+  const handleCustomerAdded = async (newCustomerId?: string) => {
+    // Reload customers list to get the newly added customer
+    const updatedCustomers = await getAllCustomers();
+    setCustomers(updatedCustomers);
+    
+    // If customer ID is provided, select it automatically
+    if (newCustomerId) {
+      const newCustomer = updatedCustomers.find(
+        (c) => (c.customer_id || c.CustomerID || c.id) === newCustomerId
+      );
+      if (newCustomer) {
+        setCheckForm((prev) => ({ ...prev, customerId: newCustomerId }));
+        setCustomerQuery(`${newCustomer.Name || newCustomer.name || ''} - ${newCustomer.Phone || newCustomer.phone || ''}`);
+      }
+    }
+    
+    setIsCustomerModalOpen(false);
   };
 
   return (
@@ -453,9 +475,20 @@ export default function ChecksPage() {
 
             <div className="p-4 space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  الزبون
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    الزبون
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomerModalOpen(true)}
+                    className="flex items-center gap-1 px-2 py-1 text-xs text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="إضافة زبون جديد"
+                  >
+                    <UserPlus size={14} />
+                    <span>إضافة زبون</span>
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={customerQuery}
@@ -619,6 +652,14 @@ export default function ChecksPage() {
           </div>
         </div>
       )}
+
+      {/* Customer Form Modal */}
+      <CustomerFormModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        customer={null}
+        onSuccess={handleCustomerAdded}
+      />
       </div>
     </AdminLayout>
   );

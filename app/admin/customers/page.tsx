@@ -392,9 +392,10 @@ export default function CustomersPage() {
     setEditingCustomer(null);
   };
 
-  const handleCustomerSuccess = () => {
+  const handleCustomerSuccess = (customerId?: string) => {
     // Refresh customers after save
     loadCustomers();
+    // customerId is available if needed for future enhancements
   };
 
   const handleViewProfile = (customer: Customer) => {
