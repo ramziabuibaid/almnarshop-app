@@ -41,6 +41,7 @@ interface QuotationDetail {
     barcode?: string;
     shamelNo?: string;
     costPrice?: number;
+    image?: string;
   };
 }
 
@@ -575,9 +576,10 @@ export default function EditQuotationPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الخصم الخاص</label>
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 value={specialDiscountAmount}
                 onChange={(e) => setSpecialDiscountAmount(parseFloat(e.target.value) || 0)}
+                onWheel={(e) => e.currentTarget.blur()}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
               />
             </div>
@@ -585,9 +587,10 @@ export default function EditQuotationPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">خصم الهدايا</label>
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 value={giftDiscountAmount}
                 onChange={(e) => setGiftDiscountAmount(parseFloat(e.target.value) || 0)}
+                onWheel={(e) => e.currentTarget.blur()}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
               />
             </div>
@@ -634,7 +637,9 @@ export default function EditQuotationPage() {
                     />
                     {isProductDropdownOpen && filteredProducts.length > 0 && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {filteredProducts.map((product) => (
+                        {filteredProducts.map((product) => {
+                          const imageUrl = product.Image || product.image || '';
+                          return (
                           <button
                             key={product.ProductID || product.id || product.product_id}
                             type="button"
@@ -646,17 +651,36 @@ export default function EditQuotationPage() {
                             }}
                             className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
                           >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="flex-1 text-right">{product.Name || product.name}</span>
-                              <span className="flex items-center gap-2 text-left" dir="ltr">
-                                <span className="text-gray-600 text-sm">
-                                  (محل: {product.CS_Shop || product.cs_shop || 0} | مخزن: {product.CS_War || product.cs_war || 0})
-                                </span>
-                                <span className="font-semibold">₪{product.SalePrice || product.sale_price || product.price || 0}</span>
-                              </span>
+                            <div className="flex items-center gap-3">
+                              {imageUrl ? (
+                                <img
+                                  src={imageUrl}
+                                  alt={product.Name || product.name}
+                                  className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                                  <span className="text-gray-400 text-xs">—</span>
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="flex-1 text-right truncate">{product.Name || product.name}</span>
+                                  <span className="flex items-center gap-2 text-left flex-shrink-0" dir="ltr">
+                                    <span className="text-gray-600 text-xs">
+                                      (محل: {product.CS_Shop || product.cs_shop || 0} | مخزن: {product.CS_War || product.cs_war || 0})
+                                    </span>
+                                    <span className="font-semibold">₪{product.SalePrice || product.sale_price || product.price || 0}</span>
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                           </button>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -666,9 +690,10 @@ export default function EditQuotationPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الكمية</label>
                     <input
                       type="number"
-                      step="0.01"
+                      step="1"
                       value={newProductQuantity}
                       onChange={(e) => setNewProductQuantity(parseFloat(e.target.value) || 1)}
+                      onWheel={(e) => e.currentTarget.blur()}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
                     />
                   </div>
@@ -676,9 +701,10 @@ export default function EditQuotationPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">سعر الوحدة</label>
                     <input
                       type="number"
-                      step="0.01"
+                      step="1"
                       value={newProductPrice}
                       onChange={(e) => setNewProductPrice(parseFloat(e.target.value) || 0)}
+                      onWheel={(e) => e.currentTarget.blur()}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
                     />
                   </div>
@@ -721,26 +747,56 @@ export default function EditQuotationPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {details.map((item, index) => (
+                    {details.map((item, index) => {
+                      // Get product image from products array if not in item.product
+                      const product = products.find(p => (p.ProductID || p.id || p.product_id) === item.ProductID);
+                      const imageUrl = item.product?.image || product?.Image || product?.image || '';
+                      const productName = item.product?.name || product?.Name || product?.name || `Product ${item.ProductID}`;
+                      return (
                       <tr key={item.QuotationDetailID || index}>
                         <td className="px-4 py-3 text-sm text-gray-900 font-cairo">
-                          {item.product?.name || `Product ${item.ProductID}`}
+                          <div className="flex items-center gap-2">
+                            {imageUrl ? (
+                              <>
+                                <img
+                                  src={imageUrl}
+                                  alt={productName}
+                                  className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                    if (placeholder) placeholder.style.display = 'flex';
+                                  }}
+                                />
+                                <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
+                                  <span className="text-gray-400 text-xs">—</span>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                                <span className="text-gray-400 text-xs">—</span>
+                              </div>
+                            )}
+                            <span>{productName}</span>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <input
                             type="number"
-                            step="0.01"
+                            step="1"
                             value={item.Quantity}
                             onChange={(e) => handleUpdateQuantity(item.QuotationDetailID, parseFloat(e.target.value) || 0)}
+                            onWheel={(e) => e.currentTarget.blur()}
                             className="w-20 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
                           />
                         </td>
                         <td className="px-4 py-3">
                           <input
                             type="number"
-                            step="0.01"
+                            step="1"
                             value={item.UnitPrice}
                             onChange={(e) => handleUpdatePrice(item.QuotationDetailID, parseFloat(e.target.value) || 0)}
+                            onWheel={(e) => e.currentTarget.blur()}
                             className="w-24 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
                           />
                         </td>
@@ -753,7 +809,8 @@ export default function EditQuotationPage() {
                           ₪{(item.Quantity * item.UnitPrice).toFixed(2)}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

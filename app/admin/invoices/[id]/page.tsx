@@ -30,6 +30,7 @@ interface InvoiceDetail {
   barcode?: string;
   mode?: 'Pick' | 'Scan';
   scannedBarcode?: string;
+  productImage?: string;
 }
 
 interface CashInvoice {
@@ -373,8 +374,8 @@ export default function EditInvoicePage() {
                 type="number"
                 value={discount}
                 onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                min="0"
-                step="0.01"
+                step="1"
+                onWheel={(e) => e.currentTarget.blur()}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo"
               />
             </div>
@@ -441,6 +442,7 @@ export default function EditInvoicePage() {
                               const productId = product.ProductID || product.id;
                               const productName = product.Name || product.name || '';
                               const productPrice = product.SalePrice || product.price || 0;
+                              const imageUrl = product.Image || product.image || '';
                               return (
                                 <button
                                   key={productId}
@@ -455,9 +457,27 @@ export default function EditInvoicePage() {
                                     selectedProductId === productId ? 'bg-gray-100 font-medium' : ''
                                   }`}
                                 >
+                                  <div className="flex items-center gap-3">
+                                    {imageUrl ? (
+                                      <img
+                                        src={imageUrl}
+                                        alt={productName}
+                                        className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                        }}
+                                      />
+                                    ) : (
+                                      <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                                        <span className="text-gray-400 text-xs">—</span>
+                                      </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between">
-                                    <span>{productName}</span>
-                                    <span className="text-sm text-gray-600 mr-2">₪{productPrice.toFixed(2)}</span>
+                                        <span className="truncate">{productName}</span>
+                                        <span className="text-sm text-gray-600 mr-2 flex-shrink-0">₪{productPrice.toFixed(2)}</span>
+                                      </div>
+                                    </div>
                                   </div>
                                 </button>
                               );
@@ -476,8 +496,8 @@ export default function EditInvoicePage() {
                     type="number"
                     value={newProductQuantity}
                     onChange={(e) => setNewProductQuantity(parseFloat(e.target.value) || 1)}
-                    min="0"
-                    step="0.01"
+                    step="1"
+                    onWheel={(e) => e.currentTarget.blur()}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo"
                   />
                 </div>
@@ -489,8 +509,8 @@ export default function EditInvoicePage() {
                     type="number"
                     value={newProductPrice}
                     onChange={(e) => setNewProductPrice(parseFloat(e.target.value) || 0)}
-                    min="0"
-                    step="0.01"
+                    step="1"
+                    onWheel={(e) => e.currentTarget.blur()}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo"
                   />
                 </div>
@@ -547,21 +567,48 @@ export default function EditInvoicePage() {
                     </td>
                   </tr>
                 ) : (
-                  details.map((item, index) => (
+                  details.map((item, index) => {
+                    // Get product image from products array
+                    const product = products.find(p => (p.ProductID || p.id || p.product_id) === item.productID);
+                    const imageUrl = item.productImage || product?.Image || product?.image || '';
+                    return (
                     <tr key={item.detailID || `item-${index}`} className="hover:bg-gray-50">
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-cairo">
                         {item.barcode || item.productID || '—'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900 font-cairo">
-                        {item.productName || '—'}
+                        <div className="flex items-center gap-2">
+                          {imageUrl ? (
+                            <>
+                              <img
+                                src={imageUrl}
+                                alt={item.productName}
+                                className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                  if (placeholder) placeholder.style.display = 'flex';
+                                }}
+                              />
+                              <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
+                                <span className="text-gray-400 text-xs">—</span>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                              <span className="text-gray-400 text-xs">—</span>
+                            </div>
+                          )}
+                          <span>{item.productName || '—'}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <input
                           type="number"
                           value={item.quantity}
                           onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
-                          min="0"
-                          step="0.01"
+                          step="1"
+                          onWheel={(e) => e.currentTarget.blur()}
                           className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo text-sm"
                         />
                       </td>
@@ -570,8 +617,8 @@ export default function EditInvoicePage() {
                           type="number"
                           value={item.unitPrice}
                           onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
-                          min="0"
-                          step="0.01"
+                          step="1"
+                          onWheel={(e) => e.currentTarget.blur()}
                           className="w-24 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo text-sm"
                         />
                       </td>
@@ -587,7 +634,8 @@ export default function EditInvoicePage() {
                         </button>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>

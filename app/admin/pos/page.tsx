@@ -832,17 +832,44 @@ export default function POSPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {cart.map((item) => (
+                  {cart.map((item) => {
+                    // Get product image from products array
+                    const product = products.find(p => (p.ProductID || p.id || p.product_id) === item.productID);
+                    const imageUrl = product?.Image || product?.image || '';
+                    return (
                     <div
                       key={item.productID}
                       className="bg-gray-50 rounded-lg p-2 border border-gray-200"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        {/* Product Name & ID (Single Line) */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {item.name} <span className="text-xs text-gray-500">({item.productID})</span>
-                          </p>
+                        {/* Product Image & Name */}
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt={item.name}
+                              className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (placeholder) placeholder.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          {imageUrl ? (
+                            <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
+                              <span className="text-gray-400 text-xs">—</span>
+                            </div>
+                          ) : (
+                            <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                              <span className="text-gray-400 text-xs">—</span>
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {item.name} <span className="text-xs text-gray-500">({item.productID})</span>
+                            </p>
+                          </div>
                         </div>
                         
                         {/* Quantity Controls */}
@@ -894,7 +921,8 @@ export default function POSPage() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
