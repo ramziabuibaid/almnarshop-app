@@ -144,8 +144,17 @@ export default function ProductsManagerPage() {
         status: 'deleted',
         references: null,
       });
-      setDeleteTarget(null);
       await loadProducts();
+      // Close modal after showing success message for 1.5 seconds
+      setTimeout(() => {
+        setDeleteTarget(null);
+        setDeleteState({
+          loading: false,
+          error: '',
+          status: 'idle',
+          references: null,
+        });
+      }, 1500);
     } catch (err: any) {
       setDeleteState({
         loading: false,
@@ -1061,7 +1070,7 @@ export default function ProductsManagerPage() {
                 </button>
                 <button
                   onClick={confirmDelete}
-                  disabled={deleteState.loading}
+                  disabled={deleteState.loading || deleteState.status === 'blocked' || deleteState.status === 'deleted'}
                   className="px-4 py-2 rounded-lg text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
                 >
                   {deleteState.loading ? 'جاري الحذف...' : 'تأكيد الحذف'}

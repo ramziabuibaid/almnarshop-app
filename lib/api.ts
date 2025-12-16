@@ -1213,12 +1213,19 @@ export async function getCustomerUsage(customerId: string): Promise<{
       .limit(50);
 
     if (error) {
-      console.error(`[API] Error checking ${q.table}:`, error);
-      continue;
+      console.error(`[API] Failed to check customer usage in ${q.table}:`, error);
+      throw new Error(`Failed to check customer usage (${q.table}): ${error.message}`);
     }
 
     if (data && Array.isArray(data)) {
-      usage[q.key] = data.map((row: any) => row[q.column]).filter(Boolean);
+      const uniqueIds = Array.from(
+        new Set(
+          data
+            .map((row: any) => row[q.column])
+            .filter((v: any) => typeof v === 'string' && v.trim() !== '')
+        )
+      );
+      usage[q.key] = uniqueIds;
     }
   }
 

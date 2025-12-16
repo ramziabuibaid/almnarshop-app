@@ -92,9 +92,7 @@ export default function QuotationsPage() {
 
   // Reset to page 1 when search changes
   useEffect(() => {
-    if (currentPage !== 1) {
-      setCurrentPage(1);
-    }
+    setCurrentPage(1);
   }, [debouncedSearchQuery]);
 
   const handleDelete = async (quotationId: string) => {

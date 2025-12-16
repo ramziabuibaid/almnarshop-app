@@ -85,9 +85,7 @@ export default function WarehouseSalesPage() {
 
   // Reset to page 1 when search changes
   useEffect(() => {
-    if (currentPage !== 1) {
-      setCurrentPage(1);
-    }
+    setCurrentPage(1);
   }, [debouncedSearchQuery]);
 
   const handlePrintInvoice = (invoice: WarehouseSalesInvoice) => {
