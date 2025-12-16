@@ -7,6 +7,7 @@ import { useAdminAuth } from '@/context/AdminAuthContext';
 import {
   getCashInvoicesFromSupabase,
   getCashInvoice,
+  updateCashInvoiceSettlementStatus,
 } from '@/lib/api';
 import {
   Loader2,
@@ -25,6 +26,7 @@ interface CashInvoice {
   Notes?: string;
   Discount?: number;
   totalAmount?: number;
+  isSettled?: boolean;
 }
 
 export default function InvoicesPage() {
@@ -39,6 +41,7 @@ export default function InvoicesPage() {
     details: any[] | null;
   }>({ invoice: null, details: null });
   const [viewLoading, setViewLoading] = useState(false);
+  const [updatingSettlement, setUpdatingSettlement] = useState(false);
 
   // Check if user has permission to view cash invoices
   const canViewCashInvoices = admin?.is_super_admin || admin?.permissions?.viewCashInvoices === true;
@@ -85,6 +88,36 @@ export default function InvoicesPage() {
 
   const closeView = () => {
     setViewing({ invoice: null, details: null });
+  };
+
+  const handleMarkAsSettled = async () => {
+    if (!viewing.invoice) return;
+    
+    const invoiceId = viewing.invoice.InvoiceID || viewing.invoice.invoice_id;
+    if (!invoiceId) return;
+
+    if (!confirm('هل أنت متأكد من تغيير حالة الفاتورة إلى مرحلة؟')) {
+      return;
+    }
+
+    setUpdatingSettlement(true);
+    try {
+      await updateCashInvoiceSettlementStatus(invoiceId, true);
+      // Reload invoice data
+      const fullInvoice = await getCashInvoice(invoiceId);
+      setViewing({
+        invoice: fullInvoice,
+        details: fullInvoice?.details || [],
+      });
+      // Reload invoices list to update the status
+      await loadInvoices();
+      alert('تم تغيير حالة الفاتورة إلى مرحلة بنجاح');
+    } catch (err: any) {
+      console.error('[InvoicesPage] Failed to update settlement status:', err);
+      alert(err?.message || 'فشل تحديث حالة الفاتورة');
+    } finally {
+      setUpdatingSettlement(false);
+    }
   };
 
   const handleEditInvoice = (invoice: CashInvoice) => {
@@ -221,6 +254,9 @@ export default function InvoicesPage() {
                       التاريخ
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                      حالة التسوية
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
                       الملاحظات
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
@@ -239,6 +275,17 @@ export default function InvoicesPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-600 font-cairo">{formatDate(invoice.DateTime)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${
+                            invoice.isSettled
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {invoice.isSettled ? 'مرحلة' : 'غير مرحلة'}
+                        </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-600 max-w-xs truncate font-cairo">
@@ -308,6 +355,22 @@ export default function InvoicesPage() {
               </div>
               <div className="flex items-center gap-2">
                 {viewLoading && <Loader2 size={18} className="animate-spin text-gray-500" />}
+                {viewing.invoice && !viewing.invoice.isSettled && (
+                  <button
+                    onClick={handleMarkAsSettled}
+                    disabled={updatingSettlement}
+                    className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-cairo flex items-center gap-1"
+                  >
+                    {updatingSettlement ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        جاري التحديث...
+                      </>
+                    ) : (
+                      'تغيير إلى مرحلة'
+                    )}
+                  </button>
+                )}
                 <button
                   onClick={closeView}
                   className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
@@ -324,8 +387,18 @@ export default function InvoicesPage() {
                   <div className="font-semibold">{viewing.invoice.InvoiceID || viewing.invoice.invoice_id}</div>
                 </div>
                 <div>
-                  <div className="text-gray-500">الحالة</div>
-                  <div className="font-semibold">{viewing.invoice.Status || viewing.invoice.status || '—'}</div>
+                  <div className="text-gray-500">حالة التسوية</div>
+                  <div className="font-semibold">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        viewing.invoice.isSettled
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {viewing.invoice.isSettled ? 'مرحلة' : 'غير مرحلة'}
+                    </span>
+                  </div>
                 </div>
                 <div>
                   <div className="text-gray-500">الخصم</div>

@@ -137,7 +137,8 @@ export default function ProductFormModal({
       // Prepare product data for API
       const productData: any = {
         ProductID: formData.ProductID || undefined,
-        'Shamel No': formData['Shamel No'] || undefined,
+        // Explicitly handle empty strings for Shamel No to allow clearing the field
+        'Shamel No': formData['Shamel No'] !== undefined ? (formData['Shamel No'] || '') : undefined,
         Barcode: formData.Barcode || undefined,
         Name: formData.Name || undefined,
         Type: formData.Type || undefined,
@@ -161,11 +162,12 @@ export default function ProductFormModal({
         'image 3': formData['image 3'] !== undefined ? (formData['image 3'] || '') : undefined,
       };
 
-      // Remove undefined values, but keep empty strings for image fields to allow deletion
+      // Remove undefined values, but keep empty strings for image fields and Shamel No to allow deletion
       Object.keys(productData).forEach((key) => {
-        // Keep empty strings for image fields to allow clearing images
+        // Keep empty strings for image fields and Shamel No to allow clearing
         const isImageField = key === 'Image' || key === 'Image 2' || key === 'image 3';
-        if (!isImageField && (productData[key] === undefined || productData[key] === '')) {
+        const isShamelNo = key === 'Shamel No';
+        if (!isImageField && !isShamelNo && (productData[key] === undefined || productData[key] === '')) {
           delete productData[key];
         } else if (productData[key] === undefined) {
           delete productData[key];

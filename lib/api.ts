@@ -588,7 +588,12 @@ export async function saveProduct(productData: any): Promise<any> {
     // Convert PascalCase to snake_case for Supabase
     const supabaseData: any = {
       product_id: productData.ProductID || productData.product_id || null,
-      shamel_no: productData['Shamel No'] || productData.shamel_no || null,
+      // Explicitly handle empty strings for shamel_no - convert to null to allow clearing
+      shamel_no: productData['Shamel No'] !== undefined 
+        ? (productData['Shamel No'] === '' ? null : productData['Shamel No'])
+        : (productData.shamel_no !== undefined 
+          ? (productData.shamel_no === '' ? null : productData.shamel_no)
+          : null),
       barcode: productData.Barcode || productData.barcode || null,
       name: productData.Name || productData.name || null,
       type: productData.Type || productData.type || null,
@@ -611,12 +616,13 @@ export async function saveProduct(productData: any): Promise<any> {
       image_url_3: productData['image 3'] !== undefined ? (productData['image 3'] || null) : (productData.image3 !== undefined ? (productData.image3 || null) : (productData.image_url_3 !== undefined ? (productData.image_url_3 || null) : null)),
     };
 
-    // Remove null/undefined/empty string values, but keep null for image fields to allow deletion
+    // Remove null/undefined/empty string values, but keep null for image fields and shamel_no to allow deletion
     Object.keys(supabaseData).forEach((key) => {
       const isImageField = key === 'image_url' || key === 'image_url_2' || key === 'image_url_3';
-      // For image fields, keep null values to allow clearing images
+      const isShamelNo = key === 'shamel_no';
+      // For image fields and shamel_no, keep null/empty values to allow clearing
       // For other fields, remove null/undefined/empty values
-      if (!isImageField && (supabaseData[key] === null || supabaseData[key] === undefined || supabaseData[key] === '')) {
+      if (!isImageField && !isShamelNo && (supabaseData[key] === null || supabaseData[key] === undefined || supabaseData[key] === '')) {
         delete supabaseData[key];
       } else if (supabaseData[key] === undefined) {
         delete supabaseData[key];
@@ -711,6 +717,108 @@ export async function saveProduct(productData: any): Promise<any> {
     // Generic error
     throw new Error(`Failed to save product: ${error?.message || 'Unknown error'}. Please check the browser console for more details.`);
   }
+}
+
+/**
+ * Check where a product is used across invoices/orders/quotations
+ */
+export async function getProductUsage(productId: string): Promise<{
+  cashInvoices: string[];
+  onlineOrders: string[];
+  shopInvoices: string[];
+  warehouseInvoices: string[];
+  quotations: string[];
+}> {
+  const usage = {
+    cashInvoices: [] as string[],
+    onlineOrders: [] as string[],
+    shopInvoices: [] as string[],
+    warehouseInvoices: [] as string[],
+    quotations: [] as string[],
+  };
+
+  const queries = [
+    {
+      key: 'cashInvoices' as const,
+      table: 'cash_invoice_details',
+      column: 'invoice_id',
+    },
+    {
+      key: 'onlineOrders' as const,
+      table: 'online_order_details',
+      column: 'order_id',
+    },
+    {
+      key: 'shopInvoices' as const,
+      table: 'shop_sales_details',
+      column: 'invoice_id',
+    },
+    {
+      key: 'warehouseInvoices' as const,
+      table: 'warehouse_sales_details',
+      column: 'invoice_id',
+    },
+    {
+      key: 'quotations' as const,
+      table: 'quotation_details',
+      column: 'quotation_id',
+    },
+  ];
+
+  for (const q of queries) {
+    const { data, error } = await supabase
+      .from(q.table)
+      .select(`${q.column}`, { count: 'exact', head: false })
+      .eq('product_id', productId)
+      .limit(50);
+
+    if (error) {
+      console.error(`[API] Failed to check product usage in ${q.table}:`, error);
+      throw new Error(`Failed to check product usage (${q.table}): ${error.message}`);
+    }
+
+    if (data && Array.isArray(data)) {
+      const uniqueIds = Array.from(
+        new Set(
+          data
+            .map((row: any) => row[q.column])
+            .filter((v: any) => typeof v === 'string' && v.trim() !== '')
+        )
+      );
+      usage[q.key] = uniqueIds;
+    }
+  }
+
+  return usage;
+}
+
+/**
+ * Delete a product if it is not referenced elsewhere.
+ * If referenced, returns status=blocked and reference ids.
+ */
+export async function deleteProduct(productId: string): Promise<{
+  status: 'deleted' | 'blocked';
+  references?: Awaited<ReturnType<typeof getProductUsage>>;
+}> {
+  if (!productId) {
+    throw new Error('ProductID is required for deletion');
+  }
+
+  // Check usage before deletion
+  const references = await getProductUsage(productId);
+  const hasRefs = Object.values(references).some((list) => list.length > 0);
+
+  if (hasRefs) {
+    return { status: 'blocked', references };
+  }
+
+  const { error } = await supabase.from('products').delete().eq('product_id', productId);
+  if (error) {
+    console.error('[API] Error deleting product:', error);
+    throw new Error(`Failed to delete product: ${error.message}`);
+  }
+
+  return { status: 'deleted' };
 }
 
 /**
@@ -1037,28 +1145,118 @@ export async function generateCustomerID(): Promise<string> {
 }
 
 /**
- * Delete a customer from Supabase
+ * Get customer usage across all related tables
+ * Returns lists of IDs where the customer is referenced
  */
-export async function deleteCustomer(customerID: string): Promise<any> {
-  try {
-    console.log('[API] Deleting customer from Supabase:', customerID);
+export async function getCustomerUsage(customerId: string): Promise<{
+  shopReceipts: string[];
+  shopPayments: string[];
+  shopInvoices: string[];
+  warehouseInvoices: string[];
+  quotations: string[];
+  maintenance: string[];
+  checks: string[];
+}> {
+  const usage = {
+    shopReceipts: [] as string[],
+    shopPayments: [] as string[],
+    shopInvoices: [] as string[],
+    warehouseInvoices: [] as string[],
+    quotations: [] as string[],
+    maintenance: [] as string[],
+    checks: [] as string[],
+  };
 
-    const { error } = await supabase
-      .from('customers')
-      .delete()
-      .eq('customer_id', customerID);
+  const queries = [
+    {
+      key: 'shopReceipts' as const,
+      table: 'shop_receipts',
+      column: 'receipt_id',
+    },
+    {
+      key: 'shopPayments' as const,
+      table: 'shop_payments',
+      column: 'pay_id',
+    },
+    {
+      key: 'shopInvoices' as const,
+      table: 'shop_sales_invoices',
+      column: 'invoice_id',
+    },
+    {
+      key: 'warehouseInvoices' as const,
+      table: 'warehouse_sales_invoices',
+      column: 'invoice_id',
+    },
+    {
+      key: 'quotations' as const,
+      table: 'quotations',
+      column: 'quotation_id',
+    },
+    {
+      key: 'maintenance' as const,
+      table: 'maintenance',
+      column: 'maint_no',
+    },
+    {
+      key: 'checks' as const,
+      table: 'checks',
+      column: 'check_id',
+    },
+  ];
+
+  for (const q of queries) {
+    const { data, error } = await supabase
+      .from(q.table)
+      .select(`${q.column}`, { count: 'exact', head: false })
+      .eq('customer_id', customerId)
+      .limit(50);
 
     if (error) {
-      console.error('[API] Failed to delete customer:', error);
-      throw new Error(`Failed to delete customer: ${error.message}`);
+      console.error(`[API] Error checking ${q.table}:`, error);
+      continue;
     }
 
-    console.log('[API] Customer deleted successfully');
-    return { status: 'success' };
-  } catch (error: any) {
-    console.error('[API] deleteCustomer error:', error);
-    throw error;
+    if (data && Array.isArray(data)) {
+      usage[q.key] = data.map((row: any) => row[q.column]).filter(Boolean);
+    }
   }
+
+  return usage;
+}
+
+/**
+ * Delete a customer from Supabase
+ * Checks for usage in related tables before deletion
+ */
+export async function deleteCustomer(customerID: string): Promise<{
+  status: 'deleted' | 'blocked';
+  references?: Awaited<ReturnType<typeof getCustomerUsage>>;
+}> {
+  if (!customerID) {
+    throw new Error('CustomerID is required for deletion');
+  }
+
+  // Check usage before deletion
+  const references = await getCustomerUsage(customerID);
+  const hasRefs = Object.values(references).some((list) => list.length > 0);
+
+  if (hasRefs) {
+    return { status: 'blocked', references };
+  }
+
+  const { error } = await supabase
+    .from('customers')
+    .delete()
+    .eq('customer_id', customerID);
+
+  if (error) {
+    console.error('[API] Error deleting customer:', error);
+    throw new Error(`Failed to delete customer: ${error.message}`);
+  }
+
+  console.log('[API] Customer deleted successfully');
+  return { status: 'deleted' };
 }
 
 // ==========================================
@@ -2103,6 +2301,7 @@ function mapCashInvoiceFromSupabase(invoice: any, totalAmount?: number): any {
     Notes: invoice.notes || '',
     Discount: parseFloat(String(invoice.discount || 0)) || 0,
     totalAmount: totalAmount || 0, // Will be calculated from details
+    isSettled: invoice.is_settled === true || invoice.is_settled === 'true' || invoice.isSettled === true,
     // Keep original fields
     ...invoice,
   };
@@ -2398,6 +2597,34 @@ export async function deleteCashInvoice(invoiceId: string): Promise<any> {
   } catch (error: any) {
     console.error('[API] deleteCashInvoice error:', error);
     throw new Error(`Failed to delete cash invoice: ${error?.message || 'Unknown error'}`);
+  }
+}
+
+/**
+ * Update cash invoice settlement status
+ */
+export async function updateCashInvoiceSettlementStatus(
+  invoiceId: string,
+  isSettled: boolean
+): Promise<any> {
+  try {
+    console.log('[API] Updating cash invoice settlement status:', invoiceId, isSettled);
+
+    const { error } = await supabase
+      .from('cash_invoices')
+      .update({ is_settled: isSettled })
+      .eq('invoice_id', invoiceId);
+
+    if (error) {
+      console.error('[API] Failed to update settlement status:', error);
+      throw new Error(`Failed to update settlement status: ${error.message}`);
+    }
+
+    console.log('[API] Settlement status updated successfully');
+    return { status: 'success', invoiceID: invoiceId, isSettled };
+  } catch (error: any) {
+    console.error('[API] updateCashInvoiceSettlementStatus error:', error);
+    throw new Error(`Failed to update settlement status: ${error?.message || 'Unknown error'}`);
   }
 }
 
@@ -3549,18 +3776,80 @@ export async function saveShopSalesInvoice(payload: {
 /**
  * Get shop sales invoices from Supabase with pagination
  */
-export async function getShopSalesInvoices(page: number = 1, pageSize: number = 20): Promise<{ invoices: any[]; total: number }> {
+export async function getShopSalesInvoices(page: number = 1, pageSize: number = 20, searchQuery?: string): Promise<{ invoices: any[]; total: number }> {
   try {
-    console.log('[API] Fetching shop sales invoices from Supabase...', { page, pageSize });
+    console.log('[API] Fetching shop sales invoices from Supabase...', { page, pageSize, searchQuery });
 
     // Calculate pagination
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    // First, get total count
-    const { count, error: countError } = await supabase
+    // If search query provided, find matching customer IDs first
+    let customerIdsToSearch: string[] = [];
+    if (searchQuery && searchQuery.trim()) {
+      const search = searchQuery.trim();
+      const { data: matchingCustomers } = await supabase
+        .from('customers')
+        .select('customer_id')
+        .or(`name.ilike.%${search}%,customer_id.ilike.%${search}%`);
+      
+      if (matchingCustomers) {
+        customerIdsToSearch = matchingCustomers.map(c => c.customer_id);
+      }
+    }
+
+    // Build base queries
+    let countQuery = supabase
       .from('shop_sales_invoices')
       .select('*', { count: 'exact', head: true });
+
+    let dataQuery = supabase
+      .from('shop_sales_invoices')
+      .select('*');
+
+    // Apply search filters
+    if (searchQuery && searchQuery.trim()) {
+      const search = searchQuery.trim();
+      
+      if (customerIdsToSearch.length > 0) {
+        // Search in invoice_id OR customer_id (direct match) OR customer_id in matching list
+        // We'll fetch both sets and combine them
+        // First, get invoices matching invoice_id or customer_id directly
+        const { data: directMatches } = await supabase
+          .from('shop_sales_invoices')
+          .select('invoice_id')
+          .or(`invoice_id.ilike.%${search}%,customer_id.ilike.%${search}%`);
+        
+        const directMatchIds = directMatches?.map(i => i.invoice_id) || [];
+        
+        // Then get invoices matching customer IDs
+        const { data: customerMatches } = await supabase
+          .from('shop_sales_invoices')
+          .select('invoice_id')
+          .in('customer_id', customerIdsToSearch);
+        
+        const customerMatchIds = customerMatches?.map(i => i.invoice_id) || [];
+        
+        // Combine and get unique IDs
+        const allMatchIds = [...new Set([...directMatchIds, ...customerMatchIds])];
+        
+        if (allMatchIds.length > 0) {
+          countQuery = countQuery.in('invoice_id', allMatchIds);
+          dataQuery = dataQuery.in('invoice_id', allMatchIds);
+        } else {
+          // No matches found
+          countQuery = countQuery.eq('invoice_id', 'NO_MATCHES');
+          dataQuery = dataQuery.eq('invoice_id', 'NO_MATCHES');
+        }
+      } else {
+        // Only search in invoice_id and customer_id if no matching customers found
+        countQuery = countQuery.or(`invoice_id.ilike.%${search}%,customer_id.ilike.%${search}%`);
+        dataQuery = dataQuery.or(`invoice_id.ilike.%${search}%,customer_id.ilike.%${search}%`);
+      }
+    }
+
+    // Get total count
+    const { count, error: countError } = await countQuery;
 
     if (countError) {
       console.error('[API] Error getting invoice count:', countError);
@@ -3570,9 +3859,7 @@ export async function getShopSalesInvoices(page: number = 1, pageSize: number = 
     const total = count || 0;
 
     // Fetch invoices with pagination - newest first
-    const { data: invoices, error } = await supabase
-      .from('shop_sales_invoices')
-      .select('*')
+    const { data: invoices, error } = await dataQuery
       .order('created_at', { ascending: false })
       .order('date', { ascending: false })
       .range(from, to);
@@ -4042,18 +4329,79 @@ export async function saveWarehouseSalesInvoice(payload: {
 /**
  * Get warehouse sales invoices from Supabase with pagination
  */
-export async function getWarehouseSalesInvoices(page: number = 1, pageSize: number = 20): Promise<{ invoices: any[]; total: number }> {
+export async function getWarehouseSalesInvoices(page: number = 1, pageSize: number = 20, searchQuery?: string): Promise<{ invoices: any[]; total: number }> {
   try {
-    console.log('[API] Fetching warehouse sales invoices from Supabase...', { page, pageSize });
+    console.log('[API] Fetching warehouse sales invoices from Supabase...', { page, pageSize, searchQuery });
 
     // Calculate pagination
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    // First, get total count
-    const { count, error: countError } = await supabase
+    // If search query provided, find matching customer IDs first
+    let customerIdsToSearch: string[] = [];
+    if (searchQuery && searchQuery.trim()) {
+      const search = searchQuery.trim();
+      const { data: matchingCustomers } = await supabase
+        .from('customers')
+        .select('customer_id')
+        .or(`name.ilike.%${search}%,customer_id.ilike.%${search}%`);
+      
+      if (matchingCustomers) {
+        customerIdsToSearch = matchingCustomers.map(c => c.customer_id);
+      }
+    }
+
+    // Build base queries
+    let countQuery = supabase
       .from('warehouse_sales_invoices')
       .select('*', { count: 'exact', head: true });
+
+    let dataQuery = supabase
+      .from('warehouse_sales_invoices')
+      .select('*');
+
+    // Apply search filters
+    if (searchQuery && searchQuery.trim()) {
+      const search = searchQuery.trim();
+      
+      if (customerIdsToSearch.length > 0) {
+        // Search in invoice_id OR customer_id (direct match) OR customer_id in matching list
+        // First, get invoices matching invoice_id or customer_id directly
+        const { data: directMatches } = await supabase
+          .from('warehouse_sales_invoices')
+          .select('invoice_id')
+          .or(`invoice_id.ilike.%${search}%,customer_id.ilike.%${search}%`);
+        
+        const directMatchIds = directMatches?.map(i => i.invoice_id) || [];
+        
+        // Then get invoices matching customer IDs
+        const { data: customerMatches } = await supabase
+          .from('warehouse_sales_invoices')
+          .select('invoice_id')
+          .in('customer_id', customerIdsToSearch);
+        
+        const customerMatchIds = customerMatches?.map(i => i.invoice_id) || [];
+        
+        // Combine and get unique IDs
+        const allMatchIds = [...new Set([...directMatchIds, ...customerMatchIds])];
+        
+        if (allMatchIds.length > 0) {
+          countQuery = countQuery.in('invoice_id', allMatchIds);
+          dataQuery = dataQuery.in('invoice_id', allMatchIds);
+        } else {
+          // No matches found
+          countQuery = countQuery.eq('invoice_id', 'NO_MATCHES');
+          dataQuery = dataQuery.eq('invoice_id', 'NO_MATCHES');
+        }
+      } else {
+        // Only search in invoice_id and customer_id if no matching customers found
+        countQuery = countQuery.or(`invoice_id.ilike.%${search}%,customer_id.ilike.%${search}%`);
+        dataQuery = dataQuery.or(`invoice_id.ilike.%${search}%,customer_id.ilike.%${search}%`);
+      }
+    }
+
+    // Get total count
+    const { count, error: countError } = await countQuery;
 
     if (countError) {
       console.error('[API] Error getting invoice count:', countError);
@@ -4063,9 +4411,7 @@ export async function getWarehouseSalesInvoices(page: number = 1, pageSize: numb
     const total = count || 0;
 
     // Fetch invoices with pagination - newest first
-    const { data: invoices, error } = await supabase
-      .from('warehouse_sales_invoices')
-      .select('*')
+    const { data: invoices, error } = await dataQuery
       .order('created_at', { ascending: false })
       .order('date', { ascending: false })
       .range(from, to);
@@ -5437,19 +5783,80 @@ function mapQuotationFromSupabase(quotation: any, totalAmount: number = 0): any 
 /**
  * Get all quotations from Supabase
  */
-export async function getQuotationsFromSupabase(page: number = 1, pageSize: number = 20): Promise<{ quotations: any[]; total: number }> {
+export async function getQuotationsFromSupabase(page: number = 1, pageSize: number = 20, searchQuery?: string): Promise<{ quotations: any[]; total: number }> {
   try {
-    console.log('[API] Fetching quotations from Supabase...', { page, pageSize });
+    console.log('[API] Fetching quotations from Supabase...', { page, pageSize, searchQuery });
     const startTime = Date.now();
     
     // Calculate pagination
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    // First, get total count
-    const { count, error: countError } = await supabase
+    // If search query provided, find matching customer IDs first
+    let customerIdsToSearch: string[] = [];
+    if (searchQuery && searchQuery.trim()) {
+      const search = searchQuery.trim();
+      const { data: matchingCustomers } = await supabase
+        .from('customers')
+        .select('customer_id')
+        .or(`name.ilike.%${search}%,customer_id.ilike.%${search}%`);
+      
+      if (matchingCustomers) {
+        customerIdsToSearch = matchingCustomers.map(c => c.customer_id);
+      }
+    }
+
+    // Build base queries
+    let countQuery = supabase
       .from('quotations')
       .select('*', { count: 'exact', head: true });
+
+    let dataQuery = supabase
+      .from('quotations')
+      .select('*, customers:customer_id(name, phone, address, shamel_no)');
+
+    // Apply search filters
+    if (searchQuery && searchQuery.trim()) {
+      const search = searchQuery.trim();
+      
+      if (customerIdsToSearch.length > 0) {
+        // Search in quotation_id OR notes OR customer_id (direct match) OR customer_id in matching list
+        // First, get quotations matching quotation_id, notes, or customer_id directly
+        const { data: directMatches } = await supabase
+          .from('quotations')
+          .select('quotation_id')
+          .or(`quotation_id.ilike.%${search}%,customer_id.ilike.%${search}%,notes.ilike.%${search}%`);
+        
+        const directMatchIds = directMatches?.map(q => q.quotation_id) || [];
+        
+        // Then get quotations matching customer IDs
+        const { data: customerMatches } = await supabase
+          .from('quotations')
+          .select('quotation_id')
+          .in('customer_id', customerIdsToSearch);
+        
+        const customerMatchIds = customerMatches?.map(q => q.quotation_id) || [];
+        
+        // Combine and get unique IDs
+        const allMatchIds = [...new Set([...directMatchIds, ...customerMatchIds])];
+        
+        if (allMatchIds.length > 0) {
+          countQuery = countQuery.in('quotation_id', allMatchIds);
+          dataQuery = dataQuery.in('quotation_id', allMatchIds);
+        } else {
+          // No matches found
+          countQuery = countQuery.eq('quotation_id', 'NO_MATCHES');
+          dataQuery = dataQuery.eq('quotation_id', 'NO_MATCHES');
+        }
+      } else {
+        // Only search in quotation_id, customer_id, and notes if no matching customers found
+        countQuery = countQuery.or(`quotation_id.ilike.%${search}%,customer_id.ilike.%${search}%,notes.ilike.%${search}%`);
+        dataQuery = dataQuery.or(`quotation_id.ilike.%${search}%,customer_id.ilike.%${search}%,notes.ilike.%${search}%`);
+      }
+    }
+
+    // Get total count
+    const { count, error: countError } = await countQuery;
 
     if (countError) {
       console.error('[API] Error getting quotation count:', countError);
@@ -5459,9 +5866,7 @@ export async function getQuotationsFromSupabase(page: number = 1, pageSize: numb
     const total = count || 0;
     
     // Fetch quotations ordered by date descending with pagination
-    const { data: quotations, error } = await supabase
-      .from('quotations')
-      .select('*, customers:customer_id(name, phone, address, shamel_no)')
+    const { data: quotations, error } = await dataQuery
       .order('date', { ascending: false })
       .range(from, to);
     

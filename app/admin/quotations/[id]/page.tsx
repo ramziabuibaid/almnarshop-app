@@ -744,6 +744,7 @@ export default function EditQuotationPage() {
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
                       )}
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الإجمالي</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">إجراءات</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -807,6 +808,15 @@ export default function EditQuotationPage() {
                         )}
                         <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo">
                           ₪{(item.Quantity * item.UnitPrice).toFixed(2)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => handleRemoveItem(item.QuotationDetailID)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="حذف المنتج"
+                          >
+                            <Trash2 size={18} />
+                          </button>
                         </td>
                       </tr>
                       );

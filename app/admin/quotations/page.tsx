@@ -52,10 +52,20 @@ export default function QuotationsPage() {
   const [totalQuotations, setTotalQuotations] = useState(0);
   const [showAll, setShowAll] = useState(false);
   const pageSize = 20;
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  // Debounce search query - wait 500ms after user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     loadQuotations();
-  }, [currentPage, showAll]);
+  }, [currentPage, showAll, debouncedSearchQuery]);
 
   const loadQuotations = async () => {
     setLoading(true);
@@ -63,12 +73,12 @@ export default function QuotationsPage() {
     try {
       if (showAll) {
         // Load all quotations (use a very large page size)
-        const result = await getQuotationsFromSupabase(1, 10000);
+        const result = await getQuotationsFromSupabase(1, 10000, debouncedSearchQuery || undefined);
         setQuotations(result.quotations);
         setTotalQuotations(result.total);
       } else {
         // Load paginated quotations
-        const result = await getQuotationsFromSupabase(currentPage, pageSize);
+        const result = await getQuotationsFromSupabase(currentPage, pageSize, debouncedSearchQuery || undefined);
         setQuotations(result.quotations);
         setTotalQuotations(result.total);
       }
@@ -79,6 +89,13 @@ export default function QuotationsPage() {
       setLoading(false);
     }
   };
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearchQuery]);
 
   const handleDelete = async (quotationId: string) => {
     if (!confirm('هل أنت متأكد من حذف هذا العرض السعري؟')) {
@@ -156,6 +173,7 @@ export default function QuotationsPage() {
     return statusColors[status] || 'bg-gray-100 text-gray-800';
   };
 
+  // Apply local filters only (status) - search is done in API
   const filteredQuotations = useMemo(() => {
     let filtered = quotations;
     
@@ -164,21 +182,8 @@ export default function QuotationsPage() {
       filtered = filtered.filter((quotation) => quotation.Status === statusFilter);
     }
     
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((quotation) => {
-        return (
-          String(quotation.QuotationID || '').toLowerCase().includes(query) ||
-          String(quotation.CustomerID || '').toLowerCase().includes(query) ||
-          String(quotation.Notes || '').toLowerCase().includes(query) ||
-          String(quotation.Status || '').toLowerCase().includes(query)
-        );
-      });
-    }
-    
     return filtered;
-  }, [quotations, searchQuery, statusFilter]);
+  }, [quotations, statusFilter]);
 
   if (loading) {
     return (

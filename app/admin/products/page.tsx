@@ -6,9 +6,10 @@ import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ProductFormModal from '@/components/admin/ProductFormModal';
 import MarketingCardGenerator from '@/components/admin/MarketingCardGenerator';
-import { Plus, Edit, Image as ImageIcon, Loader2, Package, ChevronLeft, ChevronRight, Filter, X, Search, ChevronDown, Sparkles, CheckCircle2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Edit, Image as ImageIcon, Loader2, Package, ChevronLeft, ChevronRight, Filter, X, Search, ChevronDown, Sparkles, CheckCircle2, ArrowUp, ArrowDown, Trash } from 'lucide-react';
 import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
+import { deleteProduct } from '@/lib/api';
 
 const PRODUCTS_PER_PAGE = 20;
 
@@ -42,6 +43,24 @@ export default function ProductsManagerPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'saving' | 'success' | null }>({ message: '', type: null });
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [deleteState, setDeleteState] = useState<{
+    loading: boolean;
+    error: string;
+    status: 'idle' | 'blocked' | 'deleted';
+    references: {
+      cashInvoices: string[];
+      onlineOrders: string[];
+      shopInvoices: string[];
+      warehouseInvoices: string[];
+      quotations: string[];
+    } | null;
+  }>({
+    loading: false,
+    error: '',
+    status: 'idle',
+    references: null,
+  });
 
   // Check if user has permission to view cost
   const canViewCost = admin?.is_super_admin || admin?.permissions?.viewCost === true;
@@ -86,6 +105,65 @@ export default function ProductsManagerPage() {
   const handleMarketingModalClose = () => {
     setIsMarketingModalOpen(false);
     setMarketingProduct(null);
+  };
+
+  const handleDeleteClick = (product: Product) => {
+    setDeleteTarget(product);
+    setDeleteState({
+      loading: false,
+      error: '',
+      status: 'idle',
+      references: null,
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const productId = deleteTarget.ProductID || deleteTarget.id;
+    if (!productId) {
+      setDeleteState((prev) => ({ ...prev, error: 'ProductID مفقود لهذا الصنف.' }));
+      return;
+    }
+
+    setDeleteState((prev) => ({ ...prev, loading: true, error: '' }));
+    try {
+      const result = await deleteProduct(productId);
+      if (result.status === 'blocked') {
+        setDeleteState({
+          loading: false,
+          error: '',
+          status: 'blocked',
+          references: result.references || null,
+        });
+        return;
+      }
+
+      setDeleteState({
+        loading: false,
+        error: '',
+        status: 'deleted',
+        references: null,
+      });
+      setDeleteTarget(null);
+      await loadProducts();
+    } catch (err: any) {
+      setDeleteState({
+        loading: false,
+        error: err?.message || 'فشل في حذف المنتج. حاول مرة أخرى.',
+        status: 'idle',
+        references: null,
+      });
+    }
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteTarget(null);
+    setDeleteState({
+      loading: false,
+      error: '',
+      status: 'idle',
+      references: null,
+    });
   };
 
   // Filter and sort products
@@ -845,6 +923,13 @@ export default function ProductsManagerPage() {
                             >
                               <Sparkles size={18} />
                             </button>
+                          <button
+                            onClick={() => handleDeleteClick(product)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete Product"
+                          >
+                            <Trash size={18} />
+                          </button>
                           </div>
                         </td>
                       </tr>
@@ -909,6 +994,79 @@ export default function ProductsManagerPage() {
                 Next
                 <ChevronRight size={20} />
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Delete confirmation modal */}
+        {deleteTarget && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-lg rounded-lg shadow-2xl p-6 relative">
+              <button
+                onClick={closeDeleteModal}
+                className="absolute top-3 right-3 p-2 rounded-full hover:bg-gray-100"
+              >
+                <X size={20} />
+              </button>
+
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">حذف المنتج</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                هل أنت متأكد من حذف المنتج "{deleteTarget.Name || deleteTarget.name || deleteTarget.ProductID}"؟
+                سيتم منع الحذف إذا كان المنتج مستخدمًا في الفواتير أو العروض.
+              </p>
+
+              {deleteState.error && (
+                <div className="mb-3 p-3 rounded-lg bg-red-50 text-red-700 text-sm border border-red-200">
+                  {deleteState.error}
+                </div>
+              )}
+
+              {deleteState.status === 'deleted' && (
+                <div className="mb-3 p-3 rounded-lg bg-green-50 text-green-700 text-sm border border-green-200">
+                  تم حذف المنتج بنجاح.
+                </div>
+              )}
+
+              {deleteState.status === 'blocked' && deleteState.references && (
+                <div className="mb-3 p-3 rounded-lg bg-yellow-50 text-yellow-800 text-sm border border-yellow-200 space-y-2">
+                  <div className="font-semibold">لا يمكن الحذف لوجود ارتباطات:</div>
+                  {deleteState.references.cashInvoices.length > 0 && (
+                    <div>فواتير نقدية: {deleteState.references.cashInvoices.join(', ')}</div>
+                  )}
+                  {deleteState.references.onlineOrders.length > 0 && (
+                    <div>فواتير أونلاين: {deleteState.references.onlineOrders.join(', ')}</div>
+                  )}
+                  {deleteState.references.shopInvoices.length > 0 && (
+                    <div>فواتير المحل: {deleteState.references.shopInvoices.join(', ')}</div>
+                  )}
+                  {deleteState.references.warehouseInvoices.length > 0 && (
+                    <div>فواتير المخزن: {deleteState.references.warehouseInvoices.join(', ')}</div>
+                  )}
+                  {deleteState.references.quotations.length > 0 && (
+                    <div>عروض سعرية: {deleteState.references.quotations.join(', ')}</div>
+                  )}
+                  <p className="text-xs text-gray-600">
+                    عدّل الفواتير أو استبدل المنتج بمنتج آخر ثم حاول الحذف مجددًا.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 mt-6">
+                <button
+                  onClick={closeDeleteModal}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  disabled={deleteState.loading}
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={deleteState.loading}
+                  className="px-4 py-2 rounded-lg text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {deleteState.loading ? 'جاري الحذف...' : 'تأكيد الحذف'}
+                </button>
+              </div>
             </div>
           </div>
         )}

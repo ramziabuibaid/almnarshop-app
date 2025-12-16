@@ -267,7 +267,39 @@ export default function CustomerFormModal({
     setIsDeleting(true);
     setError('');
     try {
-      await deleteCustomer(customerId);
+      const result = await deleteCustomer(customerId);
+      
+      if (result.status === 'blocked' && result.references) {
+        const refs = result.references;
+        const messages: string[] = [];
+        
+        if (refs.shopReceipts.length > 0) {
+          messages.push(`سندات قبض: ${refs.shopReceipts.slice(0, 10).join(', ')}${refs.shopReceipts.length > 10 ? ` و${refs.shopReceipts.length - 10} أخرى` : ''}`);
+        }
+        if (refs.shopPayments.length > 0) {
+          messages.push(`سندات صرف: ${refs.shopPayments.slice(0, 10).join(', ')}${refs.shopPayments.length > 10 ? ` و${refs.shopPayments.length - 10} أخرى` : ''}`);
+        }
+        if (refs.shopInvoices.length > 0) {
+          messages.push(`فواتير مبيعات المحل: ${refs.shopInvoices.slice(0, 10).join(', ')}${refs.shopInvoices.length > 10 ? ` و${refs.shopInvoices.length - 10} أخرى` : ''}`);
+        }
+        if (refs.warehouseInvoices.length > 0) {
+          messages.push(`فواتير مبيعات المخزن: ${refs.warehouseInvoices.slice(0, 10).join(', ')}${refs.warehouseInvoices.length > 10 ? ` و${refs.warehouseInvoices.length - 10} أخرى` : ''}`);
+        }
+        if (refs.quotations.length > 0) {
+          messages.push(`عروض أسعار: ${refs.quotations.slice(0, 10).join(', ')}${refs.quotations.length > 10 ? ` و${refs.quotations.length - 10} أخرى` : ''}`);
+        }
+        if (refs.maintenance.length > 0) {
+          messages.push(`صيانة: ${refs.maintenance.slice(0, 10).join(', ')}${refs.maintenance.length > 10 ? ` و${refs.maintenance.length - 10} أخرى` : ''}`);
+        }
+        if (refs.checks.length > 0) {
+          messages.push(`شيكات راجعة: ${refs.checks.slice(0, 10).join(', ')}${refs.checks.length > 10 ? ` و${refs.checks.length - 10} أخرى` : ''}`);
+        }
+        
+        const errorMessage = `لا يمكن حذف الزبون لأنه مرتبط بـ:\n\n${messages.join('\n')}\n\nيرجى إصلاح أو حذف هذه السجلات أولاً.`;
+        setError(errorMessage);
+        return;
+      }
+      
       alert('تم حذف الزبون بنجاح');
       onSuccess();
       onClose();

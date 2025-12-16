@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
-import { getWarehouseSalesInvoices, updateWarehouseSalesInvoiceSign, updateWarehouseSalesInvoiceStatus } from '@/lib/api';
+import { getWarehouseSalesInvoices, getWarehouseSalesInvoice, updateWarehouseSalesInvoiceSign, updateWarehouseSalesInvoiceStatus } from '@/lib/api';
 import { Lock } from 'lucide-react';
 import {
   Loader2,
@@ -13,6 +13,7 @@ import {
   Printer,
   Plus,
   Edit,
+  Eye,
   CheckCircle,
   XCircle,
   ChevronDown,
@@ -43,19 +44,35 @@ export default function WarehouseSalesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalInvoices, setTotalInvoices] = useState(0);
   const pageSize = 20;
+  const [viewing, setViewing] = useState<{
+    invoice: any | null;
+    details: any[] | null;
+  }>({ invoice: null, details: null });
+  const [viewLoading, setViewLoading] = useState(false);
+  const [updatingSettlement, setUpdatingSettlement] = useState(false);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
   // Check if user has permission to access warehouse invoices
   const canAccessWarehouseInvoices = admin?.is_super_admin || admin?.permissions?.accessWarehouseInvoices === true;
 
+  // Debounce search query - wait 500ms after user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   useEffect(() => {
     loadInvoices();
-  }, [currentPage]);
+  }, [currentPage, debouncedSearchQuery]);
 
   const loadInvoices = async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await getWarehouseSalesInvoices(currentPage, pageSize);
+      const result = await getWarehouseSalesInvoices(currentPage, pageSize, debouncedSearchQuery || undefined);
       setInvoices(result.invoices);
       setTotalInvoices(result.total);
     } catch (err: any) {
@@ -66,6 +83,13 @@ export default function WarehouseSalesPage() {
     }
   };
 
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearchQuery]);
+
   const handlePrintInvoice = (invoice: WarehouseSalesInvoice) => {
     const printUrl = `/admin/warehouse-sales/print/${invoice.InvoiceID}`;
     window.open(printUrl, '_blank');
@@ -73,6 +97,56 @@ export default function WarehouseSalesPage() {
 
   const handleEditInvoice = (invoice: WarehouseSalesInvoice) => {
     router.push(`/admin/warehouse-sales/edit/${invoice.InvoiceID}`);
+  };
+
+  const handleViewInvoice = async (invoice: WarehouseSalesInvoice) => {
+    try {
+      setViewLoading(true);
+      const fullInvoice = await getWarehouseSalesInvoice(invoice.InvoiceID);
+      setViewing({
+        invoice: fullInvoice,
+        details: fullInvoice?.Items || [],
+      });
+    } catch (err: any) {
+      console.error('[WarehouseSalesPage] Failed to view invoice:', err);
+      alert(err?.message || 'فشل تحميل بيانات الفاتورة');
+    } finally {
+      setViewLoading(false);
+    }
+  };
+
+  const closeView = () => {
+    setViewing({ invoice: null, details: null });
+  };
+
+  const handleMarkAsSettled = async () => {
+    if (!viewing.invoice) return;
+    
+    const invoiceId = viewing.invoice.InvoiceID || viewing.invoice.invoice_id;
+    if (!invoiceId) return;
+
+    if (!confirm('هل أنت متأكد من تغيير حالة الترحيل إلى مرحلة؟')) {
+      return;
+    }
+
+    setUpdatingSettlement(true);
+    try {
+      await updateWarehouseSalesInvoiceSign(invoiceId, 'مرحلة');
+      // Reload invoice data
+      const fullInvoice = await getWarehouseSalesInvoice(invoiceId);
+      setViewing({
+        invoice: fullInvoice,
+        details: fullInvoice?.Items || [],
+      });
+      // Reload invoices list to update the status
+      await loadInvoices();
+      alert('تم تغيير حالة الترحيل إلى مرحلة بنجاح');
+    } catch (err: any) {
+      console.error('[WarehouseSalesPage] Failed to update settlement status:', err);
+      alert(err?.message || 'فشل تحديث حالة الترحيل');
+    } finally {
+      setUpdatingSettlement(false);
+    }
   };
 
   const handleToggleSign = async (invoice: WarehouseSalesInvoice) => {
@@ -122,27 +196,9 @@ export default function WarehouseSalesPage() {
     }).format(amount);
   };
 
+  // Apply local filters only (status and sign) - search is done in API
   const filteredInvoices = useMemo(() => {
     let filtered = invoices;
-
-    // Search by invoice ID, customer name, or customer ID - supports multiple words
-    if (searchQuery.trim()) {
-      const searchWords = searchQuery
-        .toLowerCase()
-        .trim()
-        .split(/\s+/)
-        .filter(word => word.length > 0);
-      
-      filtered = filtered.filter((invoice) => {
-        const invoiceID = String(invoice.InvoiceID || '').toLowerCase();
-        const customerName = String(invoice.CustomerName || '').toLowerCase();
-        const customerID = String(invoice.CustomerID || '').toLowerCase();
-        
-        const searchableText = `${invoiceID} ${customerName} ${customerID}`;
-        
-        return searchWords.every(word => searchableText.includes(word));
-      });
-    }
 
     // Filter by status
     if (statusFilter !== 'all') {
@@ -155,7 +211,7 @@ export default function WarehouseSalesPage() {
     }
 
     return filtered;
-  }, [invoices, searchQuery, statusFilter, signFilter]);
+  }, [invoices, statusFilter, signFilter]);
 
   // Check permissions
   if (!canAccessWarehouseInvoices) {
@@ -351,6 +407,13 @@ export default function WarehouseSalesPage() {
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center gap-2 justify-end">
                           <button
+                            onClick={() => handleViewInvoice(invoice)}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="عرض"
+                          >
+                            <Eye size={18} />
+                          </button>
+                          <button
                             onClick={() => handleEditInvoice(invoice)}
                             className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                             title="تعديل"
@@ -398,6 +461,146 @@ export default function WarehouseSalesPage() {
               >
                 التالي
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Modal عرض الفاتورة */}
+        {viewing.invoice && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" dir="rtl">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl overflow-hidden border border-gray-200">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 font-cairo">
+                    معاينة الفاتورة: {viewing.invoice.InvoiceID || viewing.invoice.invoice_id}
+                  </h3>
+                  <p className="text-sm text-gray-600 font-cairo">
+                    التاريخ: {formatDate(viewing.invoice.Date || viewing.invoice.date)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {viewLoading && <Loader2 size={18} className="animate-spin text-gray-500" />}
+                  {viewing.invoice && viewing.invoice.AccountantSign !== 'مرحلة' && (
+                    <button
+                      onClick={handleMarkAsSettled}
+                      disabled={updatingSettlement}
+                      className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-cairo flex items-center gap-1"
+                    >
+                      {updatingSettlement ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          جاري التحديث...
+                        </>
+                      ) : (
+                        'تغيير إلى مرحلة'
+                      )}
+                    </button>
+                  )}
+                  <button
+                    onClick={closeView}
+                    className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
+                  >
+                    إغلاق
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4 space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-gray-700 font-cairo">
+                  <div>
+                    <div className="text-gray-500">رقم الفاتورة</div>
+                    <div className="font-semibold">{viewing.invoice.InvoiceID || viewing.invoice.invoice_id}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">العميل</div>
+                    <div className="font-semibold">{viewing.invoice.CustomerName || viewing.invoice.customer_name || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">حالة الترحيل</div>
+                    <div className="font-semibold">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          viewing.invoice.AccountantSign === 'مرحلة'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {viewing.invoice.AccountantSign || 'غير مرحلة'}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">الحالة</div>
+                    <div className="font-semibold">{viewing.invoice.Status || viewing.invoice.status || '—'}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm text-gray-700 font-cairo">
+                  <div>
+                    <div className="text-gray-500">الخصم</div>
+                    <div className="font-semibold">{formatCurrency(viewing.invoice.Discount || viewing.invoice.discount || 0)}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">المجموع</div>
+                    <div className="font-semibold">{formatCurrency(viewing.invoice.Subtotal || viewing.invoice.subtotal || 0)}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">الصافي</div>
+                    <div className="font-semibold">
+                      {formatCurrency(viewing.invoice.TotalAmount || viewing.invoice.total_amount || 0)}
+                    </div>
+                  </div>
+                </div>
+
+                {viewing.invoice.Notes && (
+                  <div className="text-sm text-gray-700 font-cairo">
+                    <span className="text-gray-500">ملاحظات: </span>
+                    {viewing.invoice.Notes}
+                  </div>
+                )}
+
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700">#</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700">الصنف</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700">الكمية</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700">السعر</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700">المبلغ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(viewing.details || []).map((item, idx) => (
+                        <tr key={item.DetailsID || item.details_id || idx} className="border-b border-gray-100">
+                          <td className="px-3 py-2 text-right text-gray-800">{idx + 1}</td>
+                          <td className="px-3 py-2 text-right text-gray-800">
+                            {item.ProductName || item.productName || item.product_name || item.Name || item.name || '—'}
+                          </td>
+                          <td className="px-3 py-2 text-right text-gray-800">
+                            {item.Quantity || item.quantity || 0}
+                          </td>
+                          <td className="px-3 py-2 text-right text-gray-800">
+                            {formatCurrency(item.UnitPrice || item.unit_price || 0)}
+                          </td>
+                          <td className="px-3 py-2 text-right text-gray-800 font-semibold">
+                            {formatCurrency(
+                              (item.Quantity || item.quantity || 0) * (item.UnitPrice || item.unit_price || 0)
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                      {(viewing.details || []).length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="px-3 py-4 text-center text-gray-500 font-cairo">
+                            لا توجد بنود للعرض
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         )}
