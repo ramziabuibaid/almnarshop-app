@@ -8,6 +8,8 @@ import {
   getCRMData,
   saveCashInvoice,
   updatePTPStatusInSupabase,
+  saveCustomer,
+  logActivity,
 } from '@/lib/api';
 
 /**
@@ -24,6 +26,7 @@ export const queryKeys = {
 /**
  * Hook to fetch all products
  * Returns cached data instantly on navigation if available
+ * staleTime: 1 minute - keeps data fresh for quick navigation, but verifies on window focus
  */
 export function useProducts() {
   return useQuery({
@@ -34,12 +37,14 @@ export function useProducts() {
       console.log('[useProducts] Products loaded:', products.length);
       return products;
     },
+    staleTime: 60 * 1000, // 1 minute - keeps data fresh for quick navigation
   });
 }
 
 /**
  * Hook to fetch all customers
  * Returns cached data instantly on navigation if available
+ * staleTime: 5 minutes - customer data changes less frequently
  */
 export function useCustomers() {
   return useQuery({
@@ -50,12 +55,13 @@ export function useCustomers() {
       console.log('[useCustomers] Customers loaded:', customers.length);
       return customers;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
 /**
  * Hook to fetch all cash invoices
- * Returns cached data instantly on navigation if available
+ * staleTime: 0 - Always fetch fresh data when visiting history page
  */
 export function useInvoices() {
   return useQuery({
@@ -66,6 +72,7 @@ export function useInvoices() {
       console.log('[useInvoices] Invoices loaded:', invoices.length);
       return invoices;
     },
+    staleTime: 0, // Always fetch fresh data when visiting history
   });
 }
 
@@ -148,9 +155,11 @@ export function useSaveCashInvoice() {
       console.error('[useSaveCashInvoice] Error saving invoice:', err);
     },
     onSuccess: (data) => {
+      // CRITICAL: Invalidate products to update stock after invoice save
+      queryClient.invalidateQueries({ queryKey: queryKeys.products });
       // Invalidate and refetch invoices to get the real data from server
       queryClient.invalidateQueries({ queryKey: queryKeys.invoices });
-      console.log('[useSaveCashInvoice] Invoice saved successfully, refetching...');
+      console.log('[useSaveCashInvoice] Invoice saved successfully, invalidating products and invoices...');
     },
   });
 }
@@ -221,6 +230,74 @@ export function useResolveTask() {
       // Refetch CRM data in background to ensure consistency
       queryClient.invalidateQueries({ queryKey: queryKeys.crmData });
       console.log('[useResolveTask] Task resolved successfully, refetching...');
+    },
+  });
+}
+
+/**
+ * Hook to update a customer
+ * On Success: Invalidates customers query to refetch updated data
+ */
+export function useUpdateCustomer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (customerData: {
+      CustomerID?: string;
+      Name: string;
+      ShamelNo?: string;
+      'Shamel No'?: string;
+      ShamelNO?: string;
+      Phone?: string;
+      Email?: string;
+      Address?: string;
+      Type?: string;
+      Notes?: string;
+      Balance?: number;
+      Photo?: string;
+      PostalCode?: string;
+      [key: string]: any;
+    }) => {
+      console.log('[useUpdateCustomer] Saving customer...');
+      const result = await saveCustomer(customerData);
+      console.log('[useUpdateCustomer] Customer saved:', result);
+      return result;
+    },
+    onSuccess: () => {
+      // Invalidate customers to refetch updated data
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers });
+      console.log('[useUpdateCustomer] Customer updated successfully, invalidating customers...');
+    },
+  });
+}
+
+/**
+ * Hook to log an activity (CRM interaction)
+ * On Success: Invalidates customers query (customer balance may have changed)
+ */
+export function useLogActivity() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: {
+      CustomerID: string;
+      ActionType: string;
+      Outcome: string;
+      Notes: string;
+      PromiseDate?: string;
+      PromiseAmount?: number;
+    }) => {
+      console.log('[useLogActivity] Logging activity...');
+      const result = await logActivity(payload);
+      console.log('[useLogActivity] Activity logged:', result);
+      return result;
+    },
+    onSuccess: () => {
+      // Invalidate customers to ensure balance/activity data is fresh
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers });
+      // Also invalidate CRM data
+      queryClient.invalidateQueries({ queryKey: queryKeys.crmData });
+      console.log('[useLogActivity] Activity logged successfully, invalidating customers and CRM data...');
     },
   });
 }

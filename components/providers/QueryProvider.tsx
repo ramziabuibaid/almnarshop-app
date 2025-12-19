@@ -10,14 +10,13 @@ export function QueryProvider({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Data remains fresh for 5 minutes - no refetch on window focus unless stale
-            staleTime: 5 * 60 * 1000, // 5 minutes
-            // Refetch on window focus only if data is stale
-            refetchOnWindowFocus: false,
+            // Critical: Always refetch on window focus for multi-user sync
+            refetchOnWindowFocus: true,
             // Retry failed requests once
             retry: 1,
             // Keep data in cache even when no components are using it
             gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+            // Note: staleTime is set per-query, not globally
           },
           mutations: {
             // Retry failed mutations once

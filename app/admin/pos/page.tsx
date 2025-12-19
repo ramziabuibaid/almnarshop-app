@@ -37,7 +37,7 @@ interface CartItem {
 
 export default function POSPage() {
   const { admin } = useAdminAuth();
-  const { data: products = [] } = useProducts();
+  const { data: products = [], isLoading: isLoadingProducts } = useProducts();
   const saveInvoiceMutation = useSaveCashInvoice();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -753,8 +753,20 @@ export default function POSPage() {
 
             {/* Products Grid */}
             <div className="flex-1 overflow-y-auto p-4">
-              <div className="grid grid-cols-3 gap-3">
-                {filteredProducts.map((product, index) => {
+              {isLoadingProducts ? (
+                <div className="grid grid-cols-3 gap-3">
+                  {[...Array(12)].map((_, index) => (
+                    <div key={index} className="bg-white rounded-lg border border-gray-200 p-3 animate-pulse">
+                      <div className="aspect-square bg-gray-200 rounded-lg mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded mb-1"></div>
+                      <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  {filteredProducts.map((product, index) => {
                   const imageUrl = product.ImageUrl || product.imageUrl || product.Image || product.image || '';
                   const productKey = product.ProductID || product.id || `product-${index}`;
                   return (
@@ -803,7 +815,8 @@ export default function POSPage() {
                     </div>
                   );
                 })}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
