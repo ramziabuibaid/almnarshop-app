@@ -141,6 +141,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 }
               }
               
+              if (link.href === '/admin/payments') {
+                const canAccessPayPage = admin.is_super_admin || admin.permissions?.accessPayPage === true;
+                if (!canAccessPayPage) {
+                  return null;
+                }
+              }
+              
               if (link.href === '/admin/shop-sales') {
                 const canAccessShopInvoices = admin.is_super_admin || admin.permissions?.accessShopInvoices === true;
                 if (!canAccessShopInvoices) {
@@ -151,6 +158,27 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               if (link.href === '/admin/warehouse-sales') {
                 const canAccessWarehouseInvoices = admin.is_super_admin || admin.permissions?.accessWarehouseInvoices === true;
                 if (!canAccessWarehouseInvoices) {
+                  return null;
+                }
+              }
+              
+              if (link.href === '/admin/checks') {
+                const canAccessChecks = admin.is_super_admin || admin.permissions?.accessChecks === true;
+                if (!canAccessChecks) {
+                  return null;
+                }
+              }
+              
+              if (link.href === '/admin/quotations') {
+                const canAccessQuotations = admin.is_super_admin || admin.permissions?.accessQuotations === true;
+                if (!canAccessQuotations) {
+                  return null;
+                }
+              }
+              
+              if (link.href === '/admin/cash-sessions') {
+                const canAccessCashSessions = admin.is_super_admin || admin.permissions?.accessCashSessions === true;
+                if (!canAccessCashSessions) {
                   return null;
                 }
               }

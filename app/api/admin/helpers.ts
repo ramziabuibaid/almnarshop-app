@@ -12,6 +12,11 @@ export const DEFAULT_PERMISSIONS = {
   accessReceipts: false,
   accessShopInvoices: false,
   accessWarehouseInvoices: false,
+  accessChecks: false,
+  accessQuotations: false,
+  accessCashSessions: false,
+  accessPayPage: false,
+  accountant: false,
 };
 
 export type Permissions = typeof DEFAULT_PERMISSIONS;

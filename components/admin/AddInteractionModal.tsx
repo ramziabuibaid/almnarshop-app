@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { X, Save, Loader2, Phone, MessageSquare, MapPin, Mail } from 'lucide-react';
-import { logActivity } from '@/lib/api';
+import { logActivity, updateActivityInSupabase } from '@/lib/api';
 
 interface AddInteractionModalProps {
   isOpen: boolean;
   onClose: () => void;
   customer: any | null;
   onSuccess: () => void;
+  interaction?: any | null; // For editing existing interaction
 }
 
 export default function AddInteractionModal({
@@ -16,7 +17,9 @@ export default function AddInteractionModal({
   onClose,
   customer,
   onSuccess,
+  interaction,
 }: AddInteractionModalProps) {
+  const isEditing = !!interaction;
   const [formData, setFormData] = useState({
     Channel: 'Phone',
     Status: 'تم اعطاء وقت',
@@ -27,19 +30,60 @@ export default function AddInteractionModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Reset form when modal opens/closes or customer changes
+  // Reset form when modal opens/closes or customer/interaction changes
   useEffect(() => {
     if (isOpen) {
-      setFormData({
-        Channel: 'Phone',
-        Status: 'تم اعطاء وقت',
-        Notes: '',
-        PromiseAmount: '',
-        NextFollowUpDate: '',
-      });
+      if (interaction) {
+        // Editing mode - populate form with existing data
+        const channelMapping: Record<string, string> = {
+          'Call': 'Phone',
+          'Visit': 'Visit',
+          'WhatsApp': 'WhatsApp',
+          'Email': 'Email',
+        };
+        const outcomeMapping: Record<string, string> = {
+          'Promised': 'تم اعطاء وقت',
+          'No Answer': 'لا يوجد رد',
+          'Resolved': 'تم الدفع',
+        };
+        
+        // Format promise_date to YYYY-MM-DD for input type="date"
+        let formattedDate = '';
+        if (interaction.NextFollowUpDate || interaction.PromiseDate || interaction.promise_date) {
+          const dateStr = interaction.NextFollowUpDate || interaction.PromiseDate || interaction.promise_date;
+          try {
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+              formattedDate = date.toISOString().split('T')[0];
+            }
+          } catch (e) {
+            // If already in YYYY-MM-DD format, use as is
+            if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+              formattedDate = dateStr;
+            }
+          }
+        }
+
+        setFormData({
+          Channel: channelMapping[interaction.Channel || interaction.action_type || 'Call'] || 'Phone',
+          Status: outcomeMapping[interaction.Status || interaction.outcome || ''] || 'تم اعطاء وقت',
+          Notes: interaction.Notes || interaction.notes || '',
+          PromiseAmount: interaction.PromiseAmount || interaction.promise_amount || '',
+          NextFollowUpDate: formattedDate,
+        });
+      } else {
+        // New interaction mode
+        setFormData({
+          Channel: 'Phone',
+          Status: 'تم اعطاء وقت',
+          Notes: '',
+          PromiseAmount: '',
+          NextFollowUpDate: '',
+        });
+      }
       setError('');
     }
-  }, [isOpen, customer]);
+  }, [isOpen, customer, interaction]);
 
   const handleChange = (field: string, value: string | number) => {
     setFormData((prev) => ({
@@ -144,27 +188,39 @@ export default function AddInteractionModal({
       // Convert NextFollowUpDate to ISO format for PromiseDate
       const promiseDate = formatDateToISO(formData.NextFollowUpDate);
 
-      // Prepare activity data for CRM_Activity table
-      const activityData = {
-        CustomerID: customer.CustomerID || customer.id || customer.customerID || '',
-        ActionType: actionType,
-        Outcome: outcome,
-        Notes: formData.Notes.trim(),
-        PromiseDate: promiseDate, // ISO format (YYYY-MM-DD)
-        PromiseAmount: formData.PromiseAmount ? parseFloat(String(formData.PromiseAmount)) : undefined,
-      };
+      if (isEditing && interaction?.InteractionID) {
+        // Update existing interaction
+        const activityId = interaction.InteractionID || interaction.activity_id || interaction.id;
+        await updateActivityInSupabase(activityId, {
+          ActionType: actionType,
+          Outcome: outcome,
+          Notes: formData.Notes.trim(),
+          PromiseDate: promiseDate,
+          PromiseAmount: formData.PromiseAmount ? parseFloat(String(formData.PromiseAmount)) : undefined,
+        });
+      } else {
+        // Create new interaction
+        const activityData = {
+          CustomerID: customer.CustomerID || customer.id || customer.customerID || '',
+          ActionType: actionType,
+          Outcome: outcome,
+          Notes: formData.Notes.trim(),
+          PromiseDate: promiseDate, // ISO format (YYYY-MM-DD)
+          PromiseAmount: formData.PromiseAmount ? parseFloat(String(formData.PromiseAmount)) : undefined,
+        };
 
-      console.log('[AddInteractionModal] Submitting activity to CRM_Activity:', activityData);
-      console.log('[AddInteractionModal] Field mappings:', {
-        Channel: formData.Channel,
-        '-> ActionType': actionType,
-        Status: formData.Status,
-        '-> Outcome': outcome,
-        NextFollowUpDate: formData.NextFollowUpDate,
-        '-> PromiseDate': promiseDate,
-      });
+        console.log('[AddInteractionModal] Submitting activity to CRM_Activity:', activityData);
+        console.log('[AddInteractionModal] Field mappings:', {
+          Channel: formData.Channel,
+          '-> ActionType': actionType,
+          Status: formData.Status,
+          '-> Outcome': outcome,
+          NextFollowUpDate: formData.NextFollowUpDate,
+          '-> PromiseDate': promiseDate,
+        });
 
-      await logActivity(activityData);
+        await logActivity(activityData);
+      }
 
       // Success - close modal and refresh
       onSuccess();
@@ -223,7 +279,9 @@ export default function AddInteractionModal({
           {/* Header */}
           <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">إضافة تفاعل</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+                {isEditing ? 'تعديل تفاعل' : 'إضافة تفاعل'}
+              </h2>
               {customer && (
                 <p className="text-sm text-gray-600 mt-1">
                   {customer.Name || customer.name || 'عميل'}
@@ -369,7 +427,7 @@ export default function AddInteractionModal({
                 ) : (
                   <>
                     <Save size={16} />
-                    حفظ التفاعل
+                    {isEditing ? 'حفظ التعديلات' : 'حفظ التفاعل'}
                   </>
                 )}
               </button>

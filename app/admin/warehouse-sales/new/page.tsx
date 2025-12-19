@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import CustomerFormModal from '@/components/admin/CustomerFormModal';
 import {
@@ -41,6 +41,7 @@ const STATUS_OPTIONS = [
 
 export default function NewWarehouseSalesInvoicePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { admin } = useAdminAuth();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [customerId, setCustomerId] = useState<string>('');
@@ -68,11 +69,33 @@ export default function NewWarehouseSalesInvoicePage() {
   const customerDropdownRef = useRef<HTMLDivElement>(null);
 
   const canViewCost = admin?.is_super_admin || admin?.permissions?.viewCost === true;
+  const canViewBalances = admin?.is_super_admin || admin?.permissions?.viewBalances === true;
 
   useEffect(() => {
     loadProducts();
     loadCustomers();
   }, []);
+
+  // Check if customerId is provided in query params
+  useEffect(() => {
+    const customerIdFromQuery = searchParams.get('customerId');
+    if (customerIdFromQuery) {
+      setCustomerId(customerIdFromQuery);
+    }
+  }, [searchParams]);
+
+  // Set selected customer when customerId changes
+  useEffect(() => {
+    if (customerId && customers.length > 0) {
+      const foundCustomer = customers.find(
+        (c) => (c.CustomerID || c.id || c.customerID) === customerId
+      );
+      if (foundCustomer) {
+        setSelectedCustomer(foundCustomer);
+        setCustomerSearchQuery(foundCustomer.Name || foundCustomer.name || '');
+      }
+    }
+  }, [customerId, customers]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -391,16 +414,18 @@ export default function NewWarehouseSalesInvoicePage() {
                           <span className="flex-1 text-right">
                             {customer.name || customer.Name} ({customer.customer_id || customer.CustomerID || customer.id})
                           </span>
-                          <span className="text-sm text-gray-500 mr-2" dir="ltr">
-                            رصيد: ₪{((customer.balance || customer.Balance || 0)).toFixed(2)}
-                          </span>
+                          {canViewBalances && (
+                            <span className="text-sm text-gray-500 mr-2" dir="ltr">
+                              رصيد: ₪{((customer.balance || customer.Balance || 0)).toFixed(2)}
+                            </span>
+                          )}
                         </div>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-              {selectedCustomer && (
+              {canViewBalances && selectedCustomer && (
                 <div className="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
                   <div className="flex items-center justify-between text-sm font-cairo">
                     <span className="text-gray-600">الرصيد:</span>

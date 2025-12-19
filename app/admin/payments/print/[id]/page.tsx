@@ -32,11 +32,17 @@ export default function PaymentPrintPage() {
   }, [payId]);
 
   useEffect(() => {
-    // Auto-print when page loads
+    // Set document title for PDF filename (customer name + payment number)
     if (paymentData && !loading) {
+      const customerName = paymentData.CustomerName || 'عميل';
+      const payId = paymentData.PayID || '';
+      document.title = `${customerName} ${payId}`;
+      
+      // Auto-print when page loads in the new window
+      // This won't freeze the main app because it's in a separate window
       const timer = setTimeout(() => {
         window.print();
-      }, 300);
+      }, 500); // Slightly longer delay to ensure content is fully rendered
       return () => clearTimeout(timer);
     }
   }, [paymentData, loading]);

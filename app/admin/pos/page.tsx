@@ -4,8 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import InvoicePrint from '@/components/admin/InvoicePrint';
-import { useShop } from '@/context/ShopContext';
-import { saveCashInvoice } from '@/lib/api';
+import { useSaveCashInvoice, useProducts } from '@/hooks/useData';
 import { Lock } from 'lucide-react';
 import {
   Search,
@@ -38,7 +37,8 @@ interface CartItem {
 
 export default function POSPage() {
   const { admin } = useAdminAuth();
-  const { products, loadProducts } = useShop();
+  const { data: products = [] } = useProducts();
+  const saveInvoiceMutation = useSaveCashInvoice();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Check if user has permission to create POS invoices
@@ -173,9 +173,7 @@ export default function POSPage() {
     );
   };
 
-  useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
+  // Products are automatically loaded via React Query
 
   const addToCart = useCallback((product: any, mode: 'Pick' | 'Scan' = 'Pick', scannedBarcode?: string) => {
     setCart((prev) => {
@@ -545,7 +543,8 @@ export default function POSPage() {
         discount: discount || 0,
       };
 
-      const result = await saveCashInvoice(payload);
+      // Use mutation hook which handles optimistic updates
+      const result = await saveInvoiceMutation.mutateAsync(payload);
       
       // Set current invoice ID
       setCurrentInvoiceID(result.invoiceID);
@@ -569,10 +568,10 @@ export default function POSPage() {
         notes: notes.trim() || undefined,
       });
 
-      // Trigger print after a short delay
-      setTimeout(() => {
-        window.print();
-      }, 500);
+      // Open print in new window - user will click print button manually
+      // This prevents browser freezing and allows multiple invoices to be opened
+      const printUrl = `/admin/invoices/print/${result.invoiceID}`;
+      window.open(printUrl, `print-${result.invoiceID}`, 'noopener,noreferrer');
 
       // Clear cart after successful save
       setTimeout(() => {
@@ -976,10 +975,10 @@ export default function POSPage() {
               {/* Pay Button */}
               <button
                 onClick={handlePayAndPrint}
-                disabled={cart.length === 0 || isProcessing}
+                disabled={cart.length === 0 || isProcessing || saveInvoiceMutation.isPending}
                 className="w-full py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isProcessing ? (
+                {(isProcessing || saveInvoiceMutation.isPending) ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                     جاري المعالجة...

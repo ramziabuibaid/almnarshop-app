@@ -3,7 +3,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminAuth } from '@/context/AdminAuthContext';
 import CustomerSelect from '@/components/admin/CustomerSelect';
+import { Lock } from 'lucide-react';
 import { getShopPayments, saveShopPayment, getAllCustomers } from '@/lib/api';
 import {
   Loader2,
@@ -31,7 +33,11 @@ interface ShopPayment {
 }
 
 export default function PaymentsPage() {
+  const { admin } = useAdminAuth();
   const router = useRouter();
+  
+  // Check if user has permission to access payments page
+  const canAccessPayPage = admin?.is_super_admin || admin?.permissions?.accessPayPage === true;
   const [payments, setPayments] = useState<ShopPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,8 +93,9 @@ export default function PaymentsPage() {
   };
 
   const handlePrintPayment = (payment: ShopPayment) => {
+    // Open print page in new window - will auto-print when loaded
     const printUrl = `/admin/payments/print/${payment.PayID}`;
-    window.open(printUrl, '_blank');
+    window.open(printUrl, `print-payment-${payment.PayID}`, 'noopener,noreferrer');
   };
 
   const handleAddNew = () => {
@@ -190,6 +197,21 @@ export default function PaymentsPage() {
     setCurrentPage(1);
   }, [searchQuery]);
 
+  // Check permissions
+  if (!canAccessPayPage) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
+          <div className="text-center">
+            <Lock size={48} className="text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600 text-lg mb-2 font-cairo">ليس لديك صلاحية للوصول إلى صفحة سندات دفع المحل</p>
+            <p className="text-gray-500 text-sm font-cairo">يرجى التواصل مع المشرف للحصول على الصلاحية</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   if (loading) {
     return (
       <AdminLayout>
@@ -289,7 +311,25 @@ export default function PaymentsPage() {
                         <div className="font-medium text-gray-900">{payment.PayID}</div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="text-gray-900">{payment.CustomerName || payment.CustomerID}</div>
+                        <button
+                          onClick={(e) => {
+                            if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                              window.open(`/admin/customers/${payment.CustomerID}`, '_blank', 'noopener,noreferrer');
+                              return;
+                            }
+                            router.push(`/admin/customers/${payment.CustomerID}`);
+                          }}
+                          onMouseDown={(e) => {
+                            if (e.button === 1) {
+                              e.preventDefault();
+                              window.open(`/admin/customers/${payment.CustomerID}`, '_blank', 'noopener,noreferrer');
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                          title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
+                        >
+                          {payment.CustomerName || payment.CustomerID}
+                        </button>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="text-gray-600">{formatDate(payment.Date)}</div>

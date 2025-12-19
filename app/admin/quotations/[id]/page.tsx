@@ -71,6 +71,9 @@ export default function EditQuotationPage() {
   const quotationId = params.id as string;
   const { admin } = useAdminAuth();
   
+  // Check if user has accountant permission (for delete)
+  const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
+  
   // Check if user can view customer balances
   const canViewBalances = admin?.is_super_admin || admin?.permissions?.viewBalances === true;
 
@@ -493,7 +496,30 @@ export default function EditQuotationPage() {
               />
             </div>
             <div className="relative" ref={customerDropdownRef}>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الزبون</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700 font-cairo">الزبون</label>
+                {selectedCustomer && customerId && (
+                  <button
+                    onClick={(e) => {
+                      if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                        window.open(`/admin/customers/${customerId}`, '_blank', 'noopener,noreferrer');
+                        return;
+                      }
+                      router.push(`/admin/customers/${customerId}`);
+                    }}
+                    onMouseDown={(e) => {
+                      if (e.button === 1) {
+                        e.preventDefault();
+                        window.open(`/admin/customers/${customerId}`, '_blank', 'noopener,noreferrer');
+                      }
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                    title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
+                  >
+                    فتح البروفايل
+                  </button>
+                )}
+              </div>
               <div className="relative">
                 <input
                   type="text"
@@ -875,23 +901,25 @@ export default function EditQuotationPage() {
 
           {/* Actions */}
           <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {deleting ? (
-                <>
-                  <Loader2 size={20} className="animate-spin" />
-                  جاري الحذف...
-                </>
-              ) : (
-                <>
-                  <Trash2 size={20} />
-                  حذف
-                </>
-              )}
-            </button>
+            {canAccountant && (
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    جاري الحذف...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={20} />
+                    حذف
+                  </>
+                )}
+              </button>
+            )}
             <div className="flex items-center gap-4">
               <button
                 onClick={() => router.push('/admin/quotations')}

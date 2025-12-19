@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useShop } from '@/context/ShopContext';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ProductFormModal from '@/components/admin/ProductFormModal';
@@ -10,6 +9,8 @@ import { Plus, Edit, Image as ImageIcon, Loader2, Package, ChevronLeft, ChevronR
 import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
 import { deleteProduct } from '@/lib/api';
+import { useProducts, queryKeys } from '@/hooks/useData';
+import { useQueryClient } from '@tanstack/react-query';
 
 const PRODUCTS_PER_PAGE = 20;
 
@@ -25,7 +26,8 @@ interface FilterState {
 
 export default function ProductsManagerPage() {
   const { admin } = useAdminAuth();
-  const { products, loadProducts, loading } = useShop();
+  const { data: products = [], isLoading: loading } = useProducts();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,10 +66,8 @@ export default function ProductsManagerPage() {
 
   // Check if user has permission to view cost
   const canViewCost = admin?.is_super_admin || admin?.permissions?.viewCost === true;
-
-  useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
+  // Check if user has accountant permission (for delete)
+  const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
 
   const handleAddNew = () => {
     setSelectedProduct(null);
@@ -87,9 +87,9 @@ export default function ProductsManagerPage() {
   };
 
   const handleSaveSuccess = async () => {
-    // Show success toast and refresh products list
+    // Show success toast and invalidate products query to refetch
     setToast({ message: 'Product Saved Successfully', type: 'success' });
-    await loadProducts();
+    queryClient.invalidateQueries({ queryKey: queryKeys.products });
     
     // Auto-hide toast after 3 seconds
     setTimeout(() => {
@@ -144,7 +144,8 @@ export default function ProductsManagerPage() {
         status: 'deleted',
         references: null,
       });
-      await loadProducts();
+      // Invalidate products query to refetch
+      queryClient.invalidateQueries({ queryKey: queryKeys.products });
       // Close modal after showing success message for 1.5 seconds
       setTimeout(() => {
         setDeleteTarget(null);
@@ -932,13 +933,15 @@ export default function ProductsManagerPage() {
                             >
                               <Sparkles size={18} />
                             </button>
-                          <button
-                            onClick={() => handleDeleteClick(product)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete Product"
-                          >
-                            <Trash size={18} />
-                          </button>
+                          {canAccountant && (
+                            <button
+                              onClick={() => handleDeleteClick(product)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete Product"
+                            >
+                              <Trash size={18} />
+                            </button>
+                          )}
                           </div>
                         </td>
                       </tr>

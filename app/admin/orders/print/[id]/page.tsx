@@ -42,11 +42,17 @@ export default function OrderPrintPage() {
   }, [orderId]);
 
   useEffect(() => {
-    // Auto-print when page loads (matching Apps Script: setTimeout(()=>window.print(), 300))
+    // Set document title for PDF filename (customer name + order number)
     if (orderData && !loading) {
+      const customerName = orderData.customerName || 'عميل';
+      const orderId = orderData.orderID || '';
+      document.title = `${customerName} ${orderId}`;
+      
+      // Auto-print when page loads in the new window
+      // This won't freeze the main app because it's in a separate window
       const timer = setTimeout(() => {
         window.print();
-      }, 300);
+      }, 500); // Slightly longer delay to ensure content is fully rendered
       return () => clearTimeout(timer);
     }
   }, [orderData, loading]);

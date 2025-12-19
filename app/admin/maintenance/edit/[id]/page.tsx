@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminAuth } from '@/context/AdminAuthContext';
 import CustomerSelect from '@/components/admin/CustomerSelect';
 import ImageUploadField from '@/components/admin/ImageUploadField';
 import { getMaintenance, updateMaintenance, deleteMaintenance, getAllCustomers } from '@/lib/api';
@@ -36,7 +37,11 @@ const companyOptions = [
 export default function EditMaintenancePage() {
   const router = useRouter();
   const params = useParams();
+  const { admin } = useAdminAuth();
   const maintNo = params?.id as string;
+  
+  // Check if user has accountant permission (for delete)
+  const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -394,24 +399,26 @@ export default function EditMaintenancePage() {
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {deleting ? (
-                <>
-                  <Loader2 size={20} className="animate-spin" />
-                  جاري الحذف...
-                </>
-              ) : (
-                <>
-                  <Trash2 size={20} />
-                  حذف السجل
-                </>
-              )}
-            </button>
+            {canAccountant && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    جاري الحذف...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={20} />
+                    حذف السجل
+                  </>
+                )}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => router.push('/admin/maintenance')}

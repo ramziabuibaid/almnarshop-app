@@ -12,8 +12,13 @@ const permissionLabels: { key: keyof AdminPermissions; label: string }[] = [
   { key: 'viewCashInvoices', label: 'View cash invoices' },
   { key: 'createPOS', label: 'Create POS invoice' },
   { key: 'accessReceipts', label: 'Access receipts page' },
+  { key: 'accessPayPage', label: 'Access payments page' },
   { key: 'accessShopInvoices', label: 'Access shop invoices' },
   { key: 'accessWarehouseInvoices', label: 'Access warehouse invoices' },
+  { key: 'accessChecks', label: 'Access checks page' },
+  { key: 'accessQuotations', label: 'Access quotations page' },
+  { key: 'accessCashSessions', label: 'Access cash sessions page' },
+  { key: 'accountant', label: 'Accountant (post invoices & change status)' },
 ];
 
 const emptyPermissions: AdminPermissions = {
@@ -23,8 +28,13 @@ const emptyPermissions: AdminPermissions = {
   viewCashInvoices: false,
   createPOS: false,
   accessReceipts: false,
+  accessPayPage: false,
   accessShopInvoices: false,
   accessWarehouseInvoices: false,
+  accessChecks: false,
+  accessQuotations: false,
+  accessCashSessions: false,
+  accountant: false,
 };
 
 export default function AdminUsersPage() {

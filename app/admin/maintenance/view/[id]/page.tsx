@@ -114,8 +114,9 @@ export default function ViewMaintenancePage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
+                // Open print page in new window - will auto-print when loaded
                 const printUrl = `/admin/maintenance/print/${record.MaintNo}`;
-                window.open(printUrl, '_blank');
+                window.open(printUrl, `print-maintenance-${record.MaintNo}`, 'noopener,noreferrer');
               }}
               className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
             >

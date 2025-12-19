@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import CustomerFormModal from '@/components/admin/CustomerFormModal';
 import {
@@ -46,6 +46,7 @@ const STATUS_OPTIONS = [
 
 export default function NewQuotationPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { admin } = useAdminAuth();
   
   // Check if user can view customer balances
@@ -82,6 +83,27 @@ export default function NewQuotationPage() {
     loadProducts();
     loadCustomers();
   }, []);
+
+  // Check if customerId is provided in query params
+  useEffect(() => {
+    const customerIdFromQuery = searchParams.get('customerId');
+    if (customerIdFromQuery) {
+      setCustomerId(customerIdFromQuery);
+    }
+  }, [searchParams]);
+
+  // Set selected customer when customerId changes
+  useEffect(() => {
+    if (customerId && customers.length > 0) {
+      const foundCustomer = customers.find(
+        (c) => (c.CustomerID || c.id || c.customerID) === customerId
+      );
+      if (foundCustomer) {
+        setSelectedCustomer(foundCustomer);
+        setCustomerSearchQuery(foundCustomer.Name || foundCustomer.name || '');
+      }
+    }
+  }, [customerId, customers]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

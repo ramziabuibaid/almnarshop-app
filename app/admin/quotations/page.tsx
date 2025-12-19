@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminAuth } from '@/context/AdminAuthContext';
 import {
   getQuotationsFromSupabase,
   deleteQuotation,
@@ -40,7 +41,10 @@ const STATUS_OPTIONS = [
 ];
 
 export default function QuotationsPage() {
+  const { admin } = useAdminAuth();
   const router = useRouter();
+  // Check if user has accountant permission (for status changes)
+  const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -146,8 +150,9 @@ export default function QuotationsPage() {
   };
 
   const handlePrint = (quotationId: string) => {
+    // Open print page in new window - will auto-print when loaded
     const url = `/admin/quotations/print/${quotationId}`;
-    window.open(url, '_blank');
+    window.open(url, `print-quotation-${quotationId}`, 'noopener,noreferrer');
   };
 
   const formatCurrency = (amount: number | undefined | null) => {
@@ -325,23 +330,51 @@ export default function QuotationsPage() {
                         <div className="text-sm text-gray-600 font-cairo">{formatDate(quotation.Date)}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-600 font-cairo">
-                          {quotation.customer?.name || quotation.CustomerID || '—'}
-                        </div>
+                        {quotation.CustomerID ? (
+                          <button
+                            onClick={(e) => {
+                              if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                                window.open(`/admin/customers/${quotation.CustomerID}`, '_blank', 'noopener,noreferrer');
+                                return;
+                              }
+                              router.push(`/admin/customers/${quotation.CustomerID}`);
+                            }}
+                            onMouseDown={(e) => {
+                              if (e.button === 1) {
+                                e.preventDefault();
+                                window.open(`/admin/customers/${quotation.CustomerID}`, '_blank', 'noopener,noreferrer');
+                              }
+                            }}
+                            className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-cairo"
+                            title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
+                          >
+                            {quotation.customer?.name || quotation.CustomerID}
+                          </button>
+                        ) : (
+                          <div className="text-sm text-gray-600 font-cairo">
+                            {quotation.customer?.name || '—'}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <select
-                          value={quotation.Status}
-                          onChange={(e) => handleStatusChange(quotation.QuotationID, e.target.value)}
-                          disabled={updatingStatusId === quotation.QuotationID}
-                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900 cursor-pointer font-cairo transition-colors ${getStatusColor(quotation.Status)} ${updatingStatusId === quotation.QuotationID ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
-                        >
-                          {STATUS_OPTIONS.map((status) => (
-                            <option key={status} value={status} className="bg-white text-gray-900">
-                              {status}
-                            </option>
-                          ))}
-                        </select>
+                        {canAccountant ? (
+                          <select
+                            value={quotation.Status}
+                            onChange={(e) => handleStatusChange(quotation.QuotationID, e.target.value)}
+                            disabled={updatingStatusId === quotation.QuotationID}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900 cursor-pointer font-cairo transition-colors ${getStatusColor(quotation.Status)} ${updatingStatusId === quotation.QuotationID ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
+                          >
+                            {STATUS_OPTIONS.map((status) => (
+                              <option key={status} value={status} className="bg-white text-gray-900">
+                                {status}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className={`inline-flex px-3 py-1.5 text-xs font-semibold rounded-lg ${getStatusColor(quotation.Status)}`}>
+                            {quotation.Status}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-semibold text-gray-900 font-cairo">
@@ -369,14 +402,16 @@ export default function QuotationsPage() {
                             <Edit size={16} />
                             تعديل
                           </button>
-                          <button
-                            onClick={() => handleDelete(quotation.QuotationID)}
-                            disabled={deletingId === quotation.QuotationID}
-                            className="text-red-600 hover:text-red-900 flex items-center gap-1 font-cairo disabled:opacity-50"
-                          >
-                            <Trash2 size={16} />
-                            حذف
-                          </button>
+                          {canAccountant && (
+                            <button
+                              onClick={() => handleDelete(quotation.QuotationID)}
+                              disabled={deletingId === quotation.QuotationID}
+                              className="text-red-600 hover:text-red-900 flex items-center gap-1 font-cairo disabled:opacity-50"
+                            >
+                              <Trash2 size={16} />
+                              حذف
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

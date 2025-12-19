@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, ChevronDown, X } from 'lucide-react';
+import { useAdminAuth } from '@/context/AdminAuthContext';
 
 interface Customer {
   CustomerID?: string;
@@ -30,9 +31,20 @@ export default function CustomerSelect({
   required = false,
   disabled = false,
 }: CustomerSelectProps) {
+  const { admin } = useAdminAuth();
+  const canViewBalances = admin?.is_super_admin || admin?.permissions?.viewBalances === true;
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const formatBalance = (balance: number | undefined | null) => {
+    const value = balance || 0;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'ILS',
+      minimumFractionDigits: 2,
+    }).format(value);
+  };
 
   // Filter customers using smart search (same logic as customers table)
   const filteredCustomers = useMemo(() => {
@@ -104,7 +116,7 @@ export default function CustomerSelect({
         >
           <span className={selectedCustomer ? 'text-gray-900 font-medium' : 'text-gray-500'}>
             {selectedCustomer
-              ? `${selectedCustomer.Name || selectedCustomer.name || ''} (${selectedCustomer.CustomerID || selectedCustomer.id || ''})`
+              ? `${selectedCustomer.Name || selectedCustomer.name || ''} (${selectedCustomer.CustomerID || selectedCustomer.id || ''})${canViewBalances && (selectedCustomer.Balance || selectedCustomer.balance) !== undefined ? ` - ${formatBalance(selectedCustomer.Balance || selectedCustomer.balance || 0)}` : ''}`
               : placeholder}
           </span>
           <ChevronDown
@@ -172,6 +184,11 @@ export default function CustomerSelect({
                         </div>
                         <div className="text-xs text-gray-500">
                           {customerID} {customer.Phone || customer.phone ? `- ${customer.Phone || customer.phone}` : ''}
+                          {canViewBalances && (customer.Balance || customer.balance) !== undefined && (
+                            <span className="ml-2 font-medium">
+                              ({formatBalance(customer.Balance || customer.balance || 0)})
+                            </span>
+                          )}
                         </div>
                       </button>
                     );

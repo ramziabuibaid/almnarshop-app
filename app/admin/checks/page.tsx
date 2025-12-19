@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminAuth } from '@/context/AdminAuthContext';
 import CustomerFormModal from '@/components/admin/CustomerFormModal';
 import {
   getChecks,
@@ -57,6 +58,11 @@ interface CheckFormState {
 }
 
 export default function ChecksPage() {
+  const { admin } = useAdminAuth();
+  
+  // Check if user has accountant permission (for delete)
+  const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
+
   const [checks, setChecks] = useState<CheckRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -431,13 +437,15 @@ export default function ChecksPage() {
                           <Edit size={14} />
                           تعديل
                         </button>
-                        <button
-                          onClick={() => handleDelete(chk.check_id)}
-                          className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 flex items-center gap-1"
-                        >
-                          <Trash2 size={14} />
-                          حذف
-                        </button>
+                        {canAccountant && (
+                          <button
+                            onClick={() => handleDelete(chk.check_id)}
+                            className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 flex items-center gap-1"
+                          >
+                            <Trash2 size={14} />
+                            حذف
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

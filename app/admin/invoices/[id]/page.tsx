@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminAuth } from '@/context/AdminAuthContext';
 import {
   getCashInvoiceDetailsFromSupabase,
   getCashInvoicesFromSupabase,
@@ -45,7 +46,11 @@ interface CashInvoice {
 export default function EditInvoicePage() {
   const router = useRouter();
   const params = useParams();
+  const { admin } = useAdminAuth();
   const invoiceId = params.id as string;
+  
+  // Check if user has accountant permission (for delete)
+  const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
 
   const [invoice, setInvoice] = useState<CashInvoice | null>(null);
   const [details, setDetails] = useState<InvoiceDetail[]>([]);
@@ -317,14 +322,16 @@ export default function EditInvoicePage() {
               <ArrowRight size={18} />
               العودة
             </button>
-            <button
-              onClick={handleDelete}
-              disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-cairo"
-            >
-              <Trash2 size={18} />
-              حذف الفاتورة
-            </button>
+            {canAccountant && (
+              <button
+                onClick={handleDelete}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-cairo"
+              >
+                <Trash2 size={18} />
+                حذف الفاتورة
+              </button>
+            )}
             <button
               onClick={handleSave}
               disabled={saving || details.length === 0}

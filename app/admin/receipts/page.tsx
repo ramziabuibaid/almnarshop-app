@@ -93,8 +93,9 @@ export default function ReceiptsPage() {
   };
 
   const handlePrintReceipt = (receipt: ShopReceipt) => {
+    // Open print page in new window - will auto-print when loaded
     const printUrl = `/admin/receipts/print/${receipt.ReceiptID}`;
-    window.open(printUrl, '_blank');
+    window.open(printUrl, `print-receipt-${receipt.ReceiptID}`, 'noopener,noreferrer');
   };
 
   const handleAddNew = () => {
@@ -310,7 +311,25 @@ export default function ReceiptsPage() {
                         <div className="font-medium text-gray-900">{receipt.ReceiptID}</div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="text-gray-900">{receipt.CustomerName || receipt.CustomerID}</div>
+                        <button
+                          onClick={(e) => {
+                            if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                              window.open(`/admin/customers/${receipt.CustomerID}`, '_blank', 'noopener,noreferrer');
+                              return;
+                            }
+                            router.push(`/admin/customers/${receipt.CustomerID}`);
+                          }}
+                          onMouseDown={(e) => {
+                            if (e.button === 1) {
+                              e.preventDefault();
+                              window.open(`/admin/customers/${receipt.CustomerID}`, '_blank', 'noopener,noreferrer');
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                          title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
+                        >
+                          {receipt.CustomerName || receipt.CustomerID}
+                        </button>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="text-gray-600">{formatDate(receipt.Date)}</div>

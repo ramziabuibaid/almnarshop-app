@@ -58,11 +58,17 @@ export default function MaintenancePrintPage() {
   }, []);
 
   useEffect(() => {
-    // Auto-print when page loads
+    // Set document title for PDF filename (customer name + maintenance number)
     if (maintenanceData && !loading) {
+      const customerName = maintenanceData.CustomerName || 'عميل';
+      const maintNo = maintenanceData.MaintNo || '';
+      document.title = `${customerName} ${maintNo}`;
+      
+      // Auto-print when page loads in the new window
+      // This won't freeze the main app because it's in a separate window
       const timer = setTimeout(() => {
         window.print();
-      }, 500);
+      }, 500); // Slightly longer delay to ensure content is fully rendered
       return () => clearTimeout(timer);
     }
   }, [maintenanceData, loading]);

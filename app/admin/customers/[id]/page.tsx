@@ -3,8 +3,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminAuth } from '@/context/AdminAuthContext';
 import CustomerFormModal from '@/components/admin/CustomerFormModal';
+import AddInteractionModal from '@/components/admin/AddInteractionModal';
+import ReceiptPaymentModal from '@/components/admin/ReceiptPaymentModal';
+import PhoneActions from '@/components/admin/PhoneActions';
 import { getCustomerData, getAllCustomers, getCustomerChecks, saveCheck, deleteCustomer } from '@/lib/api';
+import { fixPhoneNumber } from '@/lib/utils';
 import {
   Loader2,
   User,
@@ -21,6 +26,7 @@ import {
   X,
   Save,
   Trash2,
+  Printer,
 } from 'lucide-react';
 
 interface TimelineItem {
@@ -43,21 +49,33 @@ interface TimelineItem {
 export default function CustomerProfilePage() {
   const params = useParams();
   const router = useRouter();
+  const { admin } = useAdminAuth();
   const customerId = params?.id as string;
+  
+  // Check if user has permission to view balances
+  const canViewBalances = admin?.is_super_admin || admin?.permissions?.viewBalances === true;
+  // Check if user has accountant permission (for delete)
+  const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
 
   const [customer, setCustomer] = useState<any>(null);
   const [customerData, setCustomerData] = useState<{
     invoices: any[];
     receipts: any[];
     interactions: any[];
+    quotations: any[];
   }>({
     invoices: [],
     receipts: [],
     interactions: [],
+    quotations: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isInteractionModalOpen, setIsInteractionModalOpen] = useState(false);
+  const [selectedInteraction, setSelectedInteraction] = useState<any | null>(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [checks, setChecks] = useState<any[]>([]);
   const [isCheckModalOpen, setIsCheckModalOpen] = useState(false);
   const [checkForm, setCheckForm] = useState({
@@ -114,6 +132,7 @@ export default function CustomerProfilePage() {
         invoices: data.invoices || [],
         receipts: data.receipts || [],
         interactions: data.interactions || [],
+        quotations: data.quotations || [],
       });
 
       // Load checks
@@ -150,7 +169,7 @@ export default function CustomerProfilePage() {
   const financialItems = useMemo(() => {
     const items: TimelineItem[] = [];
 
-    // Add shop sales invoices
+    // Add shop and warehouse sales invoices
     (customerData.invoices || []).forEach((invoice: any) => {
       const invoiceId = invoice.InvoiceID || invoice.id || invoice.invoiceID;
       if (!invoiceId || invoiceId === '') return;
@@ -358,6 +377,28 @@ export default function CustomerProfilePage() {
     // customerId is available if needed for future enhancements
   };
 
+  const handleOpenInteractionModal = (interaction?: any) => {
+    setSelectedInteraction(interaction || null);
+    setIsInteractionModalOpen(true);
+  };
+
+  const handleCloseInteractionModal = () => {
+    setIsInteractionModalOpen(false);
+    setSelectedInteraction(null);
+  };
+
+  const handleInteractionSuccess = () => {
+    loadCustomerData();
+  };
+
+  const handleReceiptSuccess = () => {
+    loadCustomerData();
+  };
+
+  const handlePaymentSuccess = () => {
+    loadCustomerData();
+  };
+
   const handleDeleteCustomer = async () => {
     if (!customerId) return;
 
@@ -501,13 +542,56 @@ export default function CustomerProfilePage() {
               <p className="text-gray-600 mt-1">View customer history and manage interactions</p>
             </div>
           </div>
-          <button
-            onClick={() => setIsEditModalOpen(true)}
-            className="px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium flex items-center gap-2"
-          >
-            <Plus size={20} />
-            New Transaction
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleOpenInteractionModal}
+              className="px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium flex items-center gap-1.5"
+              title="إجراء تواصل"
+            >
+              <Phone size={16} />
+              <span>إجراء تواصل</span>
+            </button>
+            <button
+              onClick={() => router.push(`/admin/shop-sales/new?customerId=${customerId}`)}
+              className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-1.5"
+              title="فاتورة محل"
+            >
+              <Plus size={16} />
+              <span>فاتورة محل</span>
+            </button>
+            <button
+              onClick={() => router.push(`/admin/warehouse-sales/new?customerId=${customerId}`)}
+              className="px-3 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors text-sm font-medium flex items-center gap-1.5"
+              title="فاتورة مخزن"
+            >
+              <Plus size={16} />
+              <span>فاتورة مخزن</span>
+            </button>
+            <button
+              onClick={() => router.push(`/admin/quotations/new?customerId=${customerId}`)}
+              className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium flex items-center gap-1.5"
+              title="عرض سعر"
+            >
+              <Plus size={16} />
+              <span>عرض سعر</span>
+            </button>
+            <button
+              onClick={() => setIsReceiptModalOpen(true)}
+              className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-1.5"
+              title="سند قبض"
+            >
+              <Plus size={16} />
+              <span>سند قبض</span>
+            </button>
+            <button
+              onClick={() => setIsPaymentModalOpen(true)}
+              className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center gap-1.5"
+              title="سند صرف"
+            >
+              <Plus size={16} />
+              <span>سند صرف</span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -539,12 +623,7 @@ export default function CustomerProfilePage() {
               {customer.Phone || customer.phone ? (
                 <div className="flex items-center justify-center gap-2 text-gray-600 mb-2">
                   <Phone size={16} />
-                  <a
-                    href={`tel:${customer.Phone || customer.phone}`}
-                    className="hover:text-blue-600 hover:underline"
-                  >
-                    {customer.Phone || customer.phone}
-                  </a>
+                  <PhoneActions phone={customer.Phone || customer.phone} />
                 </div>
               ) : null}
 
@@ -567,45 +646,51 @@ export default function CustomerProfilePage() {
             </div>
 
             {/* Balance Card */}
-            <div className={`${balanceColor} rounded-lg border-2 p-6`}>
-              <div className="text-center">
-                <p className="text-sm font-medium text-gray-600 mb-2">Current Balance</p>
-                <p className={`text-3xl font-bold ${balanceTextColor} mb-1`}>
-                  {formatBalance(balance)}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {balance > 0 ? 'Amount owed to us' : balance < 0 ? 'Credit balance' : 'No balance'}
-                </p>
+            {canViewBalances && (
+              <div className={`${balanceColor} rounded-lg border-2 p-6`}>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-gray-600 mb-2">Current Balance</p>
+                  <p className={`text-3xl font-bold ${balanceTextColor} mb-1`}>
+                    {formatBalance(balance)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {balance > 0 ? 'Amount owed to us' : balance < 0 ? 'Credit balance' : 'No balance'}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Edit Profile Button */}
-            <button
-              onClick={() => setIsEditModalOpen(true)}
-              className="w-full px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium flex items-center justify-center gap-2"
-            >
-              <Edit size={18} />
-              Edit Profile
-            </button>
+            {canViewBalances && (
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="w-full px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium flex items-center justify-center gap-2"
+              >
+                <Edit size={18} />
+                Edit Profile
+              </button>
+            )}
 
             {/* Delete Customer Button */}
-            <button
-              onClick={handleDeleteCustomer}
-              disabled={deleting}
-              className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {deleting ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  جاري الحذف...
-                </>
-              ) : (
-                <>
-                  <Trash2 size={18} />
-                  حذف الزبون
-                </>
-              )}
-            </button>
+            {canAccountant && (
+              <button
+                onClick={handleDeleteCustomer}
+                disabled={deleting}
+                className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    جاري الحذف...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={18} />
+                    حذف الزبون
+                  </>
+                )}
+              </button>
+            )}
 
             {/* Checks Section (Compact summary) */}
             <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
@@ -686,9 +771,18 @@ export default function CustomerProfilePage() {
                                   </span>
                                 )}
                               </div>
-                              <span className="text-xs text-gray-500">
-                                {formatDate(item.date)}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500">
+                                  {formatDate(item.date)}
+                                </span>
+                                <button
+                                  onClick={() => handleOpenInteractionModal(item)}
+                                  className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                  title="تعديل"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                              </div>
                             </div>
 
                             {/* Notes */}
@@ -741,7 +835,16 @@ export default function CustomerProfilePage() {
                 <div className="space-y-4">
                   {financialItems.map((item, index) => {
                     const Icon = getTimelineIcon(item.type);
-                    const colors = getTimelineColor(item.type);
+                    // Use different colors for warehouse invoices (darker blue) vs shop invoices (lighter blue)
+                    let colors = getTimelineColor(item.type);
+                    if (item.type === 'invoice' && item.source === 'Warehouse') {
+                      colors = {
+                        bg: 'bg-blue-100',
+                        text: 'text-blue-800',
+                        border: 'border-blue-500',
+                        iconBg: 'bg-blue-200',
+                      };
+                    }
                     const uniqueKey = `${item.type}-${item.id || `fallback-${index}`}`;
 
                     return (
@@ -757,7 +860,8 @@ export default function CustomerProfilePage() {
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-2">
                                 <h3 className="font-semibold text-gray-900">
-                                  {item.type === 'invoice' && `فاتورة المحل #${item.invoiceNumber || item.id}`}
+                                  {item.type === 'invoice' && item.source === 'Shop' && `فاتورة المحل #${item.invoiceNumber || item.id}`}
+                                  {item.type === 'invoice' && item.source === 'Warehouse' && `فاتورة المخزن #${item.invoiceNumber || item.id}`}
                                   {item.type === 'receipt' && `سند قبض المحل #${item.receiptNumber || item.id}`}
                                   {item.type === 'payment' && `سند صرف المحل #${item.paymentNumber || item.id}`}
                                 </h3>
@@ -767,9 +871,45 @@ export default function CustomerProfilePage() {
                                   </span>
                                 )}
                               </div>
-                              <span className="text-xs text-gray-500">
-                                {formatDate(item.date)}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500">
+                                  {formatDate(item.date)}
+                                </span>
+                                {/* Print Button */}
+                                <button
+                                  onClick={() => {
+                                    if (item.type === 'invoice' && item.source === 'Shop') {
+                                      window.open(`/admin/shop-sales/print/${item.id}`, `print-shop-${item.id}`, 'noopener,noreferrer');
+                                    } else if (item.type === 'invoice' && item.source === 'Warehouse') {
+                                      window.open(`/admin/warehouse-sales/print/${item.id}`, `print-warehouse-${item.id}`, 'noopener,noreferrer');
+                                    } else if (item.type === 'receipt') {
+                                      window.open(`/admin/receipts/print/${item.id}`, `print-receipt-${item.id}`, 'noopener,noreferrer');
+                                    } else if (item.type === 'payment') {
+                                      window.open(`/admin/payments/print/${item.id}`, `print-payment-${item.id}`, 'noopener,noreferrer');
+                                    }
+                                  }}
+                                  className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                  title="طباعة"
+                                >
+                                  <Printer size={16} />
+                                </button>
+                                {/* Edit Button (only for invoices) */}
+                                {item.type === 'invoice' && (
+                                  <button
+                                    onClick={() => {
+                                      if (item.source === 'Shop') {
+                                        router.push(`/admin/shop-sales/edit/${item.id}`);
+                                      } else if (item.source === 'Warehouse') {
+                                        router.push(`/admin/warehouse-sales/edit/${item.id}`);
+                                      }
+                                    }}
+                                    className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                    title="تعديل"
+                                  >
+                                    <Edit size={16} />
+                                  </button>
+                                )}
+                              </div>
                             </div>
 
                             {/* Amount for invoices, receipts and payments */}
@@ -804,7 +944,7 @@ export default function CustomerProfilePage() {
                                 <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
                                   عرض {item.items.length} منتج
                                 </summary>
-                                <div className="mt-2 pl-4 border-l-2 border-gray-200 space-y-1">
+                                <div className="mt-2 pl-4 border-l-2 border-gray-200 space-y-2">
                                   {item.items
                                     .filter((invoiceItem: any) => invoiceItem)
                                     .map((invoiceItem: any, idx: number) => {
@@ -812,9 +952,13 @@ export default function CustomerProfilePage() {
                                       const itemName = invoiceItem.Name || invoiceItem.name || invoiceItem.product_name || 'منتج';
                                       const itemPrice = invoiceItem.Price ?? invoiceItem.price ?? invoiceItem.unit_price ?? 0;
                                       const itemQty = invoiceItem.Quantity ?? invoiceItem.quantity ?? 1;
+                                      const itemTotal = itemPrice * itemQty;
                                       return (
-                                        <div key={`${uniqueKey}-item-${itemKey}-${idx}`} className="text-xs text-gray-600">
-                                          • {itemName} - {formatBalance(itemPrice)} x {itemQty}
+                                        <div key={`${uniqueKey}-item-${itemKey}-${idx}`} className="text-sm text-gray-700">
+                                          <div className="font-medium text-gray-900">{itemName}</div>
+                                          <div className="text-xs text-gray-500 mt-0.5">
+                                            الكمية: {itemQty} × {formatBalance(itemPrice)} = {formatBalance(itemTotal)}
+                                          </div>
                                         </div>
                                       );
                                     })}
@@ -829,6 +973,142 @@ export default function CustomerProfilePage() {
                 </div>
               )}
             </div>
+
+            {/* Quotations Section - Collapsible */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <details className="group">
+                <summary className="px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-gray-900">عروض الأسعار ({customerData.quotations?.length || 0})</h2>
+                  <div className="text-sm text-gray-500">
+                    اضغط للعرض
+                  </div>
+                </summary>
+                <div className="px-6 pb-6 pt-2">
+                  {customerData.quotations && customerData.quotations.length === 0 ? (
+                    <div className="text-center py-12">
+                      <FileText size={48} className="text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-600 text-lg">لا توجد عروض أسعار</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {customerData.quotations.map((quotation: any, index: number) => {
+                        const uniqueKey = `quotation-${quotation.QuotationID || quotation.quotation_id || `fallback-${index}`}`;
+                        const quotationDate = quotation.Date || quotation.date || quotation.QuotationDate || '';
+                        const quotationAmount = quotation.Total || quotation.total || quotation.Amount || quotation.amount || 0;
+                        const quotationStatus = quotation.Status || quotation.status || '';
+
+                        return (
+                          <div
+                            key={uniqueKey}
+                            className="border-l-4 border-purple-500 pl-4 py-4 rounded-r-lg bg-purple-50 border border-purple-300 hover:shadow-sm transition-shadow"
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="p-2 rounded-lg bg-purple-100 flex-shrink-0">
+                                <FileText size={20} className="text-purple-700" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-semibold text-gray-900">
+                                      عرض سعر #{quotation.QuotationID || quotation.quotation_id || quotation.id}
+                                    </h3>
+                                    {quotationStatus && (
+                                      <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                                        {quotationStatus}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500">
+                                      {formatDate(quotationDate)}
+                                    </span>
+                                    <button
+                                      onClick={() => {
+                                        const quotationId = quotation.QuotationID || quotation.quotation_id || quotation.id;
+                                        window.open(`/admin/quotations/print/${quotationId}`, `print-quotation-${quotationId}`, 'noopener,noreferrer');
+                                      }}
+                                      className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                      title="طباعة"
+                                    >
+                                      <Printer size={16} />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        const quotationId = quotation.QuotationID || quotation.quotation_id || quotation.id;
+                                        router.push(`/admin/quotations/${quotationId}`);
+                                      }}
+                                      className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                      title="عرض/تعديل"
+                                    >
+                                      <Edit size={16} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Amount */}
+                                {quotationAmount > 0 && (
+                                  <p className="text-sm font-medium mb-2 text-gray-700">
+                                    المبلغ: {formatBalance(quotationAmount)}
+                                  </p>
+                                )}
+
+                                {/* Discounts */}
+                                {(quotation.SpecialDiscount > 0 || quotation.GiftDiscount > 0) && (
+                                  <div className="text-xs text-gray-600 mb-2">
+                                    {quotation.SpecialDiscount > 0 && (
+                                      <span>خصم خاص: {formatBalance(quotation.SpecialDiscount)}</span>
+                                    )}
+                                    {quotation.SpecialDiscount > 0 && quotation.GiftDiscount > 0 && <span> • </span>}
+                                    {quotation.GiftDiscount > 0 && (
+                                      <span>خصم هدية: {formatBalance(quotation.GiftDiscount)}</span>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Notes */}
+                                {quotation.Notes && (
+                                  <p className="text-xs text-gray-600 mb-2">
+                                    {quotation.Notes}
+                                  </p>
+                                )}
+
+                                {/* Quotation Items (expandable) */}
+                                {quotation.Items && quotation.Items.length > 0 && (
+                                  <details className="mt-2">
+                                    <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+                                      عرض {quotation.Items.length} منتج
+                                    </summary>
+                                    <div className="mt-2 pl-4 border-l-2 border-gray-200 space-y-2">
+                                      {quotation.Items
+                                        .filter((quotationItem: any) => quotationItem)
+                                        .map((quotationItem: any, idx: number) => {
+                                          const itemKey = quotationItem.ID || quotationItem.id || quotationItem.Name || quotationItem.name || quotationItem.product_id || `item-${idx}`;
+                                          const itemName = quotationItem.Name || quotationItem.name || quotationItem.product_name || 'منتج';
+                                          const itemPrice = quotationItem.Price ?? quotationItem.price ?? quotationItem.unit_price ?? 0;
+                                          const itemQty = quotationItem.Quantity ?? quotationItem.quantity ?? 1;
+                                          const itemTotal = itemPrice * itemQty;
+                                          return (
+                                            <div key={`${uniqueKey}-item-${itemKey}-${idx}`} className="text-sm text-gray-700">
+                                              <div className="font-medium text-gray-900">{itemName}</div>
+                                              <div className="text-xs text-gray-500 mt-0.5">
+                                                الكمية: {itemQty} × {formatBalance(itemPrice)} = {formatBalance(itemTotal)}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                    </div>
+                                  </details>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </details>
+            </div>
           </div>
         </div>
       </div>
@@ -839,6 +1119,33 @@ export default function CustomerProfilePage() {
         onClose={() => setIsEditModalOpen(false)}
         customer={customer}
         onSuccess={handleEditSuccess}
+      />
+
+      {/* Add/Edit Interaction Modal */}
+      <AddInteractionModal
+        isOpen={isInteractionModalOpen}
+        onClose={handleCloseInteractionModal}
+        customer={customer}
+        interaction={selectedInteraction}
+        onSuccess={handleInteractionSuccess}
+      />
+
+      {/* Receipt Modal */}
+      <ReceiptPaymentModal
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
+        customer={customer}
+        onSuccess={handleReceiptSuccess}
+        type="receipt"
+      />
+
+      {/* Payment Modal */}
+      <ReceiptPaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        customer={customer}
+        onSuccess={handlePaymentSuccess}
+        type="payment"
       />
 
       {/* Add Check Modal */}

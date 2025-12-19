@@ -1624,7 +1624,11 @@ export async function getCustomerData(customerId: string | number): Promise<any>
       Status: activity.outcome || '',
       PromiseAmount: parseFloat(String(activity.promise_amount || 0)) || 0,
       NextFollowUpDate: activity.promise_date || '',
+      PromiseDate: activity.promise_date || '',
+      PTPStatus: activity.ptp_status || '',
+      ptpStatus: activity.ptp_status || '',
       CreatedAt: activity.created_at || '',
+      ...activity, // Include all original fields
     }));
 
     // Fetch shop sales invoices for this customer
@@ -1639,7 +1643,55 @@ export async function getCustomerData(customerId: string | number): Promise<any>
       console.error('[API] Failed to fetch shop invoices:', invoicesError);
     }
 
-    // Map shop invoices
+    // Collect all product IDs from shop and warehouse invoice details
+    const allProductIds = new Set<string>();
+    (shopInvoices || []).forEach((invoice: any) => {
+      (invoice.shop_sales_details || []).forEach((detail: any) => {
+        if (detail.product_id) {
+          allProductIds.add(detail.product_id);
+        }
+      });
+    });
+
+    // Fetch warehouse sales invoices for this customer
+    const { data: warehouseInvoices, error: warehouseInvoicesError } = await supabase
+      .from('warehouse_sales_invoices')
+      .select('*, warehouse_sales_details(*)')
+      .eq('customer_id', idString)
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (warehouseInvoicesError) {
+      console.error('[API] Failed to fetch warehouse invoices:', warehouseInvoicesError);
+    }
+
+    // Collect product IDs from warehouse invoices
+    (warehouseInvoices || []).forEach((invoice: any) => {
+      (invoice.warehouse_sales_details || []).forEach((detail: any) => {
+        if (detail.product_id) {
+          allProductIds.add(detail.product_id);
+        }
+      });
+    });
+
+    // Fetch product information for all product IDs
+    let productsMap = new Map<string, any>();
+    if (allProductIds.size > 0) {
+      const { data: products, error: productsError } = await supabase
+        .from('products')
+        .select('product_id, name, barcode, shamel_no')
+        .in('product_id', Array.from(allProductIds));
+
+      if (productsError) {
+        console.error('[API] Failed to fetch products:', productsError);
+      } else if (products) {
+        products.forEach((product: any) => {
+          productsMap.set(product.product_id, product);
+        });
+      }
+    }
+
+    // Map shop invoices with product names
     const mappedInvoices = (shopInvoices || []).map((invoice: any) => {
       // Calculate total from details
       const subtotal = (invoice.shop_sales_details || []).reduce((sum: number, detail: any) => {
@@ -1647,6 +1699,23 @@ export async function getCustomerData(customerId: string | number): Promise<any>
       }, 0);
       const discount = parseFloat(String(invoice.discount || 0));
       const total = subtotal - discount;
+
+      // Map invoice details with product names
+      const mappedItems = (invoice.shop_sales_details || []).map((detail: any) => {
+        const product = productsMap.get(detail.product_id);
+        return {
+          ...detail,
+          product_id: detail.product_id,
+          product_name: product?.name || '',
+          Name: product?.name || '',
+          name: product?.name || '',
+          quantity: detail.quantity,
+          Quantity: detail.quantity,
+          unit_price: detail.unit_price,
+          Price: detail.unit_price,
+          price: detail.unit_price,
+        };
+      });
 
       return {
         InvoiceID: invoice.invoice_id,
@@ -1661,7 +1730,51 @@ export async function getCustomerData(customerId: string | number): Promise<any>
         Status: invoice.status,
         AccountantSign: invoice.accountant_sign,
         Notes: invoice.notes || '',
-        Items: invoice.shop_sales_details || [],
+        Items: mappedItems,
+        CreatedAt: invoice.created_at,
+      };
+    });
+
+    // Map warehouse invoices with product names
+    const mappedWarehouseInvoices = (warehouseInvoices || []).map((invoice: any) => {
+      // Calculate total from details
+      const subtotal = (invoice.warehouse_sales_details || []).reduce((sum: number, detail: any) => {
+        return sum + (parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0)));
+      }, 0);
+      const discount = parseFloat(String(invoice.discount || 0));
+      const total = subtotal - discount;
+
+      // Map invoice details with product names
+      const mappedItems = (invoice.warehouse_sales_details || []).map((detail: any) => {
+        const product = productsMap.get(detail.product_id);
+        return {
+          ...detail,
+          product_id: detail.product_id,
+          product_name: product?.name || '',
+          Name: product?.name || '',
+          name: product?.name || '',
+          quantity: detail.quantity,
+          Quantity: detail.quantity,
+          unit_price: detail.unit_price,
+          Price: detail.unit_price,
+          price: detail.unit_price,
+        };
+      });
+
+      return {
+        InvoiceID: invoice.invoice_id,
+        CustomerID: invoice.customer_id,
+        Date: invoice.date,
+        InvoiceDate: invoice.date,
+        InvoiceNumber: invoice.invoice_id,
+        Total: total,
+        Amount: total,
+        Type: 'warehouse_invoice',
+        Source: 'Warehouse',
+        Status: invoice.status,
+        AccountantSign: invoice.accountant_sign,
+        Notes: invoice.notes || '',
+        Items: mappedItems,
         CreatedAt: invoice.created_at,
       };
     });
@@ -1736,14 +1849,94 @@ export async function getCustomerData(customerId: string | number): Promise<any>
       };
     });
 
-    // Combine all financial transactions
-    const allInvoices = [...mappedInvoices];
+    // Fetch quotations for this customer
+    const { data: quotations, error: quotationsError } = await supabase
+      .from('quotations')
+      .select('*, quotation_details(*)')
+      .eq('customer_id', idString)
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (quotationsError) {
+      console.error('[API] Failed to fetch quotations:', quotationsError);
+    }
+
+    // Collect product IDs from quotations
+    (quotations || []).forEach((quotation: any) => {
+      (quotation.quotation_details || []).forEach((detail: any) => {
+        if (detail.product_id) {
+          allProductIds.add(detail.product_id);
+        }
+      });
+    });
+
+    // Fetch product information for quotation products if not already fetched
+    if (quotations && quotations.length > 0 && allProductIds.size > 0) {
+      const { data: quotationProducts, error: quotationProductsError } = await supabase
+        .from('products')
+        .select('product_id, name, barcode, shamel_no')
+        .in('product_id', Array.from(allProductIds));
+
+      if (!quotationProductsError && quotationProducts) {
+        quotationProducts.forEach((product: any) => {
+          if (!productsMap.has(product.product_id)) {
+            productsMap.set(product.product_id, product);
+          }
+        });
+      }
+    }
+
+    // Map quotations with product names
+    const mappedQuotations = (quotations || []).map((quotation: any) => {
+      const subtotal = (quotation.quotation_details || []).reduce((sum: number, detail: any) => {
+        return sum + (parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0)));
+      }, 0);
+      const specialDiscount = parseFloat(String(quotation.special_discount_amount || 0));
+      const giftDiscount = parseFloat(String(quotation.gift_discount_amount || 0));
+      const total = subtotal - specialDiscount - giftDiscount;
+
+      const mappedItems = (quotation.quotation_details || []).map((detail: any) => {
+        const product = productsMap.get(detail.product_id);
+        return {
+          ...detail,
+          product_id: detail.product_id,
+          product_name: product?.name || '',
+          Name: product?.name || '',
+          name: product?.name || '',
+          quantity: detail.quantity,
+          Quantity: detail.quantity,
+          unit_price: detail.unit_price,
+          Price: detail.unit_price,
+          price: detail.unit_price,
+        };
+      });
+
+      return {
+        QuotationID: quotation.quotation_id,
+        CustomerID: quotation.customer_id,
+        Date: quotation.date,
+        QuotationDate: quotation.date,
+        QuotationNumber: quotation.quotation_id,
+        Total: total,
+        Amount: total,
+        Status: quotation.status,
+        SpecialDiscount: specialDiscount,
+        GiftDiscount: giftDiscount,
+        Notes: quotation.notes || '',
+        Items: mappedItems,
+        CreatedAt: quotation.created_at,
+      };
+    });
+
+    // Combine all financial transactions (shop and warehouse invoices)
+    const allInvoices = [...mappedInvoices, ...mappedWarehouseInvoices];
     const allReceipts = [...mappedReceipts, ...mappedPayments];
 
     const result = {
       invoices: allInvoices,
       receipts: allReceipts,
       interactions: interactions || [],
+      quotations: mappedQuotations || [],
     };
 
     console.log('[API] getCustomerData success');
@@ -1913,6 +2106,60 @@ export async function updatePTPStatusInSupabase(activityId: string, newStatus: s
     return { status: 'success', data };
   } catch (error: any) {
     console.error('[API] updatePTPStatusInSupabase error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update a CRM activity (interaction) in Supabase
+ * Allows updating all fields: action_type, outcome, notes, promise_date, promise_amount
+ */
+export async function updateActivityInSupabase(activityId: string, payload: {
+  ActionType?: string;
+  Outcome?: string;
+  Notes?: string;
+  PromiseDate?: string; // ISO Date string (YYYY-MM-DD)
+  PromiseAmount?: number;
+}): Promise<any> {
+  try {
+    console.log('[API] Updating activity in Supabase:', { activityId, payload });
+
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (payload.ActionType !== undefined) {
+      updateData.action_type = payload.ActionType;
+    }
+    if (payload.Outcome !== undefined) {
+      updateData.outcome = payload.Outcome;
+    }
+    if (payload.Notes !== undefined) {
+      updateData.notes = payload.Notes;
+    }
+    if (payload.PromiseDate !== undefined) {
+      updateData.promise_date = payload.PromiseDate || null;
+    }
+    if (payload.PromiseAmount !== undefined) {
+      updateData.promise_amount = payload.PromiseAmount || 0;
+    }
+
+    const { data, error } = await supabase
+      .from('crm_activities')
+      .update(updateData)
+      .eq('activity_id', activityId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[API] Failed to update activity in Supabase:', error);
+      throw new Error(`Failed to update activity: ${error.message}`);
+    }
+
+    console.log('[API] Activity updated successfully:', data);
+    return { status: 'success', data };
+  } catch (error: any) {
+    console.error('[API] updateActivityInSupabase error:', error);
     throw error;
   }
 }

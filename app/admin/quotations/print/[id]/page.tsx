@@ -42,8 +42,17 @@ export default function QuotationPrintPage() {
   }, [quotationId]);
 
   useEffect(() => {
+    // Set document title for PDF filename (customer name + quotation number)
     if (data && !loading) {
-      const timer = setTimeout(() => window.print(), 300);
+      const customerName = data.customer?.name || 'عميل';
+      const quotationId = data.quotationID || '';
+      document.title = `${customerName} ${quotationId}`;
+      
+      // Auto-print when page loads in the new window
+      // This won't freeze the main app because it's in a separate window
+      const timer = setTimeout(() => {
+        window.print();
+      }, 500); // Slightly longer delay to ensure content is fully rendered
       return () => clearTimeout(timer);
     }
   }, [data, loading]);

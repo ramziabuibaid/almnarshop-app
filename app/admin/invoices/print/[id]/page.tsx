@@ -42,11 +42,15 @@ export default function InvoicePrintPage() {
   }, [invoiceId]);
 
   useEffect(() => {
-    // Auto-print when page loads (matching Apps Script: setTimeout(()=>window.print(), 300))
+    // Set document title for PDF filename (cash invoice - no customer name)
     if (invoiceData && !loading) {
+      document.title = invoiceData.invoiceID;
+      
+      // Auto-print when page loads in the new window
+      // This won't freeze the main app because it's in a separate window
       const timer = setTimeout(() => {
         window.print();
-      }, 300);
+      }, 500); // Slightly longer delay to ensure content is fully rendered
       return () => clearTimeout(timer);
     }
   }, [invoiceData, loading]);

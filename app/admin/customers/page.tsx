@@ -6,7 +6,11 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AddInteractionModal from '@/components/admin/AddInteractionModal';
 import CustomerFormModal from '@/components/admin/CustomerFormModal';
-import { getAllCustomers, getDashboardData, saveCustomer } from '@/lib/api';
+import PhoneActions from '@/components/admin/PhoneActions';
+import { getDashboardData, saveCustomer } from '@/lib/api';
+import { fixPhoneNumber } from '@/lib/utils';
+import { useCustomers, queryKeys } from '@/hooks/useData';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Users,
   Loader2,
@@ -46,14 +50,14 @@ interface Customer {
 }
 
 type FilterType = 'All' | 'Customer' | 'Merchant' | 'Supplier' | 'Accounting';
-type SortField = 'name' | 'type' | 'phone' | 'balance' | 'lastInvoice' | 'lastPayment' | null;
+type SortField = 'customerId' | 'name' | 'type' | 'phone' | 'balance' | 'lastInvoice' | 'lastPayment' | null;
 type SortDirection = 'asc' | 'desc';
 
 export default function CustomersPage() {
   const { admin } = useAdminAuth();
   const router = useRouter();
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: customers = [], isLoading: loading, error: queryError } = useCustomers();
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
   // Check if user has permission to view balances
@@ -68,50 +72,25 @@ export default function CustomersPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [isInteractionModalOpen, setIsInteractionModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedInteraction, setSelectedInteraction] = useState<any | null>(null);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [dashboardData, setDashboardData] = useState<any>({ overdue: [], today: [], upcoming: [] });
   const [dashboardLoading, setDashboardLoading] = useState(false);
 
-  // Fetch customers and dashboard data
+  // Fetch dashboard data on mount
   useEffect(() => {
-    loadCustomers();
     loadDashboardData();
   }, []);
 
-  const loadCustomers = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      console.log('[CustomersPage] Loading customers...');
-      const data = await getAllCustomers();
-      console.log('[CustomersPage] Customers loaded:', data?.length || 0, 'customers');
-      console.log('[CustomersPage] Sample customer:', data?.[0]);
-      
-      if (!data || !Array.isArray(data)) {
-        throw new Error('Invalid data format received from server');
-      }
-      
-      // Default sort: newest first (based on created_at)
-      const sorted = [...data].sort((a: any, b: any) => {
-        const aDate = new Date(a.created_at || a.CreatedAt || a.createdAt || 0).getTime();
-        const bDate = new Date(b.created_at || b.CreatedAt || b.createdAt || 0).getTime();
-        return bDate - aDate;
-      });
-
-      setCustomers(sorted);
-    } catch (error: any) {
-      console.error('[CustomersPage] Error loading customers:', error);
-      console.error('[CustomersPage] Error details:', {
-        message: error?.message,
-        name: error?.name,
-        stack: error?.stack,
-      });
-      setError(error?.message || 'Failed to load customers. Please check the browser console for details.');
-    } finally {
-      setLoading(false);
+  // Handle query errors
+  useEffect(() => {
+    if (queryError) {
+      setError((queryError as Error)?.message || 'Failed to load customers');
+    } else {
+      setError(null);
     }
-  };
+  }, [queryError]);
 
   const loadDashboardData = async () => {
     setDashboardLoading(true);
@@ -170,10 +149,32 @@ export default function CustomersPage() {
     }
   };
 
+  // Sort customers: by customer_id from largest to smallest (default sort)
+  const sortedCustomers = useMemo(() => {
+    return [...customers].sort((a: any, b: any) => {
+      const aId = String(a.CustomerID || a.id || a.customerID || '').toLowerCase();
+      const bId = String(b.CustomerID || b.id || b.customerID || '').toLowerCase();
+      // Compare as strings, but handle numeric parts if present
+      const aNumMatch = aId.match(/(\d+)/);
+      const bNumMatch = bId.match(/(\d+)/);
+      
+      if (aNumMatch && bNumMatch) {
+        const aNum = parseInt(aNumMatch[1], 10);
+        const bNum = parseInt(bNumMatch[1], 10);
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return bNum - aNum; // Descending order (largest to smallest)
+        }
+      }
+      
+      // Fallback to string comparison (descending)
+      return bId.localeCompare(aId, 'en', { numeric: true });
+    });
+  }, [customers]);
+
   // Filter and search customers
   const filteredCustomers = useMemo(() => {
     // First, filter out customers with empty CustomerID
-    let filtered = customers.filter((c) => {
+    let filtered = sortedCustomers.filter((c) => {
       const customerId = c.CustomerID || c.id || c.customerID;
       return customerId && customerId !== '';
     });
@@ -271,6 +272,12 @@ export default function CustomersPage() {
         let comparison = 0;
 
         switch (sortField) {
+          case 'customerId':
+            const customerIdA = String(a.CustomerID || a.id || a.customerID || '').toLowerCase();
+            const customerIdB = String(b.CustomerID || b.id || b.customerID || '').toLowerCase();
+            comparison = customerIdA.localeCompare(customerIdB, 'en', { sensitivity: 'base' });
+            break;
+
           case 'name':
             const nameA = String(a.Name || a.name || '').toLowerCase();
             const nameB = String(b.Name || b.name || '').toLowerCase();
@@ -332,11 +339,11 @@ export default function CustomersPage() {
     }
 
     return filtered;
-  }, [customers, filterType, searchQuery, showNegativeBalance, showZeroBalance, lastInvoiceYear, lastPaymentYear, sortField, sortDirection]);
+  }, [sortedCustomers, filterType, searchQuery, showNegativeBalance, showZeroBalance, lastInvoiceYear, lastPaymentYear, sortField, sortDirection]);
 
   // Calculate stats
   const stats = useMemo(() => {
-    const totalReceivables = customers
+    const totalReceivables = sortedCustomers
       .filter((c) => {
         const balance = c.Balance || c.balance || 0;
         return balance > 0;
@@ -344,7 +351,7 @@ export default function CustomersPage() {
       .reduce((sum, c) => sum + (c.Balance || c.balance || 0), 0);
 
     const totalPayables = Math.abs(
-      customers
+      sortedCustomers
         .filter((c) => {
           const balance = c.Balance || c.balance || 0;
           return balance < 0;
@@ -355,9 +362,9 @@ export default function CustomersPage() {
     return {
       totalReceivables,
       totalPayables,
-      totalCustomers: customers.length,
+      totalCustomers: sortedCustomers.length,
     };
-  }, [customers]);
+  }, [sortedCustomers]);
 
   // Calculate filtered customers balance total
   const filteredBalanceTotal = useMemo(() => {
@@ -366,19 +373,21 @@ export default function CustomersPage() {
     }, 0);
   }, [filteredCustomers]);
 
-  const handleOpenInteractionModal = (customer: Customer) => {
+  const handleOpenInteractionModal = (customer: Customer, interaction?: any) => {
     setSelectedCustomer(customer);
+    setSelectedInteraction(interaction || null);
     setIsInteractionModalOpen(true);
   };
 
   const handleCloseInteractionModal = () => {
     setIsInteractionModalOpen(false);
     setSelectedCustomer(null);
+    setSelectedInteraction(null);
   };
 
   const handleInteractionSuccess = () => {
-    // Refresh customers and dashboard data
-    loadCustomers();
+    // Invalidate queries to refetch in background
+    queryClient.invalidateQueries({ queryKey: queryKeys.customers });
     loadDashboardData();
   };
 
@@ -393,16 +402,26 @@ export default function CustomersPage() {
   };
 
   const handleCustomerSuccess = (customerId?: string) => {
-    // Refresh customers after save
-    loadCustomers();
+    // Invalidate customers query to refetch in background
+    queryClient.invalidateQueries({ queryKey: queryKeys.customers });
     // customerId is available if needed for future enhancements
   };
 
-  const handleViewProfile = (customer: Customer) => {
+  const handleViewProfile = (customer: Customer, event?: React.MouseEvent) => {
     const customerId = customer.CustomerID || customer.id || customer.customerID || '';
-    if (customerId) {
-      router.push(`/admin/customers/${customerId}`);
+    if (!customerId) return;
+
+    // If Ctrl/Cmd, Shift, or Middle mouse button is pressed, open in new tab
+    if (event) {
+      const isNewTab = event.ctrlKey || event.metaKey || event.shiftKey || event.button === 1;
+      if (isNewTab) {
+        // Open in new tab (not new window)
+        window.open(`/admin/customers/${customerId}`, '_blank', 'noopener,noreferrer');
+        return;
+      }
     }
+
+    router.push(`/admin/customers/${customerId}`);
   };
 
   const formatBalance = (balance: number | undefined | null) => {
@@ -555,20 +574,36 @@ export default function CustomersPage() {
                           </p>
                         )}
                       </div>
-                      <button
-                        onClick={() => {
-                          const customer = customers.find(
-                            (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
-                          );
-                          if (customer) {
-                            setSelectedCustomer(customer);
-                            setIsInteractionModalOpen(true);
-                          }
-                        }}
-                        className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                      >
-                        فتح
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const customer = customers.find(
+                              (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
+                            );
+                            if (customer) {
+                              handleOpenInteractionModal(customer, item);
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+                          title="تعديل"
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            const customer = customers.find(
+                              (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
+                            );
+                            if (customer) {
+                              handleOpenInteractionModal(customer, item);
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                          title="فتح/تعديل"
+                        >
+                          فتح
+                        </button>
+                      </div>
                     </div>
                       );
                     })}
@@ -601,20 +636,36 @@ export default function CustomersPage() {
                           {item.Notes || item.notes || 'لا توجد ملاحظات'}
                         </p>
                       </div>
-                      <button
-                        onClick={() => {
-                          const customer = customers.find(
-                            (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
-                          );
-                          if (customer) {
-                            setSelectedCustomer(customer);
-                            setIsInteractionModalOpen(true);
-                          }
-                        }}
-                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                      >
-                        فتح
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const customer = customers.find(
+                              (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
+                            );
+                            if (customer) {
+                              handleOpenInteractionModal(customer, item);
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+                          title="تعديل"
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            const customer = customers.find(
+                              (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
+                            );
+                            if (customer) {
+                              handleOpenInteractionModal(customer, item);
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                          title="فتح/تعديل"
+                        >
+                          فتح
+                        </button>
+                      </div>
                     </div>
                       );
                     })}
@@ -702,31 +753,33 @@ export default function CustomersPage() {
           </div>
 
           {/* Balance Filters */}
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-semibold text-gray-700">Balance Filters:</span>
-            <button
-              onClick={() => setShowNegativeBalance(!showNegativeBalance)}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${
-                showNegativeBalance
-                  ? 'bg-green-100 text-green-700 border border-green-300'
-                  : 'bg-gray-100 text-gray-500 border border-gray-300'
-              }`}
-            >
-              <div className={`w-2 h-2 rounded-full ${showNegativeBalance ? 'bg-green-600' : 'bg-gray-400'}`} />
-              إظهار الرصيد السالب
-            </button>
-            <button
-              onClick={() => setShowZeroBalance(!showZeroBalance)}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${
-                showZeroBalance
-                  ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                  : 'bg-gray-100 text-gray-500 border border-gray-300'
-              }`}
-            >
-              <div className={`w-2 h-2 rounded-full ${showZeroBalance ? 'bg-blue-600' : 'bg-gray-400'}`} />
-              إظهار الرصيد الصفر
-            </button>
-          </div>
+          {canViewBalances && (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm font-semibold text-gray-700">Balance Filters:</span>
+              <button
+                onClick={() => setShowNegativeBalance(!showNegativeBalance)}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${
+                  showNegativeBalance
+                    ? 'bg-green-100 text-green-700 border border-green-300'
+                    : 'bg-gray-100 text-gray-500 border border-gray-300'
+                }`}
+              >
+                <div className={`w-2 h-2 rounded-full ${showNegativeBalance ? 'bg-green-600' : 'bg-gray-400'}`} />
+                إظهار الرصيد السالب
+              </button>
+              <button
+                onClick={() => setShowZeroBalance(!showZeroBalance)}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${
+                  showZeroBalance
+                    ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                    : 'bg-gray-100 text-gray-500 border border-gray-300'
+                }`}
+              >
+                <div className={`w-2 h-2 rounded-full ${showZeroBalance ? 'bg-blue-600' : 'bg-gray-400'}`} />
+                إظهار الرصيد الصفر
+              </button>
+            </div>
+          )}
 
           {/* Date Filters */}
           <div className="flex flex-wrap items-center gap-4">
@@ -822,7 +875,7 @@ export default function CustomersPage() {
                 <h3 className="text-sm font-semibold text-red-800 mb-1">Error Loading Customers</h3>
                 <p className="text-sm text-red-700">{error}</p>
                 <button
-                  onClick={loadCustomers}
+                  onClick={() => queryClient.invalidateQueries({ queryKey: queryKeys.customers })}
                   className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
                 >
                   Retry
@@ -854,6 +907,15 @@ export default function CustomersPage() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('customerId')}
+                    >
+                      <div className="flex items-center">
+                        رقم الزبون
+                        {getSortIcon('customerId')}
+                      </div>
+                    </th>
                     <th 
                       className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('name')}
@@ -930,6 +992,17 @@ export default function CustomersPage() {
                         key={customerId}
                         className="hover:bg-gray-50 transition-colors"
                       >
+                        {/* Customer Number */}
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-gray-900">
+                            {customerId}
+                          </div>
+                          {(customer['Shamel No'] || customer.ShamelNo || customer.shamel_no) && (
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {customer['Shamel No'] || customer.ShamelNo || customer.shamel_no}
+                            </div>
+                          )}
+                        </td>
                         {/* Name */}
                         <td className="px-4 py-3">
                           <div className="font-semibold text-gray-900">{name}</div>
@@ -949,12 +1022,7 @@ export default function CustomersPage() {
                         {/* Phone */}
                         <td className="px-4 py-3">
                           {phone ? (
-                            <a
-                              href={`tel:${phone}`}
-                              className="text-blue-600 hover:text-blue-800 hover:underline"
-                            >
-                              {phone}
-                            </a>
+                            <PhoneActions phone={phone} />
                           ) : (
                             <span className="text-gray-400">—</span>
                           )}
@@ -994,13 +1062,15 @@ export default function CustomersPage() {
                         {/* Actions */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleEditCustomer(customer)}
-                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                              title="Edit Customer"
-                            >
-                              <Edit size={18} />
-                            </button>
+                            {canViewBalances && (
+                              <button
+                                onClick={() => handleEditCustomer(customer)}
+                                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                title="Edit Customer"
+                              >
+                                <Edit size={18} />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleOpenInteractionModal(customer)}
                               className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -1008,13 +1078,29 @@ export default function CustomersPage() {
                             >
                               <Phone size={18} />
                             </button>
-                            <button
-                              onClick={() => handleViewProfile(customer)}
-                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                              title="View Profile"
+                            <a
+                              href={`/admin/customers/${customerId}`}
+                              onClick={(e) => {
+                                // If Ctrl/Cmd or Shift is pressed, let default behavior (open in new tab)
+                                if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                                  return; // Let browser handle it
+                                }
+                                // Otherwise, prevent default and use router
+                                e.preventDefault();
+                                handleViewProfile(customer);
+                              }}
+                              onMouseDown={(e) => {
+                                // Handle middle mouse button - open in new tab
+                                if (e.button === 1) {
+                                  e.preventDefault();
+                                  window.open(`/admin/customers/${customerId}`, '_blank', 'noopener,noreferrer');
+                                }
+                              }}
+                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors inline-flex items-center justify-center"
+                              title="View Profile (Ctrl+Click, Shift+Click, or Middle Click to open in new tab)"
                             >
                               <User size={18} />
-                            </button>
+                            </a>
                           </div>
                         </td>
                       </tr>
@@ -1029,16 +1115,17 @@ export default function CustomersPage() {
         {/* Results Count */}
         {!loading && filteredCustomers.length > 0 && (
           <div className="text-sm text-gray-600 text-center">
-            Showing {filteredCustomers.length} of {customers.length} customers
+            Showing {filteredCustomers.length} of {sortedCustomers.length} customers
           </div>
         )}
       </div>
 
-      {/* Add Interaction Modal */}
+      {/* Add/Edit Interaction Modal */}
       <AddInteractionModal
         isOpen={isInteractionModalOpen}
         onClose={handleCloseInteractionModal}
         customer={selectedCustomer}
+        interaction={selectedInteraction}
         onSuccess={handleInteractionSuccess}
       />
 

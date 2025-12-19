@@ -65,10 +65,12 @@ export default function InvoicesPage() {
   };
 
   const handlePrintInvoice = (invoice: CashInvoice) => {
-    // Open print page in new window
+    // Open print page in new window - user will click print button manually
+    // This prevents browser freezing
     const printUrl = `/admin/invoices/print/${invoice.InvoiceID}`;
-    window.open(printUrl, '_blank');
+    window.open(printUrl, `print-${invoice.InvoiceID}`, 'noopener,noreferrer');
   };
+
 
   const handleViewInvoice = async (invoice: CashInvoice) => {
     try {

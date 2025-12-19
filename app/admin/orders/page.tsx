@@ -86,9 +86,9 @@ export default function OrdersPage() {
   };
 
   const handlePrintOrder = (order: OnlineOrder) => {
-    // Open print page in new window
+    // Open print page in new window - will auto-print when loaded
     const printUrl = `/admin/orders/print/${order.OrderID}`;
-    window.open(printUrl, '_blank');
+    window.open(printUrl, `print-order-${order.OrderID}`, 'noopener,noreferrer');
   };
 
   const handleEditOrder = (order: OnlineOrder) => {
@@ -345,7 +345,49 @@ export default function OrdersPage() {
                         {order.OrderID}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {order.CustomerName}
+                        {order.CustomerEmail ? (
+                          <button
+                            onClick={async (e) => {
+                              // Try to find customer by email
+                              try {
+                                const { getCustomerFromSupabase } = await import('@/lib/api');
+                                const customer = await getCustomerFromSupabase(order.CustomerEmail);
+                                if (customer && customer.customer_id) {
+                                  if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                                    window.open(`/admin/customers/${customer.customer_id}`, '_blank', 'noopener,noreferrer');
+                                    return;
+                                  }
+                                  router.push(`/admin/customers/${customer.customer_id}`);
+                                } else {
+                                  // Customer not found, show name only
+                                  return;
+                                }
+                              } catch (err) {
+                                console.error('Failed to find customer:', err);
+                              }
+                            }}
+                            onMouseDown={async (e) => {
+                              if (e.button === 1) {
+                                e.preventDefault();
+                                try {
+                                  const { getCustomerFromSupabase } = await import('@/lib/api');
+                                  const customer = await getCustomerFromSupabase(order.CustomerEmail);
+                                  if (customer && customer.customer_id) {
+                                    window.open(`/admin/customers/${customer.customer_id}`, '_blank', 'noopener,noreferrer');
+                                  }
+                                } catch (err) {
+                                  console.error('Failed to find customer:', err);
+                                }
+                              }
+                            }}
+                            className="text-blue-600 hover:text-blue-800 hover:underline"
+                            title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
+                          >
+                            {order.CustomerName}
+                          </button>
+                        ) : (
+                          order.CustomerName
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {order.CustomerPhone}
@@ -463,7 +505,45 @@ export default function OrdersPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">اسم الزبون</p>
-                    <p className="font-semibold text-gray-900">{selectedOrder.CustomerName}</p>
+                    {selectedOrder.CustomerEmail ? (
+                      <button
+                        onClick={async (e) => {
+                          try {
+                            const { getCustomerFromSupabase } = await import('@/lib/api');
+                            const customer = await getCustomerFromSupabase(selectedOrder.CustomerEmail);
+                            if (customer && customer.customer_id) {
+                              if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                                window.open(`/admin/customers/${customer.customer_id}`, '_blank', 'noopener,noreferrer');
+                                return;
+                              }
+                              router.push(`/admin/customers/${customer.customer_id}`);
+                            }
+                          } catch (err) {
+                            console.error('Failed to find customer:', err);
+                          }
+                        }}
+                        onMouseDown={async (e) => {
+                          if (e.button === 1) {
+                            e.preventDefault();
+                            try {
+                              const { getCustomerFromSupabase } = await import('@/lib/api');
+                              const customer = await getCustomerFromSupabase(selectedOrder.CustomerEmail);
+                              if (customer && customer.customer_id) {
+                                window.open(`/admin/customers/${customer.customer_id}`, '_blank', 'noopener,noreferrer');
+                              }
+                            } catch (err) {
+                              console.error('Failed to find customer:', err);
+                            }
+                          }
+                        }}
+                        className="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                        title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
+                      >
+                        {selectedOrder.CustomerName}
+                      </button>
+                    ) : (
+                      <p className="font-semibold text-gray-900">{selectedOrder.CustomerName}</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">رقم الهاتف</p>

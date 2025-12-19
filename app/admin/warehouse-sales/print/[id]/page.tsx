@@ -47,11 +47,17 @@ export default function WarehouseSalesInvoicePrintPage() {
   }, [invoiceId]);
 
   useEffect(() => {
-    // Auto-print when page loads
+    // Set document title for PDF filename (customer name + invoice number)
     if (invoiceData && !loading) {
+      const customerName = invoiceData.CustomerName || 'عميل';
+      const invoiceId = invoiceData.InvoiceID || '';
+      document.title = `${customerName} ${invoiceId}`;
+      
+      // Auto-print when page loads in the new window
+      // This won't freeze the main app because it's in a separate window
       const timer = setTimeout(() => {
         window.print();
-      }, 300);
+      }, 500); // Slightly longer delay to ensure content is fully rendered
       return () => clearTimeout(timer);
     }
   }, [invoiceData, loading]);

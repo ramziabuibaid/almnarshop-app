@@ -10,7 +10,12 @@ type PermissionKey =
   | 'createPOS'
   | 'accessReceipts'
   | 'accessShopInvoices'
-  | 'accessWarehouseInvoices';
+  | 'accessWarehouseInvoices'
+  | 'accessChecks'
+  | 'accessQuotations'
+  | 'accessCashSessions'
+  | 'accessPayPage'
+  | 'accountant';
 
 export type AdminPermissions = Record<PermissionKey, boolean>;
 

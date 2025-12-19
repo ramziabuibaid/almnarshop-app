@@ -54,6 +54,8 @@ export default function WarehouseSalesPage() {
 
   // Check if user has permission to access warehouse invoices
   const canAccessWarehouseInvoices = admin?.is_super_admin || admin?.permissions?.accessWarehouseInvoices === true;
+  // Check if user has accountant permission (for posting and status changes)
+  const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
 
   // Debounce search query - wait 500ms after user stops typing
   useEffect(() => {
@@ -89,8 +91,9 @@ export default function WarehouseSalesPage() {
   }, [debouncedSearchQuery]);
 
   const handlePrintInvoice = (invoice: WarehouseSalesInvoice) => {
+    // Open print page in new window - will auto-print when loaded
     const printUrl = `/admin/warehouse-sales/print/${invoice.InvoiceID}`;
-    window.open(printUrl, '_blank');
+    window.open(printUrl, `print-warehouse-${invoice.InvoiceID}`, 'noopener,noreferrer');
   };
 
   const handleEditInvoice = (invoice: WarehouseSalesInvoice) => {
@@ -358,46 +361,88 @@ export default function WarehouseSalesPage() {
                         <div className="font-medium text-gray-900">{invoice.InvoiceID}</div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="text-gray-900">{invoice.CustomerName || invoice.CustomerID}</div>
+                        <button
+                          onClick={(e) => {
+                            if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                              window.open(`/admin/customers/${invoice.CustomerID}`, '_blank', 'noopener,noreferrer');
+                              return;
+                            }
+                            router.push(`/admin/customers/${invoice.CustomerID}`);
+                          }}
+                          onMouseDown={(e) => {
+                            if (e.button === 1) {
+                              e.preventDefault();
+                              window.open(`/admin/customers/${invoice.CustomerID}`, '_blank', 'noopener,noreferrer');
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                          title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
+                        >
+                          {invoice.CustomerName || invoice.CustomerID}
+                        </button>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="text-gray-600">{formatDate(invoice.Date)}</div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <select
-                          value={invoice.Status}
-                          onChange={(e) => handleStatusChange(invoice, e.target.value as any)}
-                          className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-gray-900 text-gray-900"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <option value="غير مدفوع">غير مدفوع</option>
-                          <option value="تقسيط شهري">تقسيط شهري</option>
-                          <option value="دفعت بالكامل">دفعت بالكامل</option>
-                          <option value="مدفوع جزئي">مدفوع جزئي</option>
-                        </select>
+                        {canAccountant ? (
+                          <select
+                            value={invoice.Status}
+                            onChange={(e) => handleStatusChange(invoice, e.target.value as any)}
+                            className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-gray-900 text-gray-900"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <option value="غير مدفوع">غير مدفوع</option>
+                            <option value="تقسيط شهري">تقسيط شهري</option>
+                            <option value="دفعت بالكامل">دفعت بالكامل</option>
+                            <option value="مدفوع جزئي">مدفوع جزئي</option>
+                          </select>
+                        ) : (
+                          <span className="text-sm text-gray-900">{invoice.Status}</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => handleToggleSign(invoice)}
-                          className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                        {canAccountant ? (
+                          <button
+                            onClick={() => handleToggleSign(invoice)}
+                            className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                              invoice.AccountantSign === 'مرحلة'
+                                ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                            }`}
+                            title={invoice.AccountantSign === 'مرحلة' ? 'غير مرحلة' : 'مرحلة'}
+                          >
+                            {invoice.AccountantSign === 'مرحلة' ? (
+                              <>
+                                <CheckCircle size={16} />
+                                <span>مرحلة</span>
+                              </>
+                            ) : (
+                              <>
+                                <XCircle size={16} />
+                                <span>غير مرحلة</span>
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium ${
                             invoice.AccountantSign === 'مرحلة'
-                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                          }`}
-                          title={invoice.AccountantSign === 'مرحلة' ? 'غير مرحلة' : 'مرحلة'}
-                        >
-                          {invoice.AccountantSign === 'مرحلة' ? (
-                            <>
-                              <CheckCircle size={16} />
-                              <span>مرحلة</span>
-                            </>
-                          ) : (
-                            <>
-                              <XCircle size={16} />
-                              <span>غير مرحلة</span>
-                            </>
-                          )}
-                        </button>
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {invoice.AccountantSign === 'مرحلة' ? (
+                              <>
+                                <CheckCircle size={16} />
+                                <span>مرحلة</span>
+                              </>
+                            ) : (
+                              <>
+                                <XCircle size={16} />
+                                <span>غير مرحلة</span>
+                              </>
+                            )}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="font-semibold text-gray-900">{formatCurrency(invoice.TotalAmount)}</div>
@@ -478,7 +523,7 @@ export default function WarehouseSalesPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {viewLoading && <Loader2 size={18} className="animate-spin text-gray-500" />}
-                  {viewing.invoice && viewing.invoice.AccountantSign !== 'مرحلة' && (
+                  {canAccountant && viewing.invoice && viewing.invoice.AccountantSign !== 'مرحلة' && (
                     <button
                       onClick={handleMarkAsSettled}
                       disabled={updatingSettlement}
@@ -511,7 +556,29 @@ export default function WarehouseSalesPage() {
                   </div>
                   <div>
                     <div className="text-gray-500">العميل</div>
-                    <div className="font-semibold">{viewing.invoice.CustomerName || viewing.invoice.customer_name || '—'}</div>
+                    {viewing.invoice.CustomerID ? (
+                      <button
+                        onClick={(e) => {
+                          if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                            window.open(`/admin/customers/${viewing.invoice.CustomerID}`, '_blank', 'noopener,noreferrer');
+                            return;
+                          }
+                          router.push(`/admin/customers/${viewing.invoice.CustomerID}`);
+                        }}
+                        onMouseDown={(e) => {
+                          if (e.button === 1) {
+                            e.preventDefault();
+                            window.open(`/admin/customers/${viewing.invoice.CustomerID}`, '_blank', 'noopener,noreferrer');
+                          }
+                        }}
+                        className="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                        title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
+                      >
+                        {viewing.invoice.CustomerName || viewing.invoice.customer_name || viewing.invoice.CustomerID}
+                      </button>
+                    ) : (
+                      <div className="font-semibold">{viewing.invoice.CustomerName || viewing.invoice.customer_name || '—'}</div>
+                    )}
                   </div>
                   <div>
                     <div className="text-gray-500">حالة الترحيل</div>

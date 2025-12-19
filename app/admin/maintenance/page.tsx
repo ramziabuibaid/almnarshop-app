@@ -72,8 +72,9 @@ export default function MaintenancePage() {
   };
 
   const handlePrintRecord = (record: MaintenanceRecord) => {
+    // Open print page in new window - will auto-print when loaded
     const printUrl = `/admin/maintenance/print/${record.MaintNo}`;
-    window.open(printUrl, '_blank');
+    window.open(printUrl, `print-maintenance-${record.MaintNo}`, 'noopener,noreferrer');
   };
 
   const getActionButtons = (currentStatus: string, maintNo: string) => {

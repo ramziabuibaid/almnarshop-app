@@ -78,6 +78,8 @@ export default function EditShopSalesInvoicePage() {
   const customerDropdownRef = useRef<HTMLDivElement>(null);
 
   const canViewCost = admin?.is_super_admin || admin?.permissions?.viewCost === true;
+  // Check if user has accountant permission (for delete)
+  const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
 
   useEffect(() => {
     if (invoiceId) {
@@ -812,23 +814,25 @@ export default function EditShopSalesInvoicePage() {
 
           {/* Actions */}
           <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {deleting ? (
-                <>
-                  <Loader2 size={20} className="animate-spin" />
-                  جاري الحذف...
-                </>
-              ) : (
-                <>
-                  <Trash2 size={20} />
-                  حذف
-                </>
-              )}
-            </button>
+            {canAccountant && (
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    جاري الحذف...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={20} />
+                    حذف
+                  </>
+                )}
+              </button>
+            )}
             <div className="flex items-center gap-4">
               <button
                 onClick={() => router.push('/admin/shop-sales')}
