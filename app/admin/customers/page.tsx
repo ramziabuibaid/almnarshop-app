@@ -7,10 +7,8 @@ import { useAdminAuth } from '@/context/AdminAuthContext';
 import AddInteractionModal from '@/components/admin/AddInteractionModal';
 import CustomerFormModal from '@/components/admin/CustomerFormModal';
 import PhoneActions from '@/components/admin/PhoneActions';
-import { getDashboardData, saveCustomer } from '@/lib/api';
+import { getDashboardData, saveCustomer, getAllCustomers } from '@/lib/api';
 import { fixPhoneNumber } from '@/lib/utils';
-import { useCustomers, queryKeys } from '@/hooks/useData';
-import { useQueryClient } from '@tanstack/react-query';
 import {
   Users,
   Loader2,
@@ -56,8 +54,8 @@ type SortDirection = 'asc' | 'desc';
 export default function CustomersPage() {
   const { admin } = useAdminAuth();
   const router = useRouter();
-  const { data: customers = [], isLoading: loading, error: queryError } = useCustomers();
-  const queryClient = useQueryClient();
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Check if user has permission to view balances
@@ -78,19 +76,40 @@ export default function CustomersPage() {
   const [dashboardData, setDashboardData] = useState<any>({ overdue: [], today: [], upcoming: [] });
   const [dashboardLoading, setDashboardLoading] = useState(false);
 
+  // Load customers on mount
+  useEffect(() => {
+    const loadCustomers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getAllCustomers();
+        setCustomers(data || []);
+      } catch (err: any) {
+        console.error('[CustomersPage] Error loading customers:', err);
+        setError(err?.message || 'Failed to load customers');
+        setCustomers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCustomers();
+  }, []);
+
   // Fetch dashboard data on mount
   useEffect(() => {
     loadDashboardData();
   }, []);
 
-  // Handle query errors
-  useEffect(() => {
-    if (queryError) {
-      setError((queryError as Error)?.message || 'Failed to load customers');
-    } else {
-      setError(null);
+  // Reload customers
+  const reloadCustomers = async () => {
+    try {
+      const data = await getAllCustomers();
+      setCustomers(data || []);
+    } catch (err: any) {
+      console.error('[CustomersPage] Error reloading customers:', err);
     }
-  }, [queryError]);
+  };
 
   const loadDashboardData = async () => {
     setDashboardLoading(true);
@@ -385,9 +404,9 @@ export default function CustomersPage() {
     setSelectedInteraction(null);
   };
 
-  const handleInteractionSuccess = () => {
-    // Invalidate queries to refetch in background
-    queryClient.invalidateQueries({ queryKey: queryKeys.customers });
+  const handleInteractionSuccess = async () => {
+    // Reload customers and dashboard data
+    await reloadCustomers();
     loadDashboardData();
   };
 
@@ -401,9 +420,9 @@ export default function CustomersPage() {
     setEditingCustomer(null);
   };
 
-  const handleCustomerSuccess = (customerId?: string) => {
-    // Invalidate customers query to refetch in background
-    queryClient.invalidateQueries({ queryKey: queryKeys.customers });
+  const handleCustomerSuccess = async (customerId?: string) => {
+    // Reload customers
+    await reloadCustomers();
     // customerId is available if needed for future enhancements
   };
 
@@ -875,7 +894,18 @@ export default function CustomersPage() {
                 <h3 className="text-sm font-semibold text-red-800 mb-1">Error Loading Customers</h3>
                 <p className="text-sm text-red-700">{error}</p>
                 <button
-                  onClick={() => queryClient.invalidateQueries({ queryKey: queryKeys.customers })}
+                  onClick={async () => {
+                    try {
+                      setLoading(true);
+                      setError(null);
+                      const data = await getAllCustomers();
+                      setCustomers(data || []);
+                    } catch (err: any) {
+                      setError(err?.message || 'Failed to load customers');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
                   className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
                 >
                   Retry

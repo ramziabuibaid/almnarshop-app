@@ -4,7 +4,6 @@ import "./globals.css";
 import { ShopProvider } from "@/context/ShopContext";
 import { InvoicesProvider } from "@/context/InvoicesContext";
 import { AdminAuthProvider } from "@/context/AdminAuthContext";
-import { QueryProvider } from "@/components/providers/QueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,15 +36,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${cairo.variable} antialiased`}
       >
-        <QueryProvider>
-          <AdminAuthProvider>
-            <ShopProvider>
-              <InvoicesProvider>
-                {children}
-              </InvoicesProvider>
-            </ShopProvider>
-          </AdminAuthProvider>
-        </QueryProvider>
+        <AdminAuthProvider>
+          <ShopProvider>
+            <InvoicesProvider>
+              {children}
+            </InvoicesProvider>
+          </ShopProvider>
+        </AdminAuthProvider>
       </body>
     </html>
   );

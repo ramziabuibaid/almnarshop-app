@@ -8,9 +8,7 @@ import MarketingCardGenerator from '@/components/admin/MarketingCardGenerator';
 import { Plus, Edit, Image as ImageIcon, Loader2, Package, ChevronLeft, ChevronRight, Filter, X, Search, ChevronDown, Sparkles, CheckCircle2, ArrowUp, ArrowDown, Trash } from 'lucide-react';
 import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
-import { deleteProduct } from '@/lib/api';
-import { useProducts, queryKeys } from '@/hooks/useData';
-import { useQueryClient } from '@tanstack/react-query';
+import { deleteProduct, getProducts } from '@/lib/api';
 
 const PRODUCTS_PER_PAGE = 20;
 
@@ -26,8 +24,8 @@ interface FilterState {
 
 export default function ProductsManagerPage() {
   const { admin } = useAdminAuth();
-  const { data: products = [], isLoading: loading } = useProducts();
-  const queryClient = useQueryClient();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -69,6 +67,34 @@ export default function ProductsManagerPage() {
   // Check if user has accountant permission (for delete)
   const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
 
+  // Load products on mount
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        const data = await getProducts();
+        setProducts(data || []);
+      } catch (error) {
+        console.error('[ProductsPage] Error loading products:', error);
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
+  // Reload products
+  const reloadProducts = async () => {
+    try {
+      const data = await getProducts();
+      setProducts(data || []);
+    } catch (error) {
+      console.error('[ProductsPage] Error reloading products:', error);
+    }
+  };
+
   const handleAddNew = () => {
     setSelectedProduct(null);
     setIsModalOpen(true);
@@ -87,9 +113,9 @@ export default function ProductsManagerPage() {
   };
 
   const handleSaveSuccess = async () => {
-    // Show success toast and invalidate products query to refetch
+    // Show success toast and reload products
     setToast({ message: 'Product Saved Successfully', type: 'success' });
-    queryClient.invalidateQueries({ queryKey: queryKeys.products });
+    await reloadProducts();
     
     // Auto-hide toast after 3 seconds
     setTimeout(() => {
@@ -144,8 +170,8 @@ export default function ProductsManagerPage() {
         status: 'deleted',
         references: null,
       });
-      // Invalidate products query to refetch
-      queryClient.invalidateQueries({ queryKey: queryKeys.products });
+      // Reload products after deletion
+      await reloadProducts();
       // Close modal after showing success message for 1.5 seconds
       setTimeout(() => {
         setDeleteTarget(null);
