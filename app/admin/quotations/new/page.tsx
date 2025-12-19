@@ -1,7 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import CustomerFormModal from '@/components/admin/CustomerFormModal';
@@ -45,7 +45,7 @@ const STATUS_OPTIONS = [
   'ملغي',
 ];
 
-export default function NewQuotationPage() {
+function QuotationsFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { admin } = useAdminAuth();
@@ -791,6 +791,14 @@ export default function NewQuotationPage() {
         onSuccess={handleCustomerAdded}
       />
     </AdminLayout>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <QuotationsFormContent />
+    </Suspense>
   );
 }
 

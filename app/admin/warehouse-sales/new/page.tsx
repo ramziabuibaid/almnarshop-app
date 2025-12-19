@@ -1,7 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import CustomerFormModal from '@/components/admin/CustomerFormModal';
@@ -40,7 +40,7 @@ const STATUS_OPTIONS = [
   'مدفوع جزئي',
 ];
 
-export default function NewWarehouseSalesInvoicePage() {
+function WarehouseSalesFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { admin } = useAdminAuth();
@@ -768,5 +768,13 @@ export default function NewWarehouseSalesInvoicePage() {
         onSuccess={handleCustomerAdded}
       />
     </AdminLayout>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <WarehouseSalesFormContent />
+    </Suspense>
   );
 }
