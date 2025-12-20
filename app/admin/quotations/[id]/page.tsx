@@ -291,11 +291,15 @@ export default function EditQuotationPage() {
   };
 
   const calculateCostTotal = () => {
-    const subtotal = calculateCostSubtotal();
-    return subtotal - specialDiscountAmount - giftDiscountAmount;
+    // إجمالي التكلفة: لا تتأثر بالخصومات لأنها تكلفة الشراء الفعلية من المورد
+    // اسم الحقل "بعد الخصم" للمطابقة مع الواجهة لكن القيمة بدون خصم
+    return calculateCostSubtotal();
   };
 
   const calculateProfit = () => {
+    // الربح = الإجمالي - إجمالي التكلفة
+    // حيث أن الإجمالي = المجموع الفرعي - الخصومات
+    // وإجمالي التكلفة = التكلفة الفرعية (بدون خصم لأنها تكلفة الشراء الفعلية)
     return calculateTotal() - calculateCostTotal();
   };
 
@@ -861,12 +865,6 @@ export default function EditQuotationPage() {
                   <span>المجموع الفرعي:</span>
                   <span className="font-semibold">₪{calculateSubtotal().toFixed(2)}</span>
                 </div>
-                {showCosts && canViewCost && (
-                  <div className="flex justify-between text-sm text-gray-600 font-cairo">
-                    <span>إجمالي التكلفة الفرعي:</span>
-                    <span className="font-semibold text-gray-900">₪{calculateCostSubtotal().toFixed(2)}</span>
-                  </div>
-                )}
                 {specialDiscountAmount > 0 && (
                   <div className="flex justify-between text-sm text-gray-600 font-cairo">
                     <span>الخصم الخاص:</span>
@@ -886,7 +884,7 @@ export default function EditQuotationPage() {
                 {showCosts && canViewCost && (
                   <>
                     <div className="flex justify-between text-lg font-bold text-gray-900 font-cairo">
-                      <span>إجمالي التكلفة بعد الخصم:</span>
+                      <span>إجمالي التكلفة:</span>
                       <span>₪{calculateCostTotal().toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-lg font-bold text-green-600 font-cairo border-t border-gray-200 pt-2">

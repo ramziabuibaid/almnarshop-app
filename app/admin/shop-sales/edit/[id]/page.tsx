@@ -115,13 +115,14 @@ export default function EditShopSalesInvoicePage() {
       setStatus(data.Status || 'غير مدفوع');
       setDiscount(data.Discount || 0);
       
-      // Map invoice items to details
+      // Map invoice items to details (costPrice will be added after products are loaded)
       const mappedDetails: InvoiceDetail[] = (data.Items || []).map((item: any) => ({
         detailID: item.DetailsID,
         productID: item.ProductID,
         productName: item.ProductName || '',
         quantity: item.Quantity || 0,
         unitPrice: item.UnitPrice || 0,
+        costPrice: 0, // Will be updated when products are loaded
         isNew: false,
       }));
       setDetails(mappedDetails);
@@ -137,6 +138,26 @@ export default function EditShopSalesInvoicePage() {
     try {
       const productsData = await getProducts();
       setProducts(productsData);
+      
+      // Update costPrice for existing invoice items after products are loaded
+      setDetails((prevDetails) => {
+        return prevDetails.map((detail) => {
+          // Skip if costPrice already exists (user might have added new items)
+          if (detail.costPrice && detail.costPrice > 0) return detail;
+          
+          // Find product and get costPrice
+          const product = productsData.find(
+            (p) => (p.ProductID || p.id || p.product_id) === detail.productID
+          );
+          if (product) {
+            return {
+              ...detail,
+              costPrice: product.CostPrice || product.cost_price || product.costPrice || 0,
+            };
+          }
+          return detail;
+        });
+      });
     } catch (err: any) {
       console.error('[EditShopSalesInvoicePage] Failed to load products:', err);
     }
@@ -270,8 +291,8 @@ export default function EditShopSalesInvoicePage() {
   };
 
   const calculateCostTotal = () => {
-    const subtotal = calculateCostSubtotal();
-    return subtotal - discount;
+    // إجمالي التكلفة: لا تتأثر بالخصومات لأنها تكلفة الشراء الفعلية من المورد
+    return calculateCostSubtotal();
   };
 
   const calculateProfit = () => {
@@ -780,12 +801,6 @@ export default function EditShopSalesInvoicePage() {
                   <span>المجموع الفرعي:</span>
                   <span className="font-semibold">₪{calculateSubtotal().toFixed(2)}</span>
                 </div>
-                {showCosts && canViewCost && (
-                  <div className="flex justify-between text-sm text-gray-600 font-cairo">
-                    <span>إجمالي التكلفة الفرعي:</span>
-                    <span className="font-semibold text-gray-900">₪{calculateCostSubtotal().toFixed(2)}</span>
-                  </div>
-                )}
                 {discount > 0 && (
                   <div className="flex justify-between text-sm text-gray-600 font-cairo">
                     <span>الخصم:</span>
@@ -799,7 +814,7 @@ export default function EditShopSalesInvoicePage() {
                 {showCosts && canViewCost && (
                   <>
                     <div className="flex justify-between text-lg font-bold text-gray-900 font-cairo">
-                      <span>إجمالي التكلفة بعد الخصم:</span>
+                      <span>إجمالي التكلفة:</span>
                       <span>₪{calculateCostTotal().toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-lg font-bold text-green-600 font-cairo border-t border-gray-200 pt-2">

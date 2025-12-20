@@ -6433,3 +6433,114 @@ export async function deleteQuotation(quotationId: string): Promise<void> {
   }
 }
 
+/**
+ * Get the last price a customer paid for a specific product
+ * Searches in shop sales and warehouse sales invoices (not quotations)
+ * Returns the last unit_price found, or null if not found
+ */
+export async function getCustomerLastPriceForProduct(customerId: string, productId: string): Promise<number | null> {
+  try {
+    if (!customerId || !productId) {
+      console.log('[API] getCustomerLastPriceForProduct: Missing customerId or productId', { customerId, productId });
+      return null;
+    }
+
+    console.log('[API] getCustomerLastPriceForProduct: Searching for last price', { customerId, productId });
+
+    let lastPrice: number | null = null;
+    let lastDate: Date | null = null;
+
+    // Search in shop sales invoices
+    const { data: shopInvoices, error: shopInvoicesError } = await supabase
+      .from('shop_sales_invoices')
+      .select('invoice_id, date')
+      .eq('customer_id', customerId)
+      .order('date', { ascending: false })
+      .limit(200);
+
+    if (shopInvoicesError) {
+      console.error('[API] getCustomerLastPriceForProduct: Shop invoices error', shopInvoicesError);
+    } else if (shopInvoices && shopInvoices.length > 0) {
+      const invoiceIds = shopInvoices.map((inv: any) => inv.invoice_id);
+      console.log('[API] getCustomerLastPriceForProduct: Found shop invoices', shopInvoices.length, 'invoiceIds:', invoiceIds.slice(0, 5));
+      
+      const { data: shopDetails, error: shopDetailsError } = await supabase
+        .from('shop_sales_details')
+        .select('invoice_id, unit_price, created_at')
+        .eq('product_id', productId)
+        .in('invoice_id', invoiceIds)
+        .order('created_at', { ascending: false });
+
+      if (shopDetailsError) {
+        console.error('[API] getCustomerLastPriceForProduct: Shop details error', shopDetailsError);
+      } else if (shopDetails && shopDetails.length > 0) {
+        console.log('[API] getCustomerLastPriceForProduct: Found shop details', shopDetails.length);
+        // Create a map for quick invoice lookup
+        const invoiceMap = new Map(shopInvoices.map((inv: any) => [inv.invoice_id, inv]));
+        
+        for (const detail of shopDetails) {
+          const invoice = invoiceMap.get(detail.invoice_id);
+          if (invoice && invoice.date) {
+            const invoiceDate = new Date(invoice.date);
+            if (!lastDate || invoiceDate > lastDate) {
+              lastDate = invoiceDate;
+              lastPrice = parseFloat(String(detail.unit_price || 0));
+              console.log('[API] getCustomerLastPriceForProduct: Updated from shop sales', { date: invoice.date, price: lastPrice });
+            }
+          }
+        }
+      }
+    }
+
+    // Search in warehouse sales invoices
+    const { data: warehouseInvoices, error: warehouseInvoicesError } = await supabase
+      .from('warehouse_sales_invoices')
+      .select('invoice_id, date')
+      .eq('customer_id', customerId)
+      .order('date', { ascending: false })
+      .limit(200);
+
+    if (warehouseInvoicesError) {
+      console.error('[API] getCustomerLastPriceForProduct: Warehouse invoices error', warehouseInvoicesError);
+    } else if (warehouseInvoices && warehouseInvoices.length > 0) {
+      const invoiceIds = warehouseInvoices.map((inv: any) => inv.invoice_id);
+      console.log('[API] getCustomerLastPriceForProduct: Found warehouse invoices', warehouseInvoices.length);
+      
+      const { data: warehouseDetails, error: warehouseDetailsError } = await supabase
+        .from('warehouse_sales_details')
+        .select('invoice_id, unit_price, created_at')
+        .eq('product_id', productId)
+        .in('invoice_id', invoiceIds)
+        .order('created_at', { ascending: false });
+
+      if (warehouseDetailsError) {
+        console.error('[API] getCustomerLastPriceForProduct: Warehouse details error', warehouseDetailsError);
+      } else if (warehouseDetails && warehouseDetails.length > 0) {
+        console.log('[API] getCustomerLastPriceForProduct: Found warehouse details', warehouseDetails.length);
+        const invoiceMap = new Map(warehouseInvoices.map((inv: any) => [inv.invoice_id, inv]));
+        
+        for (const detail of warehouseDetails) {
+          const invoice = invoiceMap.get(detail.invoice_id);
+          if (invoice && invoice.date) {
+            const invoiceDate = new Date(invoice.date);
+            if (!lastDate || invoiceDate > lastDate) {
+              lastDate = invoiceDate;
+              lastPrice = parseFloat(String(detail.unit_price || 0));
+              console.log('[API] getCustomerLastPriceForProduct: Updated from warehouse sales', { date: invoice.date, price: lastPrice });
+            }
+          }
+        }
+      }
+    }
+
+    // Note: We don't search in quotations because quotations are not finalized invoices
+    // Only search in actual invoices (shop sales and warehouse sales)
+
+    console.log('[API] getCustomerLastPriceForProduct: Final result', { lastPrice, lastDate });
+    return lastPrice && lastPrice > 0 ? lastPrice : null;
+  } catch (error: any) {
+    console.error('[API] getCustomerLastPriceForProduct error:', error);
+    return null;
+  }
+}
+

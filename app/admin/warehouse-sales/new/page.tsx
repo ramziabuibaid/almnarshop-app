@@ -9,6 +9,7 @@ import {
   saveWarehouseSalesInvoice,
   getProducts,
   getAllCustomers,
+  getCustomerLastPriceForProduct,
 } from '@/lib/api';
 import {
   Loader2,
@@ -226,22 +227,52 @@ function WarehouseSalesFormContent() {
       return;
     }
 
+    // Use manually entered price if provided, otherwise use default sale price (will update in background)
+    let unitPrice = product.SalePrice || product.sale_price || product.price || 0;
+    if (newProductPrice != null && newProductPrice > 0) {
+      unitPrice = newProductPrice;
+    }
+
+    const detailId = `temp-${Date.now()}`;
+    const productIdForSearch = product.ProductID || product.id || product.product_id;
+    
     const newDetail: InvoiceDetail = {
-      detailID: `temp-${Date.now()}`,
-      productID: product.ProductID || product.id || product.product_id,
+      detailID: detailId,
+      productID: productIdForSearch,
       productName: product.Name || product.name || '',
       quantity: newProductQuantity,
-      unitPrice: (newProductPrice != null && newProductPrice > 0) ? newProductPrice : (product.SalePrice || product.sale_price || product.price || 0),
+      unitPrice: unitPrice,
       costPrice: product.CostPrice || product.cost_price || product.costPrice || 0,
       productImage: product.Image || product.image || '',
     };
 
+    // Add product immediately
     setDetails((prev) => [...prev, newDetail]);
     setSelectedProductId('');
     setNewProductQuantity(1);
     setNewProductPrice(0);
     setShowAddProduct(false);
     setProductSearchQuery('');
+
+    // Fetch last customer price in background and update if found (only if no manual price was entered)
+    if (customerId && (!newProductPrice || newProductPrice === 0)) {
+      // Use setTimeout to run in background without blocking UI
+      setTimeout(async () => {
+        const lastPrice = await getCustomerLastPriceForProduct(
+          customerId,
+          productIdForSearch
+        );
+        
+        if (lastPrice && lastPrice > 0) {
+          // Update the price for this specific detail
+          setDetails((prev) =>
+            prev.map((item) =>
+              item.detailID === detailId ? { ...item, unitPrice: lastPrice } : item
+            )
+          );
+        }
+      }, 0);
+    }
   };
 
   const calculateSubtotal = () => {
@@ -258,8 +289,8 @@ function WarehouseSalesFormContent() {
   };
 
   const calculateCostTotal = () => {
-    const subtotal = calculateCostSubtotal();
-    return subtotal - discount;
+    // إجمالي التكلفة: لا تتأثر بالخصومات لأنها تكلفة الشراء الفعلية من المورد
+    return calculateCostSubtotal();
   };
 
   const calculateProfit = () => {
@@ -513,7 +544,7 @@ function WarehouseSalesFormContent() {
                             type="button"
                             onClick={() => {
                               setSelectedProductId(product.ProductID || product.id || product.product_id);
-                              setNewProductPrice(product.SalePrice || product.sale_price || product.price || 0);
+                              setNewProductPrice(0); // Reset to 0 so handleAddProduct can fetch last customer price
                               setIsProductDropdownOpen(false);
                               setProductSearchQuery(product.Name || product.name || '');
                             }}
@@ -718,7 +749,7 @@ function WarehouseSalesFormContent() {
                 {showCosts && canViewCost && (
                   <>
                     <div className="flex justify-between text-lg font-bold text-gray-900 font-cairo">
-                      <span>إجمالي التكلفة بعد الخصم:</span>
+                      <span>إجمالي التكلفة:</span>
                       <span>₪{calculateCostTotal().toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-lg font-bold text-green-600 font-cairo border-t border-gray-200 pt-2">

@@ -10,8 +10,11 @@ import {
   Edit,
   Image as ImageIcon,
   Printer,
+  MessageCircle,
 } from 'lucide-react';
 import { convertDriveImageUrl } from '@/lib/api';
+import { fixPhoneNumber } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
 export default function ViewMaintenancePage() {
   const router = useRouter();
@@ -60,6 +63,80 @@ export default function ViewMaintenancePage() {
   const getImageUrl = (imagePath: string | undefined) => {
     if (!imagePath) return null;
     return convertDriveImageUrl(imagePath);
+  };
+
+  const handleWhatsApp = async (countryCode: '970' | '972') => {
+    if (!record) return;
+    
+    try {
+      // Fetch customer data directly from Supabase
+      const { data: customer, error: customerError } = await supabase
+        .from('customers')
+        .select('phone, name')
+        .eq('customer_id', record.CustomerID)
+        .single();
+
+      if (customerError || !customer) {
+        console.error('[ViewMaintenancePage] Error fetching customer:', customerError);
+        alert('فشل جلب بيانات العميل');
+        return;
+      }
+
+      const customerPhone = customer.phone || '';
+      
+      if (!customerPhone || customerPhone.trim() === '') {
+        alert('لا يوجد رقم هاتف للعميل');
+        return;
+      }
+
+      // Fix phone number format
+      const fixedPhone = fixPhoneNumber(customerPhone);
+      
+      // Get local number (remove leading 0 for WhatsApp)
+      const getLocalNumber = (phoneNum: string): string => {
+        if (!phoneNum) return '';
+        const cleaned = phoneNum.trim().replace(/\s+/g, '').replace(/-/g, '');
+        // Remove leading 0 if present
+        if (cleaned.startsWith('0')) {
+          return cleaned.substring(1);
+        }
+        return cleaned;
+      };
+
+      const localNumber = getLocalNumber(fixedPhone);
+      const whatsappNumber = `${countryCode}${localNumber}`;
+
+      // Determine pickup location based on status
+      let pickupLocation = '';
+      if (record.Status === 'جاهزة للتسليم للزبون من المحل') {
+        pickupLocation = 'المعرض في جنين - شارع الناصرة';
+      } else if (record.Status === 'جاهزة للتسليم للزبون من المخزن') {
+        pickupLocation = 'المعرض في جنين - مقر المخزن في المنطقة الصناعية';
+      }
+
+      // Create WhatsApp message
+      const message = `السلام عليكم ورحمة الله وبركاته
+
+نود إعلامكم أن القطعة "${record.ItemName}" جاهزة للاستلام
+يمكنكم استلامها من ${pickupLocation}
+
+رقم الصيانة: ${record.MaintNo}
+${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
+نتمنى لكم يوم سعيد`;
+
+      // Open WhatsApp
+      const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    } catch (error: any) {
+      console.error('[ViewMaintenancePage] Error sending WhatsApp:', error);
+      alert(`فشل إرسال رسالة واتساب: ${error?.message || 'خطأ غير معروف'}`);
+    }
+  };
+
+  // Check if WhatsApp button should be shown for this status
+  const shouldShowWhatsApp = (status: string) => {
+    return status === 'جاهزة للتسليم للزبون من المحل' || 
+           status === 'جاهزة للتسليم للزبون من المخزن';
   };
 
   if (loading) {
@@ -112,6 +189,35 @@ export default function ViewMaintenancePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {shouldShowWhatsApp(record.Status) && (
+              <div className="relative group">
+                <button
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  title="إرسال واتساب"
+                >
+                  <MessageCircle size={20} />
+                  إرسال واتساب
+                </button>
+                <div className="absolute left-0 top-full mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                  <div className="p-2 space-y-1">
+                    <button
+                      onClick={() => handleWhatsApp('970')}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <MessageCircle size={16} className="text-green-600" />
+                      <span className="flex-1">واتساب: 970</span>
+                    </button>
+                    <button
+                      onClick={() => handleWhatsApp('972')}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <MessageCircle size={16} className="text-green-600" />
+                      <span className="flex-1">واتساب: 972</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             <button
               onClick={() => {
                 // Open print page in new window - will auto-print when loaded

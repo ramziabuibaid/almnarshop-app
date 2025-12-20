@@ -6,6 +6,8 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import CustomerSelect from '@/components/admin/CustomerSelect';
 import { getShopReceipts, saveShopReceipt, getAllCustomers } from '@/lib/api';
+import { fixPhoneNumber } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 import { Lock } from 'lucide-react';
 import {
   Loader2,
@@ -18,6 +20,7 @@ import {
   Edit,
   ChevronLeft,
   ChevronRight,
+  MessageCircle,
 } from 'lucide-react';
 
 interface ShopReceipt {
@@ -96,6 +99,73 @@ export default function ReceiptsPage() {
     // Open print page in new window - will auto-print when loaded
     const printUrl = `/admin/receipts/print/${receipt.ReceiptID}`;
     window.open(printUrl, `print-receipt-${receipt.ReceiptID}`, 'noopener,noreferrer');
+  };
+
+  const handleWhatsApp = async (receipt: ShopReceipt, countryCode: '970' | '972') => {
+    try {
+      // Fetch customer data directly from Supabase
+      const { data: customer, error: customerError } = await supabase
+        .from('customers')
+        .select('phone, balance, name')
+        .eq('customer_id', receipt.CustomerID)
+        .single();
+
+      if (customerError || !customer) {
+        console.error('[ReceiptsPage] Error fetching customer:', customerError);
+        alert('فشل جلب بيانات العميل');
+        return;
+      }
+
+      const customerPhone = customer.phone || '';
+      
+      if (!customerPhone || customerPhone.trim() === '') {
+        alert('لا يوجد رقم هاتف للعميل');
+        return;
+      }
+
+      // Fix phone number format
+      const fixedPhone = fixPhoneNumber(customerPhone);
+      
+      // Get local number (remove leading 0 for WhatsApp)
+      const getLocalNumber = (phoneNum: string): string => {
+        if (!phoneNum) return '';
+        const cleaned = phoneNum.trim().replace(/\s+/g, '').replace(/-/g, '');
+        // Remove leading 0 if present
+        if (cleaned.startsWith('0')) {
+          return cleaned.substring(1);
+        }
+        return cleaned;
+      };
+
+      const localNumber = getLocalNumber(fixedPhone);
+      const whatsappNumber = `${countryCode}${localNumber}`;
+
+      // Get customer balance (remaining amount)
+      const customerBalance = parseFloat(String(customer.balance || 0));
+      const balanceText = customerBalance > 0 
+        ? `وتبقى عليه ${customerBalance.toFixed(2)} ₪`
+        : customerBalance < 0
+        ? `ورصيده ${Math.abs(customerBalance).toFixed(2)} ₪ (دائن)`
+        : 'ورصيده صفر';
+
+      // Create WhatsApp message
+      const message = `السلام عليكم ورحمة الله وبركاته
+
+تم استلام مبلغ ${receipt.TotalAmount.toFixed(2)} ₪ كدفعة منكم
+${balanceText}
+
+رقم السند: ${receipt.ReceiptID}
+التاريخ: ${formatDate(receipt.Date)}
+
+شكراً لكم`;
+
+      // Open WhatsApp
+      const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    } catch (error: any) {
+      console.error('[ReceiptsPage] Error sending WhatsApp:', error);
+      alert(`فشل إرسال رسالة واتساب: ${error?.message || 'خطأ غير معروف'}`);
+    }
   };
 
   const handleAddNew = () => {
@@ -359,6 +429,32 @@ export default function ReceiptsPage() {
                           >
                             <Printer size={18} />
                           </button>
+                          <div className="relative group">
+                            <button
+                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                              title="إرسال واتساب"
+                            >
+                              <MessageCircle size={18} />
+                            </button>
+                            <div className="absolute left-0 top-full mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                              <div className="p-2 space-y-1">
+                                <button
+                                  onClick={() => handleWhatsApp(receipt, '970')}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                  <MessageCircle size={16} className="text-green-600" />
+                                  <span className="flex-1">واتساب: 970</span>
+                                </button>
+                                <button
+                                  onClick={() => handleWhatsApp(receipt, '972')}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                  <MessageCircle size={16} className="text-green-600" />
+                                  <span className="flex-1">واتساب: 972</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </td>
                     </tr>

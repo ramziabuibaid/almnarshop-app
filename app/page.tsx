@@ -1,27 +1,32 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Filter, ShoppingCart, User, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
+import { Search, Filter, ShoppingCart, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useShop } from '@/context/ShopContext';
-import ProductCard from '@/components/ProductCard';
-import FilterSidebar, { FilterState, SortOption } from '@/components/FilterSidebar';
-import CartDrawer from '@/components/CartDrawer';
 import { useRouter } from 'next/navigation';
+import ProductCard from '@/components/store/ProductCard';
+import FilterSidebar from '@/components/store/FilterSidebar';
+import FilterDrawer from '@/components/store/FilterDrawer';
+import ActiveFiltersBar from '@/components/store/ActiveFiltersBar';
+import ProductGridHeader from '@/components/store/ProductGridHeader';
+import CartDrawer from '@/components/CartDrawer';
+import { FilterState, SortOption } from '@/components/store/types';
 
 const PRODUCTS_PER_PAGE = 20;
 
 export default function Home() {
   const { products, loadProducts, cart, user, loading } = useShop();
   const [searchQuery, setSearchQuery] = useState('');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<FilterState>({
-    type: '',
-    brand: '',
-    size: '',
-    color: '',
+    selectedTypes: [],
+    selectedBrands: [],
+    selectedSizes: [],
+    selectedColors: [],
+    priceRange: { min: 0, max: 10000 },
   });
   const [sortOption, setSortOption] = useState<SortOption>('date-desc');
   const router = useRouter();
@@ -37,46 +42,79 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted]);
 
+  // Calculate price range from products
+  const priceRange = useMemo(() => {
+    if (products.length === 0) return { min: 0, max: 10000 };
+    const prices = products.map((p) => p.price || 0).filter((p) => p > 0);
+    if (prices.length === 0) return { min: 0, max: 10000 };
+    return {
+      min: Math.min(...prices),
+      max: Math.max(...prices),
+    };
+  }, [products]);
+
+  // Initialize price range when products load
+  useEffect(() => {
+    if (products.length > 0 && (priceRange.min !== 0 || priceRange.max !== 10000)) {
+      setFilters((prev) => {
+        // Only update if price range hasn't been initialized yet
+        if (prev.priceRange.min === 0 && prev.priceRange.max === 10000) {
+          return {
+            ...prev,
+            priceRange: { min: priceRange.min, max: priceRange.max },
+          };
+        }
+        return prev;
+      });
+    }
+  }, [products.length, priceRange]);
+
   // Filter and sort products
   const filteredProducts = useMemo(() => {
     let filtered = products;
 
-    // Apply search - supports multiple words (e.g., "ثلاجة سامسونج" will find products with both words)
+    // Apply search - supports multiple words
     if (searchQuery.trim()) {
-      // Split search query into individual words
       const searchWords = searchQuery
         .toLowerCase()
         .trim()
         .split(/\s+/)
-        .filter(word => word.length > 0);
-      
+        .filter((word) => word.length > 0);
+
       filtered = filtered.filter((p) => {
-        // Safely convert all values to strings and create searchable text
         const name = String(p.name || p.Name || '').toLowerCase();
         const brand = String(p.brand || p.Brand || '').toLowerCase();
         const type = String(p.type || p.Type || '').toLowerCase();
-        
-        // Combine all searchable fields into one text
         const searchableText = `${name} ${brand} ${type}`;
-        
-        // Check if ALL search words are found in the searchable text
-        return searchWords.every(word => searchableText.includes(word));
+        return searchWords.every((word) => searchableText.includes(word));
       });
     }
 
-    // Apply filters
-    if (filters.type) {
-      filtered = filtered.filter((p) => p.type === filters.type);
+    // Apply type filter
+    if (filters.selectedTypes.length > 0) {
+      filtered = filtered.filter((p) => filters.selectedTypes.includes(p.type || ''));
     }
-    if (filters.brand) {
-      filtered = filtered.filter((p) => p.brand === filters.brand);
+
+    // Apply brand filter
+    if (filters.selectedBrands.length > 0) {
+      filtered = filtered.filter((p) => filters.selectedBrands.includes(p.brand || ''));
     }
-    if (filters.size) {
-      filtered = filtered.filter((p) => p.size === filters.size);
+
+    // Apply size filter
+    if (filters.selectedSizes.length > 0) {
+      filtered = filtered.filter((p) => filters.selectedSizes.includes(p.size || ''));
     }
-    if (filters.color) {
-      filtered = filtered.filter((p) => p.color === filters.color);
+
+    // Apply color filter
+    if (filters.selectedColors.length > 0) {
+      filtered = filtered.filter((p) => filters.selectedColors.includes(p.color || ''));
     }
+
+    // Apply price filter
+    filtered = filtered.filter((p) => {
+      const price = p.price || 0;
+      return price >= filters.priceRange.min && price <= filters.priceRange.max;
+    });
 
     // Apply sorting
     const sorted = [...filtered];
@@ -94,11 +132,10 @@ export default function Home() {
         sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
         break;
       case 'date-desc':
-        // Sort by created_at descending (newest first)
         sorted.sort((a, b) => {
           const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
           const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-          return dateB - dateA; // Descending order (newest first)
+          return dateB - dateA;
         });
         break;
     }
@@ -119,12 +156,105 @@ export default function Home() {
 
   const cartItemCount = isMounted ? cart.reduce((sum, item) => sum + item.quantity, 0) : 0;
 
+  // Build active filters for ActiveFiltersBar
+  const activeFilters = useMemo(() => {
+    const active: Array<{ key: string; label: string; value: string }> = [];
+    
+    filters.selectedTypes.forEach((type) => {
+      active.push({ key: `type_${type}`, label: 'النوع', value: type });
+    });
+    
+    filters.selectedBrands.forEach((brand) => {
+      active.push({ key: `brand_${brand}`, label: 'العلامة التجارية', value: brand });
+    });
+    
+    filters.selectedSizes.forEach((size) => {
+      active.push({ key: `size_${size}`, label: 'الحجم', value: size });
+    });
+    
+    filters.selectedColors.forEach((color) => {
+      active.push({ key: `color_${color}`, label: 'اللون', value: color });
+    });
+
+    // Price filter (only show if not at full range)
+    const isPriceFiltered = 
+      filters.priceRange.min > priceRange.min || 
+      filters.priceRange.max < priceRange.max;
+    if (isPriceFiltered) {
+      active.push({
+        key: 'price',
+        label: 'السعر',
+        value: `₪${filters.priceRange.min.toFixed(2)} - ₪${filters.priceRange.max.toFixed(2)}`,
+      });
+    }
+
+    return active;
+  }, [filters, priceRange]);
+
+  const handleRemoveFilter = (key: string) => {
+    if (key === 'price') {
+      setFilters((prev) => ({
+        ...prev,
+        priceRange: { min: priceRange.min, max: priceRange.max },
+      }));
+    } else if (key.startsWith('type_')) {
+      const type = key.replace('type_', '');
+      setFilters((prev) => ({
+        ...prev,
+        selectedTypes: prev.selectedTypes.filter((t) => t !== type),
+      }));
+    } else if (key.startsWith('brand_')) {
+      const brand = key.replace('brand_', '');
+      setFilters((prev) => ({
+        ...prev,
+        selectedBrands: prev.selectedBrands.filter((b) => b !== brand),
+      }));
+    } else if (key.startsWith('size_')) {
+      const size = key.replace('size_', '');
+      setFilters((prev) => ({
+        ...prev,
+        selectedSizes: prev.selectedSizes.filter((s) => s !== size),
+      }));
+    } else if (key.startsWith('color_')) {
+      const color = key.replace('color_', '');
+      setFilters((prev) => ({
+        ...prev,
+        selectedColors: prev.selectedColors.filter((c) => c !== color),
+      }));
+    }
+  };
+
+  const handleClearAllFilters = () => {
+    setFilters({
+      selectedTypes: [],
+      selectedBrands: [],
+      selectedSizes: [],
+      selectedColors: [],
+      priceRange: { min: priceRange.min, max: priceRange.max },
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" dir="rtl">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
+            {/* Company Name */}
+            <div className="flex-shrink-0">
+              <h1 
+                className="text-2xl font-bold tracking-tight uppercase"
+                style={{ 
+                  fontFamily: 'var(--font-nunito), Nunito, system-ui, -apple-system, sans-serif',
+                  letterSpacing: '0.01em',
+                  color: '#D4AF37',
+                  fontWeight: 700
+                }}
+              >
+                ALMNAR
+              </h1>
+            </div>
+
             {/* Search Bar */}
             <div className="flex-1 relative">
               <Search
@@ -143,11 +273,20 @@ export default function Home() {
 
             {/* Filter Button - Mobile only */}
             <button
-              onClick={() => setIsFilterOpen(true)}
-              className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              onClick={() => setIsFilterDrawerOpen(true)}
+              className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors relative"
               aria-label="Filter"
             >
               <Filter size={24} className="text-gray-700" />
+              {(filters.selectedTypes.length > 0 ||
+                filters.selectedBrands.length > 0 ||
+                filters.selectedSizes.length > 0 ||
+                filters.selectedColors.length > 0 ||
+                (filters.priceRange.min > priceRange.min || filters.priceRange.max < priceRange.max)) && (
+                <span className="absolute -top-1 -right-1 bg-gray-900 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  {activeFilters.length}
+                </span>
+              )}
             </button>
 
             {/* Cart Button */}
@@ -164,7 +303,7 @@ export default function Home() {
               )}
             </button>
 
-            {/* Admin Panel Button - TEMPORARY: Show for all logged-in users */}
+            {/* Admin Panel Button */}
             {user && (
               <button
                 onClick={() => router.push('/admin')}
@@ -186,19 +325,8 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Filter Sidebar - Desktop (always visible) */}
-      <FilterSidebar
-        isOpen={isFilterOpen}
-        onClose={() => setIsFilterOpen(false)}
-        onApplyFilters={(newFilters) => {
-          setFilters(newFilters);
-          setIsFilterOpen(false);
-        }}
-        currentFilters={filters}
-      />
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6" dir="rtl">
+      {/* Main Content - 2 Column Layout (Desktop) */}
+      <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
@@ -208,113 +336,113 @@ export default function Home() {
           </div>
         )}
 
-        {/* Results Count and Sort */}
         {!loading && (
-          <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <p className="text-sm text-gray-600">
-              عرض {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} من {filteredProducts.length} منتج
-            </p>
-            <div className="flex items-center gap-3">
-              {totalPages > 1 && (
-                <p className="text-sm text-gray-600 hidden sm:block">
-                  صفحة {currentPage} من {totalPages}
-                </p>
+          <div className="flex gap-6">
+            {/* Desktop Sidebar - Hidden on mobile */}
+            <aside className="hidden lg:block">
+              <FilterSidebar filters={filters} onFilterChange={setFilters} />
+            </aside>
+
+            {/* Products Grid */}
+            <div className="flex-1 min-w-0">
+              {/* Active Filters Bar */}
+              <ActiveFiltersBar
+                filters={activeFilters}
+                onRemove={handleRemoveFilter}
+                onClearAll={handleClearAllFilters}
+              />
+
+              {/* Grid Header */}
+              <ProductGridHeader
+                totalResults={filteredProducts.length}
+                showingFrom={startIndex + 1}
+                showingTo={Math.min(endIndex, filteredProducts.length)}
+                sortOption={sortOption}
+                onSortChange={setSortOption}
+              />
+
+              {/* Products Grid */}
+              {filteredProducts.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 text-lg">لم يتم العثور على منتجات</p>
+                  <p className="text-gray-400 text-sm mt-2">جرب تعديل البحث أو الفلاتر</p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {paginatedProducts.map((product) => (
+                      <ProductCard key={product.id} product={product} />
+                    ))}
+                  </div>
+
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="mt-8 flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronRight size={20} />
+                        السابق
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setCurrentPage(pageNum)}
+                              className={`px-3 py-2 rounded-lg transition-colors ${
+                                currentPage === pageNum
+                                  ? 'bg-gray-900 text-white'
+                                  : 'border border-gray-300 hover:bg-gray-50'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <button
+                        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        التالي
+                        <ChevronLeft size={20} />
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
-              {/* Sort Dropdown */}
-              <div className="relative">
-                <select
-                  value={sortOption}
-                  onChange={(e) => setSortOption(e.target.value as SortOption)}
-                  className="appearance-none pr-4 pl-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-sm font-medium cursor-pointer text-right"
-                >
-                  <option value="date-desc">الأحدث أولاً</option>
-                  <option value="name-asc">الاسم: أ-ي</option>
-                  <option value="name-desc">الاسم: ي-أ</option>
-                  <option value="price-asc">السعر: من الأقل للأعلى</option>
-                  <option value="price-desc">السعر: من الأعلى للأقل</option>
-                </select>
-                <ArrowUpDown size={16} className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
             </div>
           </div>
         )}
-
-        {/* Products Grid */}
-        {!loading && filteredProducts.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">لم يتم العثور على منتجات</p>
-            <p className="text-gray-400 text-sm mt-2">
-              جرب تعديل البحث أو الفلاتر
-            </p>
-          </div>
-        ) : !loading ? (
-          <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {paginatedProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-2">
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronRight size={20} />
-                  السابق
-                </button>
-                
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      pageNum = currentPage - 2 + i;
-                    }
-                    
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => setCurrentPage(pageNum)}
-                        className={`px-3 py-2 rounded-lg transition-colors ${
-                          currentPage === pageNum
-                            ? 'bg-gray-900 text-white'
-                            : 'border border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  التالي
-                  <ChevronLeft size={20} />
-                </button>
-        </div>
-            )}
-          </>
-        ) : null}
       </main>
 
-      {/* Cart Drawer */}
-      <CartDrawer
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
+      {/* Mobile Filter Drawer */}
+      <FilterDrawer
+        isOpen={isFilterDrawerOpen}
+        onClose={() => setIsFilterDrawerOpen(false)}
+        filters={filters}
+        onFilterChange={setFilters}
       />
+
+      {/* Cart Drawer */}
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </div>
   );
 }
