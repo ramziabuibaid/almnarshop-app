@@ -76,6 +76,11 @@ export default function CustomersPage() {
   const [dashboardData, setDashboardData] = useState<any>({ overdue: [], today: [], upcoming: [] });
   const [dashboardLoading, setDashboardLoading] = useState(false);
 
+  // Set page title
+  useEffect(() => {
+    document.title = 'العملاء - Customers';
+  }, []);
+
   // Load customers on mount
   useEffect(() => {
     const loadCustomers = async () => {

@@ -43,6 +43,10 @@ export default function POSPage() {
 
   // Check if user has permission to create POS invoices
   const canCreatePOS = admin?.is_super_admin || admin?.permissions?.createPOS === true;
+
+  useEffect(() => {
+    document.title = 'نقطة البيع - POS';
+  }, []);
   const [barcodeInput, setBarcodeInput] = useState('');
   const [filters, setFilters] = useState({
     type: '',

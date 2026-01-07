@@ -34,6 +34,7 @@ export function sanitizeAdminRow(row: any) {
     username: row.username,
     is_super_admin: !!row.is_super_admin,
     is_active: !!row.is_active,
+    work_location: row.work_location === 'المخزن' ? 'المخزن' : 'المحل',
     permissions: normalizePermissions(row.permissions),
   };
 }

@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
     const password = String(body?.password || '');
     const is_super_admin = !!body?.is_super_admin;
     const is_active = body?.is_active !== undefined ? !!body.is_active : true;
+    const work_location = body?.work_location === 'المخزن' ? 'المخزن' : 'المحل';
     const permissions = normalizePermissions(body?.permissions);
 
     if (!username || !password) {
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
         password_hash,
         is_super_admin,
         is_active,
+        work_location,
         permissions,
       })
       .select('*')

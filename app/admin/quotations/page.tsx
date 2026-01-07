@@ -9,6 +9,7 @@ import {
   deleteQuotation,
   updateQuotationStatus,
 } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import {
   Loader2,
   FileText,
@@ -17,18 +18,23 @@ import {
   Edit,
   Trash2,
   Plus,
+  X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface Quotation {
   QuotationID: string;
   Date: string;
   CustomerID: string | null;
-  customer?: { name?: string; phone?: string; address?: string };
+  customer?: { name?: string; phone?: string; address?: string; shamelNo?: string };
   Notes?: string;
   Status: string;
   SpecialDiscountAmount: number;
   GiftDiscountAmount: number;
   totalAmount?: number;
+  CreatedAt?: string;
+  CreatedBy?: string;
 }
 
 const STATUS_OPTIONS = [
@@ -45,7 +51,7 @@ export default function QuotationsPage() {
   const router = useRouter();
   // Check if user has accountant permission (for status changes)
   const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
-  const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [allQuotations, setAllQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,39 +59,55 @@ export default function QuotationsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalQuotations, setTotalQuotations] = useState(0);
-  const [showAll, setShowAll] = useState(false);
-  const pageSize = 20;
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-
-  // Debounce search query - wait 500ms after user stops typing
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  const QUOTATIONS_PER_PAGE = 30;
+  const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
-    loadQuotations();
-  }, [currentPage, showAll, debouncedSearchQuery]);
+    document.title = 'العروض السعرية - Quotations';
+  }, []);
 
-  const loadQuotations = async () => {
+  useEffect(() => {
+    loadAllQuotations();
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      // Fetch admin users from Supabase
+      const { data: users, error } = await supabase
+        .from('admin_users')
+        .select('id, username')
+        .order('username');
+
+      if (error) {
+        console.error('[Quotations] Failed to load users:', error);
+        return;
+      }
+
+      // Create a map from user_id to username
+      const map = new Map<string, string>();
+      if (users && Array.isArray(users)) {
+        users.forEach((user: any) => {
+          const userId = user.id || '';
+          const username = user.username || '';
+          if (userId && username) {
+            map.set(userId, username);
+          }
+        });
+      }
+      setUserMap(map);
+    } catch (err: any) {
+      console.error('[Quotations] Failed to load users:', err);
+    }
+  };
+
+  const loadAllQuotations = async () => {
     setLoading(true);
     setError(null);
     try {
-      if (showAll) {
         // Load all quotations (use a very large page size)
-        const result = await getQuotationsFromSupabase(1, 10000, debouncedSearchQuery || undefined);
-        setQuotations(result.quotations);
-        setTotalQuotations(result.total);
-      } else {
-        // Load paginated quotations
-        const result = await getQuotationsFromSupabase(currentPage, pageSize, debouncedSearchQuery || undefined);
-        setQuotations(result.quotations);
-        setTotalQuotations(result.total);
-      }
+      const result = await getQuotationsFromSupabase(1, 10000);
+      setAllQuotations(result.quotations);
     } catch (err: any) {
       console.error('[QuotationsPage] Failed to load quotations:', err);
       setError(err?.message || 'فشل تحميل العروض السعرية');
@@ -94,10 +116,10 @@ export default function QuotationsPage() {
     }
   };
 
-  // Reset to page 1 when search changes
+  // Reset to page 1 when search or filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchQuery]);
+  }, [searchQuery, statusFilter]);
 
   const handleDelete = async (quotationId: string) => {
     if (!confirm('هل أنت متأكد من حذف هذا العرض السعري؟')) {
@@ -108,7 +130,7 @@ export default function QuotationsPage() {
     try {
       await deleteQuotation(quotationId);
       // Reload quotations after deletion
-      loadQuotations();
+      loadAllQuotations();
     } catch (err: any) {
       console.error('[QuotationsPage] Failed to delete quotation:', err);
       alert(err?.message || 'فشل حذف العرض السعري');
@@ -122,14 +144,14 @@ export default function QuotationsPage() {
     try {
       await updateQuotationStatus(quotationId, newStatus);
       // Update local state immediately for better UX
-      setQuotations(prev => prev.map(q => 
+      setAllQuotations(prev => prev.map(q => 
         q.QuotationID === quotationId ? { ...q, Status: newStatus } : q
       ));
     } catch (err: any) {
       console.error('[QuotationsPage] Failed to update quotation status:', err);
       alert(err?.message || 'فشل تحديث حالة العرض السعري');
       // Reload to revert any optimistic update
-      loadQuotations();
+      loadAllQuotations();
     } finally {
       setUpdatingStatusId(null);
     }
@@ -146,6 +168,20 @@ export default function QuotationsPage() {
       });
     } catch {
       return '—';
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    } catch {
+      return '';
     }
   };
 
@@ -176,9 +212,34 @@ export default function QuotationsPage() {
     return statusColors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  // Apply local filters only (status) - search is done in API
+  // Apply smart search and filters (client-side like products page)
   const filteredQuotations = useMemo(() => {
-    let filtered = quotations;
+    let filtered = allQuotations;
+
+    // Apply smart search - supports multiple words (like products page)
+    if (searchQuery.trim()) {
+      // Split search query into individual words
+      const searchWords = searchQuery
+        .toLowerCase()
+        .trim()
+        .split(/\s+/)
+        .filter(word => word.length > 0);
+      
+      filtered = filtered.filter((quotation) => {
+        // Get searchable fields
+        const quotationId = String(quotation.QuotationID || '').toLowerCase();
+        const customerName = String(quotation.customer?.name || '').toLowerCase();
+        const customerId = String(quotation.CustomerID || '').toLowerCase();
+        const notes = String(quotation.Notes || '').toLowerCase();
+        const status = String(quotation.Status || '').toLowerCase();
+        
+        // Combine all searchable fields into one text
+        const searchableText = `${quotationId} ${customerName} ${customerId} ${notes} ${status}`;
+        
+        // Check if ALL search words are found in the searchable text (words don't need to be consecutive)
+        return searchWords.every(word => searchableText.includes(word));
+      });
+    }
     
     // Apply status filter
     if (statusFilter && statusFilter !== 'الكل') {
@@ -186,7 +247,13 @@ export default function QuotationsPage() {
     }
     
     return filtered;
-  }, [quotations, statusFilter]);
+  }, [allQuotations, searchQuery, statusFilter]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredQuotations.length / QUOTATIONS_PER_PAGE);
+  const startIndex = (currentPage - 1) * QUOTATIONS_PER_PAGE;
+  const endIndex = startIndex + QUOTATIONS_PER_PAGE;
+  const paginatedQuotations = filteredQuotations.slice(startIndex, endIndex);
 
   if (loading) {
     return (
@@ -231,19 +298,10 @@ export default function QuotationsPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">العروض السعرية</h1>
             <p className="text-gray-600 mt-1">
-              عرض وإدارة جميع العروض السعرية ({totalQuotations} عرض إجمالي)
+              عرض وإدارة جميع العروض السعرية ({allQuotations.length} عرض إجمالي)
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                setShowAll(!showAll);
-                setCurrentPage(1);
-              }}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo"
-            >
-              {showAll ? 'عرض بصفحات' : 'عرض الكل'}
-            </button>
             <button
               onClick={() => router.push('/admin/quotations/new')}
               className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
@@ -266,6 +324,15 @@ export default function QuotationsPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  title="مسح البحث"
+                >
+                  <X size={18} />
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-gray-700 font-cairo whitespace-nowrap">فلترة:</label>
@@ -285,12 +352,23 @@ export default function QuotationsPage() {
           </div>
         </div>
 
+        {/* Search Results Info */}
+        {searchQuery && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-700">
+              تم العثور على <span className="font-semibold">{filteredQuotations.length}</span> عرض سعري يطابق البحث
+            </p>
+          </div>
+        )}
+
         {/* Quotations List */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           {filteredQuotations.length === 0 ? (
             <div className="text-center py-12">
               <FileText size={48} className="text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">لا توجد عروض سعرية</p>
+              <p className="text-gray-600 text-lg">
+                {searchQuery ? 'لم يتم العثور على عروض سعرية تطابق البحث' : 'لا توجد عروض سعرية'}
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -313,46 +391,67 @@ export default function QuotationsPage() {
                       المبلغ الإجمالي
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
-                      الملاحظات
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
                       الإجراءات
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredQuotations.map((quotation, index) => (
+                  {paginatedQuotations.map((quotation, index) => (
                     <tr key={quotation.QuotationID || `quotation-${index}`} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900 font-cairo">{quotation.QuotationID}</div>
+                        <div className="text-sm font-medium text-gray-900 font-cairo">
+                          {quotation.QuotationID}
+                        </div>
+                        {quotation.CreatedBy && userMap.get(quotation.CreatedBy) && (
+                          <div className="text-xs text-gray-500 font-cairo mt-1">
+                            {userMap.get(quotation.CreatedBy)}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-600 font-cairo">{formatDate(quotation.Date)}</div>
+                        {quotation.CreatedAt && (
+                          <div className="text-xs text-gray-500 font-cairo mt-1">
+                            {formatTime(quotation.CreatedAt)}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {quotation.CustomerID ? (
-                          <button
-                            onClick={(e) => {
-                              if (e.ctrlKey || e.metaKey || e.shiftKey) {
-                                window.open(`/admin/customers/${quotation.CustomerID}`, '_blank', 'noopener,noreferrer');
-                                return;
-                              }
-                              router.push(`/admin/customers/${quotation.CustomerID}`);
-                            }}
-                            onMouseDown={(e) => {
-                              if (e.button === 1) {
-                                e.preventDefault();
-                                window.open(`/admin/customers/${quotation.CustomerID}`, '_blank', 'noopener,noreferrer');
-                              }
-                            }}
-                            className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-cairo"
-                            title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
-                          >
-                            {quotation.customer?.name || quotation.CustomerID}
-                          </button>
+                          <div>
+                            <button
+                              onClick={(e) => {
+                                if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                                  window.open(`/admin/customers/${quotation.CustomerID}`, '_blank', 'noopener,noreferrer');
+                                  return;
+                                }
+                                router.push(`/admin/customers/${quotation.CustomerID}`);
+                              }}
+                              onMouseDown={(e) => {
+                                if (e.button === 1) {
+                                  e.preventDefault();
+                                  window.open(`/admin/customers/${quotation.CustomerID}`, '_blank', 'noopener,noreferrer');
+                                }
+                              }}
+                              className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-cairo"
+                              title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
+                            >
+                              {quotation.customer?.name || quotation.CustomerID}
+                            </button>
+                            {quotation.customer?.shamelNo && (
+                              <div className="text-xs text-gray-500 font-cairo mt-1">
+                                {quotation.customer.shamelNo}
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <div className="text-sm text-gray-600 font-cairo">
                             {quotation.customer?.name || '—'}
+                            {quotation.customer?.shamelNo && (
+                              <div className="text-xs text-gray-500 font-cairo mt-1">
+                                {quotation.customer.shamelNo}
+                              </div>
+                            )}
                           </div>
                         )}
                       </td>
@@ -379,11 +478,6 @@ export default function QuotationsPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-semibold text-gray-900 font-cairo">
                           {formatCurrency(quotation.totalAmount || 0)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-600 max-w-xs truncate font-cairo">
-                          {quotation.Notes || '—'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -420,44 +514,68 @@ export default function QuotationsPage() {
               </table>
             </div>
           )}
-        </div>
 
         {/* Pagination */}
-        {!showAll && totalQuotations > pageSize && (
-          <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-4">
-            <div className="text-sm text-gray-600 font-cairo">
-              عرض {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalQuotations)} من {totalQuotations}
+          {filteredQuotations.length > 0 && totalPages > 1 && (
+            <div className="bg-gray-50 border-t border-gray-200 px-4 py-3 flex items-center justify-between">
+              <div className="text-sm text-gray-700">
+                عرض <span className="font-semibold">{startIndex + 1}</span> إلى{' '}
+                <span className="font-semibold">
+                  {Math.min(endIndex, filteredQuotations.length)}
+                </span>{' '}
+                من <span className="font-semibold">{filteredQuotations.length}</span> عرض سعري
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-cairo"
-              >
-                السابق
+                  className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="الصفحة السابقة"
+                >
+                  <ChevronRight size={20} className="text-gray-600" />
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum: number;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-3 py-1 rounded-lg transition-colors ${
+                          currentPage === pageNum
+                            ? 'bg-gray-900 text-white'
+                            : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {pageNum}
               </button>
-              <span className="text-sm text-gray-600 font-cairo">
-                صفحة {currentPage} من {Math.ceil(totalQuotations / pageSize)}
-              </span>
+                    );
+                  })}
+                </div>
               <button
-                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalQuotations / pageSize), prev + 1))}
-                disabled={currentPage >= Math.ceil(totalQuotations / pageSize)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-cairo"
-              >
-                التالي
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="الصفحة التالية"
+                >
+                  <ChevronLeft size={20} className="text-gray-600" />
               </button>
             </div>
           </div>
         )}
-
-        {/* Summary */}
-        {filteredQuotations.length > 0 && (
-          <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
-            <p className="text-sm text-gray-600 font-cairo">
-              العروض المعروضة: <span className="font-semibold">{filteredQuotations.length}</span> من <span className="font-semibold">{totalQuotations}</span>
-            </p>
           </div>
-        )}
+
+
       </div>
     </AdminLayout>
   );

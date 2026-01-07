@@ -17,12 +17,16 @@ import {
   CheckCircle,
   XCircle,
   ChevronDown,
+  X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface WarehouseSalesInvoice {
   InvoiceID: string;
   CustomerID: string;
   CustomerName: string;
+  CustomerShamelNo?: string;
   Date: string;
   AccountantSign: string;
   Notes?: string;
@@ -35,48 +39,41 @@ interface WarehouseSalesInvoice {
 export default function WarehouseSalesPage() {
   const { admin } = useAdminAuth();
   const router = useRouter();
-  const [invoices, setInvoices] = useState<WarehouseSalesInvoice[]>([]);
+  const [allInvoices, setAllInvoices] = useState<WarehouseSalesInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [signFilter, setSignFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalInvoices, setTotalInvoices] = useState(0);
-  const pageSize = 20;
+  const INVOICES_PER_PAGE = 30;
   const [viewing, setViewing] = useState<{
     invoice: any | null;
     details: any[] | null;
   }>({ invoice: null, details: null });
   const [viewLoading, setViewLoading] = useState(false);
   const [updatingSettlement, setUpdatingSettlement] = useState(false);
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
   // Check if user has permission to access warehouse invoices
   const canAccessWarehouseInvoices = admin?.is_super_admin || admin?.permissions?.accessWarehouseInvoices === true;
   // Check if user has accountant permission (for posting and status changes)
   const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
 
-  // Debounce search query - wait 500ms after user stops typing
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    document.title = 'مبيعات المخزن - Warehouse Sales';
+  }, []);
 
   useEffect(() => {
-    loadInvoices();
-  }, [currentPage, debouncedSearchQuery]);
+    loadAllInvoices();
+  }, []);
 
-  const loadInvoices = async () => {
+  const loadAllInvoices = async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await getWarehouseSalesInvoices(currentPage, pageSize, debouncedSearchQuery || undefined);
-      setInvoices(result.invoices);
-      setTotalInvoices(result.total);
+      // Load all invoices (use a large page size to get all)
+      const result = await getWarehouseSalesInvoices(1, 10000);
+      setAllInvoices(result.invoices);
     } catch (err: any) {
       console.error('[WarehouseSalesPage] Failed to load invoices:', err);
       setError(err?.message || 'فشل تحميل الفواتير');
@@ -85,10 +82,10 @@ export default function WarehouseSalesPage() {
     }
   };
 
-  // Reset to page 1 when search changes
+  // Reset to page 1 when search or filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchQuery]);
+  }, [searchQuery, statusFilter, signFilter]);
 
   const handlePrintInvoice = (invoice: WarehouseSalesInvoice) => {
     // Open print page in new window - will auto-print when loaded
@@ -140,7 +137,7 @@ export default function WarehouseSalesPage() {
         details: fullInvoice?.Items || [],
       });
       // Reload invoices list to update the status
-      await loadInvoices();
+      await loadAllInvoices();
       alert('تم تغيير حالة الترحيل إلى مرحلة بنجاح');
     } catch (err: any) {
       console.error('[WarehouseSalesPage] Failed to update settlement status:', err);
@@ -177,14 +174,27 @@ export default function WarehouseSalesPage() {
     if (!dateString) return '—';
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('ar-SA', {
+      return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
-        numberingSystem: 'latn',
       });
     } catch {
       return '—';
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    } catch {
+      return '';
     }
   };
 
@@ -197,9 +207,32 @@ export default function WarehouseSalesPage() {
     }).format(amount);
   };
 
-  // Apply local filters only (status and sign) - search is done in API
+  // Apply smart search and filters (client-side like products page)
   const filteredInvoices = useMemo(() => {
-    let filtered = invoices;
+    let filtered = allInvoices;
+
+    // Apply smart search - supports multiple words (like products page)
+    if (searchQuery.trim()) {
+      // Split search query into individual words
+      const searchWords = searchQuery
+        .toLowerCase()
+        .trim()
+        .split(/\s+/)
+        .filter(word => word.length > 0);
+      
+      filtered = filtered.filter((invoice) => {
+        // Get searchable fields
+        const invoiceId = String(invoice.InvoiceID || '').toLowerCase();
+        const customerName = String(invoice.CustomerName || '').toLowerCase();
+        const customerId = String(invoice.CustomerID || '').toLowerCase();
+        
+        // Combine all searchable fields into one text
+        const searchableText = `${invoiceId} ${customerName} ${customerId}`;
+        
+        // Check if ALL search words are found in the searchable text (words don't need to be consecutive)
+        return searchWords.every(word => searchableText.includes(word));
+      });
+    }
 
     // Filter by status
     if (statusFilter !== 'all') {
@@ -212,7 +245,13 @@ export default function WarehouseSalesPage() {
     }
 
     return filtered;
-  }, [invoices, statusFilter, signFilter]);
+  }, [allInvoices, searchQuery, statusFilter, signFilter]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredInvoices.length / INVOICES_PER_PAGE);
+  const startIndex = (currentPage - 1) * INVOICES_PER_PAGE;
+  const endIndex = startIndex + INVOICES_PER_PAGE;
+  const paginatedInvoices = filteredInvoices.slice(startIndex, endIndex);
 
   // Check permissions
   if (!canAccessWarehouseInvoices) {
@@ -250,7 +289,7 @@ export default function WarehouseSalesPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">فواتير مبيعات المخزن</h1>
             <p className="text-gray-600 mt-1">
-              إدارة فواتير مبيعات المخزن ({totalInvoices} فاتورة إجمالي)
+              إدارة فواتير مبيعات المخزن ({allInvoices.length} فاتورة إجمالي)
             </p>
           </div>
           <button
@@ -273,18 +312,27 @@ export default function WarehouseSalesPage() {
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
-            <div className="relative">
+            <div className="relative flex-1">
               <Search
                 size={20}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
               />
               <input
                 type="text"
-                placeholder="بحث برقم الفاتورة أو اسم العميل..."
+                placeholder="بحث برقم الفاتورة أو اسم العميل أو رقم الزبون..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  title="مسح البحث"
+                >
+                  <X size={18} />
+                </button>
+              )}
             </div>
 
             {/* Status Filter */}
@@ -319,11 +367,22 @@ export default function WarehouseSalesPage() {
           </div>
         </div>
 
+        {/* Search Results Info */}
+        {searchQuery && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-700">
+              تم العثور على <span className="font-semibold">{filteredInvoices.length}</span> فاتورة تطابق البحث
+            </p>
+          </div>
+        )}
+
         {/* Invoices Table */}
         {filteredInvoices.length === 0 ? (
           <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
             <FileText size={48} className="text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg">لا توجد فواتير</p>
+            <p className="text-gray-600 text-lg">
+              {searchQuery ? 'لم يتم العثور على فواتير تطابق البحث' : 'لا توجد فواتير'}
+            </p>
           </div>
         ) : (
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -355,7 +414,7 @@ export default function WarehouseSalesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {filteredInvoices.map((invoice) => (
+                  {paginatedInvoices.map((invoice) => (
                     <tr key={invoice.InvoiceID} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 text-right">
                         <div className="font-medium text-gray-900">{invoice.InvoiceID}</div>
@@ -380,9 +439,19 @@ export default function WarehouseSalesPage() {
                         >
                           {invoice.CustomerName || invoice.CustomerID}
                         </button>
+                        {invoice.CustomerShamelNo && (
+                          <div className="text-xs text-gray-500 font-cairo mt-1">
+                            {invoice.CustomerShamelNo}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="text-gray-600">{formatDate(invoice.Date)}</div>
+                        {invoice.CreatedAt && (
+                          <div className="text-xs text-gray-500 font-cairo mt-1">
+                            {formatTime(invoice.CreatedAt)}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         {canAccountant ? (
@@ -480,33 +549,6 @@ export default function WarehouseSalesPage() {
           </div>
         )}
 
-        {/* Pagination */}
-        {totalInvoices > pageSize && (
-          <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-4">
-            <div className="text-sm text-gray-600">
-              عرض {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalInvoices)} من {totalInvoices}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                السابق
-              </button>
-              <span className="text-sm text-gray-600">
-                صفحة {currentPage} من {Math.ceil(totalInvoices / pageSize)}
-              </span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalInvoices / pageSize), prev + 1))}
-                disabled={currentPage >= Math.ceil(totalInvoices / pageSize)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                التالي
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Modal عرض الفاتورة */}
         {viewing.invoice && (

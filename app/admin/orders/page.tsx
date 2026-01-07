@@ -54,6 +54,10 @@ export default function OrdersPage() {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
+    document.title = 'الطلبيات - Orders';
+  }, []);
+
+  useEffect(() => {
     loadOrders();
   }, []);
 

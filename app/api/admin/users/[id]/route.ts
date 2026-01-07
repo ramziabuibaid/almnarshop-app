@@ -26,6 +26,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (body.is_active !== undefined) {
       updates.is_active = !!body.is_active;
     }
+    if (body.work_location !== undefined) {
+      updates.work_location = body.work_location === 'المخزن' ? 'المخزن' : 'المحل';
+    }
     if (body.permissions !== undefined) {
       updates.permissions = normalizePermissions(body.permissions);
     }

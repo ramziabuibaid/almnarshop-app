@@ -13,6 +13,10 @@ export default function LoginPage() {
   const { setUser } = useShop();
   const router = useRouter();
 
+  useEffect(() => {
+    document.title = 'تسجيل الدخول - Login';
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');

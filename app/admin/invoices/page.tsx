@@ -47,6 +47,10 @@ export default function InvoicesPage() {
   const canViewCashInvoices = admin?.is_super_admin || admin?.permissions?.viewCashInvoices === true;
 
   useEffect(() => {
+    document.title = 'الفواتير النقدية - Cash Invoices';
+  }, []);
+
+  useEffect(() => {
     loadInvoices();
   }, []);
 

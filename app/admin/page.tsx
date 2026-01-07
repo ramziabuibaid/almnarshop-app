@@ -9,6 +9,10 @@ export default function AdminDashboardPage() {
   const { products, loadProducts } = useShop();
 
   useEffect(() => {
+    document.title = 'لوحة التحكم - Dashboard';
+  }, []);
+
+  useEffect(() => {
     loadProducts();
   }, [loadProducts]);
 

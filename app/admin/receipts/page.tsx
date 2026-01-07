@@ -60,6 +60,10 @@ export default function ReceiptsPage() {
   });
 
   useEffect(() => {
+    document.title = 'سندات القبض - Receipts';
+  }, []);
+
+  useEffect(() => {
     loadReceipts(1);
     loadCustomers();
   }, []);

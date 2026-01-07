@@ -4131,54 +4131,55 @@ export async function getShopSalesInvoices(page: number = 1, pageSize: number = 
     // Get unique customer IDs
     const customerIds = [...new Set(invoices.map(i => i.customer_id).filter(Boolean))];
     
-    // Fetch all customer names in one query
-    let customerMap = new Map<string, string>();
+    // Fetch all customer names and shamel_no in one query
+    let customerMap = new Map<string, { name: string; shamelNo: string }>();
     if (customerIds.length > 0) {
       const { data: customers } = await supabase
         .from('customers')
-        .select('customer_id, name')
+        .select('customer_id, name, shamel_no')
         .in('customer_id', customerIds);
       
       if (customers) {
         customers.forEach((c: any) => {
-          customerMap.set(c.customer_id, c.name || '');
+          customerMap.set(c.customer_id, {
+            name: c.name || '',
+            shamelNo: c.shamel_no || ''
+          });
         });
       }
     }
 
-    // Get all invoice IDs
-    const invoiceIds = invoices.map(i => i.invoice_id);
-    
-    // Fetch all details in one query
-    let detailsMap = new Map<string, number>();
-    if (invoiceIds.length > 0) {
-      const { data: allDetails } = await supabase
-        .from('shop_sales_details')
-        .select('invoice_id, quantity, unit_price')
-        .in('invoice_id', invoiceIds);
+    // Fetch details for each invoice individually (same method as quotations - more reliable)
+    const mappedInvoices = await Promise.all(invoices.map(async (invoice: any) => {
+      const invoiceId = invoice.invoice_id;
       
-      if (allDetails) {
-        // Calculate subtotal for each invoice
-        allDetails.forEach((detail: any) => {
-          const invoiceId = detail.invoice_id;
-          const itemTotal = parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0));
-          const currentSubtotal = detailsMap.get(invoiceId) || 0;
-          detailsMap.set(invoiceId, currentSubtotal + itemTotal);
-        });
+      // Fetch details for this invoice
+      const { data: details, error: detailsError } = await supabase
+        .from('shop_sales_details')
+        .select('quantity, unit_price')
+        .eq('invoice_id', invoiceId);
+      
+      if (detailsError) {
+        console.error(`[API] Error fetching details for invoice ${invoiceId}:`, detailsError);
       }
-    }
-
-    // Map invoices with customer names and totals
-    const mappedInvoices = invoices.map((invoice: any) => {
-      const customerName = customerMap.get(invoice.customer_id) || '';
-      const subtotal = detailsMap.get(invoice.invoice_id) || 0;
+      
+      // Calculate subtotal from details
+      const subtotal = (details || []).reduce((sum: number, detail: any) => {
+        const quantity = parseFloat(String(detail.quantity || 0));
+        const unitPrice = parseFloat(String(detail.unit_price || 0));
+        return sum + (quantity * unitPrice);
+      }, 0);
+      
       const discount = parseFloat(String(invoice.discount || 0));
-      const total = subtotal - discount;
+      const total = Math.max(0, subtotal - discount);
+      
+      const customer = customerMap.get(invoice.customer_id) || { name: '', shamelNo: '' };
 
       return {
         InvoiceID: invoice.invoice_id,
         CustomerID: invoice.customer_id,
-        CustomerName: customerName,
+        CustomerName: customer.name,
+        CustomerShamelNo: customer.shamelNo,
         Date: invoice.date,
         AccountantSign: invoice.accountant_sign,
         Notes: invoice.notes || '',
@@ -4187,7 +4188,7 @@ export async function getShopSalesInvoices(page: number = 1, pageSize: number = 
         TotalAmount: total,
         CreatedAt: invoice.created_at,
       };
-    });
+    }));
 
     console.log(`[API] Shop sales invoices loaded: ${mappedInvoices.length} of ${total}`);
     return { invoices: mappedInvoices, total };
@@ -4683,54 +4684,55 @@ export async function getWarehouseSalesInvoices(page: number = 1, pageSize: numb
     // Get unique customer IDs
     const customerIds = [...new Set(invoices.map(i => i.customer_id).filter(Boolean))];
     
-    // Fetch all customer names in one query
-    let customerMap = new Map<string, string>();
+    // Fetch all customer names and shamel_no in one query
+    let customerMap = new Map<string, { name: string; shamelNo: string }>();
     if (customerIds.length > 0) {
       const { data: customers } = await supabase
         .from('customers')
-        .select('customer_id, name')
+        .select('customer_id, name, shamel_no')
         .in('customer_id', customerIds);
       
       if (customers) {
         customers.forEach((c: any) => {
-          customerMap.set(c.customer_id, c.name || '');
+          customerMap.set(c.customer_id, {
+            name: c.name || '',
+            shamelNo: c.shamel_no || ''
+          });
         });
       }
     }
 
-    // Get all invoice IDs
-    const invoiceIds = invoices.map(i => i.invoice_id);
-    
-    // Fetch all details in one query
-    let detailsMap = new Map<string, number>();
-    if (invoiceIds.length > 0) {
-      const { data: allDetails } = await supabase
-        .from('warehouse_sales_details')
-        .select('invoice_id, quantity, unit_price')
-        .in('invoice_id', invoiceIds);
+    // Fetch details for each invoice individually (same method as quotations - more reliable)
+    const mappedInvoices = await Promise.all(invoices.map(async (invoice: any) => {
+      const invoiceId = invoice.invoice_id;
       
-      if (allDetails) {
-        // Calculate subtotal for each invoice
-        allDetails.forEach((detail: any) => {
-          const invoiceId = detail.invoice_id;
-          const itemTotal = parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0));
-          const currentSubtotal = detailsMap.get(invoiceId) || 0;
-          detailsMap.set(invoiceId, currentSubtotal + itemTotal);
-        });
+      // Fetch details for this invoice
+      const { data: details, error: detailsError } = await supabase
+        .from('warehouse_sales_details')
+        .select('quantity, unit_price')
+        .eq('invoice_id', invoiceId);
+      
+      if (detailsError) {
+        console.error(`[API] Error fetching details for invoice ${invoiceId}:`, detailsError);
       }
-    }
-
-    // Map invoices with customer names and totals
-    const mappedInvoices = invoices.map((invoice: any) => {
-      const customerName = customerMap.get(invoice.customer_id) || '';
-      const subtotal = detailsMap.get(invoice.invoice_id) || 0;
+      
+      // Calculate subtotal from details
+      const subtotal = (details || []).reduce((sum: number, detail: any) => {
+        const quantity = parseFloat(String(detail.quantity || 0));
+        const unitPrice = parseFloat(String(detail.unit_price || 0));
+        return sum + (quantity * unitPrice);
+      }, 0);
+      
       const discount = parseFloat(String(invoice.discount || 0));
-      const total = subtotal - discount;
+      const total = Math.max(0, subtotal - discount);
+      
+      const customer = customerMap.get(invoice.customer_id) || { name: '', shamelNo: '' };
 
       return {
         InvoiceID: invoice.invoice_id,
         CustomerID: invoice.customer_id,
-        CustomerName: customerName,
+        CustomerName: customer.name,
+        CustomerShamelNo: customer.shamelNo,
         Date: invoice.date,
         AccountantSign: invoice.accountant_sign,
         Notes: invoice.notes || '',
@@ -4739,7 +4741,7 @@ export async function getWarehouseSalesInvoices(page: number = 1, pageSize: numb
         TotalAmount: total,
         CreatedAt: invoice.created_at,
       };
-    });
+    }));
 
     console.log(`[API] Warehouse sales invoices loaded: ${mappedInvoices.length} of ${total}`);
     return { invoices: mappedInvoices, total };
@@ -6023,6 +6025,8 @@ function mapQuotationFromSupabase(quotation: any, totalAmount: number = 0): any 
     SpecialDiscountAmount: parseFloat(String(quotation.special_discount_amount || 0)) || 0,
     GiftDiscountAmount: parseFloat(String(quotation.gift_discount_amount || 0)) || 0,
     totalAmount: totalAmount,
+    CreatedAt: quotation.created_at || '',
+    CreatedBy: quotation.created_by || quotation.user_id || '',
     customer: customer
       ? {
           name: customer.name || '',
@@ -6119,8 +6123,9 @@ export async function getQuotationsFromSupabase(page: number = 1, pageSize: numb
 
     const total = count || 0;
     
-    // Fetch quotations ordered by date descending with pagination
+    // Fetch quotations ordered by created_at descending (newest first), then by date
     const { data: quotations, error } = await dataQuery
+      .order('created_at', { ascending: false })
       .order('date', { ascending: false })
       .range(from, to);
     
@@ -6134,40 +6139,48 @@ export async function getQuotationsFromSupabase(page: number = 1, pageSize: numb
       throw new Error('Invalid response format: No quotations array found');
     }
     
-    // Fetch details for all quotations to calculate totals
-    const quotationIds = quotations.map((q: any) => q.quotation_id);
-    
-    const { data: allDetails, error: detailsError } = await supabase
-      .from('quotation_details')
-      .select('quotation_id, quantity, unit_price')
-      .in('quotation_id', quotationIds);
-    
-    if (detailsError) {
-      console.error('[API] Error fetching quotation details:', detailsError);
-    }
-    
-    // Calculate total for each quotation
-    const totalsMap = new Map<string, number>();
-    if (allDetails && Array.isArray(allDetails)) {
-      allDetails.forEach((detail: any) => {
-        const quotationId = detail.quotation_id;
-        const itemTotal = parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0));
-        const currentTotal = totalsMap.get(quotationId) || 0;
-        totalsMap.set(quotationId, currentTotal + itemTotal);
-      });
-    }
-    
-    // Map quotations with totals
-    const mappedQuotations = quotations.map((quotation: any) => {
-      const subtotal = totalsMap.get(quotation.quotation_id) || 0;
+    // Fetch details for each quotation individually (old method - more reliable)
+    // This ensures we get the correct totals even if it's a bit slower
+    const mappedQuotations = await Promise.all(quotations.map(async (quotation: any) => {
+      const quotationId = quotation.quotation_id;
+      
+      // Fetch details for this quotation
+      const { data: details, error: detailsError } = await supabase
+        .from('quotation_details')
+        .select('quantity, unit_price')
+        .eq('quotation_id', quotationId);
+      
+      if (detailsError) {
+        console.error(`[API] Error fetching details for quotation ${quotationId}:`, detailsError);
+      }
+      
+      // Calculate subtotal from details
+      const subtotal = (details || []).reduce((sum: number, detail: any) => {
+        const quantity = parseFloat(String(detail.quantity || 0));
+        const unitPrice = parseFloat(String(detail.unit_price || 0));
+        return sum + (quantity * unitPrice);
+      }, 0);
+      
       const specialDiscount = parseFloat(String(quotation.special_discount_amount || 0)) || 0;
       const giftDiscount = parseFloat(String(quotation.gift_discount_amount || 0)) || 0;
-      const totalAmount = subtotal - specialDiscount - giftDiscount;
+      
+      // Calculate total from details
+      const totalAmount = Math.max(0, subtotal - specialDiscount - giftDiscount);
+      
       return mapQuotationFromSupabase(quotation, totalAmount);
-    });
+    }));
     
     const totalTime = Date.now() - startTime;
     console.log(`[API] Quotations loaded from Supabase: ${mappedQuotations.length} of ${total} in ${totalTime}ms`);
+    
+    // Debug: Check final mapped quotations
+    if (mappedQuotations.length > 0) {
+      const sampleMapped = mappedQuotations.slice(0, 3).map(q => ({
+        quotationId: q.QuotationID,
+        totalAmount: q.totalAmount
+      }));
+      console.log('[API] Sample final mapped quotations:', sampleMapped);
+    }
     
     return { quotations: mappedQuotations, total };
   } catch (error: any) {
@@ -6541,6 +6554,570 @@ export async function getCustomerLastPriceForProduct(customerId: string, product
   } catch (error: any) {
     console.error('[API] getCustomerLastPriceForProduct error:', error);
     return null;
+  }
+}
+
+/**
+ * Get warehouse cash flow from warehouse_cash_flow view
+ * Returns all transactions sorted by date ascending for balance calculation
+ * If view doesn't have receipt_id/payment_id, fetch from individual tables
+ */
+export async function getWarehouseCashFlow(): Promise<any[]> {
+  try {
+    console.log('[API] Fetching warehouse cash flow from Supabase...');
+
+    // First try to get from view
+    const { data: viewData, error: viewError } = await supabase
+      .from('warehouse_cash_flow')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .order('date', { ascending: true });
+
+    // If view works and has receipt_id/payment_id, use it
+    if (!viewError && viewData && viewData.length > 0) {
+      const hasIds = viewData.some((item: any) => item.receipt_id || item.payment_id || item.receiptId || item.paymentId);
+      if (hasIds) {
+        console.log(`[API] Warehouse cash flow loaded from view: ${viewData.length} transactions`);
+        return viewData;
+      }
+    }
+
+    // If view doesn't work or doesn't have IDs, fetch from individual tables
+    console.log('[API] View missing IDs, fetching from individual tables...');
+    
+    const [receiptsResult, paymentsResult] = await Promise.all([
+      supabase
+        .from('warehouse_receipts')
+        .select('*, receipt_id')
+        .order('created_at', { ascending: true })
+        .order('date', { ascending: true }),
+      supabase
+        .from('warehouse_payments')
+        .select('*, payment_id')
+        .order('created_at', { ascending: true })
+        .order('date', { ascending: true })
+    ]);
+
+    const receipts = receiptsResult.data || [];
+    const payments = paymentsResult.data || [];
+
+    // Transform receipts
+    const receiptTransactions = receipts.map((r: any) => ({
+      receipt_id: r.receipt_id,
+      date: r.date,
+      created_at: r.created_at,
+      direction: 'in',
+      cash_amount: r.cash_amount || 0,
+      check_amount: r.check_amount || 0,
+      amount: (r.cash_amount || 0) + (r.check_amount || 0), // Total for backward compatibility
+      customer_id: r.customer_id,
+      related_party: r.customer_id,
+      notes: r.notes,
+      created_by: r.created_by || r.user_id,
+      user_id: r.created_by || r.user_id,
+    }));
+
+    // Transform payments
+    const paymentTransactions = payments.map((p: any) => ({
+      payment_id: p.payment_id,
+      date: p.date,
+      created_at: p.created_at,
+      direction: 'out',
+      cash_amount: p.cash_amount || 0,
+      check_amount: p.check_amount || 0,
+      amount: (p.cash_amount || 0) + (p.check_amount || 0), // Total for backward compatibility
+      customer_id: p.customer_id || p.related_party,
+      related_party: p.customer_id || p.related_party,
+      notes: p.notes,
+      created_by: p.created_by || p.user_id,
+      user_id: p.created_by || p.user_id,
+    }));
+
+    // Combine and sort
+    const allTransactions = [...receiptTransactions, ...paymentTransactions].sort((a, b) => {
+      const timeA = new Date(a.created_at || a.date).getTime();
+      const timeB = new Date(b.created_at || b.date).getTime();
+      return timeA - timeB;
+    });
+
+    console.log(`[API] Warehouse cash flow loaded from tables: ${allTransactions.length} transactions`);
+    return allTransactions;
+  } catch (error: any) {
+    console.error('[API] getWarehouseCashFlow error:', error?.message || error);
+    throw error;
+  }
+}
+
+/**
+ * Get shop cash flow from shop_receipts and shop_payments tables
+ * Ordered by date ASC, created_at ASC (critical for running balance calculation)
+ */
+export async function getShopCashFlow(): Promise<any[]> {
+  try {
+    console.log('[API] Fetching shop cash flow from tables...');
+
+    // Try to fetch from view first (if it exists)
+    try {
+      const { data: viewData, error: viewError } = await supabase
+        .from('shop_cash_flow')
+        .select('*')
+        .order('date', { ascending: true })
+        .order('created_at', { ascending: true });
+
+      if (!viewError && viewData && Array.isArray(viewData) && viewData.length > 0) {
+        console.log('[API] Shop cash flow loaded from view');
+        // Transform view data
+        const transformed = viewData.map((item: any) => {
+          const receiptId = item.receipt_id || '';
+          const paymentId = item.payment_id || item.pay_id || '';
+          const isReceipt = !!receiptId;
+          const isPayment = !!paymentId;
+          
+          let direction: 'in' | 'out' = 'in';
+          if (item.direction) {
+            direction = item.direction.toLowerCase() === 'out' ? 'out' : 'in';
+          } else {
+            direction = isReceipt ? 'in' : 'out';
+          }
+
+          const cashAmount = parseFloat(item.cash_amount || 0);
+          const chequeAmount = parseFloat(item.cheque_amount || 0);
+          const totalAmount = cashAmount + chequeAmount;
+          const relatedParty = item.related_party || item.customer_id || '';
+          const customerId = item.customer_id || item.related_party || '';
+          const userId = item.created_by || item.user_id || item.created_by_user_id || '';
+
+          return {
+            id: item.id || receiptId || paymentId || `transaction-${Date.now()}`,
+            date: item.date || '',
+            created_at: item.created_at || item.createdAt || '',
+            type: isReceipt ? 'receipt' as const : 'payment' as const,
+            direction,
+            related_party: relatedParty,
+            customer_id: customerId,
+            cash_amount: cashAmount,
+            check_amount: chequeAmount,
+            amount: totalAmount,
+            notes: item.notes || '',
+            receipt_id: receiptId,
+            payment_id: paymentId,
+            created_by: userId,
+            user_id: userId,
+          };
+        });
+        return transformed;
+      }
+    } catch (viewErr: any) {
+      console.log('[API] View not available or empty, fetching from tables...', viewErr?.message);
+    }
+
+    // If view doesn't work or doesn't have data, fetch from individual tables
+    console.log('[API] Fetching from individual tables...');
+    
+    const [receiptsResult, paymentsResult] = await Promise.all([
+      supabase
+        .from('shop_receipts')
+        .select('*, receipt_id')
+        .order('created_at', { ascending: true })
+        .order('date', { ascending: true }),
+      supabase
+        .from('shop_payments')
+        .select('*, pay_id')
+        .order('created_at', { ascending: true })
+        .order('date', { ascending: true })
+    ]);
+
+    const receipts = receiptsResult.data || [];
+    const payments = paymentsResult.data || [];
+
+    // Transform receipts
+    const receiptTransactions = receipts.map((r: any) => ({
+      receipt_id: r.receipt_id,
+      date: r.date,
+      created_at: r.created_at,
+      direction: 'in',
+      cash_amount: r.cash_amount || 0,
+      cheque_amount: r.cheque_amount || 0,
+      check_amount: r.cheque_amount || 0, // Also include check_amount for consistency
+      amount: (r.cash_amount || 0) + (r.cheque_amount || 0),
+      customer_id: r.customer_id,
+      related_party: r.customer_id,
+      notes: r.notes,
+      created_by: r.created_by || r.user_id,
+      user_id: r.created_by || r.user_id,
+    }));
+
+    // Transform payments
+    const paymentTransactions = payments.map((p: any) => ({
+      payment_id: p.pay_id,
+      date: p.date,
+      created_at: p.created_at,
+      direction: 'out',
+      cash_amount: p.cash_amount || 0,
+      cheque_amount: p.cheque_amount || 0,
+      check_amount: p.cheque_amount || 0, // Also include check_amount for consistency
+      amount: (p.cash_amount || 0) + (p.cheque_amount || 0),
+      customer_id: p.customer_id,
+      related_party: p.customer_id,
+      notes: p.notes,
+      created_by: p.created_by || p.user_id,
+      user_id: p.created_by || p.user_id,
+    }));
+
+    // Combine and sort chronologically (for balance calculation)
+    const allTransactions = [...receiptTransactions, ...paymentTransactions].sort((a, b) => {
+      const timeA = new Date(a.created_at || a.date).getTime();
+      const timeB = new Date(b.created_at || b.date).getTime();
+      if (timeA !== timeB) return timeA - timeB;
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      if (dateA !== dateB) return dateA - dateB;
+      const idA = (a as any).receipt_id || (a as any).payment_id || '';
+      const idB = (b as any).receipt_id || (b as any).payment_id || '';
+      return idA < idB ? -1 : 1;
+    });
+
+    console.log(`[API] Shop cash flow loaded from tables: ${allTransactions.length} transactions (${receipts.length} receipts, ${payments.length} payments)`);
+    return allTransactions;
+  } catch (error: any) {
+    console.error('[API] getShopCashFlow error:', error?.message || error);
+    throw error;
+  }
+}
+
+
+/**
+ * Generate warehouse receipt ID in format: warecXXXX-YYY
+ * Where XXXX is padded count and YYY is random 3-digit number (100-999)
+ */
+function generateWarehouseReceiptID(count: number): string {
+  const paddedCount = String(count + 1).padStart(4, '0');
+  const random = Math.floor(Math.random() * (999 - 100 + 1)) + 100;
+  return `warec${paddedCount}-${random}`;
+}
+
+/**
+ * Generate warehouse payment ID in format: wapayXXXX-YYY
+ * Where XXXX is padded count and YYY is random 3-digit number (100-999)
+ */
+function generateWarehousePaymentID(count: number): string {
+  const paddedCount = String(count + 1).padStart(4, '0');
+  const random = Math.floor(Math.random() * (999 - 100 + 1)) + 100;
+  return `wapay${paddedCount}-${random}`;
+}
+
+/**
+ * Create warehouse receipt
+ * ID format: warecXXXX-YYY
+ */
+export async function createWarehouseReceipt(data: {
+  date: string; // Format: YYYY-MM-DD
+  cash_amount: number;
+  check_amount: number;
+  related_party?: string; // Customer ID or name
+  notes?: string;
+  created_by?: string; // Admin user ID
+}): Promise<any> {
+  try {
+    console.log('[API] Creating warehouse receipt:', data);
+
+    // Get count of existing receipts
+    const { count, error: countError } = await supabase
+      .from('warehouse_receipts')
+      .select('*', { count: 'exact', head: true });
+
+    if (countError) {
+      console.error('[API] Failed to get receipt count:', countError);
+      throw new Error(`Failed to get receipt count: ${countError.message}`);
+    }
+
+    const receiptCount = count || 0;
+    const receiptId = generateWarehouseReceiptID(receiptCount);
+    console.log('[API] Generated warehouse receipt ID:', receiptId);
+
+    const receiptData: any = {
+      receipt_id: receiptId,
+      date: data.date,
+      cash_amount: data.cash_amount || 0,
+      check_amount: data.check_amount || 0,
+      customer_id: data.related_party || null, // Use customer_id column
+      notes: data.notes || null,
+      created_by: data.created_by || null, // Admin user ID
+    };
+
+    const { data: result, error } = await supabase
+      .from('warehouse_receipts')
+      .insert(receiptData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[API] Failed to create warehouse receipt:', error);
+      throw new Error(`Failed to create warehouse receipt: ${error.message}`);
+    }
+
+    console.log('[API] Warehouse receipt created successfully:', receiptId);
+    return { status: 'success', receiptId, data: result };
+  } catch (error: any) {
+    console.error('[API] createWarehouseReceipt error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create warehouse payment
+ * ID format: wapayXXXX-YYY
+ */
+export async function createWarehousePayment(data: {
+  date: string; // Format: YYYY-MM-DD
+  cash_amount: number;
+  check_amount: number;
+  customer_id?: string; // Customer ID (linked to customers table)
+  related_party?: string; // Legacy field for backward compatibility
+  notes?: string;
+  created_by?: string; // Admin user ID
+}): Promise<any> {
+  try {
+    console.log('[API] Creating warehouse payment:', data);
+
+    // Get count of existing payments
+    const { count, error: countError } = await supabase
+      .from('warehouse_payments')
+      .select('*', { count: 'exact', head: true });
+
+    if (countError) {
+      console.error('[API] Failed to get payment count:', countError);
+      throw new Error(`Failed to get payment count: ${countError.message}`);
+    }
+
+    const paymentCount = count || 0;
+    const paymentId = generateWarehousePaymentID(paymentCount);
+    console.log('[API] Generated warehouse payment ID:', paymentId);
+
+    // Prepare payment data with customer_id (linked to customers table)
+    const paymentData: any = {
+      payment_id: paymentId,
+      date: data.date,
+      cash_amount: data.cash_amount || 0,
+      check_amount: data.check_amount || 0,
+      notes: data.notes || null,
+      created_by: data.created_by || null,
+    };
+
+    // Add customer_id if provided (preferred field)
+    if (data.customer_id) {
+      paymentData.customer_id = data.customer_id;
+    } else if (data.related_party) {
+      // Fallback to related_party for backward compatibility
+      paymentData.customer_id = data.related_party;
+    }
+
+    console.log('[API] Attempting to insert payment with data:', paymentData);
+
+    const { data: result, error } = await supabase
+      .from('warehouse_payments')
+      .insert(paymentData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[API] Failed to create warehouse payment:', error);
+      console.error('[API] Payment data attempted:', paymentData);
+      throw new Error(`Failed to create warehouse payment: ${error.message}`);
+    }
+
+    // Verify that customer_id was saved
+    if ((data.customer_id || data.related_party) && result) {
+      const savedCustomerId = result.customer_id;
+      console.log('[API] Payment created successfully. Saved customer info:', {
+        paymentId,
+        attemptedValue: data.customer_id || data.related_party,
+        savedCustomerId,
+        fullResult: result
+      });
+      
+      if (!savedCustomerId) {
+        console.warn('[API] Warning: customer_id was not saved in payment. Result:', result);
+      }
+    }
+
+    console.log('[API] Warehouse payment created successfully:', paymentId);
+    return { status: 'success', paymentId, data: result };
+  } catch (error: any) {
+    console.error('[API] createWarehousePayment error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get warehouse receipt by ID
+ */
+export async function getWarehouseReceipt(receiptId: string): Promise<any> {
+  try {
+    const { data: receipt, error } = await supabase
+      .from('warehouse_receipts')
+      .select('*')
+      .eq('receipt_id', receiptId)
+      .single();
+
+    if (error || !receipt) {
+      throw new Error(`Receipt not found: ${error?.message || 'Unknown error'}`);
+    }
+
+    return receipt;
+  } catch (error: any) {
+    console.error('[API] getWarehouseReceipt error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update warehouse receipt
+ */
+export async function updateWarehouseReceipt(receiptId: string, data: {
+  date: string;
+  cash_amount: number;
+  check_amount: number;
+  related_party?: string;
+  notes?: string;
+}): Promise<any> {
+  try {
+    const updateData: any = {
+      date: data.date,
+      cash_amount: data.cash_amount || 0,
+      check_amount: data.check_amount || 0,
+      notes: data.notes || null,
+    };
+
+    // Try customer_id first
+    if (data.related_party) {
+      updateData.customer_id = data.related_party;
+    }
+
+    const { data: result, error } = await supabase
+      .from('warehouse_receipts')
+      .update(updateData)
+      .eq('receipt_id', receiptId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update receipt: ${error.message}`);
+    }
+
+    return { status: 'success', data: result };
+  } catch (error: any) {
+    console.error('[API] updateWarehouseReceipt error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete warehouse receipt
+ */
+export async function deleteWarehouseReceipt(receiptId: string): Promise<any> {
+  try {
+    const { error } = await supabase
+      .from('warehouse_receipts')
+      .delete()
+      .eq('receipt_id', receiptId);
+
+    if (error) {
+      throw new Error(`Failed to delete receipt: ${error.message}`);
+    }
+
+    return { status: 'success' };
+  } catch (error: any) {
+    console.error('[API] deleteWarehouseReceipt error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get warehouse payment by ID
+ */
+export async function getWarehousePayment(paymentId: string): Promise<any> {
+  try {
+    const { data: payment, error } = await supabase
+      .from('warehouse_payments')
+      .select('*')
+      .eq('payment_id', paymentId)
+      .single();
+
+    if (error || !payment) {
+      throw new Error(`Payment not found: ${error?.message || 'Unknown error'}`);
+    }
+
+    return payment;
+  } catch (error: any) {
+    console.error('[API] getWarehousePayment error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update warehouse payment
+ */
+export async function updateWarehousePayment(paymentId: string, data: {
+  date: string;
+  cash_amount: number;
+  check_amount: number;
+  customer_id?: string; // Customer ID (linked to customers table)
+  related_party?: string; // Legacy field for backward compatibility
+  notes?: string;
+}): Promise<any> {
+  try {
+    const updateData: any = {
+      date: data.date,
+      cash_amount: data.cash_amount || 0,
+      check_amount: data.check_amount || 0,
+      notes: data.notes || null,
+    };
+
+    // Add customer_id if provided (preferred field)
+    if (data.customer_id) {
+      updateData.customer_id = data.customer_id;
+    } else if (data.related_party) {
+      // Fallback to related_party for backward compatibility
+      updateData.customer_id = data.related_party;
+    }
+
+    const { data: result, error } = await supabase
+      .from('warehouse_payments')
+      .update(updateData)
+      .eq('payment_id', paymentId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update payment: ${error.message}`);
+    }
+
+    return { status: 'success', data: result };
+  } catch (error: any) {
+    console.error('[API] updateWarehousePayment error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete warehouse payment
+ */
+export async function deleteWarehousePayment(paymentId: string): Promise<any> {
+  try {
+    const { error } = await supabase
+      .from('warehouse_payments')
+      .delete()
+      .eq('payment_id', paymentId);
+
+    if (error) {
+      throw new Error(`Failed to delete payment: ${error.message}`);
+    }
+
+    return { status: 'success' };
+  } catch (error: any) {
+    console.error('[API] deleteWarehousePayment error:', error);
+    throw error;
   }
 }
 

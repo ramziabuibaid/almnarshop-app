@@ -67,6 +67,11 @@ export default function ProductsManagerPage() {
   // Check if user has accountant permission (for delete)
   const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
 
+  // Set page title
+  useEffect(() => {
+    document.title = 'المنتجات - Products';
+  }, []);
+
   // Load products on mount
   useEffect(() => {
     const loadProducts = async () => {

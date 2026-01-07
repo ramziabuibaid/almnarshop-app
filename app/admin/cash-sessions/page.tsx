@@ -24,6 +24,10 @@ export default function CashSessionsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
+    document.title = 'جلسات الكاش - Cash Sessions';
+  }, []);
+
+  useEffect(() => {
     loadSessions();
   }, []);
 

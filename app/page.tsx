@@ -36,6 +36,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    document.title = 'المتجر - My Shop';
+  }, []);
+
+  useEffect(() => {
     if (isMounted) {
       loadProducts();
     }

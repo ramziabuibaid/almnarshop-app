@@ -59,6 +59,10 @@ export default function TasksPage() {
   const canViewTasks = admin?.is_super_admin || admin?.permissions?.viewTasks === true;
 
   useEffect(() => {
+    document.title = 'المهام والمتابعات - Tasks';
+  }, []);
+
+  useEffect(() => {
     loadTasks();
   }, []);
 

@@ -15,6 +15,9 @@ type PermissionKey =
   | 'accessQuotations'
   | 'accessCashSessions'
   | 'accessPayPage'
+  | 'accessShopCashBox'
+  | 'accessWarehouseCashBox'
+  | 'viewCashBoxBalance'
   | 'accountant';
 
 export type AdminPermissions = Record<PermissionKey, boolean>;
@@ -24,6 +27,7 @@ export interface AdminUser {
   username: string;
   is_super_admin: boolean;
   is_active: boolean;
+  work_location?: 'المحل' | 'المخزن';
   permissions: AdminPermissions;
 }
 

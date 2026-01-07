@@ -57,6 +57,10 @@ export default function PaymentsPage() {
   });
 
   useEffect(() => {
+    document.title = 'سندات الدفع - Payments';
+  }, []);
+
+  useEffect(() => {
     loadPayments(1);
     loadCustomers();
   }, []);

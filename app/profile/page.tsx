@@ -24,6 +24,10 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    document.title = 'الملف الشخصي - Profile';
+  }, []);
+
+  useEffect(() => {
     if (!user) {
       router.push('/login');
       return;

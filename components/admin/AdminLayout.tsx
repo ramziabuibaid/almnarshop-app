@@ -35,8 +35,8 @@ const sidebarLinks = [
   { href: '/admin/orders', label: 'طلبيات اون لاين', icon: ShoppingBag },
   { href: '/admin/shop-sales', label: 'فواتير مبيعات المحل', icon: FileText },
   { href: '/admin/warehouse-sales', label: 'فواتير مبيعات المخزن', icon: FileText },
-  { href: '/admin/receipts', label: 'سندات قبض المحل', icon: FileText },
-  { href: '/admin/payments', label: 'سندات دفع المحل', icon: FileText },
+  { href: '/admin/shop-finance/cash-box', label: 'صندوق المحل', icon: Wallet },
+  { href: '/admin/warehouse-finance/cash-box', label: 'صندوق المستودع', icon: Wallet },
   { href: '/admin/maintenance', label: 'الصيانة', icon: Wrench },
   { href: '/admin/cash-sessions', label: 'الصندوق اليومي', icon: Wallet },
   { href: '/admin/checks', label: 'الشيكات الراجعة', icon: FileText },
@@ -179,6 +179,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               if (link.href === '/admin/cash-sessions') {
                 const canAccessCashSessions = admin.is_super_admin || admin.permissions?.accessCashSessions === true;
                 if (!canAccessCashSessions) {
+                  return null;
+                }
+              }
+              
+              if (link.href === '/admin/shop-finance/cash-box') {
+                const canAccessShopCashBox = admin.is_super_admin || admin.permissions?.accessShopCashBox === true;
+                if (!canAccessShopCashBox) {
+                  return null;
+                }
+              }
+              
+              if (link.href === '/admin/warehouse-finance/cash-box') {
+                const canAccessWarehouseCashBox = admin.is_super_admin || admin.permissions?.accessWarehouseCashBox === true;
+                if (!canAccessWarehouseCashBox) {
                   return null;
                 }
               }

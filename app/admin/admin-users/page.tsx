@@ -18,6 +18,9 @@ const permissionLabels: { key: keyof AdminPermissions; label: string }[] = [
   { key: 'accessChecks', label: 'Access checks page' },
   { key: 'accessQuotations', label: 'Access quotations page' },
   { key: 'accessCashSessions', label: 'Access cash sessions page' },
+  { key: 'accessShopCashBox', label: 'Access shop cash box page' },
+  { key: 'accessWarehouseCashBox', label: 'Access warehouse cash box page' },
+  { key: 'viewCashBoxBalance', label: 'View cash box balance (shop & warehouse)' },
   { key: 'accountant', label: 'Accountant (post invoices & change status)' },
 ];
 
@@ -34,6 +37,9 @@ const emptyPermissions: AdminPermissions = {
   accessChecks: false,
   accessQuotations: false,
   accessCashSessions: false,
+  accessShopCashBox: false,
+  accessWarehouseCashBox: false,
+  viewCashBoxBalance: false,
   accountant: false,
 };
 
@@ -49,6 +55,7 @@ export default function AdminUsersPage() {
     password: '',
     is_super_admin: false,
     is_active: true,
+    work_location: 'المحل' as 'المحل' | 'المخزن',
     permissions: { ...emptyPermissions },
   });
 
@@ -64,13 +71,25 @@ export default function AdminUsersPage() {
         throw new Error(body?.message || 'Failed to load users');
       }
       const data = await res.json();
-      setUsers(data.users || []);
+      // Ensure all permissions are defined (boolean) for each user
+      const usersWithPermissions = (data.users || []).map((user: AdminUser) => ({
+        ...user,
+        permissions: {
+          ...emptyPermissions,
+          ...user.permissions,
+        },
+      }));
+      setUsers(usersWithPermissions);
     } catch (err: any) {
       setError(err?.message || 'Failed to load users');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    document.title = 'مستخدمو الإدارة - Admin Users';
+  }, []);
 
   useEffect(() => {
     if (canManage) fetchUsers();
@@ -157,6 +176,7 @@ export default function AdminUsersPage() {
         password: '',
         is_super_admin: false,
         is_active: true,
+        work_location: 'المحل' as 'المحل' | 'المخزن',
         permissions: { ...emptyPermissions },
       });
     } catch (err: any) {
@@ -244,13 +264,26 @@ export default function AdminUsersPage() {
               />
               Active
             </label>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                مكان العمل <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={newUser.work_location}
+                onChange={(e) => setNewUser((p) => ({ ...p, work_location: e.target.value as 'المحل' | 'المخزن' }))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              >
+                <option value="المحل">المحل</option>
+                <option value="المخزن">المخزن</option>
+              </select>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
             {permissionLabels.map(({ key, label }) => (
               <label key={key} className="flex items-center gap-2 text-sm text-gray-700">
                 <input
                   type="checkbox"
-                  checked={newUser.permissions[key]}
+                  checked={newUser.permissions[key] === true}
                   onChange={(e) =>
                     setNewUser((p) => ({
                       ...p,
@@ -296,10 +329,11 @@ export default function AdminUsersPage() {
                       <div className="font-semibold text-gray-900">{user.username}</div>
                       <div className="text-sm text-gray-500">
                         {user.is_super_admin ? 'Super admin' : 'Standard admin'} •{' '}
-                        {user.is_active ? 'Active' : 'Disabled'}
+                        {user.is_active ? 'Active' : 'Disabled'} •{' '}
+                        مكان العمل: {user.work_location || 'المحل'}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 text-sm text-gray-700">
+                    <div className="flex items-center gap-3 text-sm text-gray-700 flex-wrap">
                       <label className="flex items-center gap-1">
                         <input
                           type="checkbox"
@@ -318,6 +352,17 @@ export default function AdminUsersPage() {
                           Super
                         </label>
                       )}
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">مكان العمل:</label>
+                        <select
+                          value={user.work_location || 'المحل'}
+                          onChange={(e) => updateUser(user.id, { work_location: e.target.value as 'المحل' | 'المخزن' })}
+                          className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                        >
+                          <option value="المحل">المحل</option>
+                          <option value="المخزن">المخزن</option>
+                        </select>
+                      </div>
                       {admin?.id !== user.id && (
                         <button
                           onClick={() => deleteUser(user.id)}
@@ -337,7 +382,7 @@ export default function AdminUsersPage() {
                       <label key={key} className="flex items-center gap-2 text-sm text-gray-700">
                         <input
                           type="checkbox"
-                          checked={user.permissions[key]}
+                          checked={user.permissions[key] === true}
                           onChange={(e) => {
                             if (!user.id) {
                               setError('User ID is missing. Please refresh the page.');

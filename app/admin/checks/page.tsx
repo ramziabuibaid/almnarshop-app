@@ -141,6 +141,10 @@ export default function ChecksPage() {
   };
 
   useEffect(() => {
+    document.title = 'الشيكات - Checks';
+  }, []);
+
+  useEffect(() => {
     loadCustomers();
   }, []);
 
