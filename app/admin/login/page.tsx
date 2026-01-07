@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, UserCircle, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
