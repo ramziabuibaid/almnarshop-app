@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -12,7 +12,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
-export default function NewWarehouseReceiptPage() {
+function ReceiptForm() {
   const { admin } = useAdminAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -235,3 +235,19 @@ export default function NewWarehouseReceiptPage() {
   );
 }
 
+export default function NewWarehouseReceiptPage() {
+  return (
+    <Suspense fallback={
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
+          <div className="text-center">
+            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">جاري التحميل...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    }>
+      <ReceiptForm />
+    </Suspense>
+  );
+}
