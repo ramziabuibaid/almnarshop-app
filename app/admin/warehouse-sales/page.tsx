@@ -138,6 +138,12 @@ export default function WarehouseSalesPage() {
   };
 
   const handleMarkAsSettled = async () => {
+    // Check permission
+    if (!canAccountant) {
+      alert('ليس لديك صلاحية لتغيير حالة الترحيل');
+      return;
+    }
+
     if (!viewing.invoice) return;
     
     const invoiceId = viewing.invoice.InvoiceID || viewing.invoice.invoice_id;
@@ -170,6 +176,12 @@ export default function WarehouseSalesPage() {
   };
 
   const handleToggleSign = async (invoice: WarehouseSalesInvoice) => {
+    // Check permission
+    if (!canAccountant) {
+      alert('ليس لديك صلاحية لتغيير حالة الترحيل');
+      return;
+    }
+
     try {
       const newSign = invoice.AccountantSign === 'مرحلة' ? 'غير مرحلة' : 'مرحلة';
       await updateWarehouseSalesInvoiceSign(invoice.InvoiceID, newSign as 'مرحلة' | 'غير مرحلة');
@@ -184,6 +196,12 @@ export default function WarehouseSalesPage() {
   };
 
   const handleStatusChange = async (invoice: WarehouseSalesInvoice, newStatus: 'غير مدفوع' | 'تقسيط شهري' | 'دفعت بالكامل' | 'مدفوع جزئي') => {
+    // Check permission
+    if (!canAccountant) {
+      alert('ليس لديك صلاحية لتغيير حالة الفاتورة');
+      return;
+    }
+
     try {
       await updateWarehouseSalesInvoiceStatus(invoice.InvoiceID, newStatus);
       // Update local state immediately (optimistic update like maintenance page)

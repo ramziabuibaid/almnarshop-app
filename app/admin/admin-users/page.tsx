@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth, AdminPermissions, AdminUser } from '@/context/AdminAuthContext';
-import { Shield, Save, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Shield, Save, Plus, RefreshCw, Trash2, Key, X } from 'lucide-react';
 
 const permissionLabels: { key: keyof AdminPermissions; label: string }[] = [
   { key: 'viewBalances', label: 'View customer balances' },
@@ -49,6 +49,18 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [passwordModal, setPasswordModal] = useState<{
+    isOpen: boolean;
+    userId: string | null;
+    username: string;
+  }>({
+    isOpen: false,
+    userId: null,
+    username: '',
+  });
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const [newUser, setNewUser] = useState({
     username: '',
@@ -183,6 +195,60 @@ export default function AdminUsersPage() {
       setError(err?.message || 'Failed to create user');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openPasswordModal = (userId: string, username: string) => {
+    setPasswordModal({
+      isOpen: true,
+      userId,
+      username,
+    });
+    setNewPassword('');
+    setConfirmPassword('');
+  };
+
+  const closePasswordModal = () => {
+    setPasswordModal({
+      isOpen: false,
+      userId: null,
+      username: '',
+    });
+    setNewPassword('');
+    setConfirmPassword('');
+  };
+
+  const changePassword = async () => {
+    if (!passwordModal.userId) return;
+
+    if (!newPassword || newPassword.length < 6) {
+      setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('كلمة المرور وتأكيد كلمة المرور غير متطابقين');
+      return;
+    }
+
+    setChangingPassword(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/users/${passwordModal.userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.message || 'Failed to change password');
+      }
+      closePasswordModal();
+      alert('تم تغيير كلمة المرور بنجاح');
+    } catch (err: any) {
+      setError(err?.message || 'فشل تغيير كلمة المرور');
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -363,6 +429,15 @@ export default function AdminUsersPage() {
                           <option value="المخزن">المخزن</option>
                         </select>
                       </div>
+                      <button
+                        onClick={() => openPasswordModal(user.id, user.username)}
+                        disabled={saving}
+                        className="flex items-center gap-1 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 text-sm font-medium"
+                        title="Change password"
+                      >
+                        <Key size={16} />
+                        تغيير كلمة المرور
+                      </button>
                       {admin?.id !== user.id && (
                         <button
                           onClick={() => deleteUser(user.id)}
@@ -402,6 +477,111 @@ export default function AdminUsersPage() {
             </div>
           )}
         </div>
+
+        {/* Change Password Modal */}
+        {passwordModal.isOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            onClick={closePasswordModal}
+          >
+            <div
+              className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+              dir="rtl"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Key size={20} className="text-gray-700" />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    تغيير كلمة المرور
+                  </h3>
+                </div>
+                <button
+                  onClick={closePasswordModal}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  disabled={changingPassword}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-1">
+                  المستخدم: <span className="font-medium text-gray-900">{passwordModal.username}</span>
+                </p>
+              </div>
+
+              {error && (
+                <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    كلمة المرور الجديدة <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => {
+                      setNewPassword(e.target.value);
+                      setError(null);
+                    }}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                    placeholder="أدخل كلمة المرور الجديدة (6 أحرف على الأقل)"
+                    disabled={changingPassword}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    تأكيد كلمة المرور <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      setError(null);
+                    }}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                    placeholder="أعد إدخال كلمة المرور الجديدة"
+                    disabled={changingPassword}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 mt-6">
+                <button
+                  onClick={closePasswordModal}
+                  disabled={changingPassword}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={changePassword}
+                  disabled={changingPassword || !newPassword || !confirmPassword}
+                  className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {changingPassword ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin" />
+                      جاري التغيير...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      تغيير كلمة المرور
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );
