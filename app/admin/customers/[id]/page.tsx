@@ -27,6 +27,8 @@ import {
   Save,
   Trash2,
   Printer,
+  Search,
+  ChevronDown,
 } from 'lucide-react';
 
 interface TimelineItem {
@@ -88,27 +90,67 @@ export default function CustomerProfilePage() {
   });
   const [checkSaving, setCheckSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [allCustomers, setAllCustomers] = useState<any[]>([]);
+  const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [loadingHeavyData, setLoadingHeavyData] = useState(false);
 
   useEffect(() => {
     if (customerId) {
-      loadCustomerData();
+      // Load basic info first, then heavy data in background
+      loadCustomerBasicInfo().then(() => {
+        // Load heavy data in background after basic info is loaded
+        loadCustomerHeavyData();
+      }).catch(() => {
+        // Even if basic info fails, try to load heavy data if customerId is valid
+        // This allows partial data to be shown
+        if (customerId) {
+          loadCustomerHeavyData();
+        }
+      });
     }
+    // Load all customers for search (non-blocking)
+    loadAllCustomers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerId]);
 
-  const loadCustomerData = async () => {
+  // Close customer search dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.customer-search-container')) {
+        setIsCustomerSearchOpen(false);
+      }
+    };
+
+    if (isCustomerSearchOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isCustomerSearchOpen]);
+
+  const loadAllCustomers = async () => {
+    try {
+      const customers = await getAllCustomers();
+      setAllCustomers(customers || []);
+    } catch (error) {
+      console.error('[CustomerProfile] Failed to load customers for search:', error);
+    }
+  };
+
+  // Load basic customer info first (fast)
+  const loadCustomerBasicInfo = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Ensure ID is a string and log it
       const idString = String(customerId || '').trim();
-      console.log('[CustomerProfile] Fetching Profile for ID:', idString);
-      console.log('[CustomerProfile] ID type:', typeof customerId, 'converted to:', typeof idString);
+      console.log('[CustomerProfile] Fetching basic info for ID:', idString);
       
       if (!idString || idString === '') {
         throw new Error('Customer ID is missing or invalid');
       }
 
-      // Load customer info from all customers list
+      // Load customer info from all customers list (this is usually cached/fast)
       const allCustomers = await getAllCustomers();
       const foundCustomer = allCustomers.find(
         (c) => {
@@ -122,31 +164,11 @@ export default function CustomerProfilePage() {
       }
 
       setCustomer(foundCustomer);
-
-      // Load customer data (invoices, receipts, interactions)
-      // Pass the string ID explicitly
-      const data = await getCustomerData(idString);
-      console.log('[CustomerProfile] Customer data loaded:', data);
-
-      setCustomerData({
-        invoices: data.invoices || [],
-        receipts: data.receipts || [],
-        interactions: data.interactions || [],
-        quotations: data.quotations || [],
-      });
-
-      // Load checks
-      const checksData = await getCustomerChecks(idString);
-      setChecks(checksData || []);
+      // Basic info loaded, show UI immediately
+      setLoading(false);
     } catch (error: any) {
-      console.error('[CustomerProfile] Error loading customer data:', error);
-      console.error('[CustomerProfile] Error details:', {
-        message: error?.message,
-        name: error?.name,
-        stack: error?.stack,
-      });
+      console.error('[CustomerProfile] Error loading customer basic info:', error);
       
-      // Provide friendly error messages
       let errorMessage = 'Failed to load customer data.';
       
       if (error?.message?.includes('not found') || error?.message?.includes('ID incorrect')) {
@@ -160,8 +182,39 @@ export default function CustomerProfilePage() {
       }
       
       setError(errorMessage);
-    } finally {
       setLoading(false);
+    }
+  };
+
+  // Load heavy data in background (invoices, receipts, interactions, checks)
+  const loadCustomerHeavyData = async () => {
+    if (!customerId) return;
+    
+    setLoadingHeavyData(true);
+    try {
+      const idString = String(customerId || '').trim();
+      console.log('[CustomerProfile] Loading heavy data for ID:', idString);
+
+      // Load customer data (invoices, receipts, interactions) - this is the heavy part
+      const data = await getCustomerData(idString);
+      console.log('[CustomerProfile] Customer data loaded:', data);
+
+      setCustomerData({
+        invoices: data.invoices || [],
+        receipts: data.receipts || [],
+        interactions: data.interactions || [],
+        quotations: data.quotations || [],
+      });
+
+      // Load checks in parallel
+      const checksData = await getCustomerChecks(idString);
+      setChecks(checksData || []);
+    } catch (error: any) {
+      console.error('[CustomerProfile] Error loading heavy data:', error);
+      // Don't show error to user for background loading, just log it
+      // The basic info is already shown, so user can still interact
+    } finally {
+      setLoadingHeavyData(false);
     }
   };
 
@@ -187,13 +240,13 @@ export default function CustomerProfilePage() {
       });
     });
 
-    // Add shop receipts
+    // Add shop receipts and warehouse receipts/payments
     (customerData.receipts || []).forEach((receipt: any) => {
       // Check if it's a payment (has PaymentID) or receipt (has ReceiptID)
       const receiptId = receipt.ReceiptID || receipt.PaymentID || receipt.id || receipt.receiptID;
       if (!receiptId || receiptId === '') return;
       
-      const isPayment = receipt.PaymentID || receipt.Type === 'shop_payment';
+      const isPayment = receipt.PaymentID || receipt.Type === 'shop_payment' || receipt.Type === 'warehouse_payment';
       
       items.push({
         type: isPayment ? 'payment' : 'receipt',
@@ -209,11 +262,32 @@ export default function CustomerProfilePage() {
       });
     });
 
-    // Sort by date (newest first)
+    // Sort by date and time (newest first)
+    // Prioritize created_at (includes time) over date (may only have date)
     items.sort((a, b) => {
-      const dateA = a.date ? new Date(a.date).getTime() : 0;
-      const dateB = b.date ? new Date(b.date).getTime() : 0;
-      return dateB - dateA;
+      // Get the best available timestamp for each item
+      // Priority: CreatedAt/created_at (has time) > date (may only have date)
+      const getTimestamp = (item: TimelineItem): number => {
+        // Try created_at first (includes time)
+        const createdAt = item.CreatedAt || item.created_at || '';
+        if (createdAt) {
+          const time = new Date(createdAt).getTime();
+          if (!isNaN(time)) return time;
+        }
+        // Fall back to date
+        const date = item.date || '';
+        if (date) {
+          const time = new Date(date).getTime();
+          if (!isNaN(time)) return time;
+        }
+        return 0;
+      };
+      
+      const timeA = getTimestamp(a);
+      const timeB = getTimestamp(b);
+      
+      // Sort descending (newest first)
+      return timeB - timeA;
     });
 
     return items;
@@ -529,67 +603,197 @@ export default function CustomerProfilePage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="space-y-4">
+          {/* Top Row: Title and Search */}
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+            <div className="flex items-center gap-4 flex-1 w-full">
             <button
               onClick={() => router.push('/admin/customers')}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
             >
               <ArrowLeft size={20} className="text-gray-600" />
             </button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Customer Profile</h1>
-              <p className="text-gray-600 mt-1">View customer history and manage interactions</p>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Customer Profile</h1>
+                <p className="text-gray-600 mt-1 text-sm md:text-base">View customer history and manage interactions</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+            {/* Customer Search */}
+            <div className="relative customer-search-container w-full md:w-auto md:min-w-[280px] md:max-w-[350px]">
+              <div className="relative">
+                <Search
+                  size={18}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                />
+                <input
+                  type="text"
+                  placeholder="بحث عن زبون..."
+                  value={customerSearchQuery}
+                  onChange={(e) => {
+                    setCustomerSearchQuery(e.target.value);
+                    setIsCustomerSearchOpen(true);
+                  }}
+                  onFocus={() => setIsCustomerSearchOpen(true)}
+                  className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900 placeholder:text-gray-500"
+                  dir="rtl"
+                />
+                {customerSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomerSearchQuery('');
+                      setIsCustomerSearchOpen(false);
+                    }}
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                  >
+                    <X size={14} className="text-gray-400" />
+                  </button>
+                )}
+              </div>
+              {/* Search Results Dropdown */}
+              {isCustomerSearchOpen && customerSearchQuery.trim() && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden">
+                  <div className="overflow-y-auto max-h-80" dir="rtl">
+                    {(() => {
+                      const searchWords = customerSearchQuery
+                        .toLowerCase()
+                        .trim()
+                        .split(/\s+/)
+                        .filter(word => word.length > 0);
+                      
+                      const filtered = allCustomers.filter((c) => {
+                        const name = String(c.Name || c.name || '').toLowerCase();
+                        const phone = String(c.Phone || c.phone || '').toLowerCase();
+                        const customerID = String(c.CustomerID || c.id || '').toLowerCase();
+                        const searchableText = `${name} ${phone} ${customerID}`;
+                        return searchWords.every(word => searchableText.includes(word));
+                      }).slice(0, 10); // Limit to 10 results
+                      
+                      if (filtered.length === 0) {
+                        return (
+                          <div className="p-4 text-center text-gray-500 text-sm">
+                            لا توجد نتائج
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <div className="py-1">
+                          {filtered.map((customer) => {
+                            const id = customer.CustomerID || customer.id || '';
+                            const isCurrent = id === customerId;
+                            return (
+                              <button
+                                key={id}
+                                type="button"
+                                onClick={() => {
+                                  if (!isCurrent) {
+                                    router.push(`/admin/customers/${id}`);
+                                  }
+                                  setCustomerSearchQuery('');
+                                  setIsCustomerSearchOpen(false);
+                                }}
+                                disabled={isCurrent}
+                                className={`w-full text-right px-4 py-2 hover:bg-gray-50 transition-colors ${
+                                  isCurrent ? 'bg-gray-100 font-medium opacity-60 cursor-not-allowed' : ''
+                                }`}
+                              >
+                                <div className="text-sm text-gray-900">
+                                  {customer.Name || customer.name || 'بدون اسم'}
+                                  {isCurrent && <span className="text-xs text-gray-500 mr-2">(الحالي)</span>}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {id} {customer.Phone || customer.phone ? `- ${customer.Phone || customer.phone}` : ''}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons - Responsive Grid */}
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleOpenInteractionModal}
-              className="px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium flex items-center gap-1.5"
+              className="px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium flex items-center gap-1.5 flex-shrink-0"
               title="إجراء تواصل"
             >
               <Phone size={16} />
-              <span>إجراء تواصل</span>
+              <span className="hidden sm:inline">إجراء تواصل</span>
+              <span className="sm:hidden">تواصل</span>
             </button>
             <button
               onClick={() => router.push(`/admin/shop-sales/new?customerId=${customerId}`)}
-              className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-1.5"
+              className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-1.5 flex-shrink-0"
               title="فاتورة محل"
             >
               <Plus size={16} />
-              <span>فاتورة محل</span>
+              <span className="hidden sm:inline">فاتورة محل</span>
+              <span className="sm:hidden">محل</span>
             </button>
             <button
               onClick={() => router.push(`/admin/warehouse-sales/new?customerId=${customerId}`)}
-              className="px-3 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors text-sm font-medium flex items-center gap-1.5"
+              className="px-3 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors text-sm font-medium flex items-center gap-1.5 flex-shrink-0"
               title="فاتورة مخزن"
             >
               <Plus size={16} />
-              <span>فاتورة مخزن</span>
+              <span className="hidden sm:inline">فاتورة مخزن</span>
+              <span className="sm:hidden">مخزن</span>
             </button>
             <button
               onClick={() => router.push(`/admin/quotations/new?customerId=${customerId}`)}
-              className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium flex items-center gap-1.5"
+              className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium flex items-center gap-1.5 flex-shrink-0"
               title="عرض سعر"
             >
               <Plus size={16} />
-              <span>عرض سعر</span>
+              <span className="hidden sm:inline">عرض سعر</span>
+              <span className="sm:hidden">عرض</span>
             </button>
             <button
               onClick={() => setIsReceiptModalOpen(true)}
-              className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-1.5"
-              title="سند قبض"
+              className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-1.5 flex-shrink-0"
+              title="سند قبض المحل"
             >
               <Plus size={16} />
-              <span>سند قبض</span>
+              <span className="hidden md:inline">سند قبض المحل</span>
+              <span className="hidden sm:inline md:hidden">قبض محل</span>
+              <span className="sm:hidden">قبض</span>
             </button>
             <button
               onClick={() => setIsPaymentModalOpen(true)}
-              className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center gap-1.5"
-              title="سند صرف"
+              className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center gap-1.5 flex-shrink-0"
+              title="سند صرف المحل"
             >
               <Plus size={16} />
-              <span>سند صرف</span>
+              <span className="hidden md:inline">سند صرف المحل</span>
+              <span className="hidden sm:inline md:hidden">صرف محل</span>
+              <span className="sm:hidden">صرف</span>
+            </button>
+            <button
+              onClick={() => router.push(`/admin/warehouse-finance/receipts/new?customerId=${customerId}`)}
+              className="px-3 py-2 bg-green-800 text-white rounded-lg hover:bg-green-900 transition-colors text-sm font-medium flex items-center gap-1.5 flex-shrink-0"
+              title="سند قبض المخزن"
+            >
+              <Plus size={16} />
+              <span className="hidden md:inline">سند قبض المخزن</span>
+              <span className="hidden sm:inline md:hidden">قبض مخزن</span>
+              <span className="sm:hidden">قبض</span>
+            </button>
+            <button
+              onClick={() => router.push(`/admin/warehouse-finance/payments/new?customerId=${customerId}`)}
+              className="px-3 py-2 bg-red-800 text-white rounded-lg hover:bg-red-900 transition-colors text-sm font-medium flex items-center gap-1.5 flex-shrink-0"
+              title="سند صرف المخزن"
+            >
+              <Plus size={16} />
+              <span className="hidden md:inline">سند صرف المخزن</span>
+              <span className="hidden sm:inline md:hidden">صرف مخزن</span>
+              <span className="sm:hidden">صرف</span>
             </button>
           </div>
         </div>
@@ -698,6 +902,9 @@ export default function CustomerProfilePage() {
                 <div className="flex items-center gap-2">
                   <ImageIcon size={18} className="text-gray-600" />
                   <h3 className="font-semibold text-gray-900">الشيكات الراجعة</h3>
+                  {loadingHeavyData && (
+                    <Loader2 size={16} className="animate-spin text-gray-400" />
+                  )}
                 </div>
                 <button
                   onClick={() => setIsCheckModalOpen(true)}
@@ -707,7 +914,12 @@ export default function CustomerProfilePage() {
                   إضافة
                 </button>
               </div>
-              {checks.length === 0 ? (
+              {loadingHeavyData ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 size={20} className="animate-spin text-gray-400" />
+                  <span className="text-sm text-gray-500 mr-2">جاري التحميل...</span>
+                </div>
+              ) : checks.length === 0 ? (
                 <p className="text-sm text-gray-600">لا يوجد شيكات مسجلة</p>
               ) : (
                 <div className="space-y-2">
@@ -732,9 +944,19 @@ export default function CustomerProfilePage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Interactions Section - First */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">التفاعلات والمواعيد</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">التفاعلات والمواعيد</h2>
+                {loadingHeavyData && (
+                  <Loader2 size={18} className="animate-spin text-gray-400" />
+                )}
+              </div>
 
-              {interactionItems.length === 0 ? (
+              {loadingHeavyData ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 size={24} className="animate-spin text-gray-400" />
+                  <span className="text-gray-600 text-lg mr-3">جاري تحميل التفاعلات...</span>
+                </div>
+              ) : interactionItems.length === 0 ? (
                 <div className="text-center py-12">
                   <Phone size={48} className="text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-600 text-lg">لا توجد تفاعلات</p>
@@ -824,9 +1046,19 @@ export default function CustomerProfilePage() {
 
             {/* Financial Transactions (Invoices, Receipts & Payments) - Second */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">الفواتير وسندات القبض والصرف</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">الفواتير وسندات القبض والصرف</h2>
+                {loadingHeavyData && (
+                  <Loader2 size={18} className="animate-spin text-gray-400" />
+                )}
+              </div>
 
-              {financialItems.length === 0 ? (
+              {loadingHeavyData ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 size={24} className="animate-spin text-gray-400" />
+                  <span className="text-gray-600 text-lg mr-3">جاري تحميل الفواتير والسندات...</span>
+                </div>
+              ) : financialItems.length === 0 ? (
                 <div className="text-center py-12">
                   <FileText size={48} className="text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-600 text-lg">لا توجد فواتير أو سندات</p>
@@ -835,15 +1067,31 @@ export default function CustomerProfilePage() {
                 <div className="space-y-4">
                   {financialItems.map((item, index) => {
                     const Icon = getTimelineIcon(item.type);
-                    // Use different colors for warehouse invoices (darker blue) vs shop invoices (lighter blue)
+                    // Use different colors for warehouse items vs shop items
                     let colors = getTimelineColor(item.type);
-                    if (item.type === 'invoice' && item.source === 'Warehouse') {
+                    if (item.source === 'Warehouse') {
+                      if (item.type === 'invoice') {
                       colors = {
                         bg: 'bg-blue-100',
                         text: 'text-blue-800',
                         border: 'border-blue-500',
                         iconBg: 'bg-blue-200',
                       };
+                      } else if (item.type === 'receipt') {
+                        colors = {
+                          bg: 'bg-green-100',
+                          text: 'text-green-800',
+                          border: 'border-green-500',
+                          iconBg: 'bg-green-200',
+                        };
+                      } else if (item.type === 'payment') {
+                        colors = {
+                          bg: 'bg-red-100',
+                          text: 'text-red-800',
+                          border: 'border-red-500',
+                          iconBg: 'bg-red-200',
+                        };
+                      }
                     }
                     const uniqueKey = `${item.type}-${item.id || `fallback-${index}`}`;
 
@@ -862,8 +1110,10 @@ export default function CustomerProfilePage() {
                                 <h3 className="font-semibold text-gray-900">
                                   {item.type === 'invoice' && item.source === 'Shop' && `فاتورة المحل #${item.invoiceNumber || item.id}`}
                                   {item.type === 'invoice' && item.source === 'Warehouse' && `فاتورة المخزن #${item.invoiceNumber || item.id}`}
-                                  {item.type === 'receipt' && `سند قبض المحل #${item.receiptNumber || item.id}`}
-                                  {item.type === 'payment' && `سند صرف المحل #${item.paymentNumber || item.id}`}
+                                  {item.type === 'receipt' && item.source === 'Shop' && `سند قبض المحل #${item.receiptNumber || item.id}`}
+                                  {item.type === 'receipt' && item.source === 'Warehouse' && `سند قبض المستودع #${item.receiptNumber || item.id}`}
+                                  {item.type === 'payment' && item.source === 'Shop' && `سند صرف المحل #${item.paymentNumber || item.id}`}
+                                  {item.type === 'payment' && item.source === 'Warehouse' && `سند صرف المستودع #${item.paymentNumber || item.id}`}
                                 </h3>
                                 {item.status && (
                                   <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
@@ -882,10 +1132,14 @@ export default function CustomerProfilePage() {
                                       window.open(`/admin/shop-sales/print/${item.id}`, `print-shop-${item.id}`, 'noopener,noreferrer');
                                     } else if (item.type === 'invoice' && item.source === 'Warehouse') {
                                       window.open(`/admin/warehouse-sales/print/${item.id}`, `print-warehouse-${item.id}`, 'noopener,noreferrer');
-                                    } else if (item.type === 'receipt') {
+                                    } else if (item.type === 'receipt' && item.source === 'Shop') {
                                       window.open(`/admin/receipts/print/${item.id}`, `print-receipt-${item.id}`, 'noopener,noreferrer');
-                                    } else if (item.type === 'payment') {
+                                    } else if (item.type === 'receipt' && item.source === 'Warehouse') {
+                                      window.open(`/admin/warehouse-finance/receipts/print/${item.id}`, `print-warehouse-receipt-${item.id}`, 'noopener,noreferrer');
+                                    } else if (item.type === 'payment' && item.source === 'Shop') {
                                       window.open(`/admin/payments/print/${item.id}`, `print-payment-${item.id}`, 'noopener,noreferrer');
+                                    } else if (item.type === 'payment' && item.source === 'Warehouse') {
+                                      window.open(`/admin/warehouse-finance/payments/print/${item.id}`, `print-warehouse-payment-${item.id}`, 'noopener,noreferrer');
                                     }
                                   }}
                                   className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
@@ -978,13 +1232,23 @@ export default function CustomerProfilePage() {
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
               <details className="group">
                 <summary className="px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-gray-900">عروض الأسعار ({customerData.quotations?.length || 0})</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-gray-900">عروض الأسعار ({loadingHeavyData ? '...' : (customerData.quotations?.length || 0)})</h2>
+                    {loadingHeavyData && (
+                      <Loader2 size={18} className="animate-spin text-gray-400" />
+                    )}
+                  </div>
                   <div className="text-sm text-gray-500">
                     اضغط للعرض
                   </div>
                 </summary>
                 <div className="px-6 pb-6 pt-2">
-                  {customerData.quotations && customerData.quotations.length === 0 ? (
+                  {loadingHeavyData ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 size={24} className="animate-spin text-gray-400" />
+                      <span className="text-gray-600 text-lg mr-3">جاري تحميل عروض الأسعار...</span>
+                    </div>
+                  ) : customerData.quotations && customerData.quotations.length === 0 ? (
                     <div className="text-center py-12">
                       <FileText size={48} className="text-gray-300 mx-auto mb-4" />
                       <p className="text-gray-600 text-lg">لا توجد عروض أسعار</p>

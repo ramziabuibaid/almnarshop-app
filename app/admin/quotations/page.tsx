@@ -51,8 +51,9 @@ export default function QuotationsPage() {
   const router = useRouter();
   // Check if user has accountant permission (for status changes)
   const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
-  const [allQuotations, setAllQuotations] = useState<Quotation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [allQuotations, setAllQuotations] = useState<Quotation[]>([]); // Store all loaded quotations
+  const [loading, setLoading] = useState(true); // Start with loading true
+  const [loadingMore, setLoadingMore] = useState(false); // For background loading
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('الكل');
@@ -67,8 +68,9 @@ export default function QuotationsPage() {
   }, []);
 
   useEffect(() => {
-    loadAllQuotations();
+    document.title = 'العروض السعرية - Quotations';
     loadUsers();
+    loadFirstPage();
   }, []);
 
   const loadUsers = async () => {
@@ -101,22 +103,44 @@ export default function QuotationsPage() {
     }
   };
 
-  const loadAllQuotations = async () => {
+  // Load first page quickly, then load more in background
+  const loadFirstPage = async () => {
     setLoading(true);
     setError(null);
     try {
-        // Load all quotations (use a very large page size)
-      const result = await getQuotationsFromSupabase(1, 10000);
-      setAllQuotations(result.quotations);
+      // Load first page immediately for fast initial display
+      const firstPageResult = await getQuotationsFromSupabase(1, QUOTATIONS_PER_PAGE);
+      setAllQuotations(firstPageResult.quotations);
+      setLoading(false); // Show page immediately
+      
+      // Continue loading more quotations in background
+      if (firstPageResult.total > QUOTATIONS_PER_PAGE) {
+        setLoadingMore(true);
+        loadMoreQuotations();
+      }
     } catch (err: any) {
       console.error('[QuotationsPage] Failed to load quotations:', err);
       setError(err?.message || 'فشل تحميل العروض السعرية');
-    } finally {
+      setAllQuotations([]);
       setLoading(false);
     }
   };
 
-  // Reset to page 1 when search or filter changes
+  // Load remaining quotations in background
+  const loadMoreQuotations = async () => {
+    try {
+      // Load a large number of quotations in background
+      const result = await getQuotationsFromSupabase(1, 1000);
+      setAllQuotations(result.quotations);
+    } catch (err: any) {
+      console.error('[QuotationsPage] Failed to load more quotations:', err);
+      // Don't show error to user, just log it
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, statusFilter]);
@@ -129,8 +153,8 @@ export default function QuotationsPage() {
     setDeletingId(quotationId);
     try {
       await deleteQuotation(quotationId);
-      // Reload quotations after deletion
-      loadAllQuotations();
+      // Update local state immediately (optimistic update like maintenance page)
+      setAllQuotations(prev => prev.filter(q => q.QuotationID !== quotationId));
     } catch (err: any) {
       console.error('[QuotationsPage] Failed to delete quotation:', err);
       alert(err?.message || 'فشل حذف العرض السعري');
@@ -143,7 +167,7 @@ export default function QuotationsPage() {
     setUpdatingStatusId(quotationId);
     try {
       await updateQuotationStatus(quotationId, newStatus);
-      // Update local state immediately for better UX
+      // Update local state immediately (optimistic update like maintenance page)
       setAllQuotations(prev => prev.map(q => 
         q.QuotationID === quotationId ? { ...q, Status: newStatus } : q
       ));
@@ -151,7 +175,7 @@ export default function QuotationsPage() {
       console.error('[QuotationsPage] Failed to update quotation status:', err);
       alert(err?.message || 'فشل تحديث حالة العرض السعري');
       // Reload to revert any optimistic update
-      loadAllQuotations();
+      await loadAllQuotations();
     } finally {
       setUpdatingStatusId(null);
     }
@@ -212,13 +236,12 @@ export default function QuotationsPage() {
     return statusColors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  // Apply smart search and filters (client-side like products page)
+  // Apply client-side search and filters (like maintenance page)
   const filteredQuotations = useMemo(() => {
     let filtered = allQuotations;
 
-    // Apply smart search - supports multiple words (like products page)
+    // Apply search - supports multiple words (like maintenance page)
     if (searchQuery.trim()) {
-      // Split search query into individual words
       const searchWords = searchQuery
         .toLowerCase()
         .trim()
@@ -226,17 +249,13 @@ export default function QuotationsPage() {
         .filter(word => word.length > 0);
       
       filtered = filtered.filter((quotation) => {
-        // Get searchable fields
         const quotationId = String(quotation.QuotationID || '').toLowerCase();
         const customerName = String(quotation.customer?.name || '').toLowerCase();
         const customerId = String(quotation.CustomerID || '').toLowerCase();
         const notes = String(quotation.Notes || '').toLowerCase();
-        const status = String(quotation.Status || '').toLowerCase();
         
-        // Combine all searchable fields into one text
-        const searchableText = `${quotationId} ${customerName} ${customerId} ${notes} ${status}`;
+        const searchableText = `${quotationId} ${customerName} ${customerId} ${notes}`;
         
-        // Check if ALL search words are found in the searchable text (words don't need to be consecutive)
         return searchWords.every(word => searchableText.includes(word));
       });
     }
@@ -249,11 +268,12 @@ export default function QuotationsPage() {
     return filtered;
   }, [allQuotations, searchQuery, statusFilter]);
 
-  // Pagination calculations
+  // Client-side pagination (like maintenance page)
   const totalPages = Math.ceil(filteredQuotations.length / QUOTATIONS_PER_PAGE);
-  const startIndex = (currentPage - 1) * QUOTATIONS_PER_PAGE;
-  const endIndex = startIndex + QUOTATIONS_PER_PAGE;
-  const paginatedQuotations = filteredQuotations.slice(startIndex, endIndex);
+  const paginatedQuotations = useMemo(() => {
+    const startIndex = (currentPage - 1) * QUOTATIONS_PER_PAGE;
+    return filteredQuotations.slice(startIndex, startIndex + QUOTATIONS_PER_PAGE);
+  }, [filteredQuotations, currentPage]);
 
   if (loading) {
     return (
@@ -298,7 +318,8 @@ export default function QuotationsPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">العروض السعرية</h1>
             <p className="text-gray-600 mt-1">
-              عرض وإدارة جميع العروض السعرية ({allQuotations.length} عرض إجمالي)
+              عرض وإدارة جميع العروض السعرية ({allQuotations.length.toLocaleString()} عرض محمل
+              {loadingMore && <span className="text-blue-600"> - جاري تحميل المزيد...</span>})
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -397,7 +418,7 @@ export default function QuotationsPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {paginatedQuotations.map((quotation, index) => (
-                    <tr key={quotation.QuotationID || `quotation-${index}`} className="hover:bg-gray-50">
+                    <tr key={quotation.QuotationID || `quotation-${index}`} className="hover:bg-gray-200 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900 font-cairo">
                           {quotation.QuotationID}
@@ -519,9 +540,9 @@ export default function QuotationsPage() {
           {filteredQuotations.length > 0 && totalPages > 1 && (
             <div className="bg-gray-50 border-t border-gray-200 px-4 py-3 flex items-center justify-between">
               <div className="text-sm text-gray-700">
-                عرض <span className="font-semibold">{startIndex + 1}</span> إلى{' '}
+                عرض <span className="font-semibold">{((currentPage - 1) * QUOTATIONS_PER_PAGE) + 1}</span> إلى{' '}
                 <span className="font-semibold">
-                  {Math.min(endIndex, filteredQuotations.length)}
+                  {Math.min(currentPage * QUOTATIONS_PER_PAGE, filteredQuotations.length)}
                 </span>{' '}
                 من <span className="font-semibold">{filteredQuotations.length}</span> عرض سعري
             </div>

@@ -344,7 +344,7 @@ export default function OrdersPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredOrders.map((order) => (
-                    <tr key={order.OrderID} className="hover:bg-gray-50">
+                    <tr key={order.OrderID} className="hover:bg-gray-200 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {order.OrderID}
                       </td>

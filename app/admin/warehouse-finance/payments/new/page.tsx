@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import CustomerSelect from '@/components/admin/CustomerSelect';
@@ -15,6 +15,7 @@ import {
 export default function NewWarehousePaymentPage() {
   const { admin } = useAdminAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [customers, setCustomers] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +32,17 @@ export default function NewWarehousePaymentPage() {
   useEffect(() => {
     loadCustomers();
   }, []);
+
+  // Set customer ID from query parameter if provided
+  useEffect(() => {
+    const customerIdFromQuery = searchParams.get('customerId');
+    if (customerIdFromQuery) {
+      setFormData((prev) => ({
+        ...prev,
+        customerID: customerIdFromQuery,
+      }));
+    }
+  }, [searchParams]);
 
   const loadCustomers = async () => {
     try {

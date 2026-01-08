@@ -1849,6 +1849,76 @@ export async function getCustomerData(customerId: string | number): Promise<any>
       };
     });
 
+    // Fetch warehouse receipts for this customer
+    const { data: warehouseReceipts, error: warehouseReceiptsError } = await supabase
+      .from('warehouse_receipts')
+      .select('*')
+      .eq('customer_id', idString)
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (warehouseReceiptsError) {
+      console.error('[API] Failed to fetch warehouse receipts:', warehouseReceiptsError);
+    }
+
+    // Map warehouse receipts
+    const mappedWarehouseReceipts = (warehouseReceipts || []).map((receipt: any) => {
+      const cashAmount = parseFloat(String(receipt.cash_amount || 0));
+      const chequeAmount = parseFloat(String(receipt.check_amount || 0));
+      const total = cashAmount + chequeAmount;
+
+      return {
+        ReceiptID: receipt.receipt_id,
+        CustomerID: receipt.customer_id,
+        Date: receipt.date,
+        ReceiptDate: receipt.date,
+        ReceiptNumber: receipt.receipt_id,
+        Amount: total,
+        Total: total,
+        Type: 'warehouse_receipt',
+        Source: 'Warehouse',
+        CashAmount: cashAmount,
+        ChequeAmount: chequeAmount,
+        Notes: receipt.notes || '',
+        CreatedAt: receipt.created_at,
+      };
+    });
+
+    // Fetch warehouse payments for this customer
+    const { data: warehousePayments, error: warehousePaymentsError } = await supabase
+      .from('warehouse_payments')
+      .select('*')
+      .eq('customer_id', idString)
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (warehousePaymentsError) {
+      console.error('[API] Failed to fetch warehouse payments:', warehousePaymentsError);
+    }
+
+    // Map warehouse payments
+    const mappedWarehousePayments = (warehousePayments || []).map((payment: any) => {
+      const cashAmount = parseFloat(String(payment.cash_amount || 0));
+      const chequeAmount = parseFloat(String(payment.check_amount || 0));
+      const total = cashAmount + chequeAmount;
+
+      return {
+        PaymentID: payment.payment_id,
+        CustomerID: payment.customer_id,
+        Date: payment.date,
+        PaymentDate: payment.date,
+        PaymentNumber: payment.payment_id,
+        Amount: total,
+        Total: total,
+        Type: 'warehouse_payment',
+        Source: 'Warehouse',
+        CashAmount: cashAmount,
+        ChequeAmount: chequeAmount,
+        Notes: payment.notes || '',
+        CreatedAt: payment.created_at,
+      };
+    });
+
     // Fetch quotations for this customer
     const { data: quotations, error: quotationsError } = await supabase
       .from('quotations')
@@ -1930,7 +2000,7 @@ export async function getCustomerData(customerId: string | number): Promise<any>
 
     // Combine all financial transactions (shop and warehouse invoices)
     const allInvoices = [...mappedInvoices, ...mappedWarehouseInvoices];
-    const allReceipts = [...mappedReceipts, ...mappedPayments];
+    const allReceipts = [...mappedReceipts, ...mappedPayments, ...mappedWarehouseReceipts, ...mappedWarehousePayments];
 
     const result = {
       invoices: allInvoices,

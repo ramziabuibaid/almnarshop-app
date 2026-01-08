@@ -39,10 +39,10 @@ interface ShopSalesInvoice {
 export default function ShopSalesPage() {
   const { admin } = useAdminAuth();
   const router = useRouter();
-  const [invoices, setInvoices] = useState<ShopSalesInvoice[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [allInvoices, setAllInvoices] = useState<ShopSalesInvoice[]>([]); // Store all loaded invoices
+  const [loading, setLoading] = useState(true); // Start with loading true
+  const [loadingMore, setLoadingMore] = useState(false); // For background loading
   const [error, setError] = useState<string | null>(null);
-  const [allInvoices, setAllInvoices] = useState<ShopSalesInvoice[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [signFilter, setSignFilter] = useState<string>('all');
@@ -62,28 +62,47 @@ export default function ShopSalesPage() {
 
   useEffect(() => {
     document.title = 'مبيعات المحل - Shop Sales';
+    loadFirstPage();
   }, []);
 
-  useEffect(() => {
-    loadAllInvoices();
-  }, []);
-
-  const loadAllInvoices = async () => {
+  // Load first page quickly, then load more in background
+  const loadFirstPage = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Load all invoices (use a large page size to get all)
-      const result = await getShopSalesInvoices(1, 10000);
-      setAllInvoices(result.invoices);
+      // Load first page immediately for fast initial display
+      const firstPageResult = await getShopSalesInvoices(1, INVOICES_PER_PAGE);
+      setAllInvoices(firstPageResult.invoices);
+      setLoading(false); // Show page immediately
+      
+      // Continue loading more invoices in background
+      if (firstPageResult.total > INVOICES_PER_PAGE) {
+        setLoadingMore(true);
+        loadMoreInvoices();
+      }
     } catch (err: any) {
       console.error('[ShopSalesPage] Failed to load invoices:', err);
       setError(err?.message || 'فشل تحميل الفواتير');
-    } finally {
+      setAllInvoices([]);
       setLoading(false);
     }
   };
 
-  // Reset to page 1 when search or filters change
+  // Load remaining invoices in background
+  const loadMoreInvoices = async () => {
+    try {
+      // Load a large number of invoices in background
+      const result = await getShopSalesInvoices(1, 1000);
+      setAllInvoices(result.invoices);
+    } catch (err: any) {
+      console.error('[ShopSalesPage] Failed to load more invoices:', err);
+      // Don't show error to user, just log it
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, statusFilter, signFilter]);
@@ -137,8 +156,10 @@ export default function ShopSalesPage() {
         invoice: fullInvoice,
         details: fullInvoice?.Items || [],
       });
-      // Reload invoices list to update the status
-      await loadAllInvoices();
+      // Update local state immediately (optimistic update like maintenance page)
+      setAllInvoices(prev => prev.map(inv => 
+        inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'مرحلة' } : inv
+      ));
       alert('تم تغيير حالة الترحيل إلى مرحلة بنجاح');
     } catch (err: any) {
       console.error('[ShopSalesPage] Failed to update settlement status:', err);
@@ -152,8 +173,10 @@ export default function ShopSalesPage() {
     try {
       const newSign = invoice.AccountantSign === 'مرحلة' ? 'غير مرحلة' : 'مرحلة';
       await updateShopSalesInvoiceSign(invoice.InvoiceID, newSign as 'مرحلة' | 'غير مرحلة');
-      // Reload current page instead of all invoices
-      loadInvoices();
+      // Update local state immediately (optimistic update like maintenance page)
+      setAllInvoices(prev => prev.map(inv => 
+        inv.InvoiceID === invoice.InvoiceID ? { ...inv, AccountantSign: newSign } : inv
+      ));
     } catch (err: any) {
       console.error('[ShopSalesPage] Failed to update sign:', err);
       alert('فشل تحديث حالة الترحيل: ' + (err?.message || 'خطأ غير معروف'));
@@ -163,8 +186,10 @@ export default function ShopSalesPage() {
   const handleStatusChange = async (invoice: ShopSalesInvoice, newStatus: 'غير مدفوع' | 'تقسيط شهري' | 'دفعت بالكامل' | 'مدفوع جزئي') => {
     try {
       await updateShopSalesInvoiceStatus(invoice.InvoiceID, newStatus);
-      // Reload current page instead of all invoices
-      loadInvoices();
+      // Update local state immediately (optimistic update like maintenance page)
+      setAllInvoices(prev => prev.map(inv => 
+        inv.InvoiceID === invoice.InvoiceID ? { ...inv, Status: newStatus } : inv
+      ));
     } catch (err: any) {
       console.error('[ShopSalesPage] Failed to update status:', err);
       alert('فشل تحديث الحالة: ' + (err?.message || 'خطأ غير معروف'));
@@ -208,13 +233,12 @@ export default function ShopSalesPage() {
     }).format(amount);
   };
 
-  // Apply smart search and filters (client-side like products page)
+  // Apply client-side search and filters (like maintenance page)
   const filteredInvoices = useMemo(() => {
     let filtered = allInvoices;
 
-    // Apply smart search - supports multiple words (like products page)
+    // Apply search - supports multiple words (like maintenance page)
     if (searchQuery.trim()) {
-      // Split search query into individual words
       const searchWords = searchQuery
         .toLowerCase()
         .trim()
@@ -222,15 +246,12 @@ export default function ShopSalesPage() {
         .filter(word => word.length > 0);
       
       filtered = filtered.filter((invoice) => {
-        // Get searchable fields
         const invoiceId = String(invoice.InvoiceID || '').toLowerCase();
         const customerName = String(invoice.CustomerName || '').toLowerCase();
         const customerId = String(invoice.CustomerID || '').toLowerCase();
         
-        // Combine all searchable fields into one text
         const searchableText = `${invoiceId} ${customerName} ${customerId}`;
         
-        // Check if ALL search words are found in the searchable text (words don't need to be consecutive)
         return searchWords.every(word => searchableText.includes(word));
       });
     }
@@ -248,11 +269,12 @@ export default function ShopSalesPage() {
     return filtered;
   }, [allInvoices, searchQuery, statusFilter, signFilter]);
 
-  // Pagination calculations
+  // Client-side pagination (like maintenance page)
   const totalPages = Math.ceil(filteredInvoices.length / INVOICES_PER_PAGE);
-  const startIndex = (currentPage - 1) * INVOICES_PER_PAGE;
-  const endIndex = startIndex + INVOICES_PER_PAGE;
-  const paginatedInvoices = filteredInvoices.slice(startIndex, endIndex);
+  const paginatedInvoices = useMemo(() => {
+    const startIndex = (currentPage - 1) * INVOICES_PER_PAGE;
+    return filteredInvoices.slice(startIndex, startIndex + INVOICES_PER_PAGE);
+  }, [filteredInvoices, currentPage]);
 
   // Check permissions
   if (!canAccessShopInvoices) {
@@ -290,7 +312,8 @@ export default function ShopSalesPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">فواتير مبيعات المحل</h1>
             <p className="text-gray-600 mt-1">
-              إدارة فواتير مبيعات المحل ({allInvoices.length} فاتورة إجمالي)
+              إدارة فواتير مبيعات المحل ({allInvoices.length.toLocaleString()} فاتورة محملة
+              {loadingMore && <span className="text-blue-600"> - جاري تحميل المزيد...</span>})
             </p>
           </div>
           <button
@@ -405,7 +428,7 @@ export default function ShopSalesPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {paginatedInvoices.map((invoice) => (
-                    <tr key={invoice.InvoiceID} className="hover:bg-gray-50 transition-colors">
+                    <tr key={invoice.InvoiceID} className="hover:bg-gray-200 transition-colors">
                       <td className="px-4 py-3 text-right">
                         <div className="font-medium text-gray-900">{invoice.InvoiceID}</div>
                       </td>
@@ -544,9 +567,9 @@ export default function ShopSalesPage() {
             {totalPages > 1 && (
               <div className="bg-gray-50 border-t border-gray-200 px-4 py-3 flex items-center justify-between">
                 <div className="text-sm text-gray-700">
-                  عرض <span className="font-semibold">{startIndex + 1}</span> إلى{' '}
+                  عرض <span className="font-semibold">{((currentPage - 1) * INVOICES_PER_PAGE) + 1}</span> إلى{' '}
                   <span className="font-semibold">
-                    {Math.min(endIndex, filteredInvoices.length)}
+                    {Math.min(currentPage * INVOICES_PER_PAGE, filteredInvoices.length)}
                   </span>{' '}
                   من <span className="font-semibold">{filteredInvoices.length}</span> فاتورة
                 </div>
