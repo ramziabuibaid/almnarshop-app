@@ -331,6 +331,7 @@ export default function EditQuotationPage() {
           notes,
           discount: discountSum,
           status: mapToInvoiceStatus(),
+          created_by: admin?.id || undefined,
         });
         setConvertMessage(`تم التحويل إلى فاتورة المحل بنجاح (رقم: ${res?.invoiceID || '—'})`);
       } else {
@@ -341,6 +342,7 @@ export default function EditQuotationPage() {
           notes,
           discount: discountSum,
           status: mapToInvoiceStatus(),
+          created_by: admin?.id || undefined,
         });
         setConvertMessage(`تم التحويل إلى فاتورة المخزن بنجاح (رقم: ${res?.invoiceID || '—'})`);
       }
@@ -368,6 +370,7 @@ export default function EditQuotationPage() {
         status,
         specialDiscountAmount,
         giftDiscountAmount,
+        created_by: admin?.id || undefined,
         items: details.map((item) => ({
           detailID: item.QuotationDetailID.startsWith('temp-') ? undefined : item.QuotationDetailID,
           productID: item.ProductID,

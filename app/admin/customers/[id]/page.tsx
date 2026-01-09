@@ -8,7 +8,7 @@ import CustomerFormModal from '@/components/admin/CustomerFormModal';
 import AddInteractionModal from '@/components/admin/AddInteractionModal';
 import ReceiptPaymentModal from '@/components/admin/ReceiptPaymentModal';
 import PhoneActions from '@/components/admin/PhoneActions';
-import { getCustomerData, getAllCustomers, getCustomerChecks, saveCheck, deleteCustomer } from '@/lib/api';
+import { getCustomerData, getAllCustomers, getCustomerChecks, saveCheck, deleteCustomer, updateCustomerLoginCredentials } from '@/lib/api';
 import { fixPhoneNumber } from '@/lib/utils';
 import {
   Loader2,
@@ -29,6 +29,9 @@ import {
   Printer,
   Search,
   ChevronDown,
+  Lock,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 interface TimelineItem {
@@ -94,6 +97,11 @@ export default function CustomerProfilePage() {
   const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   const [loadingHeavyData, setLoadingHeavyData] = useState(false);
+  const [isLoginCredentialsModalOpen, setIsLoginCredentialsModalOpen] = useState(false);
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [savingLoginCredentials, setSavingLoginCredentials] = useState(false);
 
   useEffect(() => {
     if (customerId) {
@@ -164,6 +172,8 @@ export default function CustomerProfilePage() {
       }
 
       setCustomer(foundCustomer);
+      // Set login username if exists
+      setLoginUsername(foundCustomer.username || '');
       // Basic info loaded, show UI immediately
       setLoading(false);
     } catch (error: any) {
@@ -447,7 +457,8 @@ export default function CustomerProfilePage() {
   };
 
   const handleEditSuccess = (customerId?: string) => {
-    loadCustomerData();
+    loadCustomerBasicInfo();
+    loadCustomerHeavyData();
     // customerId is available if needed for future enhancements
   };
 
@@ -462,15 +473,15 @@ export default function CustomerProfilePage() {
   };
 
   const handleInteractionSuccess = () => {
-    loadCustomerData();
+    loadCustomerHeavyData();
   };
 
   const handleReceiptSuccess = () => {
-    loadCustomerData();
+    loadCustomerHeavyData();
   };
 
   const handlePaymentSuccess = () => {
-    loadCustomerData();
+    loadCustomerHeavyData();
   };
 
   const handleDeleteCustomer = async () => {
@@ -561,6 +572,34 @@ export default function CustomerProfilePage() {
       alert(err?.message || 'فشل حفظ الشيك');
     } finally {
       setCheckSaving(false);
+    }
+  };
+
+  const handleSaveLoginCredentials = async () => {
+    if (!customerId) return;
+
+    if (!loginUsername.trim()) {
+      alert('يرجى إدخال اسم المستخدم');
+      return;
+    }
+
+    if (!loginPassword.trim()) {
+      alert('يرجى إدخال كلمة المرور');
+      return;
+    }
+
+    setSavingLoginCredentials(true);
+    try {
+      await updateCustomerLoginCredentials(customerId, loginUsername.trim(), loginPassword);
+      alert('تم حفظ بيانات الدخول بنجاح');
+      setIsLoginCredentialsModalOpen(false);
+      setLoginPassword(''); // Clear password after saving
+      // Reload customer data to get updated username
+      await loadCustomerBasicInfo();
+    } catch (err: any) {
+      alert(err?.message || 'فشل حفظ بيانات الدخول');
+    } finally {
+      setSavingLoginCredentials(false);
     }
   };
 
@@ -872,6 +911,21 @@ export default function CustomerProfilePage() {
               >
                 <Edit size={18} />
                 Edit Profile
+              </button>
+            )}
+
+            {/* Login Credentials Button - Only for Accountants */}
+            {canAccountant && (
+              <button
+                onClick={() => {
+                  setLoginUsername(customer.username || '');
+                  setLoginPassword('');
+                  setIsLoginCredentialsModalOpen(true);
+                }}
+                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2"
+              >
+                <Lock size={18} />
+                إدارة بيانات الدخول
               </button>
             )}
 
@@ -1376,6 +1430,105 @@ export default function CustomerProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Login Credentials Modal */}
+      {isLoginCredentialsModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" dir="rtl">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">إدارة بيانات الدخول</h3>
+              <button
+                onClick={() => {
+                  setIsLoginCredentialsModalOpen(false);
+                  setLoginPassword('');
+                }}
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-gray-600" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  اسم المستخدم <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <User size={18} />
+                  </div>
+                  <input
+                    type="text"
+                    value={loginUsername}
+                    onChange={(e) => setLoginUsername(e.target.value)}
+                    placeholder="اسم المستخدم"
+                    className="w-full pr-10 pl-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                    dir="ltr"
+                  />
+                </div>
+                <p className="mt-1 text-xs text-gray-500">يجب أن يكون اسم المستخدم فريداً</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  كلمة المرور <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <Lock size={18} />
+                  </div>
+                  <input
+                    type={showLoginPassword ? 'text' : 'password'}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="كلمة المرور"
+                    className="w-full pr-10 pl-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                    dir="ltr"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword(!showLoginPassword)}
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">سيتم تشفير كلمة المرور تلقائياً</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setIsLoginCredentialsModalOpen(false);
+                  setLoginPassword('');
+                }}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                disabled={savingLoginCredentials}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleSaveLoginCredentials}
+                disabled={savingLoginCredentials || !loginUsername.trim() || !loginPassword.trim()}
+                className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {savingLoginCredentials ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    جاري الحفظ...
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    حفظ
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Customer Modal */}
       <CustomerFormModal

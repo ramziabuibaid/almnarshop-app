@@ -324,6 +324,7 @@ function ShopSalesFormContent() {
         notes: notes.trim() || undefined,
         discount: discount || 0,
         status: status as 'غير مدفوع' | 'تقسيط شهري' | 'دفعت بالكامل' | 'مدفوع جزئي',
+        created_by: admin?.id || undefined,
       });
       router.push('/admin/shop-sales');
     } catch (err: any) {

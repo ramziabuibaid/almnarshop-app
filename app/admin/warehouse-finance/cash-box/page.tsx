@@ -51,28 +51,7 @@ export default function WarehouseCashBoxPage() {
   const { admin } = useAdminAuth();
   const router = useRouter();
   
-  // Check permissions
-  const canAccess = admin?.is_super_admin || admin?.permissions?.accessWarehouseCashBox === true;
-  const canViewBalance = admin?.is_super_admin || admin?.permissions?.viewCashBoxBalance === true;
-  
-  // Redirect if no access
-  useEffect(() => {
-    if (!admin) return;
-    if (!canAccess) {
-      router.push('/admin');
-    }
-  }, [admin, canAccess, router]);
-  
-  if (!admin) return null;
-  if (!canAccess) {
-    return (
-      <AdminLayout>
-        <div className="p-6 text-center">
-          <p className="text-red-600">ليس لديك صلاحية للوصول إلى هذه الصفحة</p>
-        </div>
-      </AdminLayout>
-    );
-  }
+  // All hooks must be called before any conditional returns
   const [transactions, setTransactions] = useState<CashFlowTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,6 +79,30 @@ export default function WarehouseCashBoxPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const TRANSACTIONS_PER_PAGE = 30;
+  
+  // Check permissions
+  const canAccess = admin?.is_super_admin || admin?.permissions?.accessWarehouseCashBox === true;
+  const canViewBalance = admin?.is_super_admin || admin?.permissions?.viewCashBoxBalance === true;
+  
+  // Redirect if no access
+  useEffect(() => {
+    if (!admin) return;
+    if (!canAccess) {
+      router.push('/admin');
+    }
+  }, [admin, canAccess, router]);
+  
+  // Early returns after all hooks
+  if (!admin) return null;
+  if (!canAccess) {
+    return (
+      <AdminLayout>
+        <div className="p-6 text-center">
+          <p className="text-red-600">ليس لديك صلاحية للوصول إلى هذه الصفحة</p>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   useEffect(() => {
     loadCashFlow();

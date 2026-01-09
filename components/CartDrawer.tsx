@@ -341,7 +341,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     type="text"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
                     placeholder="أدخل اسم الزبون"
                     disabled={isSubmitting}
                   />
@@ -355,7 +355,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     type="tel"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
                     placeholder="أدخل رقم الهاتف"
                     disabled={isSubmitting}
                   />
@@ -369,7 +369,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     type="email"
                     value={customerEmail}
                     onChange={(e) => setCustomerEmail(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
                     placeholder="أدخل البريد الإلكتروني"
                     disabled={isSubmitting}
                   />
@@ -383,7 +383,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     value={customerNotes}
                     onChange={(e) => setCustomerNotes(e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none text-gray-900 bg-white"
                     placeholder="أدخل أي ملاحظات خاصة بالطلبية"
                     disabled={isSubmitting}
                   />
@@ -408,7 +408,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                       setCheckoutError('');
                     }}
                     disabled={isSubmitting || checkoutSuccess}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed text-gray-900"
                   >
                     إلغاء
                   </button>

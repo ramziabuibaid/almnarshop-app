@@ -35,6 +35,9 @@ interface Quotation {
   totalAmount?: number;
   CreatedAt?: string;
   CreatedBy?: string;
+  created_by?: string;
+  createdBy?: string;
+  user_id?: string;
 }
 
 const STATUS_OPTIONS = [
@@ -423,11 +426,18 @@ export default function QuotationsPage() {
                         <div className="text-sm font-medium text-gray-900 font-cairo">
                           {quotation.QuotationID}
                         </div>
-                        {quotation.CreatedBy && userMap.get(quotation.CreatedBy) && (
-                          <div className="text-xs text-gray-500 font-cairo mt-1">
-                            {userMap.get(quotation.CreatedBy)}
-                          </div>
-                        )}
+                        {(() => {
+                          const userId = quotation.created_by || quotation.createdBy || quotation.user_id || quotation.CreatedBy || '';
+                          if (userId && userMap.has(userId)) {
+                            const username = userMap.get(userId);
+                            return (
+                              <div className="text-xs text-gray-500 font-cairo mt-1">
+                                {username}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-600 font-cairo">{formatDate(quotation.Date)}</div>

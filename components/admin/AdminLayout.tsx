@@ -28,7 +28,7 @@ interface AdminLayoutProps {
 
 const sidebarLinks = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/products', label: 'Products', icon: Package },
+  { href: '/admin/products', label: 'المنتجات', icon: Package },
   { href: '/admin/pos', label: 'نقطة البيع (POS)', icon: CreditCard },
   { href: '/admin/invoices', label: 'الفواتير النقدية', icon: FileText },
   { href: '/admin/quotations', label: 'العروض السعرية', icon: FileText },
@@ -40,8 +40,8 @@ const sidebarLinks = [
   { href: '/admin/maintenance', label: 'الصيانة', icon: Wrench },
   { href: '/admin/cash-sessions', label: 'الصندوق اليومي', icon: Wallet },
   { href: '/admin/checks', label: 'الشيكات الراجعة', icon: FileText },
-  { href: '/admin/customers', label: 'Customers', icon: Users },
-  { href: '/admin/tasks', label: 'Tasks & Follow-ups', icon: ClipboardList },
+  { href: '/admin/customers', label: 'الزبائن', icon: Users },
+  { href: '/admin/tasks', label: 'المهام والمتابعات', icon: ClipboardList },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {

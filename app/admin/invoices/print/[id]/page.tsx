@@ -182,7 +182,7 @@ export default function InvoicePrintPage() {
         /* ورقة A6 وحدود مريحة للطابعات */
         @page {
           size: A6 portrait;
-          margin: 8mm 7mm 8mm 7mm;
+          margin: 0;
         }
 
         @media print {

@@ -37,19 +37,37 @@ export default function PriceFilter({
     onRangeChange(localMin, newMax);
   };
 
-  const percentageMin = ((localMin - minPrice) / (maxPrice - minPrice)) * 100;
-  const percentageMax = ((localMax - minPrice) / (maxPrice - minPrice)) * 100;
+  // Calculate percentages with bounds checking
+  const calculatePercentage = (value: number, min: number, max: number): number => {
+    if (max <= min) return 0;
+    const percentage = ((value - min) / (max - min)) * 100;
+    return Math.max(0, Math.min(100, percentage)); // Clamp between 0 and 100
+  };
+
+  const percentageMin = calculatePercentage(localMin, minPrice, maxPrice);
+  const percentageMax = calculatePercentage(localMax, minPrice, maxPrice);
+  const trackWidth = Math.max(0, Math.min(100, percentageMax - percentageMin));
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-4 w-full" dir="rtl" style={{ maxWidth: '100%' }}>
       {/* Range Slider */}
-      <div className="relative">
-        <div className="h-2 bg-gray-200 rounded-full relative">
+      <div className="relative w-full" style={{ maxWidth: '100%', boxSizing: 'border-box' }}>
+        <div 
+          className="h-2 bg-gray-200 rounded-full relative" 
+          style={{ 
+            width: '100%',
+            maxWidth: '100%',
+            overflow: 'hidden',
+            boxSizing: 'border-box'
+          }}
+        >
           <div
             className="absolute h-2 bg-gray-900 rounded-full"
             style={{
-              right: `${percentageMin}%`,
-              width: `${percentageMax - percentageMin}%`,
+              right: `${Math.max(0, Math.min(100, percentageMin))}%`,
+              width: `${Math.max(0, Math.min(100, trackWidth))}%`,
+              maxWidth: `calc(100% - ${Math.max(0, Math.min(100, percentageMin))}%)`,
+              boxSizing: 'border-box',
             }}
           />
         </div>
@@ -59,7 +77,13 @@ export default function PriceFilter({
           max={maxPrice}
           value={localMin}
           onChange={(e) => handleMinChange(Number(e.target.value))}
-          className="absolute top-0 w-full h-2 opacity-0 cursor-pointer"
+          className="absolute top-0 w-full h-2 opacity-0 cursor-pointer z-10"
+          style={{ 
+            left: 0, 
+            width: '100%',
+            maxWidth: '100%',
+            boxSizing: 'border-box'
+          }}
         />
         <input
           type="range"
@@ -67,13 +91,19 @@ export default function PriceFilter({
           max={maxPrice}
           value={localMax}
           onChange={(e) => handleMaxChange(Number(e.target.value))}
-          className="absolute top-0 w-full h-2 opacity-0 cursor-pointer"
+          className="absolute top-0 w-full h-2 opacity-0 cursor-pointer z-20"
+          style={{ 
+            left: 0, 
+            width: '100%',
+            maxWidth: '100%',
+            boxSizing: 'border-box'
+          }}
         />
       </div>
 
       {/* Input Fields */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
+      <div className="flex items-center gap-3 w-full">
+        <div className="flex-1 min-w-0">
           <label className="block text-xs text-gray-600 mb-1">من</label>
           <input
             type="number"
@@ -81,11 +111,11 @@ export default function PriceFilter({
             max={maxPrice}
             value={localMin}
             onChange={(e) => handleMinChange(Number(e.target.value))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900 text-right"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900 text-right bg-white"
             dir="rtl"
           />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <label className="block text-xs text-gray-600 mb-1">إلى</label>
           <input
             type="number"
@@ -93,7 +123,7 @@ export default function PriceFilter({
             max={maxPrice}
             value={localMax}
             onChange={(e) => handleMaxChange(Number(e.target.value))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900 text-right"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900 text-right bg-white"
             dir="rtl"
           />
         </div>
@@ -106,4 +136,3 @@ export default function PriceFilter({
     </div>
   );
 }
-

@@ -307,8 +307,8 @@ export default function Home() {
               )}
             </button>
 
-            {/* Admin Panel Button */}
-            {user && (
+            {/* Admin Panel Button - Only for Admin users */}
+            {user && (user.Role === 'Admin' || user.role === 'Admin') && (
               <button
                 onClick={() => router.push('/admin')}
                 className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium text-sm"
@@ -322,6 +322,7 @@ export default function Home() {
               onClick={() => router.push(user ? '/profile' : '/login')}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               aria-label="Profile"
+              title={user ? 'الملف الشخصي' : 'تسجيل الدخول'}
             >
               <User size={24} className="text-gray-700" />
             </button>
@@ -385,9 +386,9 @@ export default function Home() {
                       <button
                         onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                         disabled={currentPage === 1}
-                        className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-900"
                       >
-                        <ChevronRight size={20} />
+                        <ChevronRight size={20} className="text-gray-900" />
                         السابق
                       </button>
 
@@ -411,7 +412,7 @@ export default function Home() {
                               className={`px-3 py-2 rounded-lg transition-colors ${
                                 currentPage === pageNum
                                   ? 'bg-gray-900 text-white'
-                                  : 'border border-gray-300 hover:bg-gray-50'
+                                  : 'border border-gray-300 hover:bg-gray-50 text-gray-900'
                               }`}
                             >
                               {pageNum}
@@ -423,10 +424,10 @@ export default function Home() {
                       <button
                         onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                         disabled={currentPage === totalPages}
-                        className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-900"
                       >
                         التالي
-                        <ChevronLeft size={20} />
+                        <ChevronLeft size={20} className="text-gray-900" />
                       </button>
                     </div>
                   )}

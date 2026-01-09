@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useShop } from '@/context/ShopContext';
 import FilterSection from './FilterSection';
 import BrandFilter from './BrandFilter';
+import TypeFilter from './TypeFilter';
 import ColorFilter from './ColorFilter';
 import PriceFilter from './PriceFilter';
 import { FilterState } from './types';
@@ -136,6 +137,12 @@ export default function FilterSidebar({ filters, onFilterChange }: FilterSidebar
     onFilterChange({ ...filters, priceRange: { min, max } });
   };
 
+  // Build type counts object
+  const typeCounts: Record<string, number> = {};
+  availableTypes.forEach((type) => {
+    typeCounts[`type_${type}`] = productCounts[`type_${type}`] || 0;
+  });
+
   // Build brand counts object
   const brandCounts: Record<string, number> = {};
   brands.forEach((brand) => {
@@ -153,29 +160,12 @@ export default function FilterSidebar({ filters, onFilterChange }: FilterSidebar
       <div className="bg-white rounded-lg border border-gray-200 p-4 sticky top-4 space-y-6">
         {/* Type Filter */}
         <FilterSection title="النوع">
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {availableTypes.map((type) => {
-              const isSelected = filters.selectedTypes.includes(type);
-              const count = productCounts[`type_${type}`] || 0;
-              return (
-                <label
-                  key={type}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => handleTypeToggle(type)}
-                    className="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
-                  />
-                  <span className="flex-1 text-sm text-gray-900">{type}</span>
-                  {count > 0 && (
-                    <span className="text-xs text-gray-500">({count})</span>
-                  )}
-                </label>
-              );
-            })}
-          </div>
+          <TypeFilter
+            types={availableTypes}
+            selectedTypes={filters.selectedTypes}
+            onToggle={handleTypeToggle}
+            productCounts={typeCounts}
+          />
         </FilterSection>
 
         {/* Brand Filter */}

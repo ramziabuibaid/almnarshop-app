@@ -62,6 +62,9 @@ export default function EditMaintenancePage() {
     serialNo: '',
     underWarranty: 'NO' as 'YES' | 'NO',
     status: 'موجودة في المحل وجاهزة للتسليم' as 'موجودة في المحل وجاهزة للتسليم' | 'موجودة في المخزن وجاهزة للتسليم' | 'موجودة في الشركة' | 'جاهزة للتسليم للزبون من المحل' | 'جاهزة للتسليم للزبون من المخزن' | 'سلمت للزبون' | 'تم ارجاعها للشركة وخصمها للزبون',
+    costAmount: '',
+    costReason: '',
+    isPaid: false,
   });
 
   useEffect(() => {
@@ -95,6 +98,9 @@ export default function EditMaintenancePage() {
         serialNo: record.SerialNo || '',
         underWarranty: (record.UnderWarranty as 'YES' | 'NO') || 'NO',
         status: record.Status || 'موجودة في المحل وجاهزة للتسليم',
+        costAmount: record.CostAmount ? String(record.CostAmount) : '',
+        costReason: record.CostReason || '',
+        isPaid: record.IsPaid || false,
       });
     } catch (err: any) {
       console.error('[EditMaintenancePage] Failed to load record:', err);
@@ -171,6 +177,9 @@ export default function EditMaintenancePage() {
         serialNo: formData.serialNo.trim() || undefined,
         underWarranty: formData.underWarranty,
         status: formData.status,
+        costAmount: formData.costAmount && formData.costAmount.trim() !== '' ? parseFloat(formData.costAmount) : null,
+        costReason: formData.costReason.trim() || null,
+        isPaid: formData.isPaid,
       };
 
       await updateMaintenance(maintNo, payload);
@@ -427,6 +436,55 @@ export default function EditMaintenancePage() {
               <option value="تم ارجاعها للشركة وخصمها للزبون">تم ارجاعها للشركة وخصمها للزبون</option>
             </select>
             <p className="mt-2 text-xs text-gray-500">يمكن تغيير الحالة أيضاً من صفحة القائمة مباشرة</p>
+          </div>
+
+          {/* Financial Information */}
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-300 pb-2 mb-4">المعلومات المالية</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  مبلغ التكلفة (₪)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.costAmount}
+                  onChange={(e) => setFormData({ ...formData, costAmount: e.target.value })}
+                  placeholder="0.00"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                />
+                <p className="mt-1 text-xs text-gray-500">مبلغ التكلفة المدفوع للشركة (اختياري)</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  تم الدفع
+                </label>
+                <select
+                  value={formData.isPaid ? 'YES' : 'NO'}
+                  onChange={(e) => setFormData({ ...formData, isPaid: e.target.value === 'YES' })}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                >
+                  <option value="NO">لا</option>
+                  <option value="YES">نعم</option>
+                </select>
+                <p className="mt-1 text-xs text-gray-500">هل تم دفع التكلفة للشركة؟</p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                سبب التكلفة
+              </label>
+              <textarea
+                value={formData.costReason}
+                onChange={(e) => setFormData({ ...formData, costReason: e.target.value })}
+                placeholder="وصف سبب التكلفة (مثال: إصلاح خارج الكفالة، قطع غيار إضافية، إلخ)"
+                rows={3}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white resize-y"
+              />
+              <p className="mt-1 text-xs text-gray-500">وصف سبب التكلفة (اختياري)</p>
+            </div>
           </div>
 
           {/* Action Buttons */}

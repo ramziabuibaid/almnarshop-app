@@ -354,6 +354,7 @@ export default function EditOrderPage() {
           notes: notes || undefined,
           discount: discount || 0,
           status: mapToInvoiceStatus(),
+          created_by: admin?.id || undefined,
         });
         setConvertMessage(`تم التحويل إلى فاتورة المحل بنجاح (رقم: ${res?.invoiceID || '—'})`);
       } else {
@@ -364,6 +365,7 @@ export default function EditOrderPage() {
           notes: notes || undefined,
           discount: discount || 0,
           status: mapToInvoiceStatus(),
+          created_by: admin?.id || undefined,
         });
         setConvertMessage(`تم التحويل إلى فاتورة المخزن بنجاح (رقم: ${res?.invoiceID || '—'})`);
       }

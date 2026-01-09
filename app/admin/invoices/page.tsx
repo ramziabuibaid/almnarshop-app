@@ -9,6 +9,7 @@ import {
   getCashInvoice,
   updateCashInvoiceSettlementStatus,
 } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import {
   Loader2,
   FileText,
@@ -27,6 +28,9 @@ interface CashInvoice {
   Discount?: number;
   totalAmount?: number;
   isSettled?: boolean;
+  created_by?: string;
+  createdBy?: string;
+  user_id?: string;
 }
 
 export default function InvoicesPage() {
@@ -42,6 +46,7 @@ export default function InvoicesPage() {
   }>({ invoice: null, details: null });
   const [viewLoading, setViewLoading] = useState(false);
   const [updatingSettlement, setUpdatingSettlement] = useState(false);
+  const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
 
   // Check if user has permission to view cash invoices
   const canViewCashInvoices = admin?.is_super_admin || admin?.permissions?.viewCashInvoices === true;
@@ -52,7 +57,36 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     loadInvoices();
+    loadUsers();
   }, []);
+
+  const loadUsers = async () => {
+    try {
+      const { data: users, error } = await supabase
+        .from('admin_users')
+        .select('id, username')
+        .order('username');
+
+      if (error) {
+        console.error('[InvoicesPage] Failed to load users:', error);
+        return;
+      }
+
+      const map = new Map<string, string>();
+      if (users && Array.isArray(users)) {
+        users.forEach((user: any) => {
+          const userId = user.id || '';
+          const username = user.username || '';
+          if (userId && username) {
+            map.set(userId, username);
+          }
+        });
+      }
+      setUserMap(map);
+    } catch (err: any) {
+      console.error('[InvoicesPage] Failed to load users:', err);
+    }
+  };
 
   const loadInvoices = async () => {
     setLoading(true);
@@ -278,6 +312,18 @@ export default function InvoicesPage() {
                     <tr key={invoice.InvoiceID || `invoice-${index}`} className="hover:bg-gray-200 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900 font-cairo">{invoice.InvoiceID}</div>
+                        {(() => {
+                          const userId = invoice.created_by || invoice.createdBy || invoice.user_id || '';
+                          if (userId && userMap.has(userId)) {
+                            const username = userMap.get(userId);
+                            return (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {username}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-600 font-cairo">{formatDate(invoice.DateTime)}</div>

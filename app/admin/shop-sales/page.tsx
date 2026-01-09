@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import { getShopSalesInvoices, getShopSalesInvoice, updateShopSalesInvoiceSign, updateShopSalesInvoiceStatus } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import { Lock } from 'lucide-react';
 import {
   Loader2,
@@ -34,6 +35,9 @@ interface ShopSalesInvoice {
   Status: string;
   TotalAmount: number;
   CreatedAt?: string;
+  created_by?: string;
+  createdBy?: string;
+  user_id?: string;
 }
 
 export default function ShopSalesPage() {
@@ -54,6 +58,7 @@ export default function ShopSalesPage() {
   }>({ invoice: null, details: null });
   const [viewLoading, setViewLoading] = useState(false);
   const [updatingSettlement, setUpdatingSettlement] = useState(false);
+  const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
 
   // Check if user has permission to access shop invoices
   const canAccessShopInvoices = admin?.is_super_admin || admin?.permissions?.accessShopInvoices === true;
@@ -63,7 +68,36 @@ export default function ShopSalesPage() {
   useEffect(() => {
     document.title = 'مبيعات المحل - Shop Sales';
     loadFirstPage();
+    loadUsers();
   }, []);
+
+  const loadUsers = async () => {
+    try {
+      const { data: users, error } = await supabase
+        .from('admin_users')
+        .select('id, username')
+        .order('username');
+
+      if (error) {
+        console.error('[ShopSalesPage] Failed to load users:', error);
+        return;
+      }
+
+      const map = new Map<string, string>();
+      if (users && Array.isArray(users)) {
+        users.forEach((user: any) => {
+          const userId = user.id || '';
+          const username = user.username || '';
+          if (userId && username) {
+            map.set(userId, username);
+          }
+        });
+      }
+      setUserMap(map);
+    } catch (err: any) {
+      console.error('[ShopSalesPage] Failed to load users:', err);
+    }
+  };
 
   // Load first page quickly, then load more in background
   const loadFirstPage = async () => {
@@ -449,6 +483,18 @@ export default function ShopSalesPage() {
                     <tr key={invoice.InvoiceID} className="hover:bg-gray-200 transition-colors">
                       <td className="px-4 py-3 text-right">
                         <div className="font-medium text-gray-900">{invoice.InvoiceID}</div>
+                        {(() => {
+                          const userId = invoice.created_by || invoice.createdBy || invoice.user_id || '';
+                          if (userId && userMap.has(userId)) {
+                            const username = userMap.get(userId);
+                            return (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {username}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button

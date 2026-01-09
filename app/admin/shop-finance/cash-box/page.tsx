@@ -448,6 +448,7 @@ export default function ShopCashBoxPage() {
         cashAmount: cashAmount,
         chequeAmount: checkAmount,
         notes: formData.notes.trim() || undefined,
+        created_by: admin?.id || undefined,
       };
 
       // Save first
@@ -510,6 +511,7 @@ export default function ShopCashBoxPage() {
         cashAmount: cashAmount,
         chequeAmount: checkAmount,
         notes: formData.notes.trim() || undefined,
+        created_by: admin?.id || undefined,
       };
 
       // Save first

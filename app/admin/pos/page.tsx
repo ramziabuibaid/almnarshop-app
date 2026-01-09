@@ -561,6 +561,7 @@ export default function POSPage() {
         })),
         notes: notes.trim() || undefined,
         discount: discount || 0,
+        created_by: admin?.id || undefined,
       };
 
       // Save invoice directly

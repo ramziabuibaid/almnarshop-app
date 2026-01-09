@@ -160,6 +160,11 @@ export default function NewMaintenancePage() {
       return;
     }
 
+    if (!formData.company || !formData.company.trim()) {
+      setError('⚠️ يجب اختيار الشركة الكفيلة');
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -168,7 +173,7 @@ export default function NewMaintenancePage() {
         customerID: formData.customerID,
         itemName: formData.itemName.trim(),
         location: formData.location,
-        company: formData.company.trim() || undefined,
+        company: formData.company.trim(),
         dateOfPurchase: formData.dateOfPurchase || undefined,
         dateOfReceive: formData.dateOfReceive,
         problem: formData.problem.trim() || undefined,
@@ -178,6 +183,7 @@ export default function NewMaintenancePage() {
         serialNo: formData.serialNo.trim() || undefined,
         underWarranty: formData.underWarranty,
         status: formData.status,
+        created_by: admin?.id || undefined,
       };
 
       await saveMaintenance(payload);
@@ -297,20 +303,24 @@ export default function NewMaintenancePage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">
-                  الشركة الكفيلة
+                  الشركة الكفيلة <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.company}
                   onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                  required
                 >
-                  <option value="">اختر الشركة (اختياري)</option>
+                  <option value="">اختر الشركة</option>
                   {companyOptions.map((company) => (
                     <option key={company} value={company}>
                       {company}
                     </option>
                   ))}
                 </select>
+                {!formData.company && (
+                  <p className="mt-1 text-xs text-gray-500">يرجى اختيار الشركة الكفيلة</p>
+                )}
               </div>
             </div>
 
@@ -447,7 +457,7 @@ export default function NewMaintenancePage() {
             </button>
             <button
               type="submit"
-              disabled={saving || !formData.customerID || !formData.itemName.trim() || !formData.dateOfReceive}
+              disabled={saving || !formData.customerID || !formData.itemName.trim() || !formData.dateOfReceive || !formData.company || !formData.company.trim()}
               className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? (

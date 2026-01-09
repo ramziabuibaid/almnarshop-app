@@ -30,7 +30,7 @@ export default function ProductGridHeader({
         <select
           value={sortOption}
           onChange={(e) => onSortChange(e.target.value as SortOption)}
-          className="appearance-none pr-4 pl-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-sm font-medium cursor-pointer text-right min-w-[200px]"
+          className="appearance-none pr-4 pl-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-sm font-medium cursor-pointer text-right min-w-[200px] text-gray-900"
           dir="rtl"
         >
           <option value="date-desc">الأحدث أولاً</option>

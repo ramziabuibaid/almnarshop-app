@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useAdminAuth } from '@/context/AdminAuthContext';
 import { getAllMaintenance, updateMaintenance } from '@/lib/api';
 import { fixPhoneNumber } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import MaintenanceTimeline from '@/components/admin/MaintenanceTimeline';
 import {
   Loader2,
   Wrench,
@@ -18,9 +20,10 @@ import {
   MessageCircle,
   ChevronLeft,
   ChevronRight,
-  ArrowUpDown,
-  Calendar,
   X,
+  DollarSign,
+  History,
+  ChevronUp,
 } from 'lucide-react';
 
 interface MaintenanceRecord {
@@ -40,10 +43,17 @@ interface MaintenanceRecord {
   SerialNo?: string;
   UnderWarranty: string;
   CreatedAt?: string;
+  created_by?: string;
+  createdBy?: string;
+  user_id?: string;
+  CostAmount?: number | null;
+  CostReason?: string | null;
+  IsPaid?: boolean;
 }
 
 export default function MaintenancePage() {
   const router = useRouter();
+  const { admin } = useAdminAuth();
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,11 +61,20 @@ export default function MaintenancePage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [companyFilter, setCompanyFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('all'); // 'all', 'today', 'week', 'month'
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortBy, setSortBy] = useState<'date' | 'status' | 'customer'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
+  const [statusChangeModal, setStatusChangeModal] = useState<{
+    isOpen: boolean;
+    maintNo: string;
+    currentStatus: string;
+    newStatus: string;
+    actionLabel: string;
+  } | null>(null);
+  const [statusChangeNote, setStatusChangeNote] = useState('');
+  const [statusChangeCostAmount, setStatusChangeCostAmount] = useState('');
+  const [statusChangeCostReason, setStatusChangeCostReason] = useState('');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const itemsPerPage = 20;
 
   useEffect(() => {
@@ -64,7 +83,36 @@ export default function MaintenancePage() {
 
   useEffect(() => {
     loadRecords();
+    loadUsers();
   }, []);
+
+  const loadUsers = async () => {
+    try {
+      const { data: users, error } = await supabase
+        .from('admin_users')
+        .select('id, username')
+        .order('username');
+
+      if (error) {
+        console.error('[MaintenancePage] Failed to load users:', error);
+        return;
+      }
+
+      const map = new Map<string, string>();
+      if (users && Array.isArray(users)) {
+        users.forEach((user: any) => {
+          const userId = user.id || '';
+          const username = user.username || '';
+          if (userId && username) {
+            map.set(userId, username);
+          }
+        });
+      }
+      setUserMap(map);
+    } catch (err: any) {
+      console.error('[MaintenancePage] Failed to load users:', err);
+    }
+  };
 
   const loadRecords = async () => {
     setLoading(true);
@@ -138,16 +186,71 @@ export default function MaintenancePage() {
     return actions;
   };
 
-  const handleStatusChange = async (maintNo: string, newStatus: string) => {
-    setUpdatingStatus(maintNo);
+  const handleStatusChangeClick = (maintNo: string, newStatus: string, actionLabel: string) => {
+    const record = records.find((r) => r.MaintNo === maintNo);
+    if (!record) return;
+    
+    setStatusChangeModal({
+      isOpen: true,
+      maintNo,
+      currentStatus: record.Status,
+      newStatus,
+      actionLabel,
+    });
+    setStatusChangeNote('');
+    setStatusChangeCostAmount('');
+    setStatusChangeCostReason('');
+  };
+
+  const handleStatusChangeConfirm = async () => {
+    if (!statusChangeModal) return;
+
+    setUpdatingStatus(statusChangeModal.maintNo);
     try {
-      await updateMaintenance(maintNo, { status: newStatus as any });
+      const payload: any = {
+        status: statusChangeModal.newStatus as any,
+        historyNote: statusChangeNote.trim() || undefined,
+        changedBy: admin?.id || undefined,
+      };
+
+      // If status is changing from "موجودة في الشركة" to "جاهزة للتسليم" (receiving from company),
+      // allow adding cost information
+      if (
+        statusChangeModal.currentStatus === 'موجودة في الشركة' &&
+        (statusChangeModal.newStatus === 'جاهزة للتسليم للزبون من المحل' ||
+          statusChangeModal.newStatus === 'جاهزة للتسليم للزبون من المخزن')
+      ) {
+        // Always send costAmount (even if empty, to allow deletion)
+        if (statusChangeCostAmount && statusChangeCostAmount.trim() !== '') {
+          payload.costAmount = parseFloat(statusChangeCostAmount);
+        } else {
+          payload.costAmount = null; // Explicitly set to null to delete
+        }
+        // Always send costReason (even if empty, to allow deletion)
+        payload.costReason = statusChangeCostReason.trim() || null;
+      }
+
+      await updateMaintenance(statusChangeModal.maintNo, payload);
+      
       // Update the record locally without full reload
       setRecords((prevRecords) =>
         prevRecords.map((record) =>
-          record.MaintNo === maintNo ? { ...record, Status: newStatus } : record
+          record.MaintNo === statusChangeModal.maintNo
+            ? {
+                ...record,
+                Status: statusChangeModal.newStatus,
+                CostAmount: payload.costAmount !== undefined ? payload.costAmount : record.CostAmount,
+                CostReason: payload.costReason !== undefined ? payload.costReason : record.CostReason,
+              }
+            : record
         )
       );
+
+      // Close modal
+      setStatusChangeModal(null);
+      setStatusChangeNote('');
+      setStatusChangeCostAmount('');
+      setStatusChangeCostReason('');
     } catch (err: any) {
       console.error('[MaintenancePage] Failed to update status:', err);
       setError(err?.message || 'فشل تحديث الحالة');
@@ -156,6 +259,25 @@ export default function MaintenancePage() {
     } finally {
       setUpdatingStatus(null);
     }
+  };
+
+  const handleStatusChangeCancel = () => {
+    setStatusChangeModal(null);
+    setStatusChangeNote('');
+    setStatusChangeCostAmount('');
+    setStatusChangeCostReason('');
+  };
+
+  const toggleRowExpansion = (maintNo: string) => {
+    setExpandedRows((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(maintNo)) {
+        newSet.delete(maintNo);
+      } else {
+        newSet.add(maintNo);
+      }
+      return newSet;
+    });
   };
 
   const handleWhatsApp = async (record: MaintenanceRecord, countryCode: '970' | '972') => {
@@ -234,14 +356,27 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
     if (!dateString) return '—';
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('ar-SA', {
+      return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
-        numberingSystem: 'latn',
       });
     } catch {
       return '—';
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    } catch {
+      return '';
     }
   };
 
@@ -298,55 +433,15 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
       filtered = filtered.filter((record) => record.Company === companyFilter);
     }
 
-    // Filter by date
-    if (dateFilter !== 'all') {
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      
-      filtered = filtered.filter((record) => {
-        if (!record.DateOfReceive) return false;
-        const receiveDate = new Date(record.DateOfReceive);
-        
-        switch (dateFilter) {
-          case 'today':
-            return receiveDate >= today;
-          case 'week':
-            const weekAgo = new Date(today);
-            weekAgo.setDate(weekAgo.getDate() - 7);
-            return receiveDate >= weekAgo;
-          case 'month':
-            const monthAgo = new Date(today);
-            monthAgo.setMonth(monthAgo.getMonth() - 1);
-            return receiveDate >= monthAgo;
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Sort records
+    // Sort records by date (newest first - desc)
     filtered = [...filtered].sort((a, b) => {
-      let comparison = 0;
-      
-      switch (sortBy) {
-        case 'date':
-          const dateA = new Date(a.DateOfReceive || a.CreatedAt || 0).getTime();
-          const dateB = new Date(b.DateOfReceive || b.CreatedAt || 0).getTime();
-          comparison = dateA - dateB;
-          break;
-        case 'status':
-          comparison = a.Status.localeCompare(b.Status, 'ar');
-          break;
-        case 'customer':
-          comparison = (a.CustomerName || a.CustomerID).localeCompare(b.CustomerName || b.CustomerID, 'ar');
-          break;
-      }
-      
-      return sortOrder === 'asc' ? comparison : -comparison;
+      const dateA = new Date(a.CreatedAt || a.DateOfReceive || 0).getTime();
+      const dateB = new Date(b.CreatedAt || b.DateOfReceive || 0).getTime();
+      return dateB - dateA; // Descending order (newest first)
     });
 
     return filtered;
-  }, [records, searchQuery, statusFilter, locationFilter, companyFilter, dateFilter, sortBy, sortOrder]);
+  }, [records, searchQuery, statusFilter, locationFilter, companyFilter]);
 
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedRecords.length / itemsPerPage);
@@ -358,7 +453,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, locationFilter, companyFilter, dateFilter]);
+  }, [searchQuery, statusFilter, locationFilter, companyFilter]);
 
   const statusOptions = [
     'موجودة في المحل وجاهزة للتسليم',
@@ -456,7 +551,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
           </div>
 
           {/* Filters Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Status Filter */}
             <div className="relative">
               <label className="block text-xs font-medium text-gray-700 mb-1">الحالة</label>
@@ -507,49 +602,10 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
               </select>
               <ChevronDown size={16} className="absolute left-3 bottom-2.5 text-gray-400 pointer-events-none" />
             </div>
-
-            {/* Date Filter */}
-            <div className="relative">
-              <label className="block text-xs font-medium text-gray-700 mb-1">التاريخ</label>
-              <select
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 appearance-none pr-8 text-sm"
-              >
-                <option value="all">جميع التواريخ</option>
-                <option value="today">اليوم</option>
-                <option value="week">آخر أسبوع</option>
-                <option value="month">آخر شهر</option>
-              </select>
-              <ChevronDown size={16} className="absolute left-3 bottom-2.5 text-gray-400 pointer-events-none" />
-            </div>
-
-            {/* Sort */}
-            <div className="relative">
-              <label className="block text-xs font-medium text-gray-700 mb-1">الترتيب</label>
-              <div className="flex gap-2">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'date' | 'status' | 'customer')}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 appearance-none pr-8 text-sm"
-                >
-                  <option value="date">التاريخ</option>
-                  <option value="status">الحالة</option>
-                  <option value="customer">العميل</option>
-                </select>
-                <button
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  title={sortOrder === 'asc' ? 'تصاعدي' : 'تنازلي'}
-                >
-                  <ArrowUpDown size={16} className={sortOrder === 'desc' ? 'rotate-180' : ''} />
-                </button>
-              </div>
-            </div>
           </div>
 
           {/* Active Filters */}
-          {(statusFilter !== 'all' || locationFilter !== 'all' || companyFilter !== 'all' || dateFilter !== 'all' || searchQuery) && (
+          {(statusFilter !== 'all' || locationFilter !== 'all' || companyFilter !== 'all' || searchQuery) && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-gray-600">الفلاتر النشطة:</span>
               {statusFilter !== 'all' && (
@@ -579,15 +635,6 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   <X size={12} />
                 </button>
               )}
-              {dateFilter !== 'all' && (
-                <button
-                  onClick={() => setDateFilter('all')}
-                  className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs hover:bg-yellow-200 transition-colors"
-                >
-                  {dateFilter === 'today' ? 'اليوم' : dateFilter === 'week' ? 'آخر أسبوع' : 'آخر شهر'}
-                  <X size={12} />
-                </button>
-              )}
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
@@ -602,7 +649,6 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   setStatusFilter('all');
                   setLocationFilter('all');
                   setCompanyFilter('all');
-                  setDateFilter('all');
                   setSearchQuery('');
                 }}
                 className="px-2 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
@@ -618,13 +664,12 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
           <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
             <Wrench size={48} className="text-gray-300 mx-auto mb-4" />
             <p className="text-gray-600 text-lg">لا توجد سجلات صيانة</p>
-            {(statusFilter !== 'all' || locationFilter !== 'all' || companyFilter !== 'all' || dateFilter !== 'all' || searchQuery) && (
+            {(statusFilter !== 'all' || locationFilter !== 'all' || companyFilter !== 'all' || searchQuery) && (
               <button
                 onClick={() => {
                   setStatusFilter('all');
                   setLocationFilter('all');
                   setCompanyFilter('all');
-                  setDateFilter('all');
                   setSearchQuery('');
                 }}
                 className="mt-4 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
@@ -665,21 +710,63 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {paginatedRecords.map((record) => (
-                    <tr key={record.MaintNo} className="hover:bg-gray-50 transition-colors">
+                      <React.Fragment key={record.MaintNo}>
+                    <tr className="hover:bg-gray-200 transition-colors">
                       <td className="px-4 py-3 text-right">
                         <div className="font-medium text-gray-900">{record.MaintNo}</div>
+                        {userMap.get(record.created_by || record.createdBy || record.user_id || '') && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {userMap.get(record.created_by || record.createdBy || record.user_id || '')}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="text-gray-900">{record.CustomerName || record.CustomerID}</div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (e.ctrlKey || e.metaKey) {
+                              window.open(`/admin/customers/${record.CustomerID}`, '_blank', 'noopener,noreferrer');
+                            } else {
+                              router.push(`/admin/customers/${record.CustomerID}`);
+                            }
+                          }}
+                          className="text-gray-900 hover:text-gray-900 hover:underline font-medium transition-colors text-right"
+                          title="عرض بروفايل العميل"
+                        >
+                          {record.CustomerName || record.CustomerID}
+                        </button>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="text-gray-900">{record.ItemName}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-gray-900">{record.ItemName}</div>
+                          {record.CostAmount !== null && record.CostAmount !== undefined && record.CostAmount > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-800 rounded-full text-xs font-medium" title={`تكلفة الصيانة: ${record.CostAmount} ₪`}>
+                              <DollarSign size={12} />
+                              {record.CostAmount} ₪
+                            </span>
+                          )}
+                        </div>
+                        {record.Company && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {record.Company}
+                          </div>
+                        )}
+                        {record.CostReason && (
+                          <div className="text-xs text-orange-600 mt-1" title={record.CostReason}>
+                            {record.CostReason.length > 30 ? `${record.CostReason.substring(0, 30)}...` : record.CostReason}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="text-gray-600">{record.Location}</div>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="text-gray-600">{formatDate(record.DateOfReceive)}</div>
+                        {record.CreatedAt && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {formatTime(record.CreatedAt)}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex flex-col gap-2">
@@ -691,7 +778,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                               {getActionButtons(record.Status, record.MaintNo).map((action, idx) => (
                                 <button
                                   key={idx}
-                                  onClick={() => handleStatusChange(record.MaintNo, action.newStatus)}
+                                  onClick={() => handleStatusChangeClick(record.MaintNo, action.newStatus, action.label)}
                                   disabled={updatingStatus === record.MaintNo}
                                   className={`text-xs px-2.5 py-1 border border-gray-300 rounded-md hover:bg-gray-100 hover:border-gray-400 transition-colors text-gray-900 font-medium ${
                                     updatingStatus === record.MaintNo ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
@@ -713,6 +800,19 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center gap-2 justify-end">
+                          <button
+                            onClick={() => toggleRowExpansion(record.MaintNo)}
+                            className={`p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors ${
+                              expandedRows.has(record.MaintNo) ? 'bg-gray-100' : ''
+                            }`}
+                            title="عرض السجل التاريخي"
+                          >
+                            {expandedRows.has(record.MaintNo) ? (
+                              <ChevronUp size={18} />
+                            ) : (
+                              <History size={18} />
+                            )}
+                          </button>
                           {shouldShowWhatsApp(record.Status) && (
                             <div className="relative group">
                               <button
@@ -765,6 +865,33 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                         </div>
                       </td>
                     </tr>
+                    {expandedRows.has(record.MaintNo) && (
+                      <tr className="bg-gradient-to-b from-gray-50 to-white">
+                        <td colSpan={7} className="px-6 py-4 border-t-2 border-gray-300">
+                          <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-top-2 duration-200" dir="rtl">
+                            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-300">
+                              <div className="flex items-center gap-2">
+                                <div className="p-1.5 bg-gray-900 rounded-lg">
+                                  <History size={14} className="text-white" />
+                                </div>
+                                <h3 className="text-sm font-bold text-gray-900">السجل التاريخي</h3>
+                                <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full">#{record.MaintNo}</span>
+                              </div>
+                              <button
+                                onClick={() => toggleRowExpansion(record.MaintNo)}
+                                className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                              >
+                                إخفاء
+                              </button>
+                            </div>
+                            <div className="max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                              <MaintenanceTimeline maintNo={record.MaintNo} />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -825,6 +952,93 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
               </div>
             )}
           </>
+        )}
+
+        {/* Status Change Modal */}
+        {statusChangeModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" dir="rtl">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 space-y-4">
+              <h3 className="text-xl font-bold text-gray-900">تغيير الحالة</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">من</label>
+                  <p className="text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">{statusChangeModal.currentStatus}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">إلى</label>
+                  <p className="text-gray-900 bg-blue-50 px-3 py-2 rounded-lg font-medium">{statusChangeModal.newStatus}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ملاحظة (اختياري)
+                  </label>
+                  <textarea
+                    value={statusChangeNote}
+                    onChange={(e) => setStatusChangeNote(e.target.value)}
+                    placeholder="أضف ملاحظة حول هذا التغيير..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 resize-y"
+                  />
+                </div>
+                {statusChangeModal.currentStatus === 'موجودة في الشركة' &&
+                  (statusChangeModal.newStatus === 'جاهزة للتسليم للزبون من المحل' ||
+                    statusChangeModal.newStatus === 'جاهزة للتسليم للزبون من المخزن') && (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          مبلغ التكلفة (₪)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={statusChangeCostAmount}
+                          onChange={(e) => setStatusChangeCostAmount(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        سبب التكلفة (اختياري)
+                      </label>
+                      <textarea
+                        value={statusChangeCostReason}
+                        onChange={(e) => setStatusChangeCostReason(e.target.value)}
+                        placeholder="وصف سبب التكلفة..."
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 resize-y"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={handleStatusChangeCancel}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleStatusChangeConfirm}
+                  disabled={updatingStatus === statusChangeModal.maintNo}
+                  className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {updatingStatus === statusChangeModal.maintNo ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 size={16} className="animate-spin" />
+                      جاري التحديث...
+                    </span>
+                  ) : (
+                    'تأكيد التغيير'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </AdminLayout>

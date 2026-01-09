@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Mail } from 'lucide-react';
+import { ArrowLeft, User, Lock, Eye, EyeOff } from 'lucide-react';
 import { useShop } from '@/context/ShopContext';
 import { login } from '@/lib/api';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { setUser } = useShop();
@@ -22,31 +24,28 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
-      setError('Please enter your email');
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername) {
+      setError('يرجى إدخال اسم المستخدم');
       setLoading(false);
       return;
     }
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      setError('Please enter a valid email address');
+    if (!password) {
+      setError('يرجى إدخال كلمة المرور');
       setLoading(false);
       return;
     }
 
     try {
-      console.log('[Login Page] Attempting login with email:', trimmedEmail);
-      const userData = await login(trimmedEmail);
+      console.log('[Login Page] Attempting login with username:', trimmedUsername);
+      const userData = await login(trimmedUsername, password);
       console.log('[Login Page] Received user data:', userData);
       
-      // Check if user data is valid - be more flexible with validation
+      // Check if user data is valid
       const hasId = !!(userData.id || userData.CustomerID || userData.customerID || userData.ID);
-      const hasEmail = !!(userData.email || userData.Email);
       
-      if (userData && (hasId || hasEmail)) {
+      if (userData && hasId) {
         console.log('[Login Page] User data is valid, setting user and redirecting...');
         setUser(userData);
         // Small delay to ensure state is set
@@ -55,11 +54,11 @@ export default function LoginPage() {
         }, 100);
       } else {
         console.error('[Login Page] Invalid user data structure:', userData);
-        setError('Invalid email or user not found. Please check the console for details.');
+        setError('فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.');
       }
     } catch (err: any) {
       console.error('[Login Page] Error details:', err);
-      const errorMessage = err?.message || 'Login failed. Please try again.';
+      const errorMessage = err?.message || 'فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -79,33 +78,71 @@ export default function LoginPage() {
         </button>
 
         {/* Login Card */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8" dir="rtl">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-              <Mail size={32} className="text-gray-700" />
+              <User size={32} className="text-gray-700" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Login</h1>
-            <p className="text-gray-600">Enter your email to continue</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">تسجيل الدخول</h1>
+            <p className="text-gray-600">أدخل اسم المستخدم وكلمة المرور للمتابعة</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label
-                htmlFor="email"
+                htmlFor="username"
                 className="block text-sm font-semibold text-gray-900 mb-2"
               >
-                Email Address
+                اسم المستخدم
               </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your.email@example.com"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
-                disabled={loading}
-                autoFocus
-              />
+              <div className="relative">
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                  <User size={20} />
+                </div>
+                <input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="اسم المستخدم"
+                  className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-gray-900"
+                  disabled={loading}
+                  autoFocus
+                  dir="ltr"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-semibold text-gray-900 mb-2"
+              >
+                كلمة المرور
+              </label>
+              <div className="relative">
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                  <Lock size={20} />
+                </div>
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="كلمة المرور"
+                  className="w-full pr-10 pl-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-gray-900"
+                  disabled={loading}
+                  dir="ltr"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
 
             {error && (
@@ -119,7 +156,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-gray-900 text-white py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
             </button>
           </form>
         </div>

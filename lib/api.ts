@@ -68,35 +68,54 @@ export function convertDriveImageUrl(imageUrl: string | null | undefined): strin
 }
 
 /**
- * Login with email (case-insensitive)
- * Now uses Supabase instead of Google Sheets
+ * Login with username and password
+ * Uses Supabase and bcrypt for password verification
  */
-export async function login(email: string): Promise<any> {
-  const trimmedEmail = email.trim().toLowerCase();
-  if (!trimmedEmail) {
-    throw new Error('Email is required');
+export async function login(username: string, password: string): Promise<any> {
+  const trimmedUsername = username.trim();
+  if (!trimmedUsername) {
+    throw new Error('اسم المستخدم مطلوب');
   }
 
-  console.log('[API] Login attempt with email:', trimmedEmail);
+  if (!password) {
+    throw new Error('كلمة المرور مطلوبة');
+  }
+
+  console.log('[API] Login attempt with username:', trimmedUsername);
 
   try {
-    // Search for customer by email (case-insensitive)
-    const { data: customers, error } = await supabase
+    // Search for customer by username (case-sensitive)
+    const { data: customer, error } = await supabase
       .from('customers')
       .select('*')
-      .ilike('email', trimmedEmail)
-      .limit(1);
+      .eq('username', trimmedUsername)
+      .single();
 
     if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows returned
+        throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة');
+      }
       console.error('[API] Login error:', error);
-      throw new Error(`Failed to login: ${error.message}`);
+      throw new Error(`فشل تسجيل الدخول: ${error.message}`);
     }
 
-    if (!customers || customers.length === 0) {
-      throw new Error('User not found. Please check your email.');
+    if (!customer) {
+      throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة');
     }
 
-    const customer = customers[0];
+    // Check if customer has login credentials set
+    if (!customer.username || !customer.password_hash) {
+      throw new Error('لم يتم تحديد بيانات الدخول لهذا العميل. يرجى التواصل مع المسؤول.');
+    }
+
+    // Verify password using bcrypt
+    const bcrypt = (await import('bcryptjs')).default;
+    const passwordMatch = await bcrypt.compare(password, customer.password_hash);
+
+    if (!passwordMatch) {
+      throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة');
+    }
 
     // Normalize and map fields
     const normalizedUser = {
@@ -104,10 +123,11 @@ export async function login(email: string): Promise<any> {
       email: (customer.email || '').toLowerCase().trim(),
       name: customer.name || '',
       balance: parseFloat(String(customer.balance || 0)) || 0,
-      Role: 'Admin' as const, // TEMPORARY: Force everyone to be Admin
+      Role: 'Customer' as const,
       phone: customer.phone || '',
       address: customer.address || '',
       type: customer.type || 'Customer',
+      username: customer.username,
       ...customer, // Keep all original fields
     };
 
@@ -122,7 +142,7 @@ export async function login(email: string): Promise<any> {
     }
     
     // Generic error
-    throw new Error('Login failed. Please check your email and try again.');
+    throw new Error('فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.');
   }
 }
 
@@ -1011,6 +1031,67 @@ export async function saveInteraction(interactionData: {
   });
 }
 
+
+/**
+ * Update customer login credentials (username and password)
+ * Only accessible by users with accountant permission
+ */
+export async function updateCustomerLoginCredentials(
+  customerId: string,
+  username: string,
+  password: string
+): Promise<void> {
+  try {
+    console.log('[API] Updating customer login credentials for:', customerId);
+
+    if (!username || username.trim() === '') {
+      throw new Error('اسم المستخدم مطلوب');
+    }
+
+    if (!password || password.trim() === '') {
+      throw new Error('كلمة المرور مطلوبة');
+    }
+
+    // Hash password using bcrypt
+    const bcrypt = (await import('bcryptjs')).default;
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    // Check if username is already taken by another customer
+    const { data: existingCustomer, error: checkError } = await supabase
+      .from('customers')
+      .select('customer_id, username')
+      .eq('username', username.trim())
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      // PGRST116 means no rows found, which is what we want
+      throw new Error(`فشل التحقق من اسم المستخدم: ${checkError.message}`);
+    }
+
+    if (existingCustomer && existingCustomer.customer_id !== customerId) {
+      throw new Error('اسم المستخدم مستخدم بالفعل من قبل عميل آخر');
+    }
+
+    // Update customer
+    const { error } = await supabase
+      .from('customers')
+      .update({
+        username: username.trim(),
+        password_hash: passwordHash,
+      })
+      .eq('customer_id', customerId);
+
+    if (error) {
+      throw new Error(`فشل تحديث بيانات الدخول: ${error.message}`);
+    }
+
+    console.log('[API] Customer login credentials updated successfully');
+  } catch (error: any) {
+    console.error('[API] updateCustomerLoginCredentials error:', error);
+    throw error;
+  }
+}
 
 /**
  * Save or update a customer
@@ -2445,6 +2526,7 @@ export async function saveCashInvoice(payload: {
   }>;
   notes?: string;
   discount?: number;
+  created_by?: string; // Admin user ID (UUID)
 }): Promise<any> {
   try {
     console.log('[API] Saving cash invoice to Supabase:', payload);
@@ -2473,6 +2555,7 @@ export async function saveCashInvoice(payload: {
       status: 'Finalized',
       notes: payload.notes || null,
       discount: payload.discount || 0,
+      created_by: payload.created_by || null, // Admin user ID
     };
     
     // Add is_synced if column exists in schema
@@ -3495,6 +3578,7 @@ export async function saveShopReceipt(payload: {
   cashAmount?: number;
   chequeAmount?: number;
   notes?: string;
+  created_by?: string; // Admin user ID
 }): Promise<any> {
   try {
     console.log('[API] Saving shop receipt to Supabase:', payload);
@@ -3521,6 +3605,7 @@ export async function saveShopReceipt(payload: {
       cash_amount: payload.cashAmount || 0,
       cheque_amount: payload.chequeAmount || 0,
       notes: payload.notes || null,
+      created_by: payload.created_by || null, // Admin user ID
     };
 
     const { data, error } = await supabase
@@ -3692,6 +3777,7 @@ export async function updateShopReceipt(receiptId: string, payload: {
   cashAmount?: number;
   chequeAmount?: number;
   notes?: string;
+  created_by?: string; // Admin user ID
 }): Promise<any> {
   try {
     console.log('[API] Updating shop receipt in Supabase:', receiptId, payload);
@@ -3703,6 +3789,11 @@ export async function updateShopReceipt(receiptId: string, payload: {
       cheque_amount: payload.chequeAmount || 0,
       notes: payload.notes || null,
     };
+    
+    // Only update created_by if provided (usually preserve original creator)
+    if (payload.created_by !== undefined) {
+      receiptData.created_by = payload.created_by;
+    }
 
     const { data, error } = await supabase
       .from('shop_receipts')
@@ -3758,6 +3849,7 @@ export async function saveShopPayment(payload: {
   cashAmount?: number;
   chequeAmount?: number;
   notes?: string;
+  created_by?: string; // Admin user ID
 }): Promise<any> {
   try {
     console.log('[API] Saving shop payment to Supabase:', payload);
@@ -3784,6 +3876,7 @@ export async function saveShopPayment(payload: {
       cash_amount: payload.cashAmount || 0,
       cheque_amount: payload.chequeAmount || 0,
       notes: payload.notes || null,
+      created_by: payload.created_by || null, // Admin user ID
     };
 
     const { data, error } = await supabase
@@ -3944,6 +4037,7 @@ export async function updateShopPayment(payId: string, payload: {
   cashAmount?: number;
   chequeAmount?: number;
   notes?: string;
+  created_by?: string; // Admin user ID
 }): Promise<any> {
   try {
     console.log('[API] Updating shop payment in Supabase:', payId, payload);
@@ -3955,6 +4049,11 @@ export async function updateShopPayment(payId: string, payload: {
       cheque_amount: payload.chequeAmount || 0,
       notes: payload.notes || null,
     };
+    
+    // Only update created_by if provided (usually preserve original creator)
+    if (payload.created_by !== undefined) {
+      paymentData.created_by = payload.created_by;
+    }
 
     const { data, error } = await supabase
       .from('shop_payments')
@@ -4019,6 +4118,7 @@ export async function saveShopSalesInvoice(payload: {
   notes?: string;
   discount?: number;
   status?: 'غير مدفوع' | 'تقسيط شهري' | 'دفعت بالكامل' | 'مدفوع جزئي';
+  created_by?: string; // Admin user ID (UUID)
 }): Promise<any> {
   try {
     console.log('[API] Saving shop sales invoice to Supabase:', payload);
@@ -4046,6 +4146,7 @@ export async function saveShopSalesInvoice(payload: {
       notes: payload.notes || null,
       discount: payload.discount || 0,
       status: payload.status || 'غير مدفوع',
+      created_by: payload.created_by || null, // Admin user ID
     };
 
     const { error: headerError } = await supabase
@@ -4257,6 +4358,9 @@ export async function getShopSalesInvoices(page: number = 1, pageSize: number = 
         Status: invoice.status,
         TotalAmount: total,
         CreatedAt: invoice.created_at,
+        created_by: invoice.created_by || null,
+        createdBy: invoice.created_by || null,
+        user_id: invoice.created_by || null,
       };
     }));
 
@@ -4573,6 +4677,7 @@ export async function saveWarehouseSalesInvoice(payload: {
   notes?: string;
   discount?: number;
   status?: 'غير مدفوع' | 'تقسيط شهري' | 'دفعت بالكامل' | 'مدفوع جزئي';
+  created_by?: string; // Admin user ID (UUID)
 }): Promise<any> {
   try {
     console.log('[API] Saving warehouse sales invoice to Supabase:', payload);
@@ -4600,6 +4705,7 @@ export async function saveWarehouseSalesInvoice(payload: {
       notes: payload.notes || null,
       discount: payload.discount || 0,
       status: payload.status || 'غير مدفوع',
+      created_by: payload.created_by || null, // Admin user ID
     };
 
     const { error: headerError } = await supabase
@@ -4810,6 +4916,9 @@ export async function getWarehouseSalesInvoices(page: number = 1, pageSize: numb
         Status: invoice.status,
         TotalAmount: total,
         CreatedAt: invoice.created_at,
+        created_by: invoice.created_by || null,
+        createdBy: invoice.created_by || null,
+        user_id: invoice.created_by || null,
       };
     }));
 
@@ -5135,6 +5244,7 @@ export async function saveMaintenance(payload: {
   status?: 'موجودة في المحل وجاهزة للتسليم' | 'موجودة في المخزن وجاهزة للتسليم' | 'موجودة في الشركة' | 'جاهزة للتسليم للزبون من المحل' | 'جاهزة للتسليم للزبون من المخزن' | 'سلمت للزبون' | 'تم ارجاعها للشركة وخصمها للزبون';
   serialNo?: string;
   underWarranty?: 'YES' | 'NO';
+  created_by?: string; // Admin user ID (UUID)
 }): Promise<any> {
   try {
     console.log('[API] Saving maintenance record:', payload);
@@ -5163,6 +5273,7 @@ export async function saveMaintenance(payload: {
       status: payload.status || 'موجودة في المحل وجاهزة للتسليم',
       serial_no: payload.serialNo || null,
       under_warranty: payload.underWarranty || 'NO',
+      created_by: payload.created_by || null, // Admin user ID
     };
 
     const { data, error } = await supabase
@@ -5229,6 +5340,12 @@ export async function getAllMaintenance(limit: number = 1000): Promise<any[]> {
         UnderWarranty: record.under_warranty,
         CreatedAt: record.created_at,
         UpdatedAt: record.updated_at,
+        created_by: record.created_by || null,
+        createdBy: record.created_by || null,
+        user_id: record.created_by || null,
+        CostAmount: record.cost_amount || null,
+        CostReason: record.cost_reason || null,
+        IsPaid: record.is_paid || false,
       };
     });
   } catch (error: any) {
@@ -5285,7 +5402,13 @@ export async function getMaintenance(maintNo: string): Promise<any> {
       SerialNo: data.serial_no || '',
       UnderWarranty: data.under_warranty,
       CreatedAt: data.created_at,
+      created_by: data.created_by || null,
+      createdBy: data.created_by || null,
+      user_id: data.created_by || null,
       UpdatedAt: data.updated_at,
+      CostAmount: data.cost_amount || null,
+      CostReason: data.cost_reason || null,
+      IsPaid: data.is_paid || false,
     };
   } catch (error: any) {
     console.error('[API] getMaintenance error:', error);
@@ -5294,7 +5417,81 @@ export async function getMaintenance(maintNo: string): Promise<any> {
 }
 
 /**
+ * Maintenance History interface
+ */
+export interface MaintenanceHistory {
+  history_id: string;
+  maintenance_id: string;
+  status_from: string;
+  status_to: string;
+  changed_by: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+/**
+ * Get maintenance history for a specific maintenance record
+ */
+export async function getMaintenanceHistory(maintNo: string): Promise<MaintenanceHistory[]> {
+  try {
+    console.log('[API] Fetching maintenance history for:', maintNo);
+
+    // Verify maintenance record exists
+    const { data: maintRecord, error: maintError } = await supabase
+      .from('maintenance')
+      .select('maint_no')
+      .eq('maint_no', maintNo)
+      .single();
+
+    if (maintError || !maintRecord) {
+      throw new Error(`Maintenance record not found: ${maintError?.message || 'Unknown error'}`);
+    }
+
+    // Fetch history records - maintenance_id stores the maint_no (TEXT)
+    const { data, error } = await supabase
+      .from('maintenance_history')
+      .select('*')
+      .eq('maintenance_id', maintNo)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch maintenance history: ${error.message}`);
+    }
+
+    console.log(`[API] Found ${data?.length || 0} history records`);
+    return (data || []) as MaintenanceHistory[];
+  } catch (error: any) {
+    console.error('[API] getMaintenanceHistory error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete maintenance history entry
+ */
+export async function deleteMaintenanceHistory(historyId: string): Promise<void> {
+  try {
+    console.log('[API] Deleting maintenance history entry:', historyId);
+
+    const { error } = await supabase
+      .from('maintenance_history')
+      .delete()
+      .eq('history_id', historyId);
+
+    if (error) {
+      throw new Error(`Failed to delete maintenance history entry: ${error.message}`);
+    }
+
+    console.log('[API] Maintenance history entry deleted successfully');
+  } catch (error: any) {
+    console.error('[API] deleteMaintenanceHistory error:', error);
+    throw error;
+  }
+}
+
+/**
  * Update maintenance record
+ * Now supports history logging when status changes
  */
 export async function updateMaintenance(
   maintNo: string,
@@ -5312,10 +5509,30 @@ export async function updateMaintenance(
     status?: 'موجودة في المحل وجاهزة للتسليم' | 'موجودة في المخزن وجاهزة للتسليم' | 'موجودة في الشركة' | 'جاهزة للتسليم للزبون من المحل' | 'جاهزة للتسليم للزبون من المخزن' | 'سلمت للزبون' | 'تم ارجاعها للشركة وخصمها للزبون';
     serialNo?: string;
     underWarranty?: 'YES' | 'NO';
+    costAmount?: number;
+    costReason?: string;
+    isPaid?: boolean;
+    historyNote?: string; // Optional note to add to history when status changes
+    changedBy?: string; // User ID who made the change
   }
 ): Promise<any> {
   try {
     console.log('[API] Updating maintenance record:', maintNo, payload);
+
+    // First, get the current maintenance record to check if status is changing
+    const { data: currentRecord, error: fetchError } = await supabase
+      .from('maintenance')
+      .select('maint_no, status')
+      .eq('maint_no', maintNo)
+      .single();
+
+    if (fetchError) {
+      throw new Error(`Failed to fetch current maintenance record: ${fetchError.message}`);
+    }
+
+    const oldStatus = currentRecord?.status || '';
+    const newStatus = payload.status;
+    const statusChanged = newStatus !== undefined && newStatus !== oldStatus;
 
     const updates: any = {};
     if (payload.customerID !== undefined) updates.customer_id = payload.customerID;
@@ -5331,7 +5548,17 @@ export async function updateMaintenance(
     if (payload.status !== undefined) updates.status = payload.status;
     if (payload.serialNo !== undefined) updates.serial_no = payload.serialNo || null;
     if (payload.underWarranty !== undefined) updates.under_warranty = payload.underWarranty;
+    if (payload.costAmount !== undefined) {
+      // Allow 0 as a valid value, only set to null if explicitly null/undefined
+      updates.cost_amount = payload.costAmount ?? null;
+    }
+    if (payload.costReason !== undefined) {
+      // Allow empty string to be saved as null
+      updates.cost_reason = payload.costReason === '' || payload.costReason === null ? null : payload.costReason;
+    }
+    if (payload.isPaid !== undefined) updates.is_paid = payload.isPaid || false;
 
+    // Update maintenance record
     const { data, error } = await supabase
       .from('maintenance')
       .update(updates)
@@ -5341,6 +5568,33 @@ export async function updateMaintenance(
 
     if (error) {
       throw new Error(`Failed to update maintenance record: ${error.message}`);
+    }
+
+    // If status changed, create history entry
+    if (statusChanged && currentRecord?.maint_no) {
+      try {
+        const historyEntry: any = {
+          maintenance_id: maintNo, // maintenance_id stores the maint_no (TEXT)
+          status_from: oldStatus,
+          status_to: newStatus,
+          changed_by: payload.changedBy || null,
+          notes: payload.historyNote || null,
+        };
+
+        const { error: historyError } = await supabase
+          .from('maintenance_history')
+          .insert(historyEntry);
+
+        if (historyError) {
+          console.error('[API] Failed to create history entry:', historyError);
+          // Don't throw - the main update succeeded, history is secondary
+        } else {
+          console.log('[API] Maintenance history entry created successfully');
+        }
+      } catch (historyErr: any) {
+        console.error('[API] Error creating history entry:', historyErr);
+        // Don't throw - the main update succeeded
+      }
     }
 
     console.log('[API] Maintenance record updated successfully');
@@ -6097,6 +6351,9 @@ function mapQuotationFromSupabase(quotation: any, totalAmount: number = 0): any 
     totalAmount: totalAmount,
     CreatedAt: quotation.created_at || '',
     CreatedBy: quotation.created_by || quotation.user_id || '',
+    created_by: quotation.created_by || null,
+    createdBy: quotation.created_by || null,
+    user_id: quotation.created_by || null,
     customer: customer
       ? {
           name: customer.name || '',
@@ -6371,6 +6628,7 @@ export async function saveQuotation(
     status: string;
     specialDiscountAmount?: number;
     giftDiscountAmount?: number;
+    created_by?: string; // Admin user ID (UUID)
     items: Array<{
       detailID?: string;
       productID: string;
@@ -6398,6 +6656,7 @@ export async function saveQuotation(
       status: payload.status || 'مسودة',
       special_discount_amount: payload.specialDiscountAmount || 0,
       gift_discount_amount: payload.giftDiscountAmount || 0,
+      created_by: payload.created_by || null, // Admin user ID
     };
     
     const { error: quotationError } = await supabase

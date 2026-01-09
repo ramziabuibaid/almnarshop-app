@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Upload, Loader2, X } from 'lucide-react';
+import { Upload, Loader2, X, Camera } from 'lucide-react';
 import { convertDriveImageUrl } from '@/lib/api';
 
 interface ImageUploadFieldProps {
@@ -21,6 +21,7 @@ export default function ImageUploadField({
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Construct preview URL from filename/filePath
   const getPreviewUrl = (filePath: string): string => {
@@ -181,9 +182,12 @@ export default function ImageUploadField({
       setUploadError(error?.message || 'Failed to upload image. Please try again.');
     } finally {
       setIsUploading(false);
-      // Reset file input
+      // Reset file inputs
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
+      }
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = '';
       }
     }
   };
@@ -229,8 +233,9 @@ export default function ImageUploadField({
         </div>
       )}
 
-      {/* Upload Button */}
-      <div className="flex items-center gap-2">
+      {/* Upload Buttons */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        {/* File input for selecting from gallery/memory */}
         <input
           ref={fileInputRef}
           type="file"
@@ -239,33 +244,58 @@ export default function ImageUploadField({
           className="hidden"
           disabled={isUploading}
         />
+        {/* Camera input for capturing directly from camera */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileSelect}
+          className="hidden"
+          disabled={isUploading}
+        />
+        
+        {/* Camera button - for mobile/tablet devices */}
         <button
           type="button"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => cameraInputRef.current?.click()}
           disabled={isUploading}
-          className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed bg-white"
+          title="التقاط صورة من الكاميرا"
         >
           {isUploading ? (
             <>
               <Loader2 size={16} className="animate-spin" />
-              <span>Uploading...</span>
+              <span>جاري الرفع...</span>
             </>
           ) : (
             <>
-              <Upload size={16} />
-              <span>{previewUrl ? 'Change Image' : 'Upload Image'}</span>
+              <Camera size={18} />
+              <span>التقاط صورة</span>
             </>
           )}
         </button>
         
-        {/* Manual input fallback */}
-        <input
-          type="text"
-          value={currentValue}
-          onChange={(e) => onUploadComplete(e.target.value)}
-          placeholder="Or enter filename/URL"
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 text-sm"
-        />
+        {/* Gallery button - for selecting from memory */}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed bg-white"
+          title="اختيار صورة من الذاكرة"
+        >
+          {isUploading ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              <span>جاري الرفع...</span>
+            </>
+          ) : (
+            <>
+              <Upload size={18} />
+              <span>{previewUrl ? 'تغيير الصورة' : 'اختيار صورة'}</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Success Message */}

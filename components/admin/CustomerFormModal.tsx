@@ -27,7 +27,7 @@ export default function CustomerFormModal({
     Email: '',
     Address: '',
     PostalCode: '',
-    Type: 'Customer',
+    Type: 'زبون',
     Notes: '',
     Balance: '',
   });
@@ -65,6 +65,20 @@ export default function CustomerFormModal({
         
         console.log('[CustomerFormModal] Resolved ShamelNo value:', shamelNo);
         
+        // Map English type values to Arabic when loading
+        const customerType = customer.Type || customer.type || 'زبون';
+        let mappedType = customerType;
+        // Convert English to Arabic if needed
+        if (customerType === 'Customer' || customerType === 'customer') {
+          mappedType = 'زبون';
+        } else if (customerType === 'Merchant' || customerType === 'merchant') {
+          mappedType = 'تاجر';
+        } else if (customerType === 'Supplier' || customerType === 'supplier') {
+          mappedType = 'مورد';
+        } else if (customerType === 'Accounting' || customerType === 'accounting') {
+          mappedType = 'تنظيمات محاسبية';
+        }
+        
         setFormData({
           CustomerID: customerID,
           Name: customer.Name || customer.name || '',
@@ -73,7 +87,7 @@ export default function CustomerFormModal({
           Email: customer.Email || customer.email || '',
           Address: customer.Address || customer.address || '',
           PostalCode: customer.PostalCode || customer.postalCode || '',
-          Type: customer.Type || customer.type || 'Customer',
+          Type: mappedType,
           Notes: customer.Notes || customer.notes || '',
           Balance: customer.Balance !== undefined && customer.Balance !== null ? String(customer.Balance) : '',
         });
@@ -96,7 +110,7 @@ export default function CustomerFormModal({
           Email: '',
           Address: '',
           PostalCode: '',
-          Type: 'Customer',
+          Type: 'زبون',
           Notes: '',
           Balance: '',
         });
@@ -449,10 +463,10 @@ export default function CustomerFormModal({
                   onChange={(e) => handleChange('Type', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
                 >
-                  <option value="Customer">زبون</option>
-                  <option value="Merchant">تاجر</option>
-                  <option value="Supplier">مورد</option>
-                  <option value="Accounting">تنظيمات محاسبية</option>
+                  <option value="زبون">زبون</option>
+                  <option value="تاجر">تاجر</option>
+                  <option value="مورد">مورد</option>
+                  <option value="تنظيمات محاسبية">تنظيمات محاسبية</option>
                 </select>
               </div>
 

@@ -326,6 +326,7 @@ function QuotationsFormContent() {
         status,
         specialDiscountAmount,
         giftDiscountAmount,
+        created_by: admin?.id || undefined,
         items: details.map((item) => ({
           productID: item.productID,
           quantity: item.quantity,

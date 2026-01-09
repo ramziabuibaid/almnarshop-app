@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import { getWarehouseSalesInvoices, getWarehouseSalesInvoice, updateWarehouseSalesInvoiceSign, updateWarehouseSalesInvoiceStatus } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import { Lock } from 'lucide-react';
 import {
   Loader2,
@@ -34,6 +35,9 @@ interface WarehouseSalesInvoice {
   Status: string;
   TotalAmount: number;
   CreatedAt?: string;
+  created_by?: string;
+  createdBy?: string;
+  user_id?: string;
 }
 
 export default function WarehouseSalesPage() {
@@ -54,6 +58,7 @@ export default function WarehouseSalesPage() {
   }>({ invoice: null, details: null });
   const [viewLoading, setViewLoading] = useState(false);
   const [updatingSettlement, setUpdatingSettlement] = useState(false);
+  const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
 
   // Check if user has permission to access warehouse invoices
   const canAccessWarehouseInvoices = admin?.is_super_admin || admin?.permissions?.accessWarehouseInvoices === true;
@@ -63,7 +68,36 @@ export default function WarehouseSalesPage() {
   useEffect(() => {
     document.title = 'مبيعات المخزن - Warehouse Sales';
     loadFirstPage();
+    loadUsers();
   }, []);
+
+  const loadUsers = async () => {
+    try {
+      const { data: users, error } = await supabase
+        .from('admin_users')
+        .select('id, username')
+        .order('username');
+
+      if (error) {
+        console.error('[WarehouseSalesPage] Failed to load users:', error);
+        return;
+      }
+
+      const map = new Map<string, string>();
+      if (users && Array.isArray(users)) {
+        users.forEach((user: any) => {
+          const userId = user.id || '';
+          const username = user.username || '';
+          if (userId && username) {
+            map.set(userId, username);
+          }
+        });
+      }
+      setUserMap(map);
+    } catch (err: any) {
+      console.error('[WarehouseSalesPage] Failed to load users:', err);
+    }
+  };
 
   // Load first page quickly, then load more in background
   const loadFirstPage = async () => {
@@ -460,6 +494,18 @@ export default function WarehouseSalesPage() {
                     <tr key={invoice.InvoiceID} className="hover:bg-gray-200 transition-colors">
                       <td className="px-4 py-3 text-right">
                         <div className="font-medium text-gray-900">{invoice.InvoiceID}</div>
+                        {(() => {
+                          const userId = invoice.created_by || invoice.createdBy || invoice.user_id || '';
+                          if (userId && userMap.has(userId)) {
+                            const username = userMap.get(userId);
+                            return (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {username}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button

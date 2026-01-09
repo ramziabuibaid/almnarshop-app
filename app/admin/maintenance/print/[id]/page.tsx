@@ -168,7 +168,7 @@ export default function MaintenancePrintPage() {
 
         @page {
           size: A6 portrait;
-          margin: 8mm 7mm 8mm 7mm;
+          margin: 0;
         }
 
         @media print {

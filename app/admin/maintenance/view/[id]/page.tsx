@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
+import MaintenanceTimeline from '@/components/admin/MaintenanceTimeline';
 import { getMaintenance } from '@/lib/api';
 import {
   Loader2,
@@ -11,6 +12,7 @@ import {
   Image as ImageIcon,
   Printer,
   MessageCircle,
+  History,
 } from 'lucide-react';
 import { convertDriveImageUrl } from '@/lib/api';
 import { fixPhoneNumber } from '@/lib/utils';
@@ -24,6 +26,7 @@ export default function ViewMaintenancePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [record, setRecord] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
 
   useEffect(() => {
     if (maintNo) {
@@ -239,8 +242,36 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
           </div>
         </div>
 
-        {/* Record Details */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+        {/* Tabs */}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="flex border-b border-gray-200" dir="rtl">
+            <button
+              onClick={() => setActiveTab('details')}
+              className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors ${
+                activeTab === 'details'
+                  ? 'text-gray-900 border-b-2 border-gray-900 bg-gray-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Edit size={18} />
+              التفاصيل
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors ${
+                activeTab === 'history'
+                  ? 'text-gray-900 border-b-2 border-gray-900 bg-gray-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <History size={18} />
+              السجل التاريخي
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'details' && (
+            <div className="p-6 space-y-6">
           {/* Customer Info */}
           <div>
             <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">معلومات العميل</h2>
@@ -284,6 +315,24 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                 <label className="block text-sm font-medium text-gray-600 mb-1">الحالة</label>
                 <p className="text-gray-900 font-medium">{record.Status}</p>
               </div>
+              {record.CostAmount !== null && record.CostAmount !== undefined && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">مبلغ التكلفة</label>
+                  <p className="text-gray-900 font-medium">{record.CostAmount} ₪</p>
+                </div>
+              )}
+              {record.CostReason && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">سبب التكلفة</label>
+                  <p className="text-gray-900">{record.CostReason}</p>
+                </div>
+              )}
+              {record.IsPaid !== undefined && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">تم الدفع</label>
+                  <p className="text-gray-900">{record.IsPaid ? 'نعم' : 'لا'}</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">تاريخ الشراء</label>
                 <p className="text-gray-900">{formatDate(record.DateOfPurchase)}</p>
@@ -360,6 +409,14 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
               )}
             </div>
           </div>
+            </div>
+          )}
+
+          {activeTab === 'history' && (
+            <div className="p-6">
+              <MaintenanceTimeline maintNo={maintNo} />
+            </div>
+          )}
         </div>
       </div>
     </AdminLayout>
