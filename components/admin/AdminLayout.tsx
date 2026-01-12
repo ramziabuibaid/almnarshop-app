@@ -18,7 +18,8 @@ import {
   FileText,
   Wrench,
   Wallet,
-  Shield
+  Shield,
+  Tag
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -29,6 +30,7 @@ interface AdminLayoutProps {
 const sidebarLinks = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/products', label: 'المنتجات', icon: Package },
+  { href: '/admin/labels', label: 'طباعة الملصقات', icon: Tag },
   { href: '/admin/pos', label: 'نقطة البيع (POS)', icon: CreditCard },
   { href: '/admin/invoices', label: 'الفواتير النقدية', icon: FileText },
   { href: '/admin/quotations', label: 'العروض السعرية', icon: FileText },

@@ -445,10 +445,10 @@ export default function QuotationsPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-600 font-cairo">
                           <div>{formatDate(quotation.Date)}</div>
-                          {quotation.CreatedAt && (
+                        {quotation.CreatedAt && (
                             <div className="text-xs text-gray-500 mt-0.5">{formatTime(quotation.CreatedAt)}</div>
                           )}
-                        </div>
+                          </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {quotation.CustomerID ? (

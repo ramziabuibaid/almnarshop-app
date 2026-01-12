@@ -99,17 +99,17 @@ export default function LoginPage() {
                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                   <User size={20} />
                 </div>
-                <input
+              <input
                   id="username"
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="اسم المستخدم"
                   className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-gray-900"
-                  disabled={loading}
-                  autoFocus
+                disabled={loading}
+                autoFocus
                   dir="ltr"
-                />
+              />
               </div>
             </div>
 

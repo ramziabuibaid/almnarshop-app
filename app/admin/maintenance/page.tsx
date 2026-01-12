@@ -774,7 +774,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center gap-2">
-                          <div className="text-gray-900">{record.ItemName}</div>
+                        <div className="text-gray-900">{record.ItemName}</div>
                           {record.CostAmount !== null && record.CostAmount !== undefined && record.CostAmount > 0 && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-800 rounded-full text-xs font-medium" title={`تكلفة الصيانة: ${record.CostAmount} ₪`}>
                               <DollarSign size={12} />

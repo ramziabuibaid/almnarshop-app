@@ -745,9 +745,9 @@ export default function ShopCashBoxPage() {
                       <td className="px-4 py-3 text-right">
                         <div className="text-gray-600">
                           <div>{formatDate(tx.date)}</div>
-                          {tx.created_at && (
+                        {tx.created_at && (
                             <div className="text-xs text-gray-500 mt-0.5">{formatTime(tx.created_at)}</div>
-                          )}
+                        )}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">

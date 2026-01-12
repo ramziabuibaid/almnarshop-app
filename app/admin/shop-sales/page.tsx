@@ -531,9 +531,9 @@ export default function ShopSalesPage() {
                       <td className="px-4 py-3 text-right">
                         <div className="text-gray-600">
                           <div>{formatDate(invoice.Date)}</div>
-                          {invoice.CreatedAt && (
+                        {invoice.CreatedAt && (
                             <div className="text-xs text-gray-500 mt-0.5">{formatTime(invoice.CreatedAt)}</div>
-                          )}
+                        )}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">
