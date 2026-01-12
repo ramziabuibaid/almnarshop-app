@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Product } from '@/types';
 import QRCode from '@/components/admin/QRCode';
 
 type LabelType = 'A' | 'B' | 'C';
 
-export default function LabelsPrintPage() {
+function LabelsPrintContent() {
   const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [labelType, setLabelType] = useState<LabelType>('A');
@@ -638,5 +638,17 @@ export default function LabelsPrintPage() {
         )}
       </div>
     </>
+  );
+}
+
+export default function LabelsPrintPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Cairo, sans-serif', direction: 'rtl' }}>
+        <p>جاري التحميل...</p>
+      </div>
+    }>
+      <LabelsPrintContent />
+    </Suspense>
   );
 }
