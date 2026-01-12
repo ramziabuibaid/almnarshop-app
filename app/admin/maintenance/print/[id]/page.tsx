@@ -103,17 +103,20 @@ export default function MaintenancePrintPage() {
   };
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return '';
+    if (!dateString) return '—';
     try {
       const date = new Date(dateString);
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
+      // Use Asia/Jerusalem timezone for Palestine (UTC+2 or UTC+3)
+      // Format as dd/mm/yyyy
+      const dateStr = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); // YYYY-MM-DD
+      const [year, month, day] = dateStr.split('-');
+      // Return as dd/mm/yyyy
       return `${day}/${month}/${year}`;
     } catch {
-      return dateString;
+      return '—';
     }
   };
+
 
   if (loading) {
     return (

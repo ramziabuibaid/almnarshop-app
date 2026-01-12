@@ -47,6 +47,15 @@ export default function InvoicesPage() {
   const [viewLoading, setViewLoading] = useState(false);
   const [updatingSettlement, setUpdatingSettlement] = useState(false);
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
+  const [dailyTotals, setDailyTotals] = useState<{
+    today: number;
+    yesterday: number;
+    dayBeforeYesterday: number;
+  }>({
+    today: 0,
+    yesterday: 0,
+    dayBeforeYesterday: 0,
+  });
 
   // Check if user has permission to view cash invoices
   const canViewCashInvoices = admin?.is_super_admin || admin?.permissions?.viewCashInvoices === true;
@@ -92,14 +101,117 @@ export default function InvoicesPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getCashInvoicesFromSupabase(100);
+      // Load more invoices to ensure we get all invoices from last 3 days
+      const data = await getCashInvoicesFromSupabase(1000);
       setInvoices(data);
+      
+      // Calculate daily totals for last 3 days
+      calculateDailyTotals(data);
     } catch (err: any) {
       console.error('[InvoicesPage] Failed to load invoices:', err);
       setError(err?.message || 'فشل تحميل الفواتير');
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateDailyTotals = (invoicesData: CashInvoice[]) => {
+    // Helper function to get date string in Jerusalem timezone
+    const getDateStr = (date: Date): string => {
+      return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); // YYYY-MM-DD
+    };
+    
+    // Helper function to subtract days from a date string (YYYY-MM-DD format)
+    const subtractDays = (dateStr: string, days: number): string => {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      date.setDate(date.getDate() - days);
+      return getDateStr(date);
+    };
+    
+    // Get current date and time
+    const now = new Date();
+    
+    // Get today's date string in Jerusalem timezone
+    const todayDateStr = getDateStr(now);
+    
+    // Calculate yesterday and day before yesterday by subtracting days from today
+    // This ensures we use the same timezone conversion method
+    const yesterdayDateStr = subtractDays(todayDateStr, 1);
+    const dayBeforeYesterdayDateStr = subtractDays(todayDateStr, 2);
+
+    let todayTotal = 0;
+    let yesterdayTotal = 0;
+    let dayBeforeYesterdayTotal = 0;
+
+    invoicesData.forEach((invoice) => {
+      if (!invoice.DateTime) return;
+      
+      const amount = invoice.totalAmount || 0;
+      if (!amount || amount === 0) return;
+
+      // Parse invoice date
+      const invoiceDate = new Date(invoice.DateTime);
+      
+      // Get date string in Jerusalem timezone
+      const invoiceDateStr = invoiceDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); // YYYY-MM-DD
+
+      // Compare date strings directly
+      if (invoiceDateStr === todayDateStr) {
+        todayTotal += amount;
+      } else if (invoiceDateStr === yesterdayDateStr) {
+        yesterdayTotal += amount;
+      } else if (invoiceDateStr === dayBeforeYesterdayDateStr) {
+        dayBeforeYesterdayTotal += amount;
+      }
+    });
+
+    // Debug: Check invoices from last 3 days
+    const invoicesFromLast3Days = invoicesData.filter(inv => {
+      if (!inv.DateTime) return false;
+      const invDateStr = new Date(inv.DateTime).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+      return invDateStr === todayDateStr || invDateStr === yesterdayDateStr || invDateStr === dayBeforeYesterdayDateStr;
+    });
+
+    console.log('[InvoicesPage] Daily totals calculation:', {
+      todayTotal,
+      yesterdayTotal,
+      dayBeforeYesterdayTotal,
+      todayDateStr,
+      yesterdayDateStr,
+      dayBeforeYesterdayDateStr,
+      totalInvoices: invoicesData.length,
+      invoicesWithAmount: invoicesData.filter(inv => inv.totalAmount && inv.totalAmount > 0).length,
+      invoicesFromLast3Days: invoicesFromLast3Days.length,
+      sampleInvoiceDates: invoicesData.slice(0, 10).map(inv => {
+        const invDateStr = inv.DateTime ? new Date(inv.DateTime).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) : null;
+        return {
+          InvoiceID: inv.InvoiceID,
+          DateTime: inv.DateTime,
+          dateStr: invDateStr,
+          amount: inv.totalAmount,
+          matchesToday: invDateStr === todayDateStr,
+          matchesYesterday: invDateStr === yesterdayDateStr,
+          matchesDayBeforeYesterday: invDateStr === dayBeforeYesterdayDateStr,
+        };
+      }),
+      invoicesForDayBeforeYesterday: invoicesData.filter(inv => {
+        if (!inv.DateTime) return false;
+        const invDateStr = new Date(inv.DateTime).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+        return invDateStr === dayBeforeYesterdayDateStr;
+      }).map(inv => ({
+        InvoiceID: inv.InvoiceID,
+        DateTime: inv.DateTime,
+        dateStr: new Date(inv.DateTime).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }),
+        amount: inv.totalAmount,
+      })),
+    });
+
+    setDailyTotals({
+      today: todayTotal,
+      yesterday: yesterdayTotal,
+      dayBeforeYesterday: dayBeforeYesterdayTotal,
+    });
   };
 
   const handlePrintInvoice = (invoice: CashInvoice) => {
@@ -169,11 +281,24 @@ export default function InvoicesPage() {
     try {
       const date = new Date(dateString);
       // Use Asia/Jerusalem timezone for Palestine (UTC+2 or UTC+3)
-      return date.toLocaleString('en-US', {
+      // Format as dd/mm/yyyy
+      // Get date string in YYYY-MM-DD format in Jerusalem timezone
+      const dateStr = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); // YYYY-MM-DD
+      const [year, month, day] = dateStr.split('-');
+      // Return as dd/mm/yyyy
+      return `${day}/${month}/${year}`;
+    } catch {
+      return '—';
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    if (!dateString) return '—';
+    try {
+      const date = new Date(dateString);
+      // Use Asia/Jerusalem timezone for Palestine (UTC+2 or UTC+3)
+      return date.toLocaleTimeString('en-US', {
         timeZone: 'Asia/Jerusalem',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
@@ -259,6 +384,33 @@ export default function InvoicesPage() {
             <h1 className="text-3xl font-bold text-gray-900">أرشيف الفواتير النقدية</h1>
             <p className="text-gray-600 mt-1">عرض وإدارة جميع الفواتير النقدية</p>
           </div>
+          
+          {/* Daily Totals */}
+          <div className="flex items-center gap-4">
+            {/* Day Before Yesterday */}
+            <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 min-w-[140px]">
+              <div className="text-xs text-gray-500 mb-1">قبل أمس</div>
+              <div className="text-xl font-bold text-gray-900">
+                {formatCurrency(dailyTotals.dayBeforeYesterday)}
+              </div>
+            </div>
+            
+            {/* Yesterday */}
+            <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 min-w-[140px]">
+              <div className="text-xs text-gray-500 mb-1">أمس</div>
+              <div className="text-xl font-bold text-gray-900">
+                {formatCurrency(dailyTotals.yesterday)}
+              </div>
+            </div>
+            
+            {/* Today */}
+            <div className="bg-blue-50 rounded-lg border-2 border-blue-500 px-4 py-3 min-w-[140px]">
+              <div className="text-xs text-blue-600 mb-1 font-medium">اليوم</div>
+              <div className="text-xl font-bold text-blue-900">
+                {formatCurrency(dailyTotals.today)}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Search */}
@@ -326,7 +478,10 @@ export default function InvoicesPage() {
                         })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-600 font-cairo">{formatDate(invoice.DateTime)}</div>
+                        <div className="text-sm text-gray-600 font-cairo">
+                          <div>{formatDate(invoice.DateTime)}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">{formatTime(invoice.DateTime)}</div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -401,9 +556,10 @@ export default function InvoicesPage() {
                 <h3 className="text-lg font-bold text-gray-900 font-cairo">
                   معاينة الفاتورة: {viewing.invoice.InvoiceID || viewing.invoice.invoice_id}
                 </h3>
-                <p className="text-sm text-gray-600 font-cairo">
-                  التاريخ: {formatDate(viewing.invoice.DateTime || viewing.invoice.date_time)}
-                </p>
+                <div className="text-sm text-gray-600 font-cairo">
+                  <div>التاريخ: {formatDate(viewing.invoice.DateTime || viewing.invoice.date_time)}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">الوقت: {formatTime(viewing.invoice.DateTime || viewing.invoice.date_time)}</div>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 {viewLoading && <Loader2 size={18} className="animate-spin text-gray-500" />}

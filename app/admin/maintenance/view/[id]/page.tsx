@@ -52,12 +52,12 @@ export default function ViewMaintenancePage() {
     if (!dateString) return '—';
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('ar-SA', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        numberingSystem: 'latn',
-      });
+      // Use Asia/Jerusalem timezone for Palestine (UTC+2 or UTC+3)
+      // Format as dd/mm/yyyy
+      const dateStr = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); // YYYY-MM-DD
+      const [year, month, day] = dateStr.split('-');
+      // Return as dd/mm/yyyy
+      return `${day}/${month}/${year}`;
     } catch {
       return '—';
     }

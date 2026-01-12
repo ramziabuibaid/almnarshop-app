@@ -356,11 +356,12 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
     if (!dateString) return '—';
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      });
+      // Use Asia/Jerusalem timezone for Palestine (UTC+2 or UTC+3)
+      // Format as dd/mm/yyyy
+      const dateStr = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); // YYYY-MM-DD
+      const [year, month, day] = dateStr.split('-');
+      // Return as dd/mm/yyyy
+      return `${day}/${month}/${year}`;
     } catch {
       return '—';
     }
@@ -370,7 +371,9 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
+      // Use Asia/Jerusalem timezone for Palestine (UTC+2 or UTC+3)
       return date.toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Jerusalem',
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,

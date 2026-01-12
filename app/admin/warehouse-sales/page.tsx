@@ -266,7 +266,9 @@ export default function WarehouseSalesPage() {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
+      // Use Asia/Jerusalem timezone for Palestine (UTC+2 or UTC+3)
       return date.toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Jerusalem',
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
@@ -534,7 +536,12 @@ export default function WarehouseSalesPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="text-gray-600">{formatDate(invoice.Date)}</div>
+                        <div className="text-gray-600">
+                          <div>{formatDate(invoice.Date)}</div>
+                          {invoice.CreatedAt && (
+                            <div className="text-xs text-gray-500 mt-0.5">{formatTime(invoice.CreatedAt)}</div>
+                          )}
+                        </div>
                         {invoice.CreatedAt && (
                           <div className="text-xs text-gray-500 font-cairo mt-1">
                             {formatTime(invoice.CreatedAt)}

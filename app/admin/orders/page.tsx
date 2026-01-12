@@ -117,17 +117,27 @@ export default function OrdersPage() {
     if (!dateString) return '—';
     try {
       const date = new Date(dateString);
-      // استخدام التقويم الميلادي مع الأرقام الإنجليزية
-      return date.toLocaleString('ar-SA', {
+      // Use Asia/Jerusalem timezone for Palestine (UTC+2 or UTC+3)
+      // Format as dd/mm/yyyy
+      const dateStr = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); // YYYY-MM-DD
+      const [year, month, day] = dateStr.split('-');
+      // Return as dd/mm/yyyy
+      return `${day}/${month}/${year}`;
+    } catch {
+      return '—';
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    if (!dateString) return '—';
+    try {
+      const date = new Date(dateString);
+      // Use Asia/Jerusalem timezone for Palestine (UTC+2 or UTC+3)
+      return date.toLocaleTimeString('en-US', {
         timeZone: 'Asia/Jerusalem',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-        hour12: true,
-        calendar: 'gregory',
-        numberingSystem: 'latn', // استخدام الأرقام اللاتينية (الإنجليزية)
+        hour12: false,
       });
     } catch {
       return '—';
@@ -426,7 +436,10 @@ export default function OrdersPage() {
                         {formatCurrency(order.TotalAmount)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(order.CreatedAt)}
+                        <div>
+                          <div>{formatDate(order.CreatedAt)}</div>
+                          <div className="text-xs text-gray-400 mt-0.5">{formatTime(order.CreatedAt)}</div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center gap-2">

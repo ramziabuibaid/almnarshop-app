@@ -400,12 +400,12 @@ export default function WarehouseCashBoxPage() {
     if (!dateString) return '—';
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('ar-SA', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        numberingSystem: 'latn',
-      });
+      // Use Asia/Jerusalem timezone for Palestine (UTC+2 or UTC+3)
+      // Format as dd/mm/yyyy
+      const dateStr = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); // YYYY-MM-DD
+      const [year, month, day] = dateStr.split('-');
+      // Return as dd/mm/yyyy
+      return `${day}/${month}/${year}`;
     } catch {
       return '—';
     }
@@ -415,10 +415,12 @@ export default function WarehouseCashBoxPage() {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
-      return date.toLocaleTimeString('ar-SA', {
+      // Use Asia/Jerusalem timezone for Palestine (UTC+2 or UTC+3)
+      return date.toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Jerusalem',
         hour: '2-digit',
         minute: '2-digit',
-        numberingSystem: 'latn',
+        hour12: false,
       });
     } catch {
       return '';
@@ -756,10 +758,12 @@ export default function WarehouseCashBoxPage() {
                         })()}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="text-gray-600">{formatDate(tx.date)}</div>
-                        {tx.created_at && (
-                          <div className="text-xs text-gray-400 mt-1">{formatTime(tx.created_at)}</div>
-                        )}
+                        <div className="text-gray-600">
+                          <div>{formatDate(tx.date)}</div>
+                          {tx.created_at && (
+                            <div className="text-xs text-gray-500 mt-0.5">{formatTime(tx.created_at)}</div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right">
                         {tx.direction === 'in' ? (
