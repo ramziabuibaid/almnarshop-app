@@ -394,6 +394,39 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
     return statusColors[status] || 'bg-gray-100 text-gray-800';
   };
 
+  // Get row background color based on status and date
+  const getRowBackgroundColor = (record: MaintenanceRecord) => {
+    // If delivered to customer, green background
+    if (record.Status === 'سلمت للزبون') {
+      return 'bg-green-50 hover:bg-green-100';
+    }
+    
+    // If not delivered and more than 2 weeks have passed since receive date
+    if (record.Status !== 'سلمت للزبون' && record.DateOfReceive) {
+      try {
+        const receiveDate = new Date(record.DateOfReceive);
+        if (!isNaN(receiveDate.getTime())) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          receiveDate.setHours(0, 0, 0, 0);
+          
+          const daysDifference = Math.floor((today.getTime() - receiveDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          // More than 14 days (2 weeks)
+          if (daysDifference > 14) {
+            return 'bg-red-50 hover:bg-red-100';
+          }
+        }
+      } catch (error) {
+        // If date parsing fails, use default
+        console.error('[MaintenancePage] Error parsing date:', error);
+      }
+    }
+    
+    // Default background
+    return 'hover:bg-gray-50';
+  };
+
   const filteredAndSortedRecords = useMemo(() => {
     let filtered = records;
 
@@ -711,7 +744,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   <tbody className="divide-y divide-gray-200">
                     {paginatedRecords.map((record) => (
                       <React.Fragment key={record.MaintNo}>
-                    <tr className="hover:bg-gray-200 transition-colors">
+                    <tr className={`${getRowBackgroundColor(record)} transition-colors`}>
                       <td className="px-4 py-3 text-right">
                         <div className="font-medium text-gray-900">{record.MaintNo}</div>
                         {userMap.get(record.created_by || record.createdBy || record.user_id || '') && (

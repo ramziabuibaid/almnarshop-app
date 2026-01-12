@@ -333,9 +333,9 @@ export default function ProductsManagerPage() {
       return null;
     }
     return sortDirection === 'asc' ? (
-      <ArrowUp size={14} className="inline-block ml-1" />
+      <ArrowUp size={14} className="inline-block mr-1" />
     ) : (
-      <ArrowDown size={14} className="inline-block ml-1" />
+      <ArrowDown size={14} className="inline-block mr-1" />
     );
   };
 
@@ -506,26 +506,26 @@ export default function ProductsManagerPage() {
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-left flex items-center justify-between"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-right flex items-center justify-between"
           >
+            <ChevronDown size={16} className={`text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             <span className={selectedOption ? 'text-gray-900 font-medium' : 'text-gray-700'}>
               {selectedOption || placeholder}
             </span>
-            <ChevronDown size={16} className={`text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           </button>
           
           {isOpen && (
-            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden">
+            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden" dir="rtl">
               <div className="p-2 border-b border-gray-200">
                 <div className="relative">
-                  <Search size={16} className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <Search size={16} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search..."
+                    placeholder="بحث..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-full pl-8 pr-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900 placeholder:text-gray-500"
+                    className="w-full pr-8 pl-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900 placeholder:text-gray-500"
                     autoFocus
                   />
                 </div>
@@ -538,14 +538,14 @@ export default function ProductsManagerPage() {
                     setIsOpen(false);
                     setSearchQuery('');
                   }}
-                  className={`w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors text-gray-900 ${
+                  className={`w-full text-right px-3 py-2 hover:bg-gray-100 transition-colors text-gray-900 ${
                     !value ? 'bg-gray-100 font-medium' : ''
                   }`}
                 >
                   {placeholder}
                 </button>
                 {filteredOptions.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-gray-600">No results found</div>
+                  <div className="px-3 py-2 text-sm text-gray-600 text-right">لا توجد نتائج</div>
                 ) : (
                   filteredOptions.map((option) => (
                     <button
@@ -556,7 +556,7 @@ export default function ProductsManagerPage() {
                         setIsOpen(false);
                         setSearchQuery('');
                       }}
-                      className={`w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors text-gray-900 ${
+                      className={`w-full text-right px-3 py-2 hover:bg-gray-100 transition-colors text-gray-900 ${
                         value === option ? 'bg-gray-100 font-medium' : ''
                       }`}
                     >
@@ -578,47 +578,48 @@ export default function ProductsManagerPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-6" dir="rtl">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Products</h1>
-            <p className="text-gray-600 mt-1">
-              Manage your product inventory ({filteredProducts.length} products)
-              {totalPages > 1 && ` - Page ${currentPage} of ${totalPages}`}
-            </p>
-          </div>
           <button
             onClick={handleAddNew}
             className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
           >
+            <span>إضافة منتج جديد</span>
             <Plus size={20} />
-            Add New Product
           </button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">المنتجات</h1>
+            <p className="text-gray-600 mt-1">
+              إدارة مخزون المنتجات ({filteredProducts.length} منتج)
+              {totalPages > 1 && ` - صفحة ${currentPage} من ${totalPages}`}
+            </p>
+          </div>
         </div>
 
         {/* Search and Filters Bar */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4" dir="rtl">
           <div className="flex items-center gap-3">
-            <input
-              type="text"
-              placeholder="Search by name, ID, barcode, or brand..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500"
-            />
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
               className="md:hidden p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <Filter size={20} className="text-gray-700" />
             </button>
+            <input
+              type="text"
+              placeholder="البحث بالاسم، الرمز، الباركود، أو العلامة التجارية..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500"
+              dir="rtl"
+            />
           </div>
 
           {/* Filters - Desktop */}
           <div className="hidden md:grid md:grid-cols-4 gap-4">
             <SearchableSelect
-              label="Type"
+              label="فئة البضاعة"
               value={filters.type}
               options={availableTypes}
               onChange={(value) => {
@@ -630,10 +631,10 @@ export default function ProductsManagerPage() {
                 }
                 setFilters(newFilters);
               }}
-              placeholder="All Types"
+              placeholder="جميع الفئات"
             />
             <SearchableSelect
-              label="Brand"
+              label="العلامة التجارية"
               value={filters.brand}
               options={availableBrands}
               onChange={(value) => {
@@ -644,10 +645,10 @@ export default function ProductsManagerPage() {
                 }
                 setFilters(newFilters);
               }}
-              placeholder="All Brands"
+              placeholder="جميع العلامات"
             />
             <SearchableSelect
-              label="Size"
+              label="الحجم"
               value={filters.size}
               options={availableSizes}
               onChange={(value) => {
@@ -657,24 +658,24 @@ export default function ProductsManagerPage() {
                 }
                 setFilters(newFilters);
               }}
-              placeholder="All Sizes"
+              placeholder="جميع الأحجام"
             />
             <SearchableSelect
-              label="Color"
+              label="اللون"
               value={filters.color}
               options={availableColors}
               onChange={(value) => setFilters(prev => ({ ...prev, color: value }))}
-              placeholder="All Colors"
+              placeholder="جميع الألوان"
             />
           </div>
 
           {/* Reset Filters */}
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-start">
             <button
               onClick={() => setFilters({ type: '', brand: '', size: '', color: '' })}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
             >
-              Reset Filters
+              إعادة تعيين الفلاتر
             </button>
           </div>
         </div>
@@ -686,19 +687,19 @@ export default function ProductsManagerPage() {
               className="fixed inset-0 bg-black/50 z-[60] md:hidden"
               onClick={() => setIsFilterOpen(false)}
             />
-            <div className="fixed top-0 right-0 h-full w-80 bg-white shadow-xl z-[70] overflow-y-auto md:hidden">
+            <div className="fixed top-0 left-0 h-full w-80 bg-white shadow-xl z-[70] overflow-y-auto md:hidden" dir="rtl">
               <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Filters</h2>
                 <button
                   onClick={() => setIsFilterOpen(false)}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                 >
                   <X size={20} className="text-gray-600" />
                 </button>
+                <h2 className="text-xl font-bold text-gray-900">الفلاتر</h2>
               </div>
               <div className="p-4 space-y-4">
                 <SearchableSelect
-                  label="Type"
+                  label="فئة البضاعة"
                   value={filters.type}
                   options={availableTypes}
                   onChange={(value) => {
@@ -710,10 +711,10 @@ export default function ProductsManagerPage() {
                     }
                     setFilters(newFilters);
                   }}
-                  placeholder="All Types"
+                  placeholder="جميع الفئات"
                 />
                 <SearchableSelect
-                  label="Brand"
+                  label="العلامة التجارية"
                   value={filters.brand}
                   options={availableBrands}
                   onChange={(value) => {
@@ -724,10 +725,10 @@ export default function ProductsManagerPage() {
                     }
                     setFilters(newFilters);
                   }}
-                  placeholder="All Brands"
+                  placeholder="جميع العلامات"
                 />
                 <SearchableSelect
-                  label="Size"
+                  label="الحجم"
                   value={filters.size}
                   options={availableSizes}
                   onChange={(value) => {
@@ -737,14 +738,14 @@ export default function ProductsManagerPage() {
                     }
                     setFilters(newFilters);
                   }}
-                  placeholder="All Sizes"
+                  placeholder="جميع الأحجام"
                 />
                 <SearchableSelect
-                  label="Color"
+                  label="اللون"
                   value={filters.color}
                   options={availableColors}
                   onChange={(value) => setFilters(prev => ({ ...prev, color: value }))}
-                  placeholder="All Colors"
+                  placeholder="جميع الألوان"
                 />
                 <button
                   onClick={() => {
@@ -753,7 +754,7 @@ export default function ProductsManagerPage() {
                   }}
                   className="w-full px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium transition-colors"
                 >
-                  Apply Filters
+                  تطبيق الفلاتر
                 </button>
               </div>
             </div>
@@ -782,58 +783,58 @@ export default function ProductsManagerPage() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Image
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      الصورة
                     </th>
                     <th 
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('name')}
                     >
-                      <div className="flex items-center">
-                        Name
+                      <div className="flex items-center justify-end">
+                        الاسم
                         {getSortIcon('name')}
                       </div>
                     </th>
                     <th 
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('id')}
                     >
-                      <div className="flex items-center">
-                        ID / Barcode
+                      <div className="flex items-center justify-end">
+                        الرمز / الباركود
                         {getSortIcon('id')}
                       </div>
                     </th>
                     <th 
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('salePrice')}
                     >
-                      <div className="flex items-center">
-                        Sale Price
+                      <div className="flex items-center justify-end">
+                        سعر البيع
                         {getSortIcon('salePrice')}
                       </div>
                     </th>
                     {canViewCost && (
                       <th 
-                        className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                         onClick={() => handleSort('costPrice')}
                       >
-                        <div className="flex items-center">
-                          Cost Price
+                        <div className="flex items-center justify-end">
+                          سعر التكلفة
                           {getSortIcon('costPrice')}
                         </div>
                       </th>
                     )}
                     <th 
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('stock')}
                     >
-                      <div className="flex items-center">
-                        Stock
+                      <div className="flex items-center justify-end">
+                        المخزون
                         {getSortIcon('stock')}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Actions
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      الإجراءات
                     </th>
                   </tr>
                 </thead>
@@ -849,7 +850,7 @@ export default function ProductsManagerPage() {
                         className="hover:bg-gray-50 transition-colors"
                       >
                         {/* Image */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right">
                           <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                             {hasImageError ? (
                               <ImageIcon size={24} className="text-gray-300" />
@@ -866,7 +867,7 @@ export default function ProductsManagerPage() {
                         </td>
 
                         {/* Name */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right">
                           <div className="font-medium text-gray-900">
                             {product.name || product.Name || 'N/A'}
                           </div>
@@ -878,7 +879,7 @@ export default function ProductsManagerPage() {
                         </td>
 
                         {/* ID / Barcode */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right">
                           <div className="text-sm text-gray-900 font-mono">
                             {product.id || product.ProductID || 'N/A'}
                           </div>
@@ -890,7 +891,7 @@ export default function ProductsManagerPage() {
                         </td>
 
                         {/* Sale Price */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right">
                           <div className="text-sm font-semibold text-gray-900">
                             ₪{parseFloat(product.price || product.SalePrice || 0).toFixed(2)}
                           </div>
@@ -898,7 +899,7 @@ export default function ProductsManagerPage() {
 
                         {/* Cost Price */}
                         {canViewCost && (
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 text-right">
                             <div className="text-sm text-gray-600">
                               {product.CostPrice !== undefined && product.CostPrice !== null && product.CostPrice !== '' ? (
                                 `₪${parseFloat(String(product.CostPrice || 0)).toFixed(2)}`
@@ -910,21 +911,21 @@ export default function ProductsManagerPage() {
                         )}
 
                         {/* Stock */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right">
                           <div className="text-sm text-gray-600">
                             {(product.CS_War !== undefined && product.CS_War !== null) || 
                              (product.CS_Shop !== undefined && product.CS_Shop !== null) ? (
                               <div className="flex flex-col gap-1">
                                 {product.CS_War !== undefined && product.CS_War !== null && (
                                   <span className="text-xs text-gray-500">
-                                    W: <span className={`font-medium ${
+                                    م: <span className={`font-medium ${
                                       (product.CS_War || 0) > 0 ? 'text-green-700' : 'text-red-700'
                                     }`}>{product.CS_War || 0}</span>
                                   </span>
                                 )}
                                 {product.CS_Shop !== undefined && product.CS_Shop !== null && (
                                   <span className="text-xs text-gray-500">
-                                    S: <span className={`font-medium ${
+                                    مح: <span className={`font-medium ${
                                       (product.CS_Shop || 0) > 0 ? 'text-green-700' : 'text-red-700'
                                     }`}>{product.CS_Shop || 0}</span>
                                   </span>
@@ -937,7 +938,7 @@ export default function ProductsManagerPage() {
                                         : 'bg-red-100 text-red-800'
                                     }`}
                                   >
-                                    Total: {(product.CS_War || 0) + (product.CS_Shop || 0)}
+                                    المجموع: {(product.CS_War || 0) + (product.CS_Shop || 0)}
                                   </span>
                                 )}
                               </div>
@@ -948,7 +949,7 @@ export default function ProductsManagerPage() {
                         </td>
 
                         {/* Actions */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right">
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleEdit(product)}
@@ -986,18 +987,15 @@ export default function ProductsManagerPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-4">
-            <div className="text-sm text-gray-600">
-              Showing {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} of {filteredProducts.length} products
-            </div>
+          <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-4" dir="rtl">
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
                 className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronLeft size={20} />
-                Previous
+                <ChevronRight size={20} />
+                التالي
               </button>
               
               <div className="flex items-center gap-1">
@@ -1030,24 +1028,27 @@ export default function ProductsManagerPage() {
               </div>
 
               <button
-                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
                 className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Next
-                <ChevronRight size={20} />
+                السابق
+                <ChevronLeft size={20} />
               </button>
+            </div>
+            <div className="text-sm text-gray-600">
+              عرض {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} من {filteredProducts.length} منتج
             </div>
           </div>
         )}
 
         {/* Delete confirmation modal */}
         {deleteTarget && (
-          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" dir="rtl">
             <div className="bg-white w-full max-w-lg rounded-lg shadow-2xl p-6 relative">
               <button
                 onClick={closeDeleteModal}
-                className="absolute top-3 right-3 p-2 rounded-full hover:bg-gray-100"
+                className="absolute top-3 left-3 p-2 rounded-full hover:bg-gray-100"
               >
                 <X size={20} />
               </button>
@@ -1094,20 +1095,20 @@ export default function ProductsManagerPage() {
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-3 mt-6">
-                <button
-                  onClick={closeDeleteModal}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                  disabled={deleteState.loading}
-                >
-                  إلغاء
-                </button>
+              <div className="flex items-center justify-start gap-3 mt-6" dir="rtl">
                 <button
                   onClick={confirmDelete}
                   disabled={deleteState.loading || deleteState.status === 'blocked' || deleteState.status === 'deleted'}
                   className="px-4 py-2 rounded-lg text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
                 >
                   {deleteState.loading ? 'جاري الحذف...' : 'تأكيد الحذف'}
+                </button>
+                <button
+                  onClick={closeDeleteModal}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  disabled={deleteState.loading}
+                >
+                  إلغاء
                 </button>
               </div>
             </div>
@@ -1126,7 +1127,7 @@ export default function ProductsManagerPage() {
 
       {/* Toast Notification */}
       {toast.type && (
-        <div className="fixed bottom-4 right-4 z-[100] animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <div className="fixed bottom-4 left-4 z-[100] animate-in slide-in-from-bottom-5 fade-in duration-300" dir="rtl">
           <div
             className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-xl min-w-[200px] ${
               toast.type === 'saving'

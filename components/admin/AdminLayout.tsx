@@ -79,7 +79,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" dir="rtl">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
@@ -90,8 +90,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-gray-900 text-white z-[70] transform transition-transform duration-300 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed top-0 right-0 h-full w-64 bg-gray-900 text-white z-[70] transform transition-transform duration-300 ${
+          sidebarOpen ? 'translate-x-0' : 'translate-x-full'
         } md:translate-x-0`}
       >
         <div className="flex flex-col h-full">
@@ -107,7 +107,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
 
           {/* Navigation Links */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden">
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto overflow-x-hidden" dir="rtl">
             {sidebarLinks.map((link) => {
               const Icon = link.icon;
               const isActive = pathname === link.href || pathname?.startsWith(link.href + '/');
@@ -206,7 +206,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     router.push(link.href);
                     setSidebarOpen(false);
                   }}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                     isActive
                       ? 'bg-gray-800 text-white'
                       : 'text-gray-300 hover:bg-gray-800 hover:text-white'
@@ -225,7 +225,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   router.push('/admin/admin-users');
                   setSidebarOpen(false);
                 }}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                   pathname === '/admin/admin-users'
                     ? 'bg-gray-800 text-white'
                     : 'text-gray-300 hover:bg-gray-800 hover:text-white'
@@ -239,10 +239,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             {/* Go to Shop Link */}
             <button
               onClick={handleGoToShop}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
             >
               <Store size={20} />
-              <span className="font-medium">Go to Shop</span>
+              <span className="font-medium">الذهاب الى المتجر</span>
             </button>
           </nav>
 
@@ -254,7 +254,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
             >
               <LogOut size={20} />
               <span className="font-medium">Logout</span>
@@ -264,17 +264,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <div className="md:ml-64">
+      <div className="md:mr-64">
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm" dir="rtl">
           <div className="px-4 py-3 flex items-center justify-between">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <Menu size={24} className="text-gray-700" />
-            </button>
-            <div className="flex-1" />
             <div className="flex items-center gap-3">
               <span className="text-sm text-gray-600 hidden sm:inline">
                 {admin.username}
@@ -283,11 +276,18 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 {admin.is_super_admin ? 'Super Admin' : 'Admin'}
               </span>
             </div>
+            <div className="flex-1" />
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <Menu size={24} className="text-gray-700" />
+            </button>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="p-4 md:p-6">{children}</main>
+        <main className="p-4 md:p-6" dir="rtl">{children}</main>
       </div>
     </div>
   );

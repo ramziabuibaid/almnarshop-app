@@ -25,6 +25,8 @@ import {
   Clock,
   ArrowUp,
   ArrowDown,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 interface Customer {
@@ -75,6 +77,8 @@ export default function CustomersPage() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [dashboardData, setDashboardData] = useState<any>({ overdue: [], today: [], upcoming: [] });
   const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [showOverdueList, setShowOverdueList] = useState(false);
+  const [showTodayList, setShowTodayList] = useState(false);
 
   // Set page title
   useEffect(() => {
@@ -534,21 +538,21 @@ export default function CustomersPage() {
       return null;
     }
     return sortDirection === 'asc' ? (
-      <ArrowUp size={14} className="inline-block ml-1" />
+      <ArrowUp size={14} className="inline-block mr-1" />
     ) : (
-      <ArrowDown size={14} className="inline-block ml-1" />
+      <ArrowDown size={14} className="inline-block mr-1" />
     );
   };
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-6" dir="rtl">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Customers & Debt Management</h1>
+            <h1 className="text-3xl font-bold text-gray-900">الزبائن</h1>
             <p className="text-gray-600 mt-1">
-              Manage customer relationships and track receivables/payables
+              إدارة علاقات العملاء ومتابعة المستحقات والمديونيات
             </p>
           </div>
           <button
@@ -570,12 +574,23 @@ export default function CustomersPage() {
             
             {/* Overdue Follow-ups */}
             {dashboardData.overdue?.length > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertCircle size={20} className="text-red-600" />
-                  <h3 className="font-semibold text-red-900">متأخرة ({dashboardData.overdue.length})</h3>
-                </div>
-                <div className="space-y-2">
+              <div className="bg-red-50 border border-red-200 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setShowOverdueList(!showOverdueList)}
+                  className="w-full flex items-center justify-between p-4 hover:bg-red-100 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertCircle size={20} className="text-red-600" />
+                    <h3 className="font-semibold text-red-900">متأخرة ({dashboardData.overdue.length})</h3>
+                  </div>
+                  {showOverdueList ? (
+                    <ChevronUp size={20} className="text-red-600" />
+                  ) : (
+                    <ChevronDown size={20} className="text-red-600" />
+                  )}
+                </button>
+                {showOverdueList && (
+                  <div className="p-4 pt-0 space-y-2">
                   {dashboardData.overdue
                     .filter((item: any) => item) // Filter out null/undefined items
                     .map((item: any, index: number) => {
@@ -631,18 +646,30 @@ export default function CustomersPage() {
                     </div>
                       );
                     })}
-                </div>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Today Follow-ups */}
             {dashboardData.today?.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Calendar size={20} className="text-blue-600" />
-                  <h3 className="font-semibold text-blue-900">اليوم ({dashboardData.today.length})</h3>
-                </div>
-                <div className="space-y-2">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setShowTodayList(!showTodayList)}
+                  className="w-full flex items-center justify-between p-4 hover:bg-blue-100 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Calendar size={20} className="text-blue-600" />
+                    <h3 className="font-semibold text-blue-900">اليوم ({dashboardData.today.length})</h3>
+                  </div>
+                  {showTodayList ? (
+                    <ChevronUp size={20} className="text-blue-600" />
+                  ) : (
+                    <ChevronDown size={20} className="text-blue-600" />
+                  )}
+                </button>
+                {showTodayList && (
+                  <div className="p-4 pt-0 space-y-2">
                   {dashboardData.today
                     .filter((item: any) => item) // Filter out null/undefined items
                     .map((item: any, index: number) => {
@@ -693,7 +720,8 @@ export default function CustomersPage() {
                     </div>
                       );
                     })}
-                </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -706,11 +734,11 @@ export default function CustomersPage() {
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Receivables</p>
+                  <p className="text-sm font-medium text-gray-600">إجمالي المستحقات</p>
                   <p className="text-2xl font-bold text-red-600 mt-2">
                     {formatBalance(stats.totalReceivables)}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">Money owed to us</p>
+                  <p className="text-xs text-gray-500 mt-1">المال المستحق لنا</p>
                 </div>
                 <div className="p-3 bg-red-50 rounded-full">
                   <TrendingUp size={24} className="text-red-600" />
@@ -724,11 +752,11 @@ export default function CustomersPage() {
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Payables</p>
+                  <p className="text-sm font-medium text-gray-600">إجمالي المدفوعات</p>
                   <p className="text-2xl font-bold text-green-600 mt-2">
                     {formatBalance(stats.totalPayables)}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">Money we owe</p>
+                  <p className="text-xs text-gray-500 mt-1">المال المستحق علينا</p>
                 </div>
                 <div className="p-3 bg-green-50 rounded-full">
                   <TrendingDown size={24} className="text-green-600" />
@@ -741,11 +769,11 @@ export default function CustomersPage() {
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Customers</p>
+                <p className="text-sm font-medium text-gray-600">إجمالي العملاء</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">
                   {stats.totalCustomers}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">All customer types</p>
+                <p className="text-xs text-gray-500 mt-1">جميع أنواع العملاء</p>
               </div>
               <div className="p-3 bg-gray-50 rounded-full">
                 <Users size={24} className="text-gray-600" />
@@ -758,19 +786,25 @@ export default function CustomersPage() {
         <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
           {/* Type Filter Tabs */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-gray-700 mr-2">Filter by Type:</span>
-            {(['All', 'Customer', 'Merchant', 'Supplier', 'Accounting'] as FilterType[]).map(
-              (type) => (
+            <span className="text-sm font-semibold text-gray-700 mr-2">فلترة حسب النوع:</span>
+            {([
+              { value: 'All', label: 'الكل' },
+              { value: 'Customer', label: 'زبون' },
+              { value: 'Merchant', label: 'تاجر' },
+              { value: 'Supplier', label: 'مورد' },
+              { value: 'Accounting', label: 'تنظيمات محاسبية' }
+            ] as { value: FilterType; label: string }[]).map(
+              ({ value, label }) => (
                 <button
-                  key={type}
-                  onClick={() => setFilterType(type)}
+                  key={value}
+                  onClick={() => setFilterType(value)}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                    filterType === type
+                    filterType === value
                       ? 'bg-gray-900 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {type}
+                  {label}
                 </button>
               )
             )}
@@ -779,7 +813,7 @@ export default function CustomersPage() {
           {/* Balance Filters */}
           {canViewBalances && (
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-sm font-semibold text-gray-700">Balance Filters:</span>
+              <span className="text-sm font-semibold text-gray-700">فلاتر الرصيد:</span>
               <button
                 onClick={() => setShowNegativeBalance(!showNegativeBalance)}
                 className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${
@@ -807,7 +841,7 @@ export default function CustomersPage() {
 
           {/* Date Filters */}
           <div className="flex flex-wrap items-center gap-4">
-            <span className="text-sm font-semibold text-gray-700">Date Filters:</span>
+            <span className="text-sm font-semibold text-gray-700">فلاتر التاريخ:</span>
             
             {/* Last Invoice Year Filter */}
             <div className="flex items-center gap-2">
@@ -879,14 +913,15 @@ export default function CustomersPage() {
           <div className="relative">
             <Search
               size={20}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
             />
             <input
               type="text"
-              placeholder="Search by name or phone..."
+              placeholder="البحث بالاسم أو الهاتف..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500"
+              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500"
+              dir="rtl"
             />
           </div>
         </div>
@@ -896,7 +931,7 @@ export default function CustomersPage() {
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="flex items-start gap-3">
               <div className="flex-1">
-                <h3 className="text-sm font-semibold text-red-800 mb-1">Error Loading Customers</h3>
+                <h3 className="text-sm font-semibold text-red-800 mb-1">خطأ في تحميل العملاء</h3>
                 <p className="text-sm text-red-700">{error}</p>
                 <button
                   onClick={async () => {
@@ -906,14 +941,14 @@ export default function CustomersPage() {
                       const data = await getAllCustomers();
                       setCustomers(data || []);
                     } catch (err: any) {
-                      setError(err?.message || 'Failed to load customers');
+                      setError(err?.message || 'فشل تحميل العملاء');
                     } finally {
                       setLoading(false);
                     }
                   }}
                   className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
                 >
-                  Retry
+                  إعادة المحاولة
                 </button>
               </div>
             </div>
@@ -924,15 +959,15 @@ export default function CustomersPage() {
         {loading ? (
           <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
             <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Loading customers...</p>
+            <p className="text-gray-600">جاري تحميل العملاء...</p>
           </div>
         ) : error ? null : filteredCustomers.length === 0 ? (
           <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
             <Users size={48} className="text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg">No customers found</p>
+            <p className="text-gray-600 text-lg">لم يتم العثور على عملاء</p>
             {searchQuery && (
               <p className="text-gray-500 text-sm mt-2">
-                Try adjusting your search query
+                حاول تعديل استعلام البحث
               </p>
             )}
           </div>
@@ -943,72 +978,72 @@ export default function CustomersPage() {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th 
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('customerId')}
                     >
-                      <div className="flex items-center">
+                      <div className="flex items-center justify-end">
                         رقم الزبون
                         {getSortIcon('customerId')}
                       </div>
                     </th>
                     <th 
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('name')}
                     >
-                      <div className="flex items-center">
-                        Name
+                      <div className="flex items-center justify-end">
+                        الاسم
                         {getSortIcon('name')}
                       </div>
                     </th>
                     <th 
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('type')}
                     >
-                      <div className="flex items-center">
-                        Type
+                      <div className="flex items-center justify-end">
+                        النوع
                         {getSortIcon('type')}
                       </div>
                     </th>
                     <th 
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('phone')}
                     >
-                      <div className="flex items-center">
-                        Phone
+                      <div className="flex items-center justify-end">
+                        الهاتف
                         {getSortIcon('phone')}
                       </div>
                     </th>
                     {canViewBalances && (
                       <th 
-                        className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                         onClick={() => handleSort('balance')}
                       >
-                        <div className="flex items-center">
-                          Balance
+                        <div className="flex items-center justify-end">
+                          الرصيد
                           {getSortIcon('balance')}
                         </div>
                       </th>
                     )}
                     <th 
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('lastInvoice')}
                     >
-                      <div className="flex items-center">
-                        Last Invoice Date
+                      <div className="flex items-center justify-end">
+                        تاريخ آخر فاتورة
                         {getSortIcon('lastInvoice')}
                       </div>
                     </th>
                     <th 
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('lastPayment')}
                     >
-                      <div className="flex items-center">
-                        Last Payment Date
+                      <div className="flex items-center justify-end">
+                        تاريخ آخر دفعة
                         {getSortIcon('lastPayment')}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Actions
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      الإجراءات
                     </th>
                   </tr>
                 </thead>
@@ -1028,7 +1063,7 @@ export default function CustomersPage() {
                         className="hover:bg-gray-50 transition-colors"
                       >
                         {/* Customer Number */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right">
                           <div className="font-semibold text-gray-900">
                             {customerId}
                           </div>
@@ -1039,12 +1074,12 @@ export default function CustomersPage() {
                           )}
                         </td>
                         {/* Name */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right">
                           <div className="font-semibold text-gray-900">{name}</div>
                         </td>
 
                         {/* Type */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right">
                           <span
                             className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getTypeBadgeColor(
                               type
@@ -1055,7 +1090,7 @@ export default function CustomersPage() {
                         </td>
 
                         {/* Phone */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right">
                           {phone ? (
                             <PhoneActions phone={phone} />
                           ) : (
@@ -1065,7 +1100,7 @@ export default function CustomersPage() {
 
                         {/* Balance */}
                         {canViewBalances && (
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 text-right">
                             <span className={getBalanceColor(balance)}>
                               {formatBalance(balance)}
                             </span>
@@ -1073,7 +1108,7 @@ export default function CustomersPage() {
                         )}
 
                         {/* Last Invoice Date */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right">
                           {formatDate(lastInvoiceDate) ? (
                             <span className="text-sm text-gray-900">
                               {formatDate(lastInvoiceDate)}
@@ -1084,7 +1119,7 @@ export default function CustomersPage() {
                         </td>
 
                         {/* Last Payment Date */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right">
                           {formatDate(lastPaymentDate) ? (
                             <span className="text-sm text-gray-900">
                               {formatDate(lastPaymentDate)}
@@ -1095,13 +1130,13 @@ export default function CustomersPage() {
                         </td>
 
                         {/* Actions */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right">
                           <div className="flex items-center gap-2">
                             {canViewBalances && (
                               <button
                                 onClick={() => handleEditCustomer(customer)}
                                 className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                title="Edit Customer"
+                                title="تعديل العميل"
                               >
                                 <Edit size={18} />
                               </button>
@@ -1109,7 +1144,7 @@ export default function CustomersPage() {
                             <button
                               onClick={() => handleOpenInteractionModal(customer)}
                               className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                              title="Add Interaction"
+                              title="إضافة تفاعل"
                             >
                               <Phone size={18} />
                             </button>
@@ -1132,7 +1167,7 @@ export default function CustomersPage() {
                                 }
                               }}
                               className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors inline-flex items-center justify-center"
-                              title="View Profile (Ctrl+Click, Shift+Click, or Middle Click to open in new tab)"
+                              title="عرض الملف الشخصي (Ctrl+Click، Shift+Click، أو النقر بالزر الأوسط لفتح في علامة تبويب جديدة)"
                             >
                               <User size={18} />
                             </a>
@@ -1150,7 +1185,7 @@ export default function CustomersPage() {
         {/* Results Count */}
         {!loading && filteredCustomers.length > 0 && (
           <div className="text-sm text-gray-600 text-center">
-            Showing {filteredCustomers.length} of {sortedCustomers.length} customers
+            عرض {filteredCustomers.length} من {sortedCustomers.length} عميل
           </div>
         )}
       </div>

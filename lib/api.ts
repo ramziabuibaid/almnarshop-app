@@ -7450,3 +7450,140 @@ export async function deleteWarehousePayment(paymentId: string): Promise<any> {
   }
 }
 
+/**
+ * Get item tracking history by Shamel No (رقم الشامل)
+ * Searches in both shop_sales and warehouse_sales invoices
+ */
+export async function getItemTracking(shamelNo: string): Promise<any[]> {
+  try {
+    if (!shamelNo || shamelNo.trim() === '') {
+      return [];
+    }
+
+    const trackingHistory: any[] = [];
+
+    // Search in shop_sales invoices
+    const { data: shopInvoices, error: shopError } = await supabase
+      .from('shop_sales')
+      .select('invoice_id, date, customer_id, notes, created_at')
+      .order('date', { ascending: false })
+      .limit(1000);
+
+    if (shopError) {
+      console.error('[API] Error fetching shop invoices:', shopError);
+    } else if (shopInvoices) {
+      // For each shop invoice, check if it contains the shamel number
+      for (const invoice of shopInvoices) {
+        const { data: details, error: detailsError } = await supabase
+          .from('shop_sales_details')
+          .select('product_id, quantity, unit_price')
+          .eq('invoice_id', invoice.invoice_id);
+
+        if (detailsError) {
+          console.error(`[API] Error fetching details for shop invoice ${invoice.invoice_id}:`, detailsError);
+          continue;
+        }
+
+        if (details && details.length > 0) {
+          // Get product shamel numbers for these products
+          const productIds = details.map(d => d.product_id).filter(Boolean);
+          if (productIds.length > 0) {
+            const { data: products, error: productsError } = await supabase
+              .from('products')
+              .select('product_id, shamel_no, name')
+              .in('product_id', productIds);
+
+            if (!productsError && products) {
+              // Check if any product has matching shamel_no
+              for (const detail of details) {
+                const product = products.find(p => p.product_id === detail.product_id);
+                if (product && product.shamel_no && product.shamel_no.trim() === shamelNo.trim()) {
+                  trackingHistory.push({
+                    invoiceId: invoice.invoice_id,
+                    date: invoice.date,
+                    customerId: invoice.customer_id,
+                    notes: invoice.notes,
+                    source: 'Shop',
+                    productName: product.name || '',
+                    quantity: detail.quantity || 0,
+                    unitPrice: detail.unit_price || 0,
+                    createdAt: invoice.created_at,
+                  });
+                  break; // Found match, no need to check other details in this invoice
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Search in warehouse_sales invoices
+    const { data: warehouseInvoices, error: warehouseError } = await supabase
+      .from('warehouse_sales')
+      .select('invoice_id, date, customer_id, notes, created_at')
+      .order('date', { ascending: false })
+      .limit(1000);
+
+    if (warehouseError) {
+      console.error('[API] Error fetching warehouse invoices:', warehouseError);
+    } else if (warehouseInvoices) {
+      // For each warehouse invoice, check if it contains the shamel number
+      for (const invoice of warehouseInvoices) {
+        const { data: details, error: detailsError } = await supabase
+          .from('warehouse_sales_details')
+          .select('product_id, quantity, unit_price')
+          .eq('invoice_id', invoice.invoice_id);
+
+        if (detailsError) {
+          console.error(`[API] Error fetching details for warehouse invoice ${invoice.invoice_id}:`, detailsError);
+          continue;
+        }
+
+        if (details && details.length > 0) {
+          // Get product shamel numbers for these products
+          const productIds = details.map(d => d.product_id).filter(Boolean);
+          if (productIds.length > 0) {
+            const { data: products, error: productsError } = await supabase
+              .from('products')
+              .select('product_id, shamel_no, name')
+              .in('product_id', productIds);
+
+            if (!productsError && products) {
+              // Check if any product has matching shamel_no
+              for (const detail of details) {
+                const product = products.find(p => p.product_id === detail.product_id);
+                if (product && product.shamel_no && product.shamel_no.trim() === shamelNo.trim()) {
+                  trackingHistory.push({
+                    invoiceId: invoice.invoice_id,
+                    date: invoice.date,
+                    customerId: invoice.customer_id,
+                    notes: invoice.notes,
+                    source: 'Warehouse',
+                    productName: product.name || '',
+                    quantity: detail.quantity || 0,
+                    unitPrice: detail.unit_price || 0,
+                    createdAt: invoice.created_at,
+                  });
+                  break; // Found match, no need to check other details in this invoice
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Sort by date (newest first)
+    trackingHistory.sort((a, b) => {
+      const dateA = new Date(a.date || a.createdAt || 0).getTime();
+      const dateB = new Date(b.date || b.createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+
+    return trackingHistory;
+  } catch (error: any) {
+    console.error('[API] getItemTracking error:', error);
+    throw error;
+  }
+}
