@@ -79,7 +79,7 @@ function PaymentForm() {
         created_by: admin?.id || undefined,
       };
 
-      await createWarehousePayment(payload);
+      await createWarehousePayment(payload, admin?.username);
       
       // Show success toast
       setToast({ message: 'تم إنشاء سند الدفع بنجاح', type: 'success' });

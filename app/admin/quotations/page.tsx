@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -56,6 +56,10 @@ export default function QuotationsPage() {
   const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
   const [allQuotations, setAllQuotations] = useState<Quotation[]>([]); // Store all loaded quotations
   const [loading, setLoading] = useState(true); // Start with loading true
+
+  useLayoutEffect(() => {
+    document.title = 'العروض السعرية';
+  }, []);
   const [loadingMore, setLoadingMore] = useState(false); // For background loading
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -52,6 +52,9 @@ interface MaintenanceRecord {
 }
 
 export default function MaintenancePage() {
+  useLayoutEffect(() => {
+    document.title = 'الصيانة';
+  }, []);
   const router = useRouter();
   const { admin } = useAdminAuth();
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);

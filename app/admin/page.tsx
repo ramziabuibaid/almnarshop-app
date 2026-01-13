@@ -3,13 +3,13 @@
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Package, ShoppingBag, Users, TrendingUp, ClipboardList } from 'lucide-react';
 import { useShop } from '@/context/ShopContext';
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 
 export default function AdminDashboardPage() {
   const { products, loadProducts } = useShop();
 
-  useEffect(() => {
-    document.title = 'لوحة التحكم - Dashboard';
+  useLayoutEffect(() => {
+    document.title = 'Dashboard';
   }, []);
 
   useEffect(() => {

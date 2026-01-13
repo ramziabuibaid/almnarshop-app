@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -45,6 +45,10 @@ export default function WarehouseSalesPage() {
   const router = useRouter();
   const [allInvoices, setAllInvoices] = useState<WarehouseSalesInvoice[]>([]); // Store all loaded invoices
   const [loading, setLoading] = useState(true); // Start with loading true
+
+  useLayoutEffect(() => {
+    document.title = 'فواتير مبيعات المخزن';
+  }, []);
   const [loadingMore, setLoadingMore] = useState(false); // For background loading
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');

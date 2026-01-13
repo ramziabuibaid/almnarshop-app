@@ -160,14 +160,34 @@ export default function CustomerProfilePage() {
 
       // Load customer info from all customers list (this is usually cached/fast)
       const allCustomers = await getAllCustomers();
+      console.log('[CustomerProfile] Searching for customer ID:', idString);
+      console.log('[CustomerProfile] Total customers:', allCustomers.length);
+      
       const foundCustomer = allCustomers.find(
         (c) => {
-          const cId = String(c.CustomerID || c.id || c.customerID || '').trim();
-          return cId === idString;
+          const cId = String(c.CustomerID || c.id || c.customerID || c.customer_id || '').trim();
+          const matches = cId === idString;
+          if (matches) {
+            console.log('[CustomerProfile] Found customer match:', { 
+              searched: idString, 
+              found: cId,
+              customer: { CustomerID: c.CustomerID, id: c.id, customerID: c.customerID, customer_id: c.customer_id }
+            });
+          }
+          return matches;
         }
       );
 
       if (!foundCustomer) {
+        // Log first few customers for debugging
+        if (allCustomers.length > 0) {
+          console.log('[CustomerProfile] Sample customer IDs:', allCustomers.slice(0, 3).map(c => ({
+            CustomerID: c.CustomerID,
+            id: c.id,
+            customerID: c.customerID,
+            customer_id: c.customer_id,
+          })));
+        }
         throw new Error('Customer not found or ID incorrect');
       }
 

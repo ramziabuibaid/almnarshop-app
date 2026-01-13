@@ -131,7 +131,7 @@ export default function PaymentsPage() {
         notes: formData.notes.trim() || undefined,
       };
 
-      await saveShopPayment(payload);
+      await saveShopPayment(payload, admin?.username);
       setIsModalOpen(false);
       loadPayments();
     } catch (err: any) {

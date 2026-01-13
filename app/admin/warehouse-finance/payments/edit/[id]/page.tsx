@@ -116,7 +116,7 @@ export default function EditWarehousePaymentPage() {
         notes: formData.notes.trim() || undefined,
       };
 
-      await updateWarehousePayment(paymentId, payload);
+      await updateWarehousePayment(paymentId, payload, admin?.username);
       
       // Show success toast
       setToast({ message: 'تم تحديث سند الدفع بنجاح', type: 'success' });

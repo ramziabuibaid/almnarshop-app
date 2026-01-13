@@ -79,7 +79,7 @@ function ReceiptForm() {
         created_by: admin?.id || undefined,
       };
 
-      await createWarehouseReceipt(payload);
+      await createWarehouseReceipt(payload, admin?.username);
       
       // Show success toast
       setToast({ message: 'تم إنشاء سند القبض بنجاح', type: 'success' });

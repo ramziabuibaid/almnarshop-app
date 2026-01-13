@@ -1237,10 +1237,12 @@ export async function saveCustomer(customerData: {
         const { createNotification } = await import('./notifications');
         const customerName = customerData.Name || 'Unknown';
         const userName = customerData.userName || 'System';
+        // Use customerId from the function scope (already defined above)
+        console.log('[API] Creating customer update notification with customerId:', customerId);
         await createNotification({
           type: 'update',
           table_name: 'customers',
-          record_name: customerName,
+          record_name: String(customerId || '').trim(), // Ensure it's a string and trimmed
           message: `تم تحديث بيانات الزبون "${customerName}" بواسطة ${userName}`,
           user_name: userName,
         });
@@ -1269,10 +1271,12 @@ export async function saveCustomer(customerData: {
         const { createNotification } = await import('./notifications');
         const customerName = customerData.Name || 'Unknown';
         const userName = customerData.userName || 'System';
+        // Use customerId from the function scope (already defined above)
+        console.log('[API] Creating customer notification with customerId:', customerId);
         await createNotification({
           type: 'create',
           table_name: 'customers',
-          record_name: customerName,
+          record_name: String(customerId || '').trim(), // Ensure it's a string and trimmed
           message: `تم إنشاء زبون جديد "${customerName}" بواسطة ${userName}`,
           user_name: userName,
         });
@@ -1464,7 +1468,7 @@ export async function deleteCustomer(customerID: string, userName?: string): Pro
     await createNotification({
       type: 'delete',
       table_name: 'customers',
-      record_name: customerName,
+      record_name: customerID, // Use customer_id instead of name
       message: `تم حذف الزبون "${customerName}" بواسطة ${userName || 'System'}`,
       user_name: userName || 'System',
     });
@@ -3772,7 +3776,7 @@ export async function saveShopReceipt(payload: {
   chequeAmount?: number;
   notes?: string;
   created_by?: string; // Admin user ID
-}): Promise<any> {
+}, userName?: string): Promise<any> {
   try {
     console.log('[API] Saving shop receipt to Supabase:', payload);
 
@@ -3813,6 +3817,39 @@ export async function saveShopReceipt(payload: {
     }
 
     console.log('[API] Receipt saved successfully');
+
+    // Create notification for receipt creation
+    try {
+      const { createNotification } = await import('./notifications');
+      let adminUserName = userName || 'System';
+      if (!userName && payload.created_by) {
+        try {
+          const { data: adminUser } = await supabase
+            .from('admin_users')
+            .select('username')
+            .eq('id', payload.created_by)
+            .single();
+          if (adminUser?.username) {
+            adminUserName = adminUser.username;
+          }
+        } catch (err) {
+          // Ignore error, use 'System' as fallback
+        }
+      }
+      const { getCustomerName } = await import('./notifications');
+      const customerName = await getCustomerName(payload.customerID);
+      await createNotification({
+        type: 'create',
+        table_name: 'shop_receipts',
+        record_name: receiptID,
+        message: `تم إنشاء سند قبض المحل للزبون ${customerName} بواسطة ${adminUserName}`,
+        user_name: adminUserName,
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for shop receipt creation:', notifError);
+      // Don't throw - notification is non-critical
+    }
+
     return { status: 'success', receiptID, data };
   } catch (error: any) {
     console.error('[API] saveShopReceipt error:', error);
@@ -3971,7 +4008,7 @@ export async function updateShopReceipt(receiptId: string, payload: {
   chequeAmount?: number;
   notes?: string;
   created_by?: string; // Admin user ID
-}): Promise<any> {
+}, userName?: string): Promise<any> {
   try {
     console.log('[API] Updating shop receipt in Supabase:', receiptId, payload);
 
@@ -4001,6 +4038,23 @@ export async function updateShopReceipt(receiptId: string, payload: {
     }
 
     console.log('[API] Receipt updated successfully');
+
+    // Create notification for receipt update
+    try {
+      const { createNotification, getCustomerName } = await import('./notifications');
+      const customerName = await getCustomerName(payload.customerID);
+      await createNotification({
+        type: 'update',
+        table_name: 'shop_receipts',
+        record_name: receiptId,
+        message: `تم تحديث سند قبض المحل للزبون ${customerName} بواسطة ${userName || 'System'}`,
+        user_name: userName || 'System',
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for shop receipt update:', notifError);
+      // Don't throw - notification is non-critical
+    }
+
     return { status: 'success', receiptID: receiptId, data };
   } catch (error: any) {
     console.error('[API] updateShopReceipt error:', error);
@@ -4043,7 +4097,7 @@ export async function saveShopPayment(payload: {
   chequeAmount?: number;
   notes?: string;
   created_by?: string; // Admin user ID
-}): Promise<any> {
+}, userName?: string): Promise<any> {
   try {
     console.log('[API] Saving shop payment to Supabase:', payload);
 
@@ -4084,6 +4138,39 @@ export async function saveShopPayment(payload: {
     }
 
     console.log('[API] Payment saved successfully');
+
+    // Create notification for payment creation
+    try {
+      const { createNotification } = await import('./notifications');
+      let adminUserName = userName || 'System';
+      if (!userName && payload.created_by) {
+        try {
+          const { data: adminUser } = await supabase
+            .from('admin_users')
+            .select('username')
+            .eq('id', payload.created_by)
+            .single();
+          if (adminUser?.username) {
+            adminUserName = adminUser.username;
+          }
+        } catch (err) {
+          // Ignore error, use 'System' as fallback
+        }
+      }
+      const { getCustomerName } = await import('./notifications');
+      const customerName = await getCustomerName(payload.customerID);
+      await createNotification({
+        type: 'create',
+        table_name: 'shop_payments',
+        record_name: payID,
+        message: `تم إنشاء سند صرف المحل للزبون ${customerName} بواسطة ${adminUserName}`,
+        user_name: adminUserName,
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for shop payment creation:', notifError);
+      // Don't throw - notification is non-critical
+    }
+
     return { status: 'success', payID, data };
   } catch (error: any) {
     console.error('[API] saveShopPayment error:', error);
@@ -4231,7 +4318,7 @@ export async function updateShopPayment(payId: string, payload: {
   chequeAmount?: number;
   notes?: string;
   created_by?: string; // Admin user ID
-}): Promise<any> {
+}, userName?: string): Promise<any> {
   try {
     console.log('[API] Updating shop payment in Supabase:', payId, payload);
 
@@ -4261,6 +4348,23 @@ export async function updateShopPayment(payId: string, payload: {
     }
 
     console.log('[API] Payment updated successfully');
+
+    // Create notification for payment update
+    try {
+      const { createNotification, getCustomerName } = await import('./notifications');
+      const customerName = await getCustomerName(payload.customerID);
+      await createNotification({
+        type: 'update',
+        table_name: 'shop_payments',
+        record_name: payId,
+        message: `تم تحديث سند صرف المحل للزبون ${customerName} بواسطة ${userName || 'System'}`,
+        user_name: userName || 'System',
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for shop payment update:', notifError);
+      // Don't throw - notification is non-critical
+    }
+
     return { status: 'success', payID: payId, data };
   } catch (error: any) {
     console.error('[API] updateShopPayment error:', error);
@@ -4387,7 +4491,7 @@ export async function saveShopSalesInvoice(payload: {
     
     // Create notification for shop invoice creation
     try {
-      const { createNotification } = await import('./notifications');
+      const { createNotification, getCustomerName } = await import('./notifications');
       let userName = 'System';
       if (payload.created_by) {
         try {
@@ -4403,11 +4507,12 @@ export async function saveShopSalesInvoice(payload: {
           // Ignore error, use 'System' as fallback
         }
       }
+      const customerName = await getCustomerName(payload.customerID);
       await createNotification({
         type: 'create',
         table_name: 'shop_sales_invoices',
         record_name: invoiceID,
-        message: `تم إنشاء فاتورة مبيعات المحل #${invoiceID} بواسطة ${userName}`,
+        message: `تم إنشاء فاتورة مبيعات المحل للزبون ${customerName} بواسطة ${userName}`,
         user_name: userName,
       });
     } catch (notifError) {
@@ -4845,12 +4950,13 @@ export async function updateShopSalesInvoice(
 
     // Create notification for invoice update
     try {
-      const { createNotification } = await import('./notifications');
+      const { createNotification, getCustomerName } = await import('./notifications');
+      const customerName = await getCustomerName(payload.customerID);
       await createNotification({
         type: 'update',
         table_name: 'shop_sales_invoices',
         record_name: invoiceId,
-        message: `تم تحديث فاتورة المبيعات #${invoiceId} بواسطة ${userName || 'System'}`,
+        message: `تم تحديث فاتورة المبيعات للزبون ${customerName} بواسطة ${userName || 'System'}`,
         user_name: userName || 'System',
       });
     } catch (notifError) {
@@ -5010,7 +5116,7 @@ export async function saveWarehouseSalesInvoice(payload: {
     
     // Create notification for warehouse invoice creation
     try {
-      const { createNotification } = await import('./notifications');
+      const { createNotification, getCustomerName } = await import('./notifications');
       let userName = 'System';
       if (payload.created_by) {
         try {
@@ -5026,11 +5132,12 @@ export async function saveWarehouseSalesInvoice(payload: {
           // Ignore error, use 'System' as fallback
         }
       }
+      const customerName = await getCustomerName(payload.customerID);
       await createNotification({
         type: 'create',
         table_name: 'warehouse_sales_invoices',
         record_name: invoiceID,
-        message: `تم إنشاء فاتورة مبيعات المخزن #${invoiceID} بواسطة ${userName}`,
+        message: `تم إنشاء فاتورة مبيعات المخزن للزبون ${customerName} بواسطة ${userName}`,
         user_name: userName,
       });
     } catch (notifError) {
@@ -5467,12 +5574,13 @@ export async function updateWarehouseSalesInvoice(
 
     // Create notification for invoice update
     try {
-      const { createNotification } = await import('./notifications');
+      const { createNotification, getCustomerName } = await import('./notifications');
+      const customerName = await getCustomerName(payload.customerID);
       await createNotification({
         type: 'update',
         table_name: 'warehouse_sales_invoices',
         record_name: invoiceId,
-        message: `تم تحديث فاتورة مبيعات المستودع #${invoiceId} بواسطة ${userName || 'System'}`,
+        message: `تم تحديث فاتورة مبيعات المستودع للزبون ${customerName} بواسطة ${userName || 'System'}`,
         user_name: userName || 'System',
       });
     } catch (notifError) {
@@ -5611,7 +5719,7 @@ export async function saveMaintenance(payload: {
     
     // Create notification for maintenance creation
     try {
-      const { createNotification } = await import('./notifications');
+      const { createNotification, getCustomerName } = await import('./notifications');
       let userName = 'System';
       if (payload.created_by) {
         try {
@@ -5627,11 +5735,12 @@ export async function saveMaintenance(payload: {
           // Ignore error, use 'System' as fallback
         }
       }
+      const customerName = await getCustomerName(payload.customerID);
       await createNotification({
         type: 'create',
         table_name: 'maintenance',
         record_name: maintNo,
-        message: `تم إنشاء سجل صيانة جديد #${maintNo} بواسطة ${userName}`,
+        message: `تم إنشاء سجل صيانة جديد للزبون ${customerName} بواسطة ${userName}`,
         user_name: userName,
       });
     } catch (notifError) {
@@ -5950,7 +6059,7 @@ export async function updateMaintenance(
       
       // Create notification for maintenance status change
       try {
-        const { createNotification } = await import('./notifications');
+        const { createNotification, getCustomerName } = await import('./notifications');
         let userName = 'System';
         if (payload.changedBy) {
           try {
@@ -5966,11 +6075,14 @@ export async function updateMaintenance(
             // Ignore error, use 'System' as fallback
           }
         }
+        // Get customer_id from the updated record
+        const customerId = data?.customer_id || payload.customerID;
+        const customerName = await getCustomerName(customerId);
         await createNotification({
           type: 'update',
           table_name: 'maintenance',
           record_name: maintNo,
-          message: `تم تغيير حالة الصيانة #${maintNo} من "${oldStatus}" إلى "${newStatus}" بواسطة ${userName}`,
+          message: `تم تغيير حالة الصيانة للزبون ${customerName} من "${oldStatus}" إلى "${newStatus}" بواسطة ${userName}`,
           user_name: userName,
         });
       } catch (notifError) {
@@ -7544,7 +7656,7 @@ export async function createWarehouseReceipt(data: {
   related_party?: string; // Customer ID or name
   notes?: string;
   created_by?: string; // Admin user ID
-}): Promise<any> {
+}, userName?: string): Promise<any> {
   try {
     console.log('[API] Creating warehouse receipt:', data);
 
@@ -7584,6 +7696,40 @@ export async function createWarehouseReceipt(data: {
     }
 
     console.log('[API] Warehouse receipt created successfully:', receiptId);
+
+    // Create notification for receipt creation
+    try {
+      const { createNotification } = await import('./notifications');
+      let adminUserName = userName || 'System';
+      if (!userName && data.created_by) {
+        try {
+          const { data: adminUser } = await supabase
+            .from('admin_users')
+            .select('username')
+            .eq('id', data.created_by)
+            .single();
+          if (adminUser?.username) {
+            adminUserName = adminUser.username;
+          }
+        } catch (err) {
+          // Ignore error, use 'System' as fallback
+        }
+      }
+      const { getCustomerName } = await import('./notifications');
+      const customerId = data.related_party || data.customer_id;
+      const customerName = await getCustomerName(customerId);
+      await createNotification({
+        type: 'create',
+        table_name: 'warehouse_receipts',
+        record_name: receiptId,
+        message: `تم إنشاء سند قبض المستودع للزبون ${customerName} بواسطة ${adminUserName}`,
+        user_name: adminUserName,
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for warehouse receipt creation:', notifError);
+      // Don't throw - notification is non-critical
+    }
+
     return { status: 'success', receiptId, data: result };
   } catch (error: any) {
     console.error('[API] createWarehouseReceipt error:', error);
@@ -7603,7 +7749,7 @@ export async function createWarehousePayment(data: {
   related_party?: string; // Legacy field for backward compatibility
   notes?: string;
   created_by?: string; // Admin user ID
-}): Promise<any> {
+}, userName?: string): Promise<any> {
   try {
     console.log('[API] Creating warehouse payment:', data);
 
@@ -7669,6 +7815,40 @@ export async function createWarehousePayment(data: {
     }
 
     console.log('[API] Warehouse payment created successfully:', paymentId);
+
+    // Create notification for payment creation
+    try {
+      const { createNotification } = await import('./notifications');
+      let adminUserName = userName || 'System';
+      if (!userName && data.created_by) {
+        try {
+          const { data: adminUser } = await supabase
+            .from('admin_users')
+            .select('username')
+            .eq('id', data.created_by)
+            .single();
+          if (adminUser?.username) {
+            adminUserName = adminUser.username;
+          }
+        } catch (err) {
+          // Ignore error, use 'System' as fallback
+        }
+      }
+      const { getCustomerName } = await import('./notifications');
+      const customerId = data.customer_id || data.related_party;
+      const customerName = await getCustomerName(customerId);
+      await createNotification({
+        type: 'create',
+        table_name: 'warehouse_payments',
+        record_name: paymentId,
+        message: `تم إنشاء سند صرف المستودع للزبون ${customerName} بواسطة ${adminUserName}`,
+        user_name: adminUserName,
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for warehouse payment creation:', notifError);
+      // Don't throw - notification is non-critical
+    }
+
     return { status: 'success', paymentId, data: result };
   } catch (error: any) {
     console.error('[API] createWarehousePayment error:', error);
@@ -7707,7 +7887,7 @@ export async function updateWarehouseReceipt(receiptId: string, data: {
   check_amount: number;
   related_party?: string;
   notes?: string;
-}): Promise<any> {
+}, userName?: string): Promise<any> {
   try {
     const updateData: any = {
       date: data.date,
@@ -7730,6 +7910,23 @@ export async function updateWarehouseReceipt(receiptId: string, data: {
 
     if (error) {
       throw new Error(`Failed to update receipt: ${error.message}`);
+    }
+
+    // Create notification for receipt update
+    try {
+      const { createNotification, getCustomerName } = await import('./notifications');
+      const customerId = data.related_party || result?.customer_id;
+      const customerName = await getCustomerName(customerId);
+      await createNotification({
+        type: 'update',
+        table_name: 'warehouse_receipts',
+        record_name: receiptId,
+        message: `تم تحديث سند قبض المستودع للزبون ${customerName} بواسطة ${userName || 'System'}`,
+        user_name: userName || 'System',
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for warehouse receipt update:', notifError);
+      // Don't throw - notification is non-critical
     }
 
     return { status: 'success', data: result };
@@ -7792,7 +7989,7 @@ export async function updateWarehousePayment(paymentId: string, data: {
   customer_id?: string; // Customer ID (linked to customers table)
   related_party?: string; // Legacy field for backward compatibility
   notes?: string;
-}): Promise<any> {
+}, userName?: string): Promise<any> {
   try {
     const updateData: any = {
       date: data.date,
@@ -7818,6 +8015,23 @@ export async function updateWarehousePayment(paymentId: string, data: {
 
     if (error) {
       throw new Error(`Failed to update payment: ${error.message}`);
+    }
+
+    // Create notification for payment update
+    try {
+      const { createNotification, getCustomerName } = await import('./notifications');
+      const customerId = data.customer_id || data.related_party || result?.customer_id;
+      const customerName = await getCustomerName(customerId);
+      await createNotification({
+        type: 'update',
+        table_name: 'warehouse_payments',
+        record_name: paymentId,
+        message: `تم تحديث سند صرف المستودع للزبون ${customerName} بواسطة ${userName || 'System'}`,
+        user_name: userName || 'System',
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for warehouse payment update:', notifError);
+      // Don't throw - notification is non-critical
     }
 
     return { status: 'success', data: result };

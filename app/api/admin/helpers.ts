@@ -14,7 +14,6 @@ export const DEFAULT_PERMISSIONS = {
   accessWarehouseInvoices: false,
   accessChecks: false,
   accessQuotations: false,
-  accessCashSessions: false,
   accessPayPage: false,
   accountant: false,
   dashboardAndNotifications: false,

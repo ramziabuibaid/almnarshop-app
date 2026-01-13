@@ -13,7 +13,6 @@ type PermissionKey =
   | 'accessWarehouseInvoices'
   | 'accessChecks'
   | 'accessQuotations'
-  | 'accessCashSessions'
   | 'accessPayPage'
   | 'accessShopCashBox'
   | 'accessWarehouseCashBox'

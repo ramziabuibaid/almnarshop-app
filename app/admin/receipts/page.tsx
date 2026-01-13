@@ -201,7 +201,7 @@ ${balanceText}
         notes: formData.notes.trim() || undefined,
       };
 
-      await saveShopReceipt(payload);
+      await saveShopReceipt(payload, admin?.username);
       setIsModalOpen(false);
       loadReceipts();
     } catch (err: any) {

@@ -2,6 +2,30 @@ import { supabase } from './supabase';
 
 export type NotificationType = 'create' | 'update' | 'delete';
 
+/**
+ * Helper function to get customer name from customer ID
+ */
+export async function getCustomerName(customerId: string | null | undefined): Promise<string> {
+  if (!customerId) return 'غير محدد';
+  
+  try {
+    const { data: customer, error } = await supabase
+      .from('customers')
+      .select('name')
+      .eq('customer_id', customerId)
+      .single();
+    
+    if (error || !customer) {
+      return 'غير محدد';
+    }
+    
+    return customer.name || 'غير محدد';
+  } catch (error) {
+    console.error('[Notifications] Failed to get customer name:', error);
+    return 'غير محدد';
+  }
+}
+
 export interface NotificationData {
   type: NotificationType;
   table_name: string;

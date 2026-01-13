@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import CustomerFormModal from '@/components/admin/CustomerFormModal';
@@ -58,6 +58,9 @@ interface CheckFormState {
 }
 
 export default function ChecksPage() {
+  useLayoutEffect(() => {
+    document.title = 'الشيكات الراجعة';
+  }, []);
   const { admin } = useAdminAuth();
   
   // Check if user has accountant permission (for delete)

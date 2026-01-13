@@ -94,7 +94,7 @@ export default function EditPaymentPage() {
         notes: formData.notes || undefined,
       };
 
-      await updateShopPayment(payId, payload);
+      await updateShopPayment(payId, payload, admin?.username);
       router.push('/admin/payments');
     } catch (err: any) {
       console.error('[EditPaymentPage] Failed to update payment:', err);

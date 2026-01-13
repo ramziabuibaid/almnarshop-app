@@ -31,7 +31,7 @@ interface AdminLayoutProps {
 
 const sidebarLinks = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/dashboard', label: 'الإشعارات', icon: Bell, permission: 'dashboardAndNotifications' },
+  { href: '/admin/notifications', label: 'الإشعارات', icon: Bell, permission: 'dashboardAndNotifications' },
   { href: '/admin/products', label: 'المنتجات', icon: Package },
   { href: '/admin/labels', label: 'طباعة الملصقات', icon: Tag },
   { href: '/admin/pos', label: 'نقطة البيع (POS)', icon: CreditCard },
@@ -43,7 +43,6 @@ const sidebarLinks = [
   { href: '/admin/shop-finance/cash-box', label: 'صندوق المحل', icon: Wallet },
   { href: '/admin/warehouse-finance/cash-box', label: 'صندوق المستودع', icon: Wallet },
   { href: '/admin/maintenance', label: 'الصيانة', icon: Wrench },
-  { href: '/admin/cash-sessions', label: 'الصندوق اليومي', icon: Wallet },
   { href: '/admin/checks', label: 'الشيكات الراجعة', icon: FileText },
   { href: '/admin/customers', label: 'الزبائن', icon: Users },
   { href: '/admin/tasks', label: 'المهام والمتابعات', icon: ClipboardList },
@@ -118,11 +117,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               const isActive = pathname === link.href || pathname?.startsWith(link.href + '/');
               
               // Check permissions for specific links
-              if (link.href === '/admin/dashboard') {
-                const canViewDashboard = admin.is_super_admin || 
+              if (link.href === '/admin/notifications') {
+                const canViewNotifications = admin.is_super_admin || 
                   admin.permissions?.viewNotifications === true || 
                   admin.permissions?.dashboardAndNotifications === true;
-                if (!canViewDashboard) {
+                if (!canViewNotifications) {
                   return null; // Hide the link if user doesn't have permission
                 }
               }
@@ -190,13 +189,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 }
               }
               
-              if (link.href === '/admin/cash-sessions') {
-                const canAccessCashSessions = admin.is_super_admin || admin.permissions?.accessCashSessions === true;
-                if (!canAccessCashSessions) {
-                  return null;
-                }
-              }
-              
               if (link.href === '/admin/shop-finance/cash-box') {
                 const canAccessShopCashBox = admin.is_super_admin || admin.permissions?.accessShopCashBox === true;
                 if (!canAccessShopCashBox) {
@@ -216,6 +208,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   key={link.href}
                   href={link.href}
                   onClick={(e) => {
+                    // Allow default behavior (open in new tab) if Ctrl/Command is pressed
+                    if (e.ctrlKey || e.metaKey) {
+                      return; // Let browser handle it
+                    }
+                    // Otherwise, prevent default and use router for SPA navigation
                     e.preventDefault();
                     router.push(link.href);
                     setSidebarOpen(false);
@@ -235,6 +232,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <a
                 href="/admin/admin-users"
                 onClick={(e) => {
+                  // Allow default behavior (open in new tab) if Ctrl/Command is pressed
+                  if (e.ctrlKey || e.metaKey) {
+                    return; // Let browser handle it
+                  }
+                  // Otherwise, prevent default and use router for SPA navigation
                   e.preventDefault();
                   router.push('/admin/admin-users');
                   setSidebarOpen(false);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import {
   getOnlineOrdersFromSupabase,
@@ -53,7 +53,7 @@ export default function OrdersPage() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.title = 'الطلبيات - Orders';
   }, []);
 

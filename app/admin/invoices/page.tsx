@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -38,6 +38,10 @@ export default function InvoicesPage() {
   const router = useRouter();
   const [invoices, setInvoices] = useState<CashInvoice[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useLayoutEffect(() => {
+    document.title = 'الفواتير النقدية';
+  }, []);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewing, setViewing] = useState<{

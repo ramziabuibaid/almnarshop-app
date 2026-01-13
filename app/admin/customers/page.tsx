@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -57,6 +57,10 @@ export default function CustomersPage() {
   const { admin } = useAdminAuth();
   const router = useRouter();
   const [customers, setCustomers] = useState<any[]>([]);
+
+  useEffect(() => {
+    document.title = 'الزبائن';
+  }, []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -48,6 +48,9 @@ interface TransactionWithBalance extends CashFlowTransaction {
 }
 
 export default function WarehouseCashBoxPage() {
+  useLayoutEffect(() => {
+    document.title = 'صندوق المستودع';
+  }, []);
   const { admin } = useAdminAuth();
   const router = useRouter();
   
@@ -482,10 +485,10 @@ export default function WarehouseCashBoxPage() {
       };
 
       if (editingTransaction && editingTransaction.receipt_id) {
-        await updateWarehouseReceipt(editingTransaction.receipt_id, payload);
+        await updateWarehouseReceipt(editingTransaction.receipt_id, payload, admin?.username);
         setToast({ message: 'تم تحديث سند القبض بنجاح', type: 'success' });
       } else {
-        await createWarehouseReceipt(payload);
+        await createWarehouseReceipt(payload, admin?.username);
         setToast({ message: 'تم إنشاء سند القبض بنجاح', type: 'success' });
       }
 
@@ -539,10 +542,10 @@ export default function WarehouseCashBoxPage() {
       };
 
       if (editingTransaction && editingTransaction.payment_id) {
-        await updateWarehousePayment(editingTransaction.payment_id, payload);
+        await updateWarehousePayment(editingTransaction.payment_id, payload, admin?.username);
         setToast({ message: 'تم تحديث سند الدفع بنجاح', type: 'success' });
       } else {
-        await createWarehousePayment(payload);
+        await createWarehousePayment(payload, admin?.username);
         setToast({ message: 'تم إنشاء سند الدفع بنجاح', type: 'success' });
       }
 

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
+import { supabase } from '@/lib/supabase';
 import {
   Activity,
   AlertCircle,
@@ -26,7 +27,7 @@ interface Notification {
   created_at: string;
 }
 
-export default function DashboardPage() {
+export default function NotificationsPage() {
   const { admin } = useAdminAuth();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -45,7 +46,7 @@ export default function DashboardPage() {
     admin?.permissions?.viewNotifications === true || 
     admin?.permissions?.dashboardAndNotifications === true;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.title = 'الإشعارات';
   }, []);
 
@@ -55,9 +56,11 @@ export default function DashboardPage() {
       return;
     }
     loadNotifications();
-  }, [canViewDashboard, router, filters]);
+  }, [canViewDashboard, router]);
 
   const loadNotifications = async () => {
+    if (!canViewDashboard) return;
+    
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -65,7 +68,6 @@ export default function DashboardPage() {
       if (filters.type) params.append('type', filters.type);
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
-      params.append('limit', '100');
 
       const response = await fetch(`/api/admin/notifications?${params.toString()}`);
       if (response.ok) {
@@ -79,12 +81,17 @@ export default function DashboardPage() {
     }
   };
 
+  useEffect(() => {
+    loadNotifications();
+  }, [filters]);
+
   const markAsRead = async (notificationId: string) => {
     setMarkingAsRead(notificationId);
     try {
       const response = await fetch(`/api/admin/notifications/${notificationId}/read`, {
         method: 'POST',
       });
+      
       if (response.ok) {
         setNotifications((prev) =>
           prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
@@ -98,18 +105,16 @@ export default function DashboardPage() {
   };
 
   const markAllAsRead = async () => {
-    setMarkingAsRead('all');
     try {
       const response = await fetch('/api/admin/notifications/read-all', {
         method: 'POST',
       });
+      
       if (response.ok) {
         setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
       }
     } catch (error) {
       console.error('[Dashboard] Failed to mark all as read:', error);
-    } finally {
-      setMarkingAsRead(null);
     }
   };
 
@@ -126,18 +131,111 @@ export default function DashboardPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('ar-SA', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return dateString;
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'create':
+        return 'إنشاء';
+      case 'update':
+        return 'تحديث';
+      case 'delete':
+        return 'حذف';
+      default:
+        return type;
+    }
+  };
+
+  const getTableLabel = (tableName: string) => {
+    const labels: Record<string, string> = {
+      products: 'المنتجات',
+      customers: 'الزبائن',
+      cash_invoices: 'الفواتير النقدية',
+      maintenance: 'الصيانة',
+      shop_sales_invoices: 'فواتير مبيعات المحل',
+      warehouse_sales_invoices: 'فواتير مبيعات المستودع',
+      shop_receipts: 'سندات قبض المحل',
+      shop_payments: 'سندات صرف المحل',
+      warehouse_receipts: 'سندات قبض المستودع',
+      warehouse_payments: 'سندات صرف المستودع',
+    };
+    return labels[tableName] || tableName;
+  };
+
+  const getNotificationUrl = async (notification: Notification): Promise<string | null> => {
+    const { table_name, record_name } = notification;
+    console.log('[Dashboard] Getting URL for notification:', { table_name, record_name });
+    
+    switch (table_name) {
+      case 'shop_sales_invoices':
+        return '/admin/shop-sales';
+      
+      case 'warehouse_sales_invoices':
+        return '/admin/warehouse-sales';
+      
+      case 'shop_receipts':
+      case 'shop_payments':
+        return '/admin/shop-finance/cash-box';
+      
+      case 'warehouse_receipts':
+      case 'warehouse_payments':
+        return '/admin/warehouse-finance/cash-box';
+      
+      case 'maintenance':
+        return '/admin/maintenance';
+      
+      case 'customers':
+        // record_name should be customer_id (format: CUS-XXXX-YYY)
+        console.log('[Dashboard] Customer notification, record_name:', record_name);
+        // Check if record_name looks like a customer_id (starts with CUS-)
+        if (record_name && record_name.startsWith('CUS-')) {
+          // Definitely a customer_id, use it directly
+          console.log('[Dashboard] Using customer_id directly:', record_name);
+          return `/admin/customers/${record_name}`;
+        }
+        // Otherwise, it's likely a customer name (for old notifications or delete notifications)
+        // Try to find by name first
+        console.log('[Dashboard] Searching for customer by name:', record_name);
+        try {
+          const { data: customer, error } = await supabase
+            .from('customers')
+            .select('customer_id')
+            .eq('name', record_name)
+            .single();
+          if (customer?.customer_id) {
+            console.log('[Dashboard] Found customer by name:', customer.customer_id);
+            return `/admin/customers/${customer.customer_id}`;
+          }
+          if (error) {
+            console.error('[Dashboard] Error searching by name:', error);
+          }
+        } catch (err) {
+          console.error('[Dashboard] Failed to get customer ID:', err);
+        }
+        // If not found, return customers list page
+        return '/admin/customers';
+      
+      case 'products':
+        return '/admin/products';
+      
+      default:
+        return null;
+    }
+  };
+
+  const handleNotificationClick = async (notification: Notification, event: React.MouseEvent) => {
+    // Check if Ctrl (Windows) or Command (Mac) is pressed
+    const openInNewTab = event.ctrlKey || event.metaKey;
+    
+    if (!notification.is_read) {
+      await markAsRead(notification.id);
+    }
+    
+    const url = await getNotificationUrl(notification);
+    if (url) {
+      if (openInNewTab) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } else {
+        router.push(url);
+      }
     }
   };
 
@@ -161,27 +259,19 @@ export default function DashboardPage() {
     }
   };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'create':
-        return 'إنشاء';
-      case 'update':
-        return 'تحديث';
-      case 'delete':
-        return 'حذف';
-      default:
-        return type;
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('ar-SA', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateString;
     }
-  };
-
-  const getTableLabel = (tableName: string) => {
-    const labels: Record<string, string> = {
-      products: 'المنتجات',
-      customers: 'الزبائن',
-      cash_invoices: 'الفواتير النقدية',
-      maintenance: 'الصيانة',
-    };
-    return labels[tableName] || tableName;
   };
 
   const filteredNotifications = useMemo(() => {
@@ -202,39 +292,32 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">الإشعارات</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              تتبع جميع أنشطة الموظفين في النظام
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900">الإشعارات</h1>
+            <p className="text-gray-600 mt-1">سجل جميع الأنشطة في النظام</p>
           </div>
           <div className="flex items-center gap-3">
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                disabled={markingAsRead === 'all'}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
               >
-                <CheckCheck className="w-4 h-4" />
-                <span>تعليم الكل كمقروء</span>
+                <CheckCheck size={18} />
+                تعليم الكل كمقروء
               </button>
             )}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                showFilters
-                  ? 'bg-blue-50 border-blue-500 text-blue-700'
-                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
             >
-              <Filter className="w-4 h-4" />
-              <span>تصفية</span>
+              <Filter size={18} />
+              {showFilters ? 'إخفاء' : 'عرض'} الفلاتر
             </button>
           </div>
         </div>
 
         {/* Filters */}
         {showFilters && (
-          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -250,7 +333,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  نوع العملية
+                  نوع الإجراء
                 </label>
                 <select
                   value={filters.type}
@@ -289,61 +372,47 @@ export default function DashboardPage() {
             <div className="mt-4 flex justify-end">
               <button
                 onClick={() => {
-                  setFilters({
-                    user_name: '',
-                    type: '',
-                    startDate: '',
-                    endDate: '',
-                  });
+                  setFilters({ user_name: '', type: '', startDate: '', endDate: '' });
+                  setShowFilters(false);
                 }}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900"
+                className="px-4 py-2 text-gray-700 hover:text-gray-900 flex items-center gap-2"
               >
-                إعادة تعيين
+                <X size={18} />
+                مسح الفلاتر
               </button>
             </div>
           </div>
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">إجمالي الإشعارات</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{notifications.length}</p>
+                <p className="text-sm text-gray-600 mb-1">إجمالي الإشعارات</p>
+                <p className="text-2xl font-bold text-gray-900">{notifications.length}</p>
               </div>
               <Activity className="w-8 h-8 text-blue-500" />
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">غير مقروء</p>
-                <p className="text-2xl font-bold text-red-600 mt-1">{unreadCount}</p>
+                <p className="text-sm text-gray-600 mb-1">غير مقروء</p>
+                <p className="text-2xl font-bold text-red-600">{unreadCount}</p>
               </div>
               <AlertCircle className="w-8 h-8 text-red-500" />
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">إنشاء</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">
-                  {notifications.filter((n) => n.type === 'create').length}
+                <p className="text-sm text-gray-600 mb-1">مقروء</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {notifications.length - unreadCount}
                 </p>
               </div>
               <CheckCircle className="w-8 h-8 text-green-500" />
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">تحديث</p>
-                <p className="text-2xl font-bold text-blue-600 mt-1">
-                  {notifications.filter((n) => n.type === 'update').length}
-                </p>
-              </div>
-              <Activity className="w-8 h-8 text-blue-500" />
             </div>
           </div>
         </div>
@@ -362,9 +431,10 @@ export default function DashboardPage() {
               filteredNotifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-4 hover:bg-gray-50 transition-colors ${
+                  className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
                     !notification.is_read ? 'bg-blue-50' : ''
                   }`}
+                  onClick={(e) => handleNotificationClick(notification, e)}
                 >
                   <div className="flex items-start gap-4">
                     <div className="mt-1">{getNotificationIcon(notification.type)}</div>
@@ -393,7 +463,10 @@ export default function DashboardPage() {
                         </div>
                         {!notification.is_read && (
                           <button
-                            onClick={() => markAsRead(notification.id)}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await markAsRead(notification.id);
+                            }}
                             disabled={markingAsRead === notification.id}
                             className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors disabled:opacity-50"
                           >

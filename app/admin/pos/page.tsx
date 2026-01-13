@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import InvoicePrint from '@/components/admin/InvoicePrint';
@@ -44,7 +44,7 @@ export default function POSPage() {
   // Check if user has permission to create POS invoices
   const canCreatePOS = admin?.is_super_admin || admin?.permissions?.createPOS === true;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.title = 'نقطة البيع - POS';
   }, []);
   const [barcodeInput, setBarcodeInput] = useState('');

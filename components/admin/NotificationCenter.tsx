@@ -165,6 +165,86 @@ export default function NotificationCenter() {
     }
   };
 
+  const getNotificationUrl = async (notification: Notification): Promise<string | null> => {
+    const { table_name, record_name } = notification;
+    console.log('[NotificationCenter] Getting URL for notification:', { table_name, record_name });
+    
+    switch (table_name) {
+      case 'shop_sales_invoices':
+        return '/admin/shop-sales';
+      
+      case 'warehouse_sales_invoices':
+        return '/admin/warehouse-sales';
+      
+      case 'shop_receipts':
+      case 'shop_payments':
+        return '/admin/shop-finance/cash-box';
+      
+      case 'warehouse_receipts':
+      case 'warehouse_payments':
+        return '/admin/warehouse-finance/cash-box';
+      
+      case 'maintenance':
+        return '/admin/maintenance';
+      
+      case 'customers':
+        // record_name should be customer_id (format: CUS-XXXX-YYY)
+        console.log('[NotificationCenter] Customer notification, record_name:', record_name);
+        // Check if record_name looks like a customer_id (starts with CUS-)
+        if (record_name && record_name.startsWith('CUS-')) {
+          // Definitely a customer_id, use it directly
+          console.log('[NotificationCenter] Using customer_id directly:', record_name);
+          return `/admin/customers/${record_name}`;
+        }
+        // Otherwise, it's likely a customer name (for old notifications or delete notifications)
+        // Try to find by name first
+        console.log('[NotificationCenter] Searching for customer by name:', record_name);
+        try {
+          const { data: customer, error } = await supabase
+            .from('customers')
+            .select('customer_id')
+            .eq('name', record_name)
+            .single();
+          if (customer?.customer_id) {
+            console.log('[NotificationCenter] Found customer by name:', customer.customer_id);
+            return `/admin/customers/${customer.customer_id}`;
+          }
+          if (error) {
+            console.error('[NotificationCenter] Error searching by name:', error);
+          }
+        } catch (err) {
+          console.error('[NotificationCenter] Failed to get customer ID:', err);
+        }
+        // If not found, return customers list page
+        return '/admin/customers';
+      
+      case 'products':
+        return '/admin/products';
+      
+      default:
+        return null;
+    }
+  };
+
+  const handleNotificationClick = async (notification: Notification, event: React.MouseEvent) => {
+    // Check if Ctrl (Windows) or Command (Mac) is pressed
+    const openInNewTab = event.ctrlKey || event.metaKey;
+    
+    if (!notification.is_read) {
+      await markAsRead(notification.id);
+    }
+    
+    const url = await getNotificationUrl(notification);
+    if (url) {
+      if (openInNewTab) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } else {
+        router.push(url);
+        setIsOpen(false);
+      }
+    }
+  };
+
   if (!canViewNotifications) {
     return null;
   }
@@ -191,7 +271,7 @@ export default function NotificationCenter() {
             <h3 className="font-semibold text-gray-900">الإشعارات</h3>
             <button
               onClick={() => {
-                router.push('/admin/dashboard');
+                router.push('/admin/notifications');
                 setIsOpen(false);
               }}
               className="text-sm text-blue-600 hover:text-blue-700"
@@ -218,13 +298,7 @@ export default function NotificationCenter() {
                     <div className="mt-1">{getNotificationIcon(notification.type)}</div>
                     <div 
                       className="flex-1 min-w-0 cursor-pointer"
-                      onClick={async () => {
-                        if (!notification.is_read) {
-                          await markAsRead(notification.id);
-                        }
-                        router.push('/admin/dashboard');
-                        setIsOpen(false);
-                      }}
+                      onClick={(e) => handleNotificationClick(notification, e)}
                     >
                       <p className="text-sm text-gray-900">{notification.message}</p>
                       <div className="flex items-center gap-2 mt-1">

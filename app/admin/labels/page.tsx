@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Search, Printer, Loader2, CheckSquare, Square, ArrowUp, ArrowDown } from 'lucide-react';
@@ -22,6 +22,10 @@ export default function LabelsPage() {
   const [useQuantity, setUseQuantity] = useState<boolean>(true); // true = حسب الكمية, false = ليبل واحد لكل منتج
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  useLayoutEffect(() => {
+    document.title = 'طباعة الملصقات';
+  }, []);
 
   useEffect(() => {
     loadProducts();

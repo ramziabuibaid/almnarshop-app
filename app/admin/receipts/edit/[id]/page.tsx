@@ -95,7 +95,7 @@ export default function EditReceiptPage() {
         notes: formData.notes || undefined,
       };
 
-      await updateShopReceipt(receiptId, payload);
+      await updateShopReceipt(receiptId, payload, admin?.username);
       router.push('/admin/receipts');
     } catch (err: any) {
       console.error('[EditReceiptPage] Failed to update receipt:', err);

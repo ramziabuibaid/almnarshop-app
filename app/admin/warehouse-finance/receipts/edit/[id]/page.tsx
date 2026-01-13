@@ -113,7 +113,7 @@ export default function EditWarehouseReceiptPage() {
         notes: formData.notes.trim() || undefined,
       };
 
-      await updateWarehouseReceipt(receiptId, payload);
+      await updateWarehouseReceipt(receiptId, payload, admin?.username);
       
       // Show success toast
       setToast({ message: 'تم تحديث سند القبض بنجاح', type: 'success' });

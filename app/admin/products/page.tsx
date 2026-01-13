@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ProductFormModal from '@/components/admin/ProductFormModal';
@@ -26,6 +26,10 @@ export default function ProductsManagerPage() {
   const { admin } = useAdminAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useLayoutEffect(() => {
+    document.title = 'المنتجات';
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
