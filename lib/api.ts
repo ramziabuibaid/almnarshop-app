@@ -477,6 +477,67 @@ function mapCustomerFromSupabase(customer: any): any {
 }
 
 /**
+ * Get a single product by ID from Supabase
+ * Maps Supabase snake_case columns to app PascalCase format
+ */
+export async function getProductById(productId: string): Promise<any | null> {
+  try {
+    if (!productId || productId.trim() === '') {
+      console.error('[API] Empty product ID provided');
+      return null;
+    }
+
+    console.log('[API] Fetching product by ID from Supabase:', productId);
+    
+    // Fetch product by product_id (the primary key in Supabase)
+    const { data: product, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('product_id', productId.trim())
+      .single();
+    
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows returned - try to find by other fields as fallback
+        console.log('[API] Product not found by product_id, trying alternative lookup:', productId);
+        
+        // Try to find by name or other identifier as fallback
+        const { data: fallbackProduct, error: fallbackError } = await supabase
+          .from('products')
+          .select('*')
+          .or(`name.ilike.%${productId}%,product_id.eq.${productId}`)
+          .limit(1)
+          .maybeSingle();
+        
+        if (fallbackError || !fallbackProduct) {
+          console.log('[API] Product not found with fallback lookup:', productId);
+          return null;
+        }
+        
+        const mappedFallback = mapProductFromSupabase(fallbackProduct);
+        console.log('[API] Product loaded via fallback:', mappedFallback.id);
+        return mappedFallback;
+      }
+      console.error('[API] Supabase error:', error);
+      throw new Error(`Failed to fetch product: ${error.message}`);
+    }
+    
+    if (!product) {
+      return null;
+    }
+    
+    // Map snake_case to PascalCase
+    const mappedProduct = mapProductFromSupabase(product);
+    
+    console.log('[API] Product loaded:', mappedProduct.id);
+    return mappedProduct;
+  } catch (error: any) {
+    console.error('[API] GetProductById error:', error?.message || error);
+    throw error;
+  }
+}
+
+/**
  * Get all products from Supabase
  * Maps Supabase snake_case columns to app PascalCase format
  */

@@ -10,6 +10,8 @@ import FilterDrawer from '@/components/store/FilterDrawer';
 import ActiveFiltersBar from '@/components/store/ActiveFiltersBar';
 import ProductGridHeader from '@/components/store/ProductGridHeader';
 import CartDrawer from '@/components/CartDrawer';
+import HeroBanner from '@/components/store/HeroBanner';
+import CategoryHighlights from '@/components/store/CategoryHighlights';
 import { FilterState, SortOption } from '@/components/store/types';
 
 const PRODUCTS_PER_PAGE = 20;
@@ -238,6 +240,20 @@ export default function Home() {
     });
   };
 
+  const handleCategoryClick = (category: string) => {
+    // Set the type filter and scroll to products
+    setFilters((prev) => ({
+      ...prev,
+      selectedTypes: [category],
+    }));
+    setTimeout(() => {
+      const productsSection = document.getElementById('products-section');
+      if (productsSection) {
+        productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
       {/* Header */}
@@ -330,8 +346,23 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Hero Banner */}
+      <HeroBanner />
+
+      {/* Category Highlights */}
+      <CategoryHighlights onCategoryClick={handleCategoryClick} />
+
       {/* Main Content - 2 Column Layout (Desktop) */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main id="products-section" className="max-w-7xl mx-auto px-4 py-8">
+        {/* Section Title */}
+        <div className="mb-6">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 text-right mb-2">
+            تصفح جميع المنتجات
+          </h2>
+          <p className="text-gray-600 text-right">
+            اكتشف مجموعتنا الكاملة من الأجهزة الإلكترونية والأجهزة المنزلية
+          </p>
+        </div>
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">

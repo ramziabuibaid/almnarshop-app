@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { ShoppingCart, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { useShop } from '@/context/ShopContext';
-import ProductModal from '@/components/ProductModal';
 import { getDirectImageUrl } from '@/lib/utils';
 
 interface ProductCardProps {
@@ -25,11 +25,13 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useShop();
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [isInView, setIsInView] = useState(false);
   const imgRef = useRef<HTMLDivElement>(null);
+  
+  const productId = product.id || product.ProductID || product.product_id || '';
+  const productUrl = productId ? `/product/${encodeURIComponent(productId)}` : '#';
   
   // Convert image URL to direct image link
   const rawImageUrl = product.image && product.image.trim() !== '' ? product.image.trim() : '';
@@ -91,10 +93,9 @@ export default function ProductCard({ product }: ProductCardProps) {
     <>
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 group">
         {/* Image Container */}
-        <div 
-          ref={imgRef}
-          className="relative w-full aspect-square bg-gray-50 flex items-center justify-center cursor-pointer overflow-hidden"
-          onClick={() => setIsModalOpen(true)}
+        <Link 
+          href={productUrl}
+          className="relative w-full aspect-square bg-gray-50 flex items-center justify-center cursor-pointer overflow-hidden block"
         >
           {/* Badges */}
           <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
@@ -112,31 +113,33 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
 
           {/* Product Image */}
-          {hasValidImage && isInView && imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={product.name}
-              loading="lazy"
-              className={`object-contain w-full h-full p-2 transition-transform duration-300 group-hover:scale-105 ${
-                imageLoading ? 'opacity-0' : 'opacity-100'
-              } ${!isAvailable ? 'opacity-50 grayscale' : ''}`}
-              onLoad={() => setImageLoading(false)}
-              onError={() => {
-                setImageError(true);
-                setImageLoading(false);
-              }}
-            />
-          ) : hasValidImage ? (
-            <div className="flex flex-col items-center justify-center text-gray-300">
-              <ImageIcon size={32} className="mb-1 animate-pulse" />
-              <span className="text-xs">Loading...</span>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center text-gray-400">
-              <ImageIcon size={48} className="mb-2" />
-              <span className="text-xs">No Image</span>
-            </div>
-          )}
+          <div ref={imgRef} className="w-full h-full flex items-center justify-center">
+            {hasValidImage && isInView && imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={product.name}
+                loading="lazy"
+                className={`object-contain w-full h-full p-2 transition-transform duration-300 group-hover:scale-105 ${
+                  imageLoading ? 'opacity-0' : 'opacity-100'
+                } ${!isAvailable ? 'opacity-50 grayscale' : ''}`}
+                onLoad={() => setImageLoading(false)}
+                onError={() => {
+                  setImageError(true);
+                  setImageLoading(false);
+                }}
+              />
+            ) : hasValidImage ? (
+              <div className="flex flex-col items-center justify-center text-gray-300">
+                <ImageIcon size={32} className="mb-1 animate-pulse" />
+                <span className="text-xs">Loading...</span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center text-gray-400">
+                <ImageIcon size={48} className="mb-2" />
+                <span className="text-xs">No Image</span>
+              </div>
+            )}
+          </div>
 
           {/* Quick Add to Cart Button (Desktop - appears on hover) */}
           <div className="absolute bottom-0 left-0 right-0 p-2 bg-white/95 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity md:block hidden">
@@ -153,16 +156,15 @@ export default function ProductCard({ product }: ProductCardProps) {
               {isAvailable ? 'إضافة إلى السلة' : 'غير متوفر'}
             </button>
           </div>
-        </div>
+        </Link>
 
         {/* Product Info */}
         <div className="p-4" dir="rtl">
-          <h3 
-            className="font-semibold text-gray-900 mb-2 line-clamp-2 min-h-[2.5rem] cursor-pointer hover:text-gray-700 transition-colors text-sm"
-            onClick={() => setIsModalOpen(true)}
-          >
-            {product.name}
-          </h3>
+          <Link href={productUrl}>
+            <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 min-h-[2.5rem] cursor-pointer hover:text-gray-700 transition-colors text-sm">
+              {product.name}
+            </h3>
+          </Link>
           
           {/* Price */}
           <p className="text-xl font-bold text-gray-900 mb-3">
@@ -184,13 +186,6 @@ export default function ProductCard({ product }: ProductCardProps) {
           </button>
         </div>
       </div>
-
-      {/* Product Modal */}
-      <ProductModal
-        product={product}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
     </>
   );
 }
