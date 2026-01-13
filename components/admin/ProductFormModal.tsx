@@ -190,6 +190,11 @@ export default function ProductFormModal({
       console.log('[ProductFormModal] Submitting - Full formData:', formData);
       console.log('[ProductFormModal] Submitting - Full productData:', productData);
       
+      // Add userName for notifications
+      if (admin?.username) {
+        productData.userName = admin.username;
+      }
+      
       await saveProduct(productData);
       
       // Success - close modal and refresh

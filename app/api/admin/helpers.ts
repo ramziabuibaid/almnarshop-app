@@ -17,6 +17,8 @@ export const DEFAULT_PERMISSIONS = {
   accessCashSessions: false,
   accessPayPage: false,
   accountant: false,
+  dashboardAndNotifications: false,
+  viewNotifications: false,
 };
 
 export type Permissions = typeof DEFAULT_PERMISSIONS;

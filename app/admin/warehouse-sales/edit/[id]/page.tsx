@@ -363,7 +363,7 @@ export default function EditWarehouseSalesInvoicePage() {
         itemIDsToDelete: itemIDsToDelete.length > 0 ? itemIDsToDelete : undefined,
       };
 
-      await updateWarehouseSalesInvoice(invoiceId, payload);
+      await updateWarehouseSalesInvoice(invoiceId, payload, admin?.username);
       router.push('/admin/warehouse-sales');
     } catch (err: any) {
       console.error('[EditWarehouseSalesInvoicePage] Failed to save invoice:', err);
@@ -381,7 +381,7 @@ export default function EditWarehouseSalesInvoicePage() {
     setDeleting(true);
     setError(null);
     try {
-      await deleteWarehouseSalesInvoice(invoiceId);
+      await deleteWarehouseSalesInvoice(invoiceId, admin?.username);
       router.push('/admin/warehouse-sales');
     } catch (err: any) {
       console.error('[EditWarehouseSalesInvoicePage] Failed to delete invoice:', err);

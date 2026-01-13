@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Save, Loader2, Trash2 } from 'lucide-react';
 import { saveCustomer, deleteCustomer, generateCustomerID } from '@/lib/api';
+import { useAdminAuth } from '@/context/AdminAuthContext';
 
 interface CustomerFormModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export default function CustomerFormModal({
   onSuccess,
 }: CustomerFormModalProps) {
   const router = useRouter();
+  const { admin } = useAdminAuth();
   const [formData, setFormData] = useState({
     CustomerID: '',
     Name: '',
@@ -247,6 +249,11 @@ export default function CustomerFormModal({
       console.log('[CustomerFormModal] LastInvoiceDate preserved:', customerData.LastInvoiceDate);
       console.log('[CustomerFormModal] LastPaymentDate preserved:', customerData.LastPaymentDate);
 
+      // Add userName for notifications
+      if (admin?.username) {
+        customerData.userName = admin.username;
+      }
+      
       const result = await saveCustomer(customerData);
 
       // Success - close modal and refresh
@@ -281,7 +288,7 @@ export default function CustomerFormModal({
     setIsDeleting(true);
     setError('');
     try {
-      const result = await deleteCustomer(customerId);
+      const result = await deleteCustomer(customerId, admin?.username);
       
       if (result.status === 'blocked' && result.references) {
         const refs = result.references;

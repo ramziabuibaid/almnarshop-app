@@ -366,7 +366,7 @@ export default function EditShopSalesInvoicePage() {
         itemIDsToDelete: itemIDsToDelete.length > 0 ? itemIDsToDelete : undefined,
       };
 
-      await updateShopSalesInvoice(invoiceId, payload);
+      await updateShopSalesInvoice(invoiceId, payload, admin?.username);
       router.push('/admin/shop-sales');
     } catch (err: any) {
       console.error('[EditShopSalesInvoicePage] Failed to save invoice:', err);
@@ -384,7 +384,7 @@ export default function EditShopSalesInvoicePage() {
     setDeleting(true);
     setError(null);
     try {
-      await deleteShopSalesInvoice(invoiceId);
+      await deleteShopSalesInvoice(invoiceId, admin?.username);
       router.push('/admin/shop-sales');
     } catch (err: any) {
       console.error('[EditShopSalesInvoicePage] Failed to delete invoice:', err);

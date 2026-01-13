@@ -158,7 +158,7 @@ export default function ProductsManagerPage() {
 
     setDeleteState((prev) => ({ ...prev, loading: true, error: '' }));
     try {
-      const result = await deleteProduct(productId);
+      const result = await deleteProduct(productId, admin?.username);
       if (result.status === 'blocked') {
         setDeleteState({
           loading: false,

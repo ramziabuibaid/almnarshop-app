@@ -184,7 +184,7 @@ export default function EditInvoicePage() {
         discount: discount || 0,
       };
 
-      await updateCashInvoice(invoiceId, payload);
+      await updateCashInvoice(invoiceId, payload, admin?.username);
       alert('تم حفظ التعديلات بنجاح');
       router.push('/admin/invoices');
     } catch (err: any) {
@@ -205,7 +205,7 @@ export default function EditInvoicePage() {
     setError(null);
 
     try {
-      await deleteCashInvoice(invoiceId);
+      await deleteCashInvoice(invoiceId, admin?.username);
       alert('تم حذف الفاتورة بنجاح');
       router.push('/admin/invoices');
     } catch (err: any) {

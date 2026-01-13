@@ -22,6 +22,7 @@ const permissionLabels: { key: keyof AdminPermissions; label: string }[] = [
   { key: 'accessWarehouseCashBox', label: 'Access warehouse cash box page' },
   { key: 'viewCashBoxBalance', label: 'View cash box balance (shop & warehouse)' },
   { key: 'accountant', label: 'Accountant (post invoices & change status)' },
+  { key: 'viewNotifications', label: 'View notifications' },
 ];
 
 const emptyPermissions: AdminPermissions = {
@@ -41,6 +42,7 @@ const emptyPermissions: AdminPermissions = {
   accessWarehouseCashBox: false,
   viewCashBoxBalance: false,
   accountant: false,
+  viewNotifications: false,
 };
 
 export default function AdminUsersPage() {

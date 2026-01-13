@@ -18,7 +18,9 @@ type PermissionKey =
   | 'accessShopCashBox'
   | 'accessWarehouseCashBox'
   | 'viewCashBoxBalance'
-  | 'accountant';
+  | 'accountant'
+  | 'dashboardAndNotifications'
+  | 'viewNotifications';
 
 export type AdminPermissions = Record<PermissionKey, boolean>;
 

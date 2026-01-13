@@ -496,7 +496,7 @@ export default function CustomerProfilePage() {
 
     setDeleting(true);
     try {
-      const result = await deleteCustomer(customerId);
+      const result = await deleteCustomer(customerId, admin?.username);
       
       if (result.status === 'blocked' && result.references) {
         const refs = result.references;

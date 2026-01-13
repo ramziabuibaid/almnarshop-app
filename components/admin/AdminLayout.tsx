@@ -19,8 +19,10 @@ import {
   Wrench,
   Wallet,
   Shield,
-  Tag
+  Tag,
+  Bell
 } from 'lucide-react';
+import NotificationCenter from './NotificationCenter';
 import { useState } from 'react';
 
 interface AdminLayoutProps {
@@ -29,6 +31,7 @@ interface AdminLayoutProps {
 
 const sidebarLinks = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/dashboard', label: 'الإشعارات', icon: Bell, permission: 'dashboardAndNotifications' },
   { href: '/admin/products', label: 'المنتجات', icon: Package },
   { href: '/admin/labels', label: 'طباعة الملصقات', icon: Tag },
   { href: '/admin/pos', label: 'نقطة البيع (POS)', icon: CreditCard },
@@ -115,6 +118,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               const isActive = pathname === link.href || pathname?.startsWith(link.href + '/');
               
               // Check permissions for specific links
+              if (link.href === '/admin/dashboard') {
+                const canViewDashboard = admin.is_super_admin || 
+                  admin.permissions?.viewNotifications === true || 
+                  admin.permissions?.dashboardAndNotifications === true;
+                if (!canViewDashboard) {
+                  return null; // Hide the link if user doesn't have permission
+                }
+              }
+              
               if (link.href === '/admin/tasks') {
                 const canViewTasks = admin.is_super_admin || admin.permissions?.viewTasks === true;
                 if (!canViewTasks) {
@@ -279,12 +291,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </span>
             </div>
             <div className="flex-1" />
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <Menu size={24} className="text-gray-700" />
-            </button>
+            <div className="flex items-center gap-2">
+              <NotificationCenter />
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Menu size={24} className="text-gray-700" />
+              </button>
+            </div>
           </div>
         </header>
 

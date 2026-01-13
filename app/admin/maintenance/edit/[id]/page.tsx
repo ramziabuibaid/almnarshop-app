@@ -201,7 +201,7 @@ export default function EditMaintenancePage() {
     setError(null);
 
     try {
-      await deleteMaintenance(maintNo);
+      await deleteMaintenance(maintNo, admin?.username);
       router.push('/admin/maintenance');
     } catch (err: any) {
       console.error('[EditMaintenancePage] Failed to delete record:', err);

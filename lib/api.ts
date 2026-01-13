@@ -695,6 +695,23 @@ export async function saveProduct(productData: any): Promise<any> {
 
       result = data;
       console.log('[API] Product updated successfully:', result);
+      
+      // Create notification for product update
+      try {
+        const { createNotification } = await import('./notifications');
+        const productName = productData.Name || productData.name || productId || 'Unknown';
+        const userName = productData.userName || 'System';
+        await createNotification({
+          type: 'update',
+          table_name: 'products',
+          record_name: productName,
+          message: `تم تحديث المنتج "${productName}" بواسطة ${userName}`,
+          user_name: userName,
+        });
+      } catch (notifError) {
+        console.error('[API] Failed to create notification for product update:', notifError);
+        // Don't throw - notification is non-critical
+      }
             } else {
       // Insert new product
       console.log('[API] Inserting new product');
@@ -717,6 +734,23 @@ export async function saveProduct(productData: any): Promise<any> {
 
       result = data;
       console.log('[API] Product created successfully:', result);
+      
+      // Create notification for product creation
+      try {
+        const { createNotification } = await import('./notifications');
+        const productName = productData.Name || productData.name || productId || 'Unknown';
+        const userName = productData.userName || 'System';
+        await createNotification({
+          type: 'create',
+          table_name: 'products',
+          record_name: productName,
+          message: `تم إنشاء المنتج "${productName}" بواسطة ${userName}`,
+          user_name: userName,
+        });
+      } catch (notifError) {
+        console.error('[API] Failed to create notification for product creation:', notifError);
+        // Don't throw - notification is non-critical
+      }
     }
 
     return {
@@ -816,7 +850,7 @@ export async function getProductUsage(productId: string): Promise<{
  * Delete a product if it is not referenced elsewhere.
  * If referenced, returns status=blocked and reference ids.
  */
-export async function deleteProduct(productId: string): Promise<{
+export async function deleteProduct(productId: string, userName?: string): Promise<{
   status: 'deleted' | 'blocked';
   references?: Awaited<ReturnType<typeof getProductUsage>>;
 }> {
@@ -832,10 +866,40 @@ export async function deleteProduct(productId: string): Promise<{
     return { status: 'blocked', references };
   }
 
+  // Get product name before deletion for notification
+  let productName = productId;
+  try {
+    const { data } = await supabase
+      .from('products')
+      .select('name')
+      .eq('product_id', productId)
+      .single();
+    if (data?.name) {
+      productName = data.name;
+    }
+  } catch (err) {
+    // Ignore error, use productId as fallback
+  }
+
   const { error } = await supabase.from('products').delete().eq('product_id', productId);
   if (error) {
     console.error('[API] Error deleting product:', error);
     throw new Error(`Failed to delete product: ${error.message}`);
+  }
+
+  // Create notification for product deletion
+  try {
+    const { createNotification } = await import('./notifications');
+    await createNotification({
+      type: 'delete',
+      table_name: 'products',
+      record_name: productName,
+      message: `تم حذف المنتج "${productName}" بواسطة ${userName || 'System'}`,
+      user_name: userName || 'System',
+    });
+  } catch (notifError) {
+    console.error('[API] Failed to create notification for product deletion:', notifError);
+    // Don't throw - notification is non-critical
   }
 
   return { status: 'deleted' };
@@ -1167,6 +1231,23 @@ export async function saveCustomer(customerData: {
 
       result = data;
       console.log('[API] Customer updated successfully');
+      
+      // Create notification for customer update
+      try {
+        const { createNotification } = await import('./notifications');
+        const customerName = customerData.Name || 'Unknown';
+        const userName = customerData.userName || 'System';
+        await createNotification({
+          type: 'update',
+          table_name: 'customers',
+          record_name: customerName,
+          message: `تم تحديث بيانات الزبون "${customerName}" بواسطة ${userName}`,
+          user_name: userName,
+        });
+      } catch (notifError) {
+        console.error('[API] Failed to create notification for customer update:', notifError);
+        // Don't throw - notification is non-critical
+      }
     } else {
       // Insert new customer
       const { data, error } = await supabase
@@ -1182,6 +1263,23 @@ export async function saveCustomer(customerData: {
 
       result = data;
       console.log('[API] Customer created successfully');
+      
+      // Create notification for customer creation
+      try {
+        const { createNotification } = await import('./notifications');
+        const customerName = customerData.Name || 'Unknown';
+        const userName = customerData.userName || 'System';
+        await createNotification({
+          type: 'create',
+          table_name: 'customers',
+          record_name: customerName,
+          message: `تم إنشاء زبون جديد "${customerName}" بواسطة ${userName}`,
+          user_name: userName,
+        });
+      } catch (notifError) {
+        console.error('[API] Failed to create notification for customer creation:', notifError);
+        // Don't throw - notification is non-critical
+      }
     }
 
     return { status: 'success', data: result };
@@ -1317,7 +1415,7 @@ export async function getCustomerUsage(customerId: string): Promise<{
  * Delete a customer from Supabase
  * Checks for usage in related tables before deletion
  */
-export async function deleteCustomer(customerID: string): Promise<{
+export async function deleteCustomer(customerID: string, userName?: string): Promise<{
   status: 'deleted' | 'blocked';
   references?: Awaited<ReturnType<typeof getCustomerUsage>>;
 }> {
@@ -1333,6 +1431,21 @@ export async function deleteCustomer(customerID: string): Promise<{
     return { status: 'blocked', references };
   }
 
+  // Get customer name before deletion for notification
+  let customerName = customerID;
+  try {
+    const { data } = await supabase
+      .from('customers')
+      .select('name')
+      .eq('customer_id', customerID)
+      .single();
+    if (data?.name) {
+      customerName = data.name;
+    }
+  } catch (err) {
+    // Ignore error, use customerID as fallback
+  }
+
   const { error } = await supabase
     .from('customers')
     .delete()
@@ -1344,6 +1457,22 @@ export async function deleteCustomer(customerID: string): Promise<{
   }
 
   console.log('[API] Customer deleted successfully');
+  
+  // Create notification for customer deletion
+  try {
+    const { createNotification } = await import('./notifications');
+    await createNotification({
+      type: 'delete',
+      table_name: 'customers',
+      record_name: customerName,
+      message: `تم حذف الزبون "${customerName}" بواسطة ${userName || 'System'}`,
+      user_name: userName || 'System',
+    });
+  } catch (notifError) {
+    console.error('[API] Failed to create notification for customer deletion:', notifError);
+    // Don't throw - notification is non-critical
+  }
+  
   return { status: 'deleted' };
 }
 
@@ -2609,7 +2738,38 @@ export async function saveCashInvoice(payload: {
 
     console.log('[API] Invoice details inserted successfully:', invoiceDetails.length, 'items');
 
-    // Step 5: Return success
+    // Step 5: Create notification for invoice creation
+    try {
+      const { createNotification } = await import('./notifications');
+      // Get admin username from created_by if available, otherwise use 'System'
+      let userName = 'System';
+      if (payload.created_by) {
+        try {
+          const { data: adminUser } = await supabase
+            .from('admin_users')
+            .select('username')
+            .eq('id', payload.created_by)
+            .single();
+          if (adminUser?.username) {
+            userName = adminUser.username;
+          }
+        } catch (err) {
+          // Ignore error, use 'System' as fallback
+        }
+      }
+      await createNotification({
+        type: 'create',
+        table_name: 'cash_invoices',
+        record_name: invoiceID,
+        message: `تم إنشاء فاتورة نقدية جديدة #${invoiceID} بواسطة ${userName}`,
+        user_name: userName,
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for invoice creation:', notifError);
+      // Don't throw - notification is non-critical
+    }
+
+    // Step 6: Return success
     const result = {
       status: 'success',
       invoiceID: invoiceID,
@@ -2848,7 +3008,8 @@ export async function updateCashInvoice(
     }>;
     notes?: string;
     discount?: number;
-  }
+  },
+  userName?: string
 ): Promise<any> {
   try {
     console.log('[API] Updating cash invoice in Supabase:', invoiceId, payload);
@@ -2974,6 +3135,22 @@ export async function updateCashInvoice(
     };
 
     console.log('[API] updateCashInvoice success:', result);
+
+    // Create notification for invoice update
+    try {
+      const { createNotification } = await import('./notifications');
+      await createNotification({
+        type: 'update',
+        table_name: 'cash_invoices',
+        record_name: invoiceId,
+        message: `تم تحديث الفاتورة النقدية #${invoiceId} بواسطة ${userName || 'System'}`,
+        user_name: userName || 'System',
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for invoice update:', notifError);
+      // Don't throw - notification is non-critical
+    }
+
     return result;
   } catch (error: any) {
     console.error('[API] updateCashInvoice error:', error);
@@ -2984,7 +3161,7 @@ export async function updateCashInvoice(
 /**
  * Delete cash invoice from Supabase
  */
-export async function deleteCashInvoice(invoiceId: string): Promise<any> {
+export async function deleteCashInvoice(invoiceId: string, userName?: string): Promise<any> {
   try {
     console.log('[API] Deleting cash invoice from Supabase:', invoiceId);
 
@@ -3000,6 +3177,22 @@ export async function deleteCashInvoice(invoiceId: string): Promise<any> {
     }
 
     console.log('[API] Invoice deleted successfully');
+    
+    // Create notification for invoice deletion
+    try {
+      const { createNotification } = await import('./notifications');
+      await createNotification({
+        type: 'delete',
+        table_name: 'cash_invoices',
+        record_name: invoiceId,
+        message: `تم حذف الفاتورة النقدية #${invoiceId} بواسطة ${userName || 'System'}`,
+        user_name: userName || 'System',
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for invoice deletion:', notifError);
+      // Don't throw - notification is non-critical
+    }
+    
     return { status: 'success', invoiceID: invoiceId };
   } catch (error: any) {
     console.error('[API] deleteCashInvoice error:', error);
@@ -4191,6 +4384,37 @@ export async function saveShopSalesInvoice(payload: {
     }
 
     console.log('[API] Shop sales invoice saved successfully');
+    
+    // Create notification for shop invoice creation
+    try {
+      const { createNotification } = await import('./notifications');
+      let userName = 'System';
+      if (payload.created_by) {
+        try {
+          const { data: adminUser } = await supabase
+            .from('admin_users')
+            .select('username')
+            .eq('id', payload.created_by)
+            .single();
+          if (adminUser?.username) {
+            userName = adminUser.username;
+          }
+        } catch (err) {
+          // Ignore error, use 'System' as fallback
+        }
+      }
+      await createNotification({
+        type: 'create',
+        table_name: 'shop_sales_invoices',
+        record_name: invoiceID,
+        message: `تم إنشاء فاتورة مبيعات المحل #${invoiceID} بواسطة ${userName}`,
+        user_name: userName,
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for shop invoice creation:', notifError);
+      // Don't throw - notification is non-critical
+    }
+    
     return { status: 'success', invoiceID, data: { invoiceID, ...invoiceHeader } };
   } catch (error: any) {
     console.error('[API] saveShopSalesInvoice error:', error);
@@ -4544,7 +4768,8 @@ export async function updateShopSalesInvoice(
       unitPrice: number;
     }>;
     itemIDsToDelete?: string[];
-  }
+  },
+  userName?: string
 ): Promise<any> {
   try {
     console.log('[API] Updating shop sales invoice:', invoiceId, payload);
@@ -4617,6 +4842,22 @@ export async function updateShopSalesInvoice(
     }
 
     console.log('[API] Shop sales invoice updated successfully');
+
+    // Create notification for invoice update
+    try {
+      const { createNotification } = await import('./notifications');
+      await createNotification({
+        type: 'update',
+        table_name: 'shop_sales_invoices',
+        record_name: invoiceId,
+        message: `تم تحديث فاتورة المبيعات #${invoiceId} بواسطة ${userName || 'System'}`,
+        user_name: userName || 'System',
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for shop sales invoice update:', notifError);
+      // Don't throw - notification is non-critical
+    }
+
     return { status: 'success', invoiceID: invoiceId };
   } catch (error: any) {
     console.error('[API] updateShopSalesInvoice error:', error);
@@ -4627,7 +4868,7 @@ export async function updateShopSalesInvoice(
 /**
  * Delete shop sales invoice
  */
-export async function deleteShopSalesInvoice(invoiceId: string): Promise<any> {
+export async function deleteShopSalesInvoice(invoiceId: string, userName?: string): Promise<any> {
   try {
     console.log('[API] Deleting shop sales invoice:', invoiceId);
 
@@ -4652,6 +4893,22 @@ export async function deleteShopSalesInvoice(invoiceId: string): Promise<any> {
     }
 
     console.log('[API] Shop sales invoice deleted successfully');
+    
+    // Create notification for shop invoice deletion
+    try {
+      const { createNotification } = await import('./notifications');
+      await createNotification({
+        type: 'delete',
+        table_name: 'shop_sales_invoices',
+        record_name: invoiceId,
+        message: `تم حذف فاتورة مبيعات المحل #${invoiceId} بواسطة ${userName || 'System'}`,
+        user_name: userName || 'System',
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for shop invoice deletion:', notifError);
+      // Don't throw - notification is non-critical
+    }
+    
     return { status: 'success' };
   } catch (error: any) {
     console.error('[API] deleteShopSalesInvoice error:', error);
@@ -4750,6 +5007,37 @@ export async function saveWarehouseSalesInvoice(payload: {
     }
 
     console.log('[API] Warehouse sales invoice saved successfully');
+    
+    // Create notification for warehouse invoice creation
+    try {
+      const { createNotification } = await import('./notifications');
+      let userName = 'System';
+      if (payload.created_by) {
+        try {
+          const { data: adminUser } = await supabase
+            .from('admin_users')
+            .select('username')
+            .eq('id', payload.created_by)
+            .single();
+          if (adminUser?.username) {
+            userName = adminUser.username;
+          }
+        } catch (err) {
+          // Ignore error, use 'System' as fallback
+        }
+      }
+      await createNotification({
+        type: 'create',
+        table_name: 'warehouse_sales_invoices',
+        record_name: invoiceID,
+        message: `تم إنشاء فاتورة مبيعات المخزن #${invoiceID} بواسطة ${userName}`,
+        user_name: userName,
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for warehouse invoice creation:', notifError);
+      // Don't throw - notification is non-critical
+    }
+    
     return { status: 'success', invoiceID, data: { invoiceID, ...invoiceHeader } };
   } catch (error: any) {
     console.error('[API] saveWarehouseSalesInvoice error:', error);
@@ -5102,7 +5390,8 @@ export async function updateWarehouseSalesInvoice(
       unitPrice: number;
     }>;
     itemIDsToDelete?: string[];
-  }
+  },
+  userName?: string
 ): Promise<any> {
   try {
     console.log('[API] Updating warehouse sales invoice:', invoiceId, payload);
@@ -5175,6 +5464,22 @@ export async function updateWarehouseSalesInvoice(
     }
 
     console.log('[API] Warehouse sales invoice updated successfully');
+
+    // Create notification for invoice update
+    try {
+      const { createNotification } = await import('./notifications');
+      await createNotification({
+        type: 'update',
+        table_name: 'warehouse_sales_invoices',
+        record_name: invoiceId,
+        message: `تم تحديث فاتورة مبيعات المستودع #${invoiceId} بواسطة ${userName || 'System'}`,
+        user_name: userName || 'System',
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for warehouse sales invoice update:', notifError);
+      // Don't throw - notification is non-critical
+    }
+
     return { status: 'success', invoiceID: invoiceId };
   } catch (error: any) {
     console.error('[API] updateWarehouseSalesInvoice error:', error);
@@ -5185,7 +5490,7 @@ export async function updateWarehouseSalesInvoice(
 /**
  * Delete warehouse sales invoice
  */
-export async function deleteWarehouseSalesInvoice(invoiceId: string): Promise<any> {
+export async function deleteWarehouseSalesInvoice(invoiceId: string, userName?: string): Promise<any> {
   try {
     console.log('[API] Deleting warehouse sales invoice:', invoiceId);
 
@@ -5210,6 +5515,22 @@ export async function deleteWarehouseSalesInvoice(invoiceId: string): Promise<an
     }
 
     console.log('[API] Warehouse sales invoice deleted successfully');
+    
+    // Create notification for warehouse invoice deletion
+    try {
+      const { createNotification } = await import('./notifications');
+      await createNotification({
+        type: 'delete',
+        table_name: 'warehouse_sales_invoices',
+        record_name: invoiceId,
+        message: `تم حذف فاتورة مبيعات المخزن #${invoiceId} بواسطة ${userName || 'System'}`,
+        user_name: userName || 'System',
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for warehouse invoice deletion:', notifError);
+      // Don't throw - notification is non-critical
+    }
+    
     return { status: 'success' };
   } catch (error: any) {
     console.error('[API] deleteWarehouseSalesInvoice error:', error);
@@ -5287,6 +5608,37 @@ export async function saveMaintenance(payload: {
     }
 
     console.log('[API] Maintenance record saved successfully');
+    
+    // Create notification for maintenance creation
+    try {
+      const { createNotification } = await import('./notifications');
+      let userName = 'System';
+      if (payload.created_by) {
+        try {
+          const { data: adminUser } = await supabase
+            .from('admin_users')
+            .select('username')
+            .eq('id', payload.created_by)
+            .single();
+          if (adminUser?.username) {
+            userName = adminUser.username;
+          }
+        } catch (err) {
+          // Ignore error, use 'System' as fallback
+        }
+      }
+      await createNotification({
+        type: 'create',
+        table_name: 'maintenance',
+        record_name: maintNo,
+        message: `تم إنشاء سجل صيانة جديد #${maintNo} بواسطة ${userName}`,
+        user_name: userName,
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for maintenance creation:', notifError);
+      // Don't throw - notification is non-critical
+    }
+    
     return data;
   } catch (error: any) {
     console.error('[API] saveMaintenance error:', error);
@@ -5595,6 +5947,36 @@ export async function updateMaintenance(
         console.error('[API] Error creating history entry:', historyErr);
         // Don't throw - the main update succeeded
       }
+      
+      // Create notification for maintenance status change
+      try {
+        const { createNotification } = await import('./notifications');
+        let userName = 'System';
+        if (payload.changedBy) {
+          try {
+            const { data: adminUser } = await supabase
+              .from('admin_users')
+              .select('username')
+              .eq('id', payload.changedBy)
+              .single();
+            if (adminUser?.username) {
+              userName = adminUser.username;
+            }
+          } catch (err) {
+            // Ignore error, use 'System' as fallback
+          }
+        }
+        await createNotification({
+          type: 'update',
+          table_name: 'maintenance',
+          record_name: maintNo,
+          message: `تم تغيير حالة الصيانة #${maintNo} من "${oldStatus}" إلى "${newStatus}" بواسطة ${userName}`,
+          user_name: userName,
+        });
+      } catch (notifError) {
+        console.error('[API] Failed to create notification for maintenance status change:', notifError);
+        // Don't throw - notification is non-critical
+      }
     }
 
     console.log('[API] Maintenance record updated successfully');
@@ -5608,7 +5990,7 @@ export async function updateMaintenance(
 /**
  * Delete maintenance record
  */
-export async function deleteMaintenance(maintNo: string): Promise<any> {
+export async function deleteMaintenance(maintNo: string, userName?: string): Promise<any> {
   try {
     console.log('[API] Deleting maintenance record:', maintNo);
 
@@ -5622,6 +6004,22 @@ export async function deleteMaintenance(maintNo: string): Promise<any> {
     }
 
     console.log('[API] Maintenance record deleted successfully');
+    
+    // Create notification for maintenance deletion
+    try {
+      const { createNotification } = await import('./notifications');
+      await createNotification({
+        type: 'delete',
+        table_name: 'maintenance',
+        record_name: maintNo,
+        message: `تم حذف سجل الصيانة #${maintNo} بواسطة ${userName || 'System'}`,
+        user_name: userName || 'System',
+      });
+    } catch (notifError) {
+      console.error('[API] Failed to create notification for maintenance deletion:', notifError);
+      // Don't throw - notification is non-critical
+    }
+    
     return { status: 'success' };
   } catch (error: any) {
     console.error('[API] deleteMaintenance error:', error);
