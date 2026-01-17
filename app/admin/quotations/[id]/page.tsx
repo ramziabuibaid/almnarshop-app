@@ -27,6 +27,7 @@ import {
   ArrowLeft,
   Eye,
   EyeOff,
+  Printer,
 } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 
@@ -36,6 +37,7 @@ interface QuotationDetail {
   ProductID: string;
   Quantity: number;
   UnitPrice: number;
+  notes?: string;
   product?: {
     name: string;
     barcode?: string;
@@ -237,6 +239,14 @@ export default function EditQuotationPage() {
     );
   };
 
+  const handleUpdateNotes = (detailID: string, newNotes: string) => {
+    setDetails((prev) =>
+      prev.map((item) =>
+        item.QuotationDetailID === detailID ? { ...item, notes: newNotes } : item
+      )
+    );
+  };
+
   const handleRemoveItem = (detailID: string) => {
     if (confirm('هل أنت متأكد من حذف هذا الصنف؟')) {
       setDetails((prev) => prev.filter((item) => item.QuotationDetailID !== detailID));
@@ -261,6 +271,7 @@ export default function EditQuotationPage() {
       ProductID: product.ProductID || product.id || product.product_id,
       Quantity: newProductQuantity,
       UnitPrice: (newProductPrice != null && newProductPrice > 0) ? newProductPrice : (product.SalePrice || product.sale_price || product.price || 0),
+      notes: '',
       product: {
         name: product.Name || product.name || '',
         barcode: product.Barcode || product.barcode,
@@ -301,6 +312,13 @@ export default function EditQuotationPage() {
     // حيث أن الإجمالي = المجموع الفرعي - الخصومات
     // وإجمالي التكلفة = التكلفة الفرعية (بدون خصم لأنها تكلفة الشراء الفعلية)
     return calculateTotal() - calculateCostTotal();
+  };
+
+  const calculateDiscountPercentage = () => {
+    const subtotal = calculateSubtotal();
+    const totalDiscount = specialDiscountAmount + giftDiscountAmount;
+    if (subtotal === 0 || totalDiscount === 0) return 0;
+    return (totalDiscount / subtotal) * 100;
   };
 
   const handleConvertToInvoice = async (target: 'shop' | 'warehouse') => {
@@ -376,11 +394,49 @@ export default function EditQuotationPage() {
           productID: item.ProductID,
           quantity: item.Quantity,
           unitPrice: item.UnitPrice,
+          notes: item.notes || '',
         })),
       });
       router.push('/admin/quotations');
     } catch (err: any) {
       console.error('[EditQuotationPage] Failed to save quotation:', err);
+      setError(err?.message || 'فشل حفظ العرض السعري');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePrintAndSave = async () => {
+    if (details.length === 0) {
+      alert('يرجى إضافة منتج واحد على الأقل');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      await saveQuotation(quotationId, {
+        date,
+        customerId: customerId || null,
+        notes,
+        status,
+        specialDiscountAmount,
+        giftDiscountAmount,
+        created_by: admin?.id || undefined,
+        items: details.map((item) => ({
+          detailID: item.QuotationDetailID.startsWith('temp-') ? undefined : item.QuotationDetailID,
+          productID: item.ProductID,
+          quantity: item.Quantity,
+          unitPrice: item.UnitPrice,
+          notes: item.notes || '',
+        })),
+      });
+      
+      // Open print page in new window
+      const url = `/admin/quotations/print/${quotationId}`;
+      window.open(url, `print-quotation-${quotationId}`, 'noopener,noreferrer');
+    } catch (err: any) {
+      console.error('[EditQuotationPage] Failed to save and print quotation:', err);
       setError(err?.message || 'فشل حفظ العرض السعري');
     } finally {
       setSaving(false);
@@ -789,6 +845,7 @@ export default function EditQuotationPage() {
                       return (
                       <tr key={item.QuotationDetailID || index}>
                         <td className="px-4 py-3 text-sm text-gray-900 font-cairo">
+                          <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             {imageUrl ? (
                               <>
@@ -812,6 +869,16 @@ export default function EditQuotationPage() {
                               </div>
                             )}
                             <span>{productName}</span>
+                            </div>
+                            <div>
+                              <textarea
+                                value={item.notes || ''}
+                                onChange={(e) => handleUpdateNotes(item.QuotationDetailID, e.target.value)}
+                                placeholder="ملاحظات..."
+                                rows={2}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo resize-none"
+                              />
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -880,6 +947,12 @@ export default function EditQuotationPage() {
                     <span className="font-semibold text-red-600">-₪{giftDiscountAmount.toFixed(2)}</span>
                   </div>
                 )}
+                {(specialDiscountAmount > 0 || giftDiscountAmount > 0) && (
+                  <div className="flex justify-between text-sm text-gray-600 font-cairo">
+                    <span>نسبة الخصم:</span>
+                    <span className="font-semibold text-green-600">{calculateDiscountPercentage().toFixed(2)}%</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-lg font-bold text-gray-900 font-cairo border-t border-gray-200 pt-2">
                   <span>الإجمالي:</span>
                   <span>₪{calculateTotal().toFixed(2)}</span>
@@ -927,6 +1000,23 @@ export default function EditQuotationPage() {
                 className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold"
               >
                 إلغاء
+              </button>
+              <button
+                onClick={handlePrintAndSave}
+                disabled={saving || details.length === 0}
+                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    جاري الحفظ...
+                  </>
+                ) : (
+                  <>
+                    <Printer size={20} />
+                    حفظ وطباعة
+                  </>
+                )}
               </button>
               <button
                 onClick={handleSave}

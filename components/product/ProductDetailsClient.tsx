@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, MessageCircle, Image as ImageIcon, Ruler, Palette, Shield, Home, ChevronLeft } from 'lucide-react';
+import { ShoppingCart, MessageCircle, Image as ImageIcon, Ruler, Palette, Shield, Home, ChevronLeft, Tag } from 'lucide-react';
 import { useShop } from '@/context/ShopContext';
 import { getDirectImageUrl } from '@/lib/utils';
+import { getProductActiveCampaign } from '@/lib/api';
 
 interface ProductDetailsClientProps {
   product: any;
@@ -17,6 +18,11 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const [activeCampaign, setActiveCampaign] = useState<{
+    campaign_id: string;
+    title: string;
+    offer_price: number;
+  } | null>(null);
 
   // Get all available images
   const images = [
@@ -57,16 +63,34 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
     }
   }, [mainImage]);
 
+  // Check if product is in an active campaign
+  useEffect(() => {
+    const checkCampaign = async () => {
+      const productId = product.id || product.ProductID || '';
+      if (productId) {
+        const campaign = await getProductActiveCampaign(productId);
+        setActiveCampaign(campaign);
+      }
+    };
+    checkCampaign();
+  }, [product.id, product.ProductID]);
+
   // Check if product is available
   const warehouseStock = product.CS_War || product.cs_war || 0;
   const shopStock = product.CS_Shop || product.cs_shop || 0;
   const totalStock = warehouseStock + shopStock;
   const isAvailable = totalStock > 0;
 
-  // Price logic - show sale_price, with strikethrough if there's a different regular price
-  const salePrice = product.price || product.SalePrice || 0;
+  // Price logic - use offer price if in active campaign, otherwise use sale_price
+  const originalSalePrice = product.price || product.SalePrice || 0;
+  const offerPrice = activeCampaign?.offer_price || null;
+  const displayPrice = offerPrice !== null ? offerPrice : originalSalePrice;
   const regularPrice = product.CostPrice || product.T1Price || product.T2Price || 0;
-  const hasDiscount = regularPrice > 0 && regularPrice > salePrice;
+  const hasDiscount = regularPrice > 0 && regularPrice > displayPrice;
+  const hasCampaignDiscount = offerPrice !== null && offerPrice < originalSalePrice;
+  const campaignDiscountPercent = hasCampaignDiscount && originalSalePrice > 0
+    ? Math.round(((originalSalePrice - offerPrice!) / originalSalePrice) * 100)
+    : 0;
 
   // WhatsApp function
   const handleWhatsApp = () => {
@@ -78,7 +102,11 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
 
   const handleAddToCart = () => {
     if (isAvailable) {
-      addToCart(product);
+      // Use offer price if product is in active campaign
+      const productToAdd = offerPrice !== null
+        ? { ...product, price: offerPrice, SalePrice: offerPrice }
+        : product;
+      addToCart(productToAdd);
     }
   };
 
@@ -219,16 +247,48 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
             ) : null}
 
             {/* Product Name */}
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-right">
-              {productName}
-            </h1>
+            <div className="mb-4">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 text-right">
+                {productName}
+              </h1>
+              {/* Campaign Badge */}
+              {activeCampaign && (
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="bg-gradient-to-r from-red-600 to-orange-500 text-white px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-2">
+                    <Tag size={16} />
+                    <span>{activeCampaign.title}</span>
+                  </div>
+                  {hasCampaignDiscount && (
+                    <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-bold">
+                      خصم {campaignDiscountPercent}%
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Price */}
             <div className="mb-6 text-right">
-              {hasDiscount ? (
+              {hasCampaignDiscount ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-4xl md:text-5xl font-bold text-red-600">
+                      ₪{displayPrice.toFixed(2)}
+                    </span>
+                    <span className="text-2xl md:text-3xl font-semibold text-gray-400 line-through">
+                      ₪{originalSalePrice.toFixed(2)}
+                    </span>
+                  </div>
+                  {hasDiscount && regularPrice > displayPrice && (
+                    <div className="text-sm text-gray-500">
+                      السعر الأصلي: <span className="line-through">₪{regularPrice.toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+              ) : hasDiscount ? (
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className="text-4xl md:text-5xl font-bold text-gray-900">
-                    ₪{salePrice.toFixed(2)}
+                    ₪{displayPrice.toFixed(2)}
                   </span>
                   <span className="text-2xl md:text-3xl font-semibold text-gray-400 line-through">
                     ₪{regularPrice.toFixed(2)}
@@ -236,7 +296,7 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
                 </div>
               ) : (
                 <span className="text-4xl md:text-5xl font-bold text-gray-900">
-                  ₪{salePrice.toFixed(2)}
+                  ₪{displayPrice.toFixed(2)}
                 </span>
               )}
             </div>

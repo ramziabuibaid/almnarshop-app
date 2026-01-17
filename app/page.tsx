@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Search, Filter, ShoppingCart, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useShop } from '@/context/ShopContext';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import ProductCard from '@/components/store/ProductCard';
 import FilterSidebar from '@/components/store/FilterSidebar';
 import FilterDrawer from '@/components/store/FilterDrawer';
@@ -12,6 +13,7 @@ import ProductGridHeader from '@/components/store/ProductGridHeader';
 import CartDrawer from '@/components/CartDrawer';
 import HeroBanner from '@/components/store/HeroBanner';
 import CategoryHighlights from '@/components/store/CategoryHighlights';
+import FlashSaleSection from '@/components/store/FlashSaleSection';
 import { FilterState, SortOption } from '@/components/store/types';
 
 const PRODUCTS_PER_PAGE = 20;
@@ -260,19 +262,16 @@ export default function Home() {
       <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
-            {/* Company Name */}
+            {/* Company Logo (Just Name) */}
             <div className="flex-shrink-0">
-              <h1 
-                className="text-2xl font-bold tracking-tight uppercase"
-                style={{ 
-                  fontFamily: 'var(--font-nunito), Nunito, system-ui, -apple-system, sans-serif',
-                  letterSpacing: '0.01em',
-                  color: '#D4AF37',
-                  fontWeight: 700
-                }}
-              >
-                ALMNAR
-              </h1>
+              <Image
+                src="/logo just name.png"
+                alt="ALMNAR"
+                width={120}
+                height={40}
+                className="h-8 md:h-10 w-auto object-contain"
+                priority
+              />
             </div>
 
             {/* Search Bar */}
@@ -351,6 +350,11 @@ export default function Home() {
 
       {/* Category Highlights */}
       <CategoryHighlights onCategoryClick={handleCategoryClick} />
+
+      {/* Flash Sale Section */}
+      <div className="max-w-7xl mx-auto px-4">
+        <FlashSaleSection />
+      </div>
 
       {/* Main Content - 2 Column Layout (Desktop) */}
       <main id="products-section" className="max-w-7xl mx-auto px-4 py-8">

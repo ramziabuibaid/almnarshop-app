@@ -10,6 +10,7 @@ interface QuotationItem {
   product?: { name: string; barcode?: string; shamelNo?: string };
   Quantity: number;
   UnitPrice: number;
+  notes?: string;
 }
 
 export default function QuotationPrintPage() {
@@ -110,6 +111,14 @@ export default function QuotationPrintPage() {
   const hasDiscounts = useMemo(() => {
     if (!data) return false;
     return (data.specialDiscount ?? 0) > 0 || (data.giftDiscount ?? 0) > 0;
+  }, [data]);
+
+  const discountPercentage = useMemo(() => {
+    if (!data) return 0;
+    const subtotal = data.subtotal || 0;
+    const totalDiscount = (data.specialDiscount || 0) + (data.giftDiscount || 0);
+    if (subtotal === 0 || totalDiscount === 0) return 0;
+    return (totalDiscount / subtotal) * 100;
   }, [data]);
 
   if (loading) {
@@ -433,7 +442,16 @@ export default function QuotationPrintPage() {
                       <td className="ta-c nowrap">
                         {item.product?.shamelNo || item.product?.barcode || item.ProductID}
                       </td>
-                      <td className="ta-r nameCell">{item.product?.name || `Product ${item.ProductID}`}</td>
+                      <td className="ta-r nameCell">
+                        <div>
+                          <div>{item.product?.name || `Product ${item.ProductID}`}</div>
+                          {item.notes && item.notes.trim() && (
+                            <div style={{ fontSize: '10px', color: '#666', marginTop: '2px', fontStyle: 'italic' }}>
+                              {item.notes}
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td className="ta-c nowrap">{item.Quantity}</td>
                       <td className="ta-c nowrap">{item.UnitPrice.toFixed(2)} ₪</td>
                       <td className="ta-c nowrap">{(item.Quantity * item.UnitPrice).toFixed(2)} ₪</td>
@@ -464,6 +482,15 @@ export default function QuotationPrintPage() {
                       <td className="label" style={{ fontWeight: 700 }}>خصم الهدايا</td>
                       <td className="value" style={{ fontWeight: 700, color: '#b91c1c' }}>
                         - {data.giftDiscount.toFixed(2)} ₪
+                      </td>
+                    </tr>
+                  )}
+
+                  {hasDiscounts && discountPercentage > 0 && (
+                    <tr>
+                      <td className="label" style={{ fontWeight: 700 }}>نسبة الخصم</td>
+                      <td className="value" style={{ fontWeight: 700, color: '#16a34a' }}>
+                        {discountPercentage.toFixed(2)}%
                       </td>
                     </tr>
                   )}

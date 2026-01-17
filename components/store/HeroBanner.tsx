@@ -1,6 +1,7 @@
 'use client';
 
 import { ChevronDown, ShoppingBag } from 'lucide-react';
+import Image from 'next/image';
 
 export default function HeroBanner() {
   const scrollToProducts = () => {
@@ -28,16 +29,17 @@ export default function HeroBanner() {
       <div className="relative h-full flex items-center justify-center">
         <div className="max-w-7xl mx-auto px-4 text-center text-white" dir="rtl">
           <div className="mb-6 md:mb-8">
-            <h1 
-              className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold mb-3 md:mb-4 tracking-tight"
-              style={{ 
-                fontFamily: 'var(--font-nunito), Nunito, system-ui, -apple-system, sans-serif',
-                color: '#D4AF37',
-                textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
-              }}
-            >
-              ALMNAR
-            </h1>
+            {/* Full Logo */}
+            <div className="mb-4 md:mb-6 flex justify-center">
+              <Image
+                src="/logo.png"
+                alt="ALMNAR Logo"
+                width={200}
+                height={200}
+                className="h-24 md:h-32 lg:h-40 w-auto object-contain"
+                priority
+              />
+            </div>
             <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold mb-2 text-gray-100">
               متجر الإلكترونيات والأجهزة المنزلية
             </p>

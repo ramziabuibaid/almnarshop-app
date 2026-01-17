@@ -1,7 +1,13 @@
-import { notFound } from 'next/navigation';
+'use client';
+
+import { useEffect } from 'react';
+import { notFound, useParams } from 'next/navigation';
 import { getProductById, getProducts } from '@/lib/api';
 import ProductDetailsClient from '@/components/product/ProductDetailsClient';
 import RelatedProducts from '@/components/product/RelatedProducts';
+import StoreHeader from '@/components/store/StoreHeader';
+import { useShop } from '@/context/ShopContext';
+import { useState } from 'react';
 
 interface PageProps {
   params: Promise<{
@@ -9,43 +15,105 @@ interface PageProps {
   }>;
 }
 
-export async function generateMetadata({ params }: PageProps) {
-  const { id } = await params;
-  const product = await getProductById(id);
-  
-  if (!product) {
-    return {
-      title: 'Product Not Found',
+export default function ProductPage() {
+  const params = useParams();
+  const id = params.id as string;
+  const { loadProducts, products: contextProducts } = useShop();
+  const [product, setProduct] = useState<any>(null);
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notFoundPage, setNotFoundPage] = useState(false);
+
+  // Load product first (fast) - priority
+  useEffect(() => {
+    if (!id) {
+      setNotFoundPage(true);
+      return;
+    }
+
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        // Fetch product details first (fast operation)
+        const productData = await getProductById(id);
+        if (!productData) {
+          setNotFoundPage(true);
+          return;
+        }
+
+        setProduct(productData);
+        setLoading(false);
+        
+        // Set page title immediately
+        document.title = `${productData.name || productData.Name || 'Product'} - My Shop`;
+      } catch (error) {
+        console.error('[ProductPage] Error loading product:', error);
+        setNotFoundPage(true);
+      }
     };
-  }
 
-  return {
-    title: `${product.name || product.Name || 'Product'} - My Shop`,
-    description: product.description || `${product.name || product.Name} - ${product.brand || product.Brand || ''}`,
-  };
-}
+    fetchProduct();
+  }, [id]);
 
-export default async function ProductPage({ params }: PageProps) {
-  const { id } = await params;
-  
-  if (!id) {
+  // Load all products in background (for search and related products) - non-blocking
+  useEffect(() => {
+    // Load products in context for search functionality (only if not already loaded)
+    if (contextProducts.length === 0) {
+      loadProducts().catch((error) => {
+        console.error('[ProductPage] Error loading products in background:', error);
+      });
+    }
+
+    // Load all products for related products section (in background)
+    const fetchAllProducts = async () => {
+      try {
+        const products = await getProducts();
+        setAllProducts(products || []);
+      } catch (error) {
+        console.error('[ProductPage] Error loading all products:', error);
+        // Use context products as fallback if available
+        if (contextProducts.length > 0) {
+          setAllProducts(contextProducts);
+        }
+      }
+    };
+
+    // Small delay to prioritize product display
+    const timer = setTimeout(() => {
+      fetchAllProducts();
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [id, contextProducts.length, loadProducts]);
+
+
+  if (notFoundPage) {
     notFound();
   }
 
-  const product = await getProductById(id);
-
-  if (!product) {
-    notFound();
+  if (loading || !product) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir="rtl">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
+          <p className="text-gray-600">جاري تحميل المنتج...</p>
+        </div>
+      </div>
+    );
   }
-
-  // Fetch all products for related products (we'll filter client-side)
-  const allProducts = await getProducts();
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
+      {/* Store Header */}
+      <StoreHeader showSearch={true} />
+      
       <ProductDetailsClient product={product} />
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <RelatedProducts currentProductId={product.id || product.ProductID || id} currentProductType={product.type || product.Type || ''} allProducts={allProducts} />
+        <RelatedProducts 
+          currentProductId={product.id || product.ProductID || id} 
+          currentProductType={product.type || product.Type || ''} 
+          allProducts={allProducts.length > 0 ? allProducts : contextProducts} 
+        />
       </div>
     </div>
   );

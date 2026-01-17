@@ -7128,6 +7128,7 @@ export async function getQuotationDetailsFromSupabase(quotationId: string): Prom
         ProductID: detail.product_id || '',
         Quantity: parseFloat(String(detail.quantity || 0)) || 0,
         UnitPrice: parseFloat(String(detail.unit_price || 0)) || 0,
+        notes: detail.notes || '',
         product: {
           product_id: product.product_id || '',
           name: product.name || '',
@@ -7205,6 +7206,7 @@ export async function saveQuotation(
       productID: string;
       quantity: number;
       unitPrice: number;
+      notes?: string;
     }>;
   }
 ): Promise<any> {
@@ -7260,6 +7262,7 @@ export async function saveQuotation(
         product_id: item.productID,
         quantity: item.quantity,
         unit_price: item.unitPrice,
+        notes: item.notes || null,
       }));
       
       const { error: detailsError } = await supabase
@@ -8257,6 +8260,433 @@ export async function getItemTracking(shamelNo: string): Promise<any[]> {
     return trackingHistory;
   } catch (error: any) {
     console.error('[API] getItemTracking error:', error);
+    throw error;
+  }
+}
+
+// ============================================================================
+// CAMPAIGNS / FLASH SALES API FUNCTIONS
+// ============================================================================
+
+/**
+ * Get all campaigns
+ */
+export async function getCampaigns(): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select('*')
+      .order('start_date', { ascending: false });
+
+    if (error) {
+      console.error('[API] Error fetching campaigns:', error);
+      throw new Error(`Failed to fetch campaigns: ${error.message}`);
+    }
+
+    return data || [];
+  } catch (error: any) {
+    console.error('[API] getCampaigns error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get a single campaign by ID
+ */
+export async function getCampaign(campaignId: string): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('campaign_id', campaignId)
+      .single();
+
+    if (error) {
+      console.error('[API] Error fetching campaign:', error);
+      throw new Error(`Failed to fetch campaign: ${error.message}`);
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('[API] getCampaign error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get campaign with its products
+ */
+export async function getCampaignWithProducts(campaignId: string): Promise<any> {
+  try {
+    // Get campaign
+    const campaign = await getCampaign(campaignId);
+
+    // Get campaign products
+    const { data: campaignProducts, error: productsError } = await supabase
+      .from('campaign_products')
+      .select('*')
+      .eq('campaign_id', campaignId);
+
+    if (productsError) {
+      console.error('[API] Error fetching campaign products:', productsError);
+      throw new Error(`Failed to fetch campaign products: ${productsError.message}`);
+    }
+
+    // Fetch product details for each campaign product
+    const productsWithDetails = [];
+    if (campaignProducts && campaignProducts.length > 0) {
+      const productIds = campaignProducts.map((cp: any) => cp.product_id).filter(Boolean);
+      if (productIds.length > 0) {
+        const { data: products, error: productsDataError } = await supabase
+          .from('products')
+          .select('*')
+          .in('product_id', productIds);
+
+        if (!productsDataError && products) {
+          for (const cp of campaignProducts) {
+            const product = products.find((p: any) => p.product_id === cp.product_id);
+            productsWithDetails.push({
+              ...cp,
+              products: product || null,
+            });
+          }
+        } else {
+          // If product fetch fails, just return campaign products without details
+          productsWithDetails.push(...campaignProducts.map((cp: any) => ({ ...cp, products: null })));
+        }
+      }
+    }
+
+    return {
+      ...campaign,
+      products: productsWithDetails,
+    };
+  } catch (error: any) {
+    console.error('[API] getCampaignWithProducts error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get the most relevant active campaign with products
+ * Returns the campaign that is currently active (now() between start_date and end_date)
+ */
+export async function getActiveCampaignWithProducts(): Promise<any | null> {
+  try {
+    const now = new Date().toISOString();
+
+    // Get active campaigns (where now is between start_date and end_date)
+    const { data: campaigns, error } = await supabase
+      .from('campaigns')
+      .select('*')
+      .lte('start_date', now)
+      .gte('end_date', now)
+      .order('start_date', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('[API] Error fetching active campaign:', error);
+      throw new Error(`Failed to fetch active campaign: ${error.message}`);
+    }
+
+    if (!campaigns || campaigns.length === 0) {
+      return null;
+    }
+
+    const campaign = campaigns[0];
+
+    // Get campaign products
+    const { data: campaignProducts, error: productsError } = await supabase
+      .from('campaign_products')
+      .select('*')
+      .eq('campaign_id', campaign.campaign_id);
+
+    if (productsError) {
+      console.error('[API] Error fetching active campaign products:', productsError);
+      // Don't throw, just return campaign without products
+      return {
+        ...campaign,
+        products: [],
+      };
+    }
+
+    // Fetch product details for each campaign product
+    const mappedProducts = [];
+    if (campaignProducts && campaignProducts.length > 0) {
+      const productIds = campaignProducts.map((cp: any) => cp.product_id).filter(Boolean);
+      if (productIds.length > 0) {
+        const { data: products, error: productsDataError } = await supabase
+          .from('products')
+          .select('*')
+          .in('product_id', productIds);
+
+        if (!productsDataError && products) {
+          for (const cp of campaignProducts) {
+            const product = products.find((p: any) => p.product_id === cp.product_id);
+            if (product) {
+              mappedProducts.push({
+                ...mapProductFromSupabase(product),
+                offer_price: cp.offer_price,
+                campaign_product_id: cp.campaign_product_id,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return {
+      ...campaign,
+      products: mappedProducts,
+    };
+  } catch (error: any) {
+    console.error('[API] getActiveCampaignWithProducts error:', error);
+    return null;
+  }
+}
+
+/**
+ * Create a new campaign
+ */
+export async function createCampaign(campaignData: {
+  title: string;
+  banner_image: string;
+  start_date: string;
+  end_date: string;
+  products: Array<{ product_id: string; offer_price: number }>;
+}): Promise<any> {
+  try {
+    // Insert campaign
+    const { data: campaign, error: campaignError } = await supabase
+      .from('campaigns')
+      .insert({
+        title: campaignData.title,
+        banner_image: campaignData.banner_image,
+        start_date: campaignData.start_date,
+        end_date: campaignData.end_date,
+      })
+      .select()
+      .single();
+
+    if (campaignError) {
+      console.error('[API] Error creating campaign:', campaignError);
+      throw new Error(`Failed to create campaign: ${campaignError.message}`);
+    }
+
+    // Insert campaign products
+    if (campaignData.products && campaignData.products.length > 0) {
+      const campaignProducts = campaignData.products.map((p) => ({
+        campaign_id: campaign.campaign_id,
+        product_id: p.product_id,
+        offer_price: p.offer_price,
+      }));
+
+      const { error: productsError } = await supabase
+        .from('campaign_products')
+        .insert(campaignProducts);
+
+      if (productsError) {
+        console.error('[API] Error creating campaign products:', productsError);
+        // Rollback: delete the campaign
+        await supabase.from('campaigns').delete().eq('campaign_id', campaign.campaign_id);
+        throw new Error(`Failed to create campaign products: ${productsError.message}`);
+      }
+    }
+
+    return campaign;
+  } catch (error: any) {
+    console.error('[API] createCampaign error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update a campaign
+ */
+export async function updateCampaign(
+  campaignId: string,
+  campaignData: {
+    title: string;
+    banner_image: string;
+    start_date: string;
+    end_date: string;
+    products: Array<{ product_id: string; offer_price: number }>;
+  }
+): Promise<any> {
+  try {
+    // Update campaign
+    const { data: campaign, error: campaignError } = await supabase
+      .from('campaigns')
+      .update({
+        title: campaignData.title,
+        banner_image: campaignData.banner_image,
+        start_date: campaignData.start_date,
+        end_date: campaignData.end_date,
+      })
+      .eq('campaign_id', campaignId)
+      .select()
+      .single();
+
+    if (campaignError) {
+      console.error('[API] Error updating campaign:', campaignError);
+      throw new Error(`Failed to update campaign: ${campaignError.message}`);
+    }
+
+    // Delete existing campaign products
+    const { error: deleteError } = await supabase
+      .from('campaign_products')
+      .delete()
+      .eq('campaign_id', campaignId);
+
+    if (deleteError) {
+      console.error('[API] Error deleting campaign products:', deleteError);
+      throw new Error(`Failed to update campaign products: ${deleteError.message}`);
+    }
+
+    // Insert new campaign products
+    if (campaignData.products && campaignData.products.length > 0) {
+      const campaignProducts = campaignData.products.map((p) => ({
+        campaign_id: campaignId,
+        product_id: p.product_id,
+        offer_price: p.offer_price,
+      }));
+
+      const { error: productsError } = await supabase
+        .from('campaign_products')
+        .insert(campaignProducts);
+
+      if (productsError) {
+        console.error('[API] Error creating campaign products:', productsError);
+        throw new Error(`Failed to update campaign products: ${productsError.message}`);
+      }
+    }
+
+    return campaign;
+  } catch (error: any) {
+    console.error('[API] updateCampaign error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get offer price for a product if it's in an active campaign
+ * Returns null if product is not in any active campaign
+ */
+export async function getProductOfferPrice(productId: string): Promise<number | null> {
+  try {
+    const now = new Date().toISOString();
+
+    // Get active campaigns
+    const { data: campaigns, error: campaignsError } = await supabase
+      .from('campaigns')
+      .select('campaign_id')
+      .lte('start_date', now)
+      .gte('end_date', now);
+
+    if (campaignsError || !campaigns || campaigns.length === 0) {
+      return null;
+    }
+
+    const campaignIds = campaigns.map((c) => c.campaign_id);
+
+    // Check if product is in any active campaign
+    const { data: campaignProduct, error: productError } = await supabase
+      .from('campaign_products')
+      .select('offer_price')
+      .eq('product_id', productId)
+      .in('campaign_id', campaignIds)
+      .limit(1)
+      .single();
+
+    if (productError || !campaignProduct) {
+      return null;
+    }
+
+    return campaignProduct.offer_price || null;
+  } catch (error: any) {
+    console.error('[API] getProductOfferPrice error:', error);
+    return null;
+  }
+}
+
+/**
+ * Get active campaign info for a specific product
+ * Returns campaign info with offer_price if product is in an active campaign
+ */
+export async function getProductActiveCampaign(productId: string): Promise<{
+  campaign_id: string;
+  title: string;
+  offer_price: number;
+} | null> {
+  try {
+    const now = new Date().toISOString();
+
+    // Get active campaigns
+    const { data: campaigns, error: campaignsError } = await supabase
+      .from('campaigns')
+      .select('campaign_id, title')
+      .lte('start_date', now)
+      .gte('end_date', now)
+      .order('start_date', { ascending: false });
+
+    if (campaignsError || !campaigns || campaigns.length === 0) {
+      return null;
+    }
+
+    // Check each campaign for the product
+    for (const campaign of campaigns) {
+      const { data: campaignProduct, error: productError } = await supabase
+        .from('campaign_products')
+        .select('offer_price')
+        .eq('product_id', productId)
+        .eq('campaign_id', campaign.campaign_id)
+        .limit(1)
+        .single();
+
+      if (!productError && campaignProduct) {
+        return {
+          campaign_id: campaign.campaign_id,
+          title: campaign.title,
+          offer_price: campaignProduct.offer_price,
+        };
+      }
+    }
+
+    return null;
+  } catch (error: any) {
+    console.error('[API] getProductActiveCampaign error:', error);
+    return null;
+  }
+}
+
+/**
+ * Delete a campaign
+ */
+export async function deleteCampaign(campaignId: string): Promise<void> {
+  try {
+    // Delete campaign products first (foreign key constraint)
+    const { error: productsError } = await supabase
+      .from('campaign_products')
+      .delete()
+      .eq('campaign_id', campaignId);
+
+    if (productsError) {
+      console.error('[API] Error deleting campaign products:', productsError);
+      throw new Error(`Failed to delete campaign products: ${productsError.message}`);
+    }
+
+    // Delete campaign
+    const { error: campaignError } = await supabase
+      .from('campaigns')
+      .delete()
+      .eq('campaign_id', campaignId);
+
+    if (campaignError) {
+      console.error('[API] Error deleting campaign:', campaignError);
+      throw new Error(`Failed to delete campaign: ${campaignError.message}`);
+    }
+  } catch (error: any) {
+    console.error('[API] deleteCampaign error:', error);
     throw error;
   }
 }

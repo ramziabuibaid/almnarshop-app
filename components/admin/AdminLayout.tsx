@@ -20,7 +20,8 @@ import {
   Wallet,
   Shield,
   Tag,
-  Bell
+  Bell,
+  Megaphone
 } from 'lucide-react';
 import NotificationCenter from './NotificationCenter';
 import { useState } from 'react';
@@ -33,6 +34,7 @@ const sidebarLinks = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/notifications', label: 'الإشعارات', icon: Bell, permission: 'dashboardAndNotifications' },
   { href: '/admin/products', label: 'المنتجات', icon: Package },
+  { href: '/admin/marketing/campaigns', label: 'العروض الترويجية', icon: Megaphone },
   { href: '/admin/labels', label: 'طباعة الملصقات', icon: Tag },
   { href: '/admin/pos', label: 'نقطة البيع (POS)', icon: CreditCard },
   { href: '/admin/invoices', label: 'الفواتير النقدية', icon: FileText },

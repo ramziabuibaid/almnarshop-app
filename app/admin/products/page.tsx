@@ -5,49 +5,77 @@ import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ProductFormModal from '@/components/admin/ProductFormModal';
 import MarketingCardGenerator from '@/components/admin/MarketingCardGenerator';
-import { Plus, Edit, Image as ImageIcon, Loader2, Package, ChevronLeft, ChevronRight, Filter, X, Search, ChevronDown, Sparkles, CheckCircle2, ArrowUp, ArrowDown, Trash } from 'lucide-react';
+import { DataTable } from '@/components/ui/data-table';
+import { Plus, Edit, Image as ImageIcon, Loader2, Package, Sparkles, CheckCircle2, Trash, Eye, X, Check } from 'lucide-react';
 import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
 import { deleteProduct, getProducts } from '@/lib/api';
-
-const PRODUCTS_PER_PAGE = 20;
-
-type SortField = 'name' | 'id' | 'barcode' | 'salePrice' | 'costPrice' | 'stock' | null;
-type SortDirection = 'asc' | 'desc';
-
-interface FilterState {
-  type: string;
-  brand: string;
-  size: string;
-  color: string;
-}
+import { ColumnDef } from '@tanstack/react-table';
 
 export default function ProductsManagerPage() {
   const { admin } = useAdminAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useLayoutEffect(() => {
-    document.title = 'المنتجات';
-  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isMarketingModalOpen, setIsMarketingModalOpen] = useState(false);
   const [marketingProduct, setMarketingProduct] = useState<Product | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState<FilterState>({
-    type: '',
-    brand: '',
-    size: '',
-    color: '',
-  });
-  const [sortField, setSortField] = useState<SortField>('name');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'saving' | 'success' | null }>({ message: '', type: null });
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const lastScrollY = useRef(0);
+  const tableRef = useRef<any>(null);
+  
+  // Load column visibility from localStorage
+  const getInitialColumnVisibility = (): Record<string, boolean> => {
+    if (typeof window === 'undefined') {
+      return {
+        T1Price: false,
+        T2Price: false,
+        Dimention: false,
+      };
+    }
+    
+    try {
+      const saved = localStorage.getItem('products-table-column-visibility');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          T1Price: false,
+          T2Price: false,
+          Dimention: false,
+          ...parsed,
+        };
+      }
+    } catch (error) {
+      console.error('[ProductsPage] Error loading column visibility:', error);
+    }
+    
+    return {
+      T1Price: false,
+      T2Price: false,
+      Dimention: false,
+    };
+  };
+
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(getInitialColumnVisibility);
+  const [isColumnVisibilityOpen, setIsColumnVisibilityOpen] = useState(false);
+  const [isNearBottom, setIsNearBottom] = useState(false);
+  const columnVisibilityButtonRef = useRef<HTMLButtonElement>(null);
+  
+  // Save column visibility to localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('products-table-column-visibility', JSON.stringify(columnVisibility));
+    } catch (error) {
+      console.error('[ProductsPage] Error saving column visibility:', error);
+    }
+  }, [columnVisibility]);
+  
   const [deleteState, setDeleteState] = useState<{
     loading: boolean;
     error: string;
@@ -70,10 +98,60 @@ export default function ProductsManagerPage() {
   const canViewCost = admin?.is_super_admin || admin?.permissions?.viewCost === true;
   // Check if user has accountant permission (for delete)
   const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
+  
+  const enableGlobalSearch = true;
+
+  useLayoutEffect(() => {
+    document.title = 'المنتجات';
+  }, []);
 
   // Set page title
   useEffect(() => {
     document.title = 'المنتجات - Products';
+  }, []);
+
+  // Handle scroll to hide/show header and check if near bottom
+  useEffect(() => {
+    let ticking = false;
+    
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY || window.pageYOffset;
+          const windowHeight = window.innerHeight;
+          const documentHeight = document.documentElement.scrollHeight;
+          
+          // Check if within 200px of bottom for pagination
+          const distanceFromBottom = documentHeight - (currentScrollY + windowHeight);
+          setIsNearBottom(distanceFromBottom < 200);
+          
+          // Show/hide header when scrolling with threshold to prevent jitter
+          const scrollDelta = currentScrollY - lastScrollY.current;
+          const threshold = 10; // Minimum scroll delta to trigger hide/show (increased to reduce jitter)
+          
+          if (currentScrollY < 80) {
+            // Always show header when near top
+            setIsHeaderHidden(false);
+          } else if (scrollDelta > threshold && currentScrollY > 150) {
+            // Hide header when scrolling down past 150px
+            setIsHeaderHidden(true);
+          } else if (scrollDelta < -threshold && currentScrollY > 80) {
+            // Show header when scrolling up (but not at top)
+            setIsHeaderHidden(false);
+          }
+          
+          lastScrollY.current = currentScrollY;
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Check on mount
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   // Load products on mount
@@ -117,16 +195,12 @@ export default function ProductsManagerPage() {
   const handleModalClose = () => {
     setIsModalOpen(false);
     setSelectedProduct(null);
-    // Clear toast when modal closes
     setToast({ message: '', type: null });
   };
 
   const handleSaveSuccess = async () => {
-    // Show success toast and reload products
     setToast({ message: 'Product Saved Successfully', type: 'success' });
     await reloadProducts();
-    
-    // Auto-hide toast after 3 seconds
     setTimeout(() => {
       setToast({ message: '', type: null });
     }, 3000);
@@ -179,9 +253,7 @@ export default function ProductsManagerPage() {
         status: 'deleted',
         references: null,
       });
-      // Reload products after deletion
       await reloadProducts();
-      // Close modal after showing success message for 1.5 seconds
       setTimeout(() => {
         setDeleteTarget(null);
         setDeleteState({
@@ -211,749 +283,358 @@ export default function ProductsManagerPage() {
     });
   };
 
-  // Filter and sort products
-  const filteredProducts = useMemo(() => {
-    let filtered = products;
-
-    // Apply search - supports multiple words (e.g., "ثلاجة سامسونج" will find products with both words)
-    if (searchQuery.trim()) {
-      // Split search query into individual words
-      const searchWords = searchQuery
-        .toLowerCase()
-        .trim()
-        .split(/\s+/)
-        .filter(word => word.length > 0);
-      
-      filtered = filtered.filter((p) => {
-        // Safely convert all values to strings and create searchable text
-        const name = String(p.name || p.Name || '').toLowerCase();
-        const id = String(p.id || p.ProductID || '').toLowerCase();
-        const barcode = String(p.barcode || p.Barcode || '').toLowerCase();
-        const brand = String(p.brand || p.Brand || '').toLowerCase();
-        
-        // Combine all searchable fields into one text
-        const searchableText = `${name} ${id} ${barcode} ${brand}`;
-        
-        // Check if ALL search words are found in the searchable text
-        return searchWords.every(word => searchableText.includes(word));
-      });
-    }
-
-    // Apply filters
-    if (filters.type) {
-      filtered = filtered.filter((p) => (p.type || p.Type) === filters.type);
-    }
-    if (filters.brand) {
-      filtered = filtered.filter((p) => (p.brand || p.Brand) === filters.brand);
-    }
-    if (filters.size) {
-      filtered = filtered.filter((p) => (p.size || p.Size) === filters.size);
-    }
-    if (filters.color) {
-      filtered = filtered.filter((p) => (p.color || p.Color) === filters.color);
-    }
-
-    // Apply sorting
-    const sorted = [...filtered];
-    if (sortField) {
-      sorted.sort((a, b) => {
-        let comparison = 0;
-        
-        switch (sortField) {
-          case 'name':
-            comparison = (a.name || a.Name || '').localeCompare(b.name || b.Name || '', 'en', { sensitivity: 'base' });
-            break;
-          case 'id':
-            const idA = String(a.id || a.ProductID || '').toLowerCase();
-            const idB = String(b.id || b.ProductID || '').toLowerCase();
-            // Try numeric comparison first, then string comparison
-            const numA = parseInt(idA);
-            const numB = parseInt(idB);
-            if (!isNaN(numA) && !isNaN(numB)) {
-              comparison = numA - numB;
-            } else {
-              comparison = idA.localeCompare(idB, 'en', { sensitivity: 'base' });
-            }
-            break;
-          case 'barcode':
-            const barcodeA = String(a.barcode || a.Barcode || '').toLowerCase();
-            const barcodeB = String(b.barcode || b.Barcode || '').toLowerCase();
-            // Try numeric comparison first, then string comparison
-            const barcodeNumA = parseInt(barcodeA);
-            const barcodeNumB = parseInt(barcodeB);
-            if (!isNaN(barcodeNumA) && !isNaN(barcodeNumB)) {
-              comparison = barcodeNumA - barcodeNumB;
-            } else {
-              comparison = barcodeA.localeCompare(barcodeB, 'en', { sensitivity: 'base' });
-            }
-            break;
-          case 'salePrice':
-            comparison = (a.price || a.SalePrice || 0) - (b.price || b.SalePrice || 0);
-            break;
-          case 'costPrice':
-            const costA = parseFloat(String(a.CostPrice || 0)) || 0;
-            const costB = parseFloat(String(b.CostPrice || 0)) || 0;
-            comparison = costA - costB;
-            break;
-          case 'stock':
-            const stockA = (a.CS_War || 0) + (a.CS_Shop || 0);
-            const stockB = (b.CS_War || 0) + (b.CS_Shop || 0);
-            comparison = stockA - stockB;
-            break;
-        }
-        
-        return sortDirection === 'asc' ? comparison : -comparison;
-      });
-    }
-
-    return sorted;
-  }, [products, searchQuery, filters, sortField, sortDirection]);
-
-  // Reset to page 1 when filters, search, or sort change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, filters, sortField, sortDirection]);
-
-  // Handle column header click for sorting
-  const handleSort = (field: SortField) => {
-    // Prevent sorting by costPrice if user doesn't have permission
-    if (field === 'costPrice' && !canViewCost) {
-      return;
-    }
-    
-    if (sortField === field) {
-      // Toggle direction if same field
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      // Set new field with ascending direction
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
-
-  // Get sort icon for column header
-  const getSortIcon = (field: SortField) => {
-    if (sortField !== field) {
-      return null;
-    }
-    return sortDirection === 'asc' ? (
-      <ArrowUp size={14} className="inline-block mr-1" />
-    ) : (
-      <ArrowDown size={14} className="inline-block mr-1" />
-    );
-  };
-
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
-  const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
-  const endIndex = startIndex + PRODUCTS_PER_PAGE;
-  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
-
-  // Cascading Filters - Each filter shows only options available based on other selected filters
-  const availableTypes = useMemo(() => {
-    let filtered = products;
-    
-    // Apply other filters (excluding type)
-    if (filters.brand) {
-      filtered = filtered.filter((p) => (p.brand || p.Brand) === filters.brand);
-    }
-    if (filters.size) {
-      filtered = filtered.filter((p) => (p.size || p.Size) === filters.size);
-    }
-    if (filters.color) {
-      filtered = filtered.filter((p) => (p.color || p.Color) === filters.color);
-    }
-    
-    const types = new Set<string>();
-    filtered.forEach((p) => {
-      if (p.type || p.Type) types.add(p.type || p.Type || '');
-    });
-    return Array.from(types).sort();
-  }, [products, filters.brand, filters.size, filters.color]);
-
-  const availableBrands = useMemo(() => {
-    let filtered = products;
-    
-    // Apply other filters (excluding brand)
-    if (filters.type) {
-      filtered = filtered.filter((p) => (p.type || p.Type) === filters.type);
-    }
-    if (filters.size) {
-      filtered = filtered.filter((p) => (p.size || p.Size) === filters.size);
-    }
-    if (filters.color) {
-      filtered = filtered.filter((p) => (p.color || p.Color) === filters.color);
-    }
-    
-    const brands = new Set<string>();
-    filtered.forEach((p) => {
-      if (p.brand || p.Brand) brands.add(p.brand || p.Brand || '');
-    });
-    return Array.from(brands).sort();
-  }, [products, filters.type, filters.size, filters.color]);
-
-  const availableSizes = useMemo(() => {
-    let filtered = products;
-    
-    // Apply other filters (excluding size)
-    if (filters.type) {
-      filtered = filtered.filter((p) => (p.type || p.Type) === filters.type);
-    }
-    if (filters.brand) {
-      filtered = filtered.filter((p) => (p.brand || p.Brand) === filters.brand);
-    }
-    if (filters.color) {
-      filtered = filtered.filter((p) => (p.color || p.Color) === filters.color);
-    }
-    
-    const sizes = new Set<string>();
-    filtered.forEach((p) => {
-      if (p.size || p.Size) sizes.add(p.size || p.Size || '');
-    });
-    return Array.from(sizes).sort();
-  }, [products, filters.type, filters.brand, filters.color]);
-
-  const availableColors = useMemo(() => {
-    let filtered = products;
-    
-    // Apply other filters (excluding color)
-    if (filters.type) {
-      filtered = filtered.filter((p) => (p.type || p.Type) === filters.type);
-    }
-    if (filters.brand) {
-      filtered = filtered.filter((p) => (p.brand || p.Brand) === filters.brand);
-    }
-    if (filters.size) {
-      filtered = filtered.filter((p) => (p.size || p.Size) === filters.size);
-    }
-    
-    const colors = new Set<string>();
-    filtered.forEach((p) => {
-      if (p.color || p.Color) colors.add(p.color || p.Color || '');
-    });
-    return Array.from(colors).sort();
-  }, [products, filters.type, filters.brand, filters.size]);
-
-  // Reset dependent filters when parent filter changes
-  useEffect(() => {
-    setFilters((prev) => {
-      const updated = { ...prev };
-      let changed = false;
-
-      if (updated.type && !availableTypes.includes(updated.type)) {
-        updated.type = '';
-        updated.brand = '';
-        updated.size = '';
-        updated.color = '';
-        changed = true;
-      }
-      if (updated.brand && !availableBrands.includes(updated.brand)) {
-        updated.brand = '';
-        updated.size = '';
-        updated.color = '';
-        changed = true;
-      }
-      if (updated.size && !availableSizes.includes(updated.size)) {
-        updated.size = '';
-        updated.color = '';
-        changed = true;
-      }
-      if (updated.color && !availableColors.includes(updated.color)) {
-        updated.color = '';
-        changed = true;
-      }
-
-      return changed ? updated : prev;
-    });
-  }, [availableTypes, availableBrands, availableSizes, availableColors]);
-
-  // SearchableSelect Component
-  interface SearchableSelectProps {
-    label: string;
-    value: string;
-    options: string[];
-    onChange: (value: string) => void;
-    placeholder?: string;
-  }
-
-  function SearchableSelect({ label, value, options, onChange, placeholder = 'All' }: SearchableSelectProps) {
-    const [isOpen, setIsOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    const filteredOptions = useMemo(() => {
-      if (!searchQuery.trim()) return options;
-      const query = searchQuery.toLowerCase();
-      return options.filter(opt => opt.toLowerCase().includes(query));
-    }, [options, searchQuery]);
-
-    const selectedOption = value ? options.find(opt => opt === value) : null;
-
-    useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-        if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-          setIsOpen(false);
-          setSearchQuery('');
-        }
-      };
-
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    return (
-      <div className="relative" ref={containerRef}>
-        <label className="block text-sm font-semibold text-gray-900 mb-2">
-          {label}
-        </label>
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setIsOpen(!isOpen)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-right flex items-center justify-between"
-          >
-            <ChevronDown size={16} className={`text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-            <span className={selectedOption ? 'text-gray-900 font-medium' : 'text-gray-700'}>
-              {selectedOption || placeholder}
-            </span>
-          </button>
-          
-          {isOpen && (
-            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden" dir="rtl">
-              <div className="p-2 border-b border-gray-200">
-                <div className="relative">
-                  <Search size={16} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="بحث..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="w-full pr-8 pl-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900 placeholder:text-gray-500"
-                    autoFocus
-                  />
-                </div>
-              </div>
-              <div className="overflow-y-auto max-h-48">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChange('');
-                    setIsOpen(false);
-                    setSearchQuery('');
-                  }}
-                  className={`w-full text-right px-3 py-2 hover:bg-gray-100 transition-colors text-gray-900 ${
-                    !value ? 'bg-gray-100 font-medium' : ''
-                  }`}
-                >
-                  {placeholder}
-                </button>
-                {filteredOptions.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-gray-600 text-right">لا توجد نتائج</div>
-                ) : (
-                  filteredOptions.map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => {
-                        onChange(option);
-                        setIsOpen(false);
-                        setSearchQuery('');
-                      }}
-                      className={`w-full text-right px-3 py-2 hover:bg-gray-100 transition-colors text-gray-900 ${
-                        value === option ? 'bg-gray-100 font-medium' : ''
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   const handleImageError = (productId: string) => {
     setImageErrors((prev) => ({ ...prev, [productId]: true }));
   };
 
-  return (
-    <AdminLayout>
-      <div className="space-y-6" dir="rtl">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={handleAddNew}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
-          >
-            <span>إضافة منتج جديد</span>
-            <Plus size={20} />
-          </button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">المنتجات</h1>
-            <p className="text-gray-600 mt-1">
-              إدارة مخزون المنتجات ({filteredProducts.length} منتج)
-              {totalPages > 1 && ` - صفحة ${currentPage} من ${totalPages}`}
-            </p>
-          </div>
-        </div>
-
-        {/* Search and Filters Bar */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4" dir="rtl">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="md:hidden p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Filter size={20} className="text-gray-700" />
-            </button>
-            <input
-              type="text"
-              placeholder="البحث بالاسم، الرمز، الباركود، أو العلامة التجارية..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500"
-              dir="rtl"
-            />
-          </div>
-
-          {/* Filters - Desktop */}
-          <div className="hidden md:grid md:grid-cols-4 gap-4">
-            <SearchableSelect
-              label="فئة البضاعة"
-              value={filters.type}
-              options={availableTypes}
-              onChange={(value) => {
-                const newFilters = { ...filters, type: value };
-                if (!value) {
-                  newFilters.brand = '';
-                  newFilters.size = '';
-                  newFilters.color = '';
-                }
-                setFilters(newFilters);
-              }}
-              placeholder="جميع الفئات"
-            />
-            <SearchableSelect
-              label="العلامة التجارية"
-              value={filters.brand}
-              options={availableBrands}
-              onChange={(value) => {
-                const newFilters = { ...filters, brand: value };
-                if (!value) {
-                  newFilters.size = '';
-                  newFilters.color = '';
-                }
-                setFilters(newFilters);
-              }}
-              placeholder="جميع العلامات"
-            />
-            <SearchableSelect
-              label="الحجم"
-              value={filters.size}
-              options={availableSizes}
-              onChange={(value) => {
-                const newFilters = { ...filters, size: value };
-                if (!value) {
-                  newFilters.color = '';
-                }
-                setFilters(newFilters);
-              }}
-              placeholder="جميع الأحجام"
-            />
-            <SearchableSelect
-              label="اللون"
-              value={filters.color}
-              options={availableColors}
-              onChange={(value) => setFilters(prev => ({ ...prev, color: value }))}
-              placeholder="جميع الألوان"
-            />
-          </div>
-
-          {/* Reset Filters */}
-          <div className="flex items-center justify-start">
-            <button
-              onClick={() => setFilters({ type: '', brand: '', size: '', color: '' })}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-            >
-              إعادة تعيين الفلاتر
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Filters Drawer */}
-        {isFilterOpen && (
-          <>
-            <div
-              className="fixed inset-0 bg-black/50 z-[60] md:hidden"
-              onClick={() => setIsFilterOpen(false)}
-            />
-            <div className="fixed top-0 left-0 h-full w-80 bg-white shadow-xl z-[70] overflow-y-auto md:hidden" dir="rtl">
-              <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-                <button
-                  onClick={() => setIsFilterOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <X size={20} className="text-gray-600" />
-                </button>
-                <h2 className="text-xl font-bold text-gray-900">الفلاتر</h2>
-              </div>
-              <div className="p-4 space-y-4">
-                <SearchableSelect
-                  label="فئة البضاعة"
-                  value={filters.type}
-                  options={availableTypes}
-                  onChange={(value) => {
-                    const newFilters = { ...filters, type: value };
-                    if (!value) {
-                      newFilters.brand = '';
-                      newFilters.size = '';
-                      newFilters.color = '';
-                    }
-                    setFilters(newFilters);
-                  }}
-                  placeholder="جميع الفئات"
-                />
-                <SearchableSelect
-                  label="العلامة التجارية"
-                  value={filters.brand}
-                  options={availableBrands}
-                  onChange={(value) => {
-                    const newFilters = { ...filters, brand: value };
-                    if (!value) {
-                      newFilters.size = '';
-                      newFilters.color = '';
-                    }
-                    setFilters(newFilters);
-                  }}
-                  placeholder="جميع العلامات"
-                />
-                <SearchableSelect
-                  label="الحجم"
-                  value={filters.size}
-                  options={availableSizes}
-                  onChange={(value) => {
-                    const newFilters = { ...filters, size: value };
-                    if (!value) {
-                      newFilters.color = '';
-                    }
-                    setFilters(newFilters);
-                  }}
-                  placeholder="جميع الأحجام"
-                />
-                <SearchableSelect
-                  label="اللون"
-                  value={filters.color}
-                  options={availableColors}
-                  onChange={(value) => setFilters(prev => ({ ...prev, color: value }))}
-                  placeholder="جميع الألوان"
-                />
-                <button
-                  onClick={() => {
-                    setFilters({ type: '', brand: '', size: '', color: '' });
-                    setIsFilterOpen(false);
-                  }}
-                  className="w-full px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium transition-colors"
-                >
-                  تطبيق الفلاتر
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Products Table */}
-        {loading ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Loading products...</p>
-          </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-            <Package size={48} className="text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg">No products found</p>
-            {searchQuery && (
-              <p className="text-gray-500 text-sm mt-2">
-                Try adjusting your search query
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      الصورة
-                    </th>
-                    <th 
-                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                      onClick={() => handleSort('name')}
-                    >
-                      <div className="flex items-center justify-end">
-                        الاسم
-                        {getSortIcon('name')}
-                      </div>
-                    </th>
-                    <th 
-                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                      onClick={() => handleSort('id')}
-                    >
-                      <div className="flex items-center justify-end">
-                        الرمز / الباركود
-                        {getSortIcon('id')}
-                      </div>
-                    </th>
-                    <th 
-                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                      onClick={() => handleSort('salePrice')}
-                    >
-                      <div className="flex items-center justify-end">
-                        سعر البيع
-                        {getSortIcon('salePrice')}
-                      </div>
-                    </th>
-                    {canViewCost && (
-                      <th 
-                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                        onClick={() => handleSort('costPrice')}
-                      >
-                        <div className="flex items-center justify-end">
-                          سعر التكلفة
-                          {getSortIcon('costPrice')}
-                        </div>
-                      </th>
-                    )}
-                    <th 
-                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                      onClick={() => handleSort('stock')}
-                    >
-                      <div className="flex items-center justify-end">
-                        المخزون
-                        {getSortIcon('stock')}
-                      </div>
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      الإجراءات
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {paginatedProducts.map((product) => {
+  // Define columns for the DataTable
+  const columns: ColumnDef<Product>[] = useMemo(
+    () => [
+      {
+        id: 'Image',
+        accessorKey: 'Image',
+        header: 'الصورة',
+        enableSorting: false,
+        enableHiding: false,
+        minSize: 100,
+        cell: ({ row }) => {
+          const product = row.original;
                     const rawImageUrl = product.image || product.Image || product.ImageUrl || '';
                     const imageUrl = getDirectImageUrl(rawImageUrl);
-                    const hasImageError = imageErrors[product.id] || !imageUrl;
+          const productId = product.id || product.ProductID || '';
+          const hasImageError = imageErrors[productId] || !imageUrl;
                     
                     return (
-                      <tr
-                        key={product.id}
-                        className="hover:bg-gray-50 transition-colors"
-                      >
-                        {/* Image */}
-                        <td className="px-4 py-3 text-right">
                           <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                             {hasImageError ? (
                               <ImageIcon size={24} className="text-gray-300" />
                             ) : (
                               <img
                                 src={imageUrl}
-                                alt={product.name}
+                  alt={product.name || product.Name || ''}
                                 className="object-contain w-full h-full"
-                                onError={() => handleImageError(product.id)}
+                  onError={() => handleImageError(productId)}
                                 loading="lazy"
                               />
                             )}
                           </div>
-                        </td>
-
-                        {/* Name */}
-                        <td className="px-4 py-3 text-right">
-                          <div className="font-medium text-gray-900">
-                            {product.name || product.Name || 'N/A'}
+          );
+        },
+      },
+      {
+        id: 'Name',
+        accessorKey: 'Name',
+        header: 'الاسم',
+        enableSorting: true,
+        enableHiding: false,
+        minSize: 200,
+        cell: ({ row }) => {
+          const product = row.original;
+          const name = product.name || product.Name || 'N/A';
+          const brand = product.brand || product.Brand;
+          return (
+            <div>
+              <div className="font-medium text-gray-900">{name}</div>
+              {brand && <div className="text-xs text-gray-500 mt-1">{brand}</div>}
                           </div>
-                          {(product.brand || product.Brand) && (
-                            <div className="text-sm text-gray-500 mt-1">
-                              {product.brand || product.Brand}
-                            </div>
-                          )}
-                        </td>
-
-                        {/* ID / Barcode */}
-                        <td className="px-4 py-3 text-right">
-                          <div className="text-sm text-gray-900 font-mono">
-                            {product.id || product.ProductID || 'N/A'}
-                          </div>
-                          {product.barcode && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              {product.barcode}
-                            </div>
-                          )}
-                        </td>
-
-                        {/* Sale Price */}
-                        <td className="px-4 py-3 text-right">
+          );
+        },
+      },
+      {
+        id: 'ProductID',
+        accessorKey: 'ProductID',
+        header: 'الرمز',
+        enableSorting: true,
+        minSize: 120,
+        cell: ({ row }) => {
+          const product = row.original;
+          const productId = product.id || product.ProductID || 'N/A';
+          const shamelNo = product['Shamel No'] || '';
+          return (
+            <div className="flex flex-col gap-1">
+              <div className="text-sm text-gray-900 font-mono">
+                {productId}
+              </div>
+              {shamelNo && (
+                <div className="text-xs text-gray-500">
+                  شامل: {shamelNo}
+                </div>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        id: 'Barcode',
+        accessorKey: 'Barcode',
+        header: 'الباركود',
+        enableSorting: true,
+        minSize: 120,
+        cell: ({ row }) => {
+          const product = row.original;
+          const barcode = product.barcode || product.Barcode || '';
+          return barcode ? (
+            <div className="text-sm text-gray-900 font-mono">{barcode}</div>
+          ) : (
+            <span className="text-gray-400 text-sm">—</span>
+          );
+        },
+      },
+      {
+        id: 'ShamelNo',
+        accessorKey: 'Shamel No',
+        header: 'شامل رقم',
+        enableSorting: true,
+        enableColumnFilter: true,
+        minSize: 120,
+        cell: ({ row }) => {
+          const product = row.original;
+          const shamelNo = product['Shamel No'] || '';
+          return shamelNo ? (
+            <div className="text-sm text-gray-900">{shamelNo}</div>
+          ) : (
+            <span className="text-gray-400 text-sm">—</span>
+          );
+        },
+      },
+      {
+        id: 'SalePrice',
+        accessorKey: 'SalePrice',
+        header: 'سعر البيع',
+        enableSorting: true,
+        minSize: 120,
+        cell: ({ row }) => {
+          const product = row.original;
+          const price = product.price || product.SalePrice || 0;
+          return (
                           <div className="text-sm font-semibold text-gray-900">
-                            ₪{parseFloat(product.price || product.SalePrice || 0).toFixed(2)}
+              ₪{parseFloat(String(price)).toFixed(2)}
                           </div>
-                        </td>
-
-                        {/* Cost Price */}
-                        {canViewCost && (
-                          <td className="px-4 py-3 text-right">
-                            <div className="text-sm text-gray-600">
-                              {product.CostPrice !== undefined && product.CostPrice !== null && product.CostPrice !== '' ? (
-                                `₪${parseFloat(String(product.CostPrice || 0)).toFixed(2)}`
-                              ) : (
-                                <span className="text-gray-400">—</span>
-                              )}
-                            </div>
-                          </td>
-                        )}
-
-                        {/* Stock */}
-                        <td className="px-4 py-3 text-right">
+          );
+        },
+      },
+      {
+        id: 'CostPrice',
+        accessorKey: 'CostPrice',
+        header: 'سعر التكلفة',
+        enableSorting: true,
+        enableColumnFilter: true,
+        enableHiding: !canViewCost,
+        minSize: 120,
+        cell: ({ row }) => {
+          const product = row.original;
+          if (!canViewCost) return <span className="text-gray-400 text-sm">—</span>;
+          const costPrice = product.CostPrice;
+          return costPrice !== undefined && costPrice !== null && costPrice !== '' ? (
+            <div className="text-sm text-gray-600">₪{parseFloat(String(costPrice)).toFixed(2)}</div>
+          ) : (
+            <span className="text-gray-400 text-sm">—</span>
+          );
+        },
+      },
+      {
+        id: 'T1Price',
+        accessorKey: 'T1Price',
+        header: 'سعر T1',
+        enableSorting: true,
+        minSize: 100,
+        cell: ({ row }) => {
+          const product = row.original;
+          const t1Price = product.T1Price;
+          return t1Price !== undefined && t1Price !== null && t1Price !== '' ? (
+            <div className="text-sm text-gray-600">₪{parseFloat(String(t1Price)).toFixed(2)}</div>
+          ) : (
+            <span className="text-gray-400 text-sm">—</span>
+          );
+        },
+      },
+      {
+        id: 'T2Price',
+        accessorKey: 'T2Price',
+        header: 'سعر T2',
+        enableSorting: true,
+        minSize: 100,
+        cell: ({ row }) => {
+          const product = row.original;
+          const t2Price = product.T2Price;
+          return t2Price !== undefined && t2Price !== null && t2Price !== '' ? (
+            <div className="text-sm text-gray-600">₪{parseFloat(String(t2Price)).toFixed(2)}</div>
+          ) : (
+            <span className="text-gray-400 text-sm">—</span>
+          );
+        },
+      },
+      {
+        id: 'Stock',
+        accessorFn: (row) => (row.CS_War || 0) + (row.CS_Shop || 0),
+        header: 'المخزون',
+        enableSorting: true,
+        minSize: 150,
+        cell: ({ row }) => {
+          const product = row.original;
+          const warehouseStock = product.CS_War !== undefined && product.CS_War !== null ? (product.CS_War || 0) : null;
+          const shopStock = product.CS_Shop !== undefined && product.CS_Shop !== null ? (product.CS_Shop || 0) : null;
+          const total = (warehouseStock || 0) + (shopStock || 0);
+          
+          if (warehouseStock === null && shopStock === null) {
+            return <span className="text-gray-400 text-sm">—</span>;
+          }
+          
+          return (
                           <div className="text-sm text-gray-600">
-                            {(product.CS_War !== undefined && product.CS_War !== null) || 
-                             (product.CS_Shop !== undefined && product.CS_Shop !== null) ? (
                               <div className="flex flex-col gap-1">
-                                {product.CS_War !== undefined && product.CS_War !== null && (
+                {warehouseStock !== null && (
                                   <span className="text-xs text-gray-500">
                                     م: <span className={`font-medium ${
-                                      (product.CS_War || 0) > 0 ? 'text-green-700' : 'text-red-700'
-                                    }`}>{product.CS_War || 0}</span>
+                      warehouseStock > 0 ? 'text-green-700' : 'text-red-700'
+                    }`}>{warehouseStock}</span>
                                   </span>
                                 )}
-                                {product.CS_Shop !== undefined && product.CS_Shop !== null && (
+                {shopStock !== null && (
                                   <span className="text-xs text-gray-500">
                                     مح: <span className={`font-medium ${
-                                      (product.CS_Shop || 0) > 0 ? 'text-green-700' : 'text-red-700'
-                                    }`}>{product.CS_Shop || 0}</span>
+                      shopStock > 0 ? 'text-green-700' : 'text-red-700'
+                    }`}>{shopStock}</span>
                                   </span>
                                 )}
-                                {(product.CS_War || 0) + (product.CS_Shop || 0) > 0 && (
+                {(warehouseStock || 0) + (shopStock || 0) > 0 && (
                                   <span
                                     className={`px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                                      ((product.CS_War || 0) + (product.CS_Shop || 0)) > 0
+                      total > 0
                                         ? 'bg-green-100 text-green-800'
                                         : 'bg-red-100 text-red-800'
                                     }`}
                                   >
-                                    المجموع: {(product.CS_War || 0) + (product.CS_Shop || 0)}
+                    المجموع: {total}
                                   </span>
                                 )}
                               </div>
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
                           </div>
-                        </td>
-
-                        {/* Actions */}
-                        <td className="px-4 py-3 text-right">
+          );
+        },
+      },
+      {
+        id: 'Type',
+        accessorKey: 'Type',
+        header: 'النوع',
+        enableSorting: true,
+        minSize: 120,
+        cell: ({ row }) => {
+          const product = row.original;
+          const type = product.type || product.Type || '';
+          return type ? (
+            <div className="text-sm text-gray-900">{type}</div>
+          ) : (
+            <span className="text-gray-400 text-sm">—</span>
+          );
+        },
+      },
+      {
+        id: 'Brand',
+        accessorKey: 'Brand',
+        header: 'العلامة التجارية',
+        enableSorting: true,
+        minSize: 150,
+        cell: ({ row }) => {
+          const product = row.original;
+          const brand = product.brand || product.Brand || '';
+          return brand ? (
+            <div className="text-sm text-gray-900">{brand}</div>
+          ) : (
+            <span className="text-gray-400 text-sm">—</span>
+          );
+        },
+      },
+      {
+        id: 'Origin',
+        accessorKey: 'Origin',
+        header: 'المنشأ',
+        enableSorting: true,
+        minSize: 120,
+        cell: ({ row }) => {
+          const product = row.original;
+          const origin = product.Origin || '';
+          return origin ? (
+            <div className="text-sm text-gray-900">{origin}</div>
+          ) : (
+            <span className="text-gray-400 text-sm">—</span>
+          );
+        },
+      },
+      {
+        id: 'Warranty',
+        accessorKey: 'Warranty',
+        header: 'الضمان',
+        enableSorting: true,
+        minSize: 120,
+        cell: ({ row }) => {
+          const product = row.original;
+          const warranty = product.Warranty || '';
+          return warranty ? (
+            <div className="text-sm text-gray-900">{warranty}</div>
+          ) : (
+            <span className="text-gray-400 text-sm">—</span>
+          );
+        },
+      },
+      {
+        id: 'Size',
+        accessorKey: 'Size',
+        header: 'الحجم',
+        enableSorting: true,
+        minSize: 100,
+        cell: ({ row }) => {
+          const product = row.original;
+          const size = product.size || product.Size || '';
+          return size ? (
+            <div className="text-sm text-gray-900">{size}</div>
+          ) : (
+            <span className="text-gray-400 text-sm">—</span>
+          );
+        },
+      },
+      {
+        id: 'Color',
+        accessorKey: 'Color',
+        header: 'اللون',
+        enableSorting: true,
+        minSize: 100,
+        cell: ({ row }) => {
+          const product = row.original;
+          const color = product.color || product.Color || '';
+          return color ? (
+            <div className="text-sm text-gray-900">{color}</div>
+          ) : (
+            <span className="text-gray-400 text-sm">—</span>
+          );
+        },
+      },
+      {
+        id: 'Dimention',
+        accessorKey: 'Dimention',
+        header: 'الأبعاد',
+        enableSorting: true,
+        minSize: 120,
+        cell: ({ row }) => {
+          const product = row.original;
+          const dimension = product.Dimention || '';
+          return dimension ? (
+            <div className="text-sm text-gray-900">{dimension}</div>
+          ) : (
+            <span className="text-gray-400 text-sm">—</span>
+          );
+        },
+      },
+      {
+        id: 'Actions',
+        header: 'الإجراءات',
+        enableSorting: false,
+        enableHiding: false,
+        enableColumnFilter: false,
+        minSize: 150,
+        cell: ({ row }) => {
+          const product = row.original;
+          return (
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleEdit(product)}
@@ -979,71 +660,196 @@ export default function ProductsManagerPage() {
                             </button>
                           )}
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+          );
+        },
+      },
+    ],
+    [canViewCost, canAccountant, imageErrors]
+  );
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-4" dir="rtl">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-                className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight size={20} />
-                التالي
-              </button>
-              
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
+  // Filter products based on search query (additional to column filters)
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return products;
+    }
+
+    const searchWords = searchQuery
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter((word) => word.length > 0);
+
+    return products.filter((p) => {
+      const name = String(p.name || p.Name || '').toLowerCase();
+      const id = String(p.id || p.ProductID || '').toLowerCase();
+      const barcode = String(p.barcode || p.Barcode || '').toLowerCase();
+      const brand = String(p.brand || p.Brand || '').toLowerCase();
+
+      const searchableText = `${name} ${id} ${barcode} ${brand}`;
+      return searchWords.every((word) => searchableText.includes(word));
+    });
+  }, [products, searchQuery]);
                   
                   return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-2 rounded-lg transition-colors ${
-                        currentPage === pageNum
-                          ? 'bg-gray-900 text-white'
-                          : 'border border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-              </div>
-
+    <AdminLayout>
+      <div className="space-y-6" dir="rtl">
+        {/* Header */}
+        <div
+          ref={headerRef}
+          className="relative"
+          style={{
+            maxHeight: isHeaderHidden ? '0' : '300px',
+            marginBottom: isHeaderHidden ? '0' : '1.5rem',
+            overflow: isHeaderHidden ? 'hidden' : 'visible',
+            transitionProperty: 'max-height, margin-bottom',
+            transitionDuration: '250ms',
+            transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+            willChange: 'max-height, margin-bottom',
+          }}
+        >
+          <div className="space-y-4">
+          <div className="flex items-center justify-between">
               <button
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              onClick={handleAddNew}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
               >
-                السابق
-                <ChevronLeft size={20} />
+              <span>إضافة منتج جديد</span>
+              <Plus size={20} />
+              </button>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">المنتجات</h1>
+              <p className="text-gray-600 mt-1">إدارة مخزون المنتجات ({filteredProducts.length} منتج)</p>
+            </div>
+            </div>
+          
+          {/* Global Search and Column Visibility */}
+          {enableGlobalSearch && (
+            <div className="flex items-center gap-3">
+              <input
+                type="text"
+                placeholder="البحث بالاسم، الرمز، الباركود، أو العلامة التجارية..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500"
+                dir="rtl"
+              />
+              
+              {/* Column Visibility Toggle */}
+              {!loading && filteredProducts.length > 0 && (
+                <div className="relative">
+                    <button
+                    ref={columnVisibilityButtonRef}
+                    type="button"
+                    onClick={() => {
+                      setIsColumnVisibilityOpen(!isColumnVisibilityOpen);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors text-sm font-medium text-gray-700 whitespace-nowrap cursor-pointer"
+                  >
+                    <Eye size={16} />
+                    <span>الأعمدة / Columns</span>
+                    {Object.values(columnVisibility).some((v) => !v) && (
+                      <span className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full text-xs">
+                        {Object.values(columnVisibility).filter((v) => !v).length}
+                      </span>
+                    )}
+                    </button>
+
+                  {isColumnVisibilityOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-[90]"
+                        onClick={() => setIsColumnVisibilityOpen(false)}
+                      />
+                      <div 
+                        className="absolute left-0 top-full mt-2 w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-[100] p-3 max-h-96 overflow-y-auto" 
+                        dir="rtl"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ position: 'absolute' }}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-semibold text-gray-900 text-sm">إظهار/إخفاء الأعمدة</h3>
+              <button
+                            onClick={() => setIsColumnVisibilityOpen(false)}
+                            className="p-1 hover:bg-gray-100 rounded"
+              >
+                            <X size={16} />
               </button>
             </div>
-            <div className="text-sm text-gray-600">
-              عرض {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} من {filteredProducts.length} منتج
+                        <div className="space-y-2">
+                          {columns
+                            .filter((col: any) => col.enableHiding !== false && col.id !== 'Actions' && col.id !== 'Image')
+                            .map((col: any) => {
+                              const columnId = col.id || col.accessorKey || col.accessorFn?.toString();
+                              const headerText = typeof col.header === 'string' ? col.header : columnId;
+                              const isVisible = columnVisibility[columnId] !== false;
+                              return (
+                                <label
+                                  key={columnId}
+                                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isVisible}
+                                    onChange={(e) => {
+                                      setColumnVisibility((prev) => ({
+                                        ...prev,
+                                        [columnId]: e.target.checked,
+                                      }));
+                                      // Update table if available
+                                      if (tableRef.current) {
+                                        const tableColumn = tableRef.current.getAllColumns().find((c: any) => c.id === columnId);
+                                        if (tableColumn) {
+                                          tableColumn.toggleVisibility(e.target.checked);
+                                        }
+                                      }
+                                    }}
+                                    className="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
+                                  />
+                                  <span className="text-sm text-gray-700 flex-1">
+                                    {headerText}
+                                  </span>
+                                  {isVisible && <Check size={14} className="text-gray-600" />}
+                                </label>
+                              );
+                            })}
             </div>
           </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          </div>
+        </div>
+
+        {/* Data Table */}
+        {loading ? (
+          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">Loading products...</p>
+            </div>
+        ) : filteredProducts.length === 0 && !searchQuery ? (
+          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+            <Package size={48} className="text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-600 text-lg">No products found</p>
+            </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={filteredProducts}
+            enableColumnFilters={true}
+            enableGlobalSearch={false}
+            pageSize={20}
+            enableColumnVisibility={false}
+            defaultColumnVisibility={columnVisibility}
+            columnVisibility={columnVisibility}
+            onColumnVisibilityChange={setColumnVisibility}
+            tableRef={tableRef}
+            hideToolbar={true}
+            showStickyPagination={isNearBottom}
+            stickyHeaderOffset={0}
+          />
         )}
 
         {/* Delete confirmation modal */}
@@ -1158,4 +964,3 @@ export default function ProductsManagerPage() {
     </AdminLayout>
   );
 }
-

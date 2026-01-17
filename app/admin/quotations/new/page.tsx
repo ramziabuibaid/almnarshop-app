@@ -23,6 +23,7 @@ import {
   EyeOff,
   UserPlus,
   Trash2,
+  Printer,
 } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 
@@ -35,6 +36,7 @@ interface QuotationDetail {
   barcode?: string;
   costPrice?: number;
   productImage?: string;
+  notes?: string;
 }
 
 const STATUS_OPTIONS = [
@@ -217,6 +219,14 @@ function QuotationsFormContent() {
     );
   };
 
+  const handleUpdateNotes = (detailID: string | undefined, newNotes: string) => {
+    setDetails((prev) =>
+      prev.map((item) =>
+        item.detailID === detailID ? { ...item, notes: newNotes } : item
+      )
+    );
+  };
+
   const handleRemoveItem = (detailID: string | undefined) => {
     if (confirm('هل أنت متأكد من حذف هذا الصنف؟')) {
       setDetails((prev) => prev.filter((item) => item.detailID !== detailID));
@@ -253,6 +263,7 @@ function QuotationsFormContent() {
       barcode: product.Barcode || product.barcode,
       costPrice: product.CostPrice || product.cost_price || product.costPrice || 0,
       productImage: product.Image || product.image || '',
+      notes: '',
     };
 
     // Add product immediately
@@ -310,6 +321,13 @@ function QuotationsFormContent() {
     return calculateTotal() - calculateCostTotal();
   };
 
+  const calculateDiscountPercentage = () => {
+    const subtotal = calculateSubtotal();
+    const totalDiscount = specialDiscountAmount + giftDiscountAmount;
+    if (subtotal === 0 || totalDiscount === 0) return 0;
+    return (totalDiscount / subtotal) * 100;
+  };
+
   const handleSave = async () => {
     if (details.length === 0) {
       alert('يرجى إضافة منتج واحد على الأقل');
@@ -331,11 +349,51 @@ function QuotationsFormContent() {
           productID: item.productID,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
+          notes: item.notes || '',
         })),
       });
       router.push('/admin/quotations');
     } catch (err: any) {
       console.error('[NewQuotationPage] Failed to save quotation:', err);
+      setError(err?.message || 'فشل حفظ العرض السعري');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePrintAndSave = async () => {
+    if (details.length === 0) {
+      alert('يرجى إضافة منتج واحد على الأقل');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      const savedQuotation = await saveQuotation(null, {
+        date,
+        customerId: customerId || null,
+        notes,
+        status,
+        specialDiscountAmount,
+        giftDiscountAmount,
+        created_by: admin?.id || undefined,
+        items: details.map((item) => ({
+          productID: item.productID,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          notes: item.notes || '',
+        })),
+      });
+      
+      // Open print page in new window
+      const quotationId = savedQuotation?.QuotationID || savedQuotation?.quotation_id || savedQuotation?.quotationID;
+      if (quotationId) {
+        const url = `/admin/quotations/print/${quotationId}`;
+        window.open(url, `print-quotation-${quotationId}`, 'noopener,noreferrer');
+      }
+    } catch (err: any) {
+      console.error('[NewQuotationPage] Failed to save and print quotation:', err);
       setError(err?.message || 'فشل حفظ العرض السعري');
     } finally {
       setSaving(false);
@@ -673,29 +731,40 @@ function QuotationsFormContent() {
                       return (
                       <tr key={item.detailID || index}>
                         <td className="px-4 py-3 text-sm text-gray-900 font-cairo">
-                          <div className="flex items-center gap-2">
-                            {imageUrl ? (
-                              <>
-                                <img
-                                  src={imageUrl}
-                                  alt={item.productName}
-                                  className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                    const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
-                                    if (placeholder) placeholder.style.display = 'flex';
-                                  }}
-                                />
-                                <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              {imageUrl ? (
+                                <>
+                                  <img
+                                    src={imageUrl}
+                                    alt={item.productName}
+                                    className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                      const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                      if (placeholder) placeholder.style.display = 'flex';
+                                    }}
+                                  />
+                                  <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
+                                    <span className="text-gray-400 text-xs">—</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
                                   <span className="text-gray-400 text-xs">—</span>
                                 </div>
-                              </>
-                            ) : (
-                              <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                <span className="text-gray-400 text-xs">—</span>
-                              </div>
-                            )}
-                            <span>{item.productName}</span>
+                              )}
+                              <span>{item.productName}</span>
+                            </div>
+                            <div>
+                              <textarea
+                                value={item.notes || ''}
+                                onChange={(e) => handleUpdateNotes(item.detailID, e.target.value)}
+                                placeholder="ملاحظات..."
+                                rows={2}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo resize-none"
+                              />
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -764,6 +833,12 @@ function QuotationsFormContent() {
                     <span className="font-semibold text-red-600">-₪{giftDiscountAmount.toFixed(2)}</span>
                   </div>
                 )}
+                {(specialDiscountAmount > 0 || giftDiscountAmount > 0) && (
+                  <div className="flex justify-between text-sm text-gray-600 font-cairo">
+                    <span>نسبة الخصم:</span>
+                    <span className="font-semibold text-green-600">{calculateDiscountPercentage().toFixed(2)}%</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-lg font-bold text-gray-900 font-cairo border-t border-gray-200 pt-2">
                   <span>الإجمالي:</span>
                   <span>₪{calculateTotal().toFixed(2)}</span>
@@ -791,6 +866,23 @@ function QuotationsFormContent() {
               className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold"
             >
               إلغاء
+            </button>
+            <button
+              onClick={handlePrintAndSave}
+              disabled={saving || details.length === 0}
+              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saving ? (
+                <>
+                  <Loader2 size={20} className="animate-spin" />
+                  جاري الحفظ...
+                </>
+              ) : (
+                <>
+                  <Printer size={20} />
+                  حفظ وطباعة
+                </>
+              )}
             </button>
             <button
               onClick={handleSave}
