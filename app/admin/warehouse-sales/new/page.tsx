@@ -23,6 +23,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
+import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
 
 interface InvoiceDetail {
   detailID?: string;
@@ -215,35 +216,37 @@ function WarehouseSalesFormContent() {
     }
   };
 
-  const handleAddProduct = () => {
-    if (!selectedProductId) {
-      alert('يرجى اختيار منتج');
+  const handleAddProduct = (productParam?: any, quantityParam?: number, priceParam?: number) => {
+    const productToAdd = productParam || products.find((p) => p.ProductID === selectedProductId || p.id === selectedProductId || p.product_id === selectedProductId);
+    
+    if (!productToAdd) {
+      if (!selectedProductId) {
+        alert('يرجى اختيار منتج');
+      } else {
+        alert('المنتج غير موجود');
+      }
       return;
     }
 
-    const product = products.find((p) => p.ProductID === selectedProductId || p.id === selectedProductId || p.product_id === selectedProductId);
-    if (!product) {
-      alert('المنتج غير موجود');
-      return;
-    }
-
-    // Use manually entered price if provided, otherwise use default sale price (will update in background)
-    let unitPrice = product.SalePrice || product.sale_price || product.price || 0;
-    if (newProductPrice != null && newProductPrice > 0) {
+    const quantity = quantityParam != null ? quantityParam : newProductQuantity;
+    let unitPrice = productToAdd.SalePrice || productToAdd.sale_price || productToAdd.price || 0;
+    if (priceParam != null && priceParam > 0) {
+      unitPrice = priceParam;
+    } else if (newProductPrice != null && newProductPrice > 0) {
       unitPrice = newProductPrice;
     }
 
     const detailId = `temp-${Date.now()}`;
-    const productIdForSearch = product.ProductID || product.id || product.product_id;
+    const productIdForSearch = productToAdd.ProductID || productToAdd.id || productToAdd.product_id;
     
     const newDetail: InvoiceDetail = {
       detailID: detailId,
       productID: productIdForSearch,
-      productName: product.Name || product.name || '',
-      quantity: newProductQuantity,
+      productName: productToAdd.Name || productToAdd.name || '',
+      quantity: quantity,
       unitPrice: unitPrice,
-      costPrice: product.CostPrice || product.cost_price || product.costPrice || 0,
-      productImage: product.Image || product.image || '',
+      costPrice: productToAdd.CostPrice || productToAdd.cost_price || productToAdd.costPrice || 0,
+      productImage: productToAdd.Image || productToAdd.image || '',
     };
 
     // Add product immediately
@@ -521,6 +524,19 @@ function WarehouseSalesFormContent() {
                 
             {showAddProduct && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                {/* Barcode Scanner */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
+                  <BarcodeScannerInput
+                    onProductFound={(product) => {
+                      handleAddProduct(product, 1);
+                    }}
+                    products={products}
+                    placeholder="امسح الباركود أو رقم الشامل..."
+                    className="w-full"
+                  />
+                </div>
+                
                 <div className="relative mb-4" ref={productDropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
                   <div className="relative">

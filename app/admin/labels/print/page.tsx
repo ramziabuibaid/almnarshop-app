@@ -388,7 +388,7 @@ function LabelsPrintContent() {
           /* Type C: A4 Sheet with 70mm x 29.7mm labels */
           @page type-c {
             size: A4;
-            margin: 0;
+            margin: 3mm;
           }
 
           .label-type-c-container {
@@ -405,8 +405,8 @@ function LabelsPrintContent() {
           }
 
           .label-type-c {
-            width: 70mm;
-            height: 29.7mm;
+            width: 64mm;
+            height: 26mm;
             border: 0.5mm solid #000;
             padding: 2mm;
             display: flex;

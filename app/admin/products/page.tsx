@@ -29,14 +29,21 @@ export default function ProductsManagerPage() {
   const lastScrollY = useRef(0);
   const tableRef = useRef<any>(null);
   
+  // Check if user has permission to view cost
+  const canViewCost = admin?.is_super_admin || admin?.permissions?.viewCost === true;
+  
   // Load column visibility from localStorage
   const getInitialColumnVisibility = (): Record<string, boolean> => {
+    const baseVisibility = {
+      T1Price: false,
+      T2Price: false,
+      Dimention: false,
+      // Hide CostPrice by default if user doesn't have permission
+      CostPrice: canViewCost ? true : false,
+    };
+    
     if (typeof window === 'undefined') {
-      return {
-        T1Price: false,
-        T2Price: false,
-        Dimention: false,
-      };
+      return baseVisibility;
     }
     
     try {
@@ -44,21 +51,17 @@ export default function ProductsManagerPage() {
       if (saved) {
         const parsed = JSON.parse(saved);
         return {
-          T1Price: false,
-          T2Price: false,
-          Dimention: false,
+          ...baseVisibility,
           ...parsed,
+          // Always hide CostPrice if user doesn't have permission, regardless of saved state
+          CostPrice: canViewCost ? (parsed.CostPrice !== false) : false,
         };
       }
     } catch (error) {
       console.error('[ProductsPage] Error loading column visibility:', error);
     }
     
-    return {
-      T1Price: false,
-      T2Price: false,
-      Dimention: false,
-    };
+    return baseVisibility;
   };
 
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(getInitialColumnVisibility);
@@ -70,11 +73,26 @@ export default function ProductsManagerPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      localStorage.setItem('products-table-column-visibility', JSON.stringify(columnVisibility));
+      // Ensure CostPrice is always hidden if user doesn't have permission
+      const visibilityToSave = {
+        ...columnVisibility,
+        CostPrice: canViewCost ? columnVisibility.CostPrice : false,
+      };
+      localStorage.setItem('products-table-column-visibility', JSON.stringify(visibilityToSave));
     } catch (error) {
       console.error('[ProductsPage] Error saving column visibility:', error);
     }
-  }, [columnVisibility]);
+  }, [columnVisibility, canViewCost]);
+  
+  // Ensure CostPrice is always hidden if user doesn't have permission
+  useEffect(() => {
+    if (!canViewCost && columnVisibility.CostPrice !== false) {
+      setColumnVisibility((prev) => ({
+        ...prev,
+        CostPrice: false,
+      }));
+    }
+  }, [canViewCost, columnVisibility.CostPrice]);
   
   const [deleteState, setDeleteState] = useState<{
     loading: boolean;
@@ -93,9 +111,6 @@ export default function ProductsManagerPage() {
     status: 'idle',
     references: null,
   });
-
-  // Check if user has permission to view cost
-  const canViewCost = admin?.is_super_admin || admin?.permissions?.viewCost === true;
   // Check if user has accountant permission (for delete)
   const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
   
@@ -296,6 +311,7 @@ export default function ProductsManagerPage() {
         header: 'الصورة',
         enableSorting: false,
         enableHiding: false,
+        enableColumnFilter: false,
         minSize: 100,
         cell: ({ row }) => {
           const product = row.original;
@@ -352,15 +368,15 @@ export default function ProductsManagerPage() {
           const shamelNo = product['Shamel No'] || '';
           return (
             <div className="flex flex-col gap-1">
-              <div className="text-sm text-gray-900 font-mono">
+                          <div className="text-sm text-gray-900 font-mono">
                 {productId}
-              </div>
+                          </div>
               {shamelNo && (
                 <div className="text-xs text-gray-500">
                   شامل: {shamelNo}
-                </div>
-              )}
-            </div>
+                            </div>
+                          )}
+                          </div>
           );
         },
       },
@@ -409,7 +425,7 @@ export default function ProductsManagerPage() {
           return (
                           <div className="text-sm font-semibold text-gray-900">
               ₪{parseFloat(String(price)).toFixed(2)}
-                          </div>
+                            </div>
           );
         },
       },
@@ -419,7 +435,7 @@ export default function ProductsManagerPage() {
         header: 'سعر التكلفة',
         enableSorting: true,
         enableColumnFilter: true,
-        enableHiding: !canViewCost,
+        enableHiding: canViewCost, // Only allow hiding if user has permission to view cost
         minSize: 120,
         cell: ({ row }) => {
           const product = row.original;
@@ -777,7 +793,14 @@ export default function ProductsManagerPage() {
             </div>
                         <div className="space-y-2">
                           {columns
-                            .filter((col: any) => col.enableHiding !== false && col.id !== 'Actions' && col.id !== 'Image')
+                            .filter((col: any) => {
+                              // Filter out columns that should not be shown in the visibility list
+                              if (col.id === 'Actions' || col.id === 'Image') return false;
+                              // Hide CostPrice column from visibility list if user doesn't have permission
+                              if (col.id === 'CostPrice' && !canViewCost) return false;
+                              // Only show columns that can be hidden/shown
+                              return col.enableHiding !== false;
+                            })
                             .map((col: any) => {
                               const columnId = col.id || col.accessorKey || col.accessorFn?.toString();
                               const headerText = typeof col.header === 'string' ? col.header : columnId;

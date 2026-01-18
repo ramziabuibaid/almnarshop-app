@@ -41,6 +41,7 @@ interface CashInvoice {
   Notes?: string;
   Discount?: number;
   totalAmount?: number;
+  isSettled?: boolean;
 }
 
 export default function EditInvoicePage() {
@@ -85,6 +86,11 @@ export default function EditInvoicePage() {
       
       if (!foundInvoice) {
         throw new Error('الفاتورة غير موجودة');
+      }
+
+      // Check if invoice is settled
+      if (foundInvoice.isSettled) {
+        throw new Error('لا يمكن تعديل فاتورة مرحلة');
       }
 
       setInvoice(foundInvoice);
@@ -163,6 +169,11 @@ export default function EditInvoicePage() {
   };
 
   const handleSave = async () => {
+    if (invoice?.isSettled) {
+      alert('لا يمكن تعديل فاتورة مرحلة');
+      return;
+    }
+
     if (details.length === 0) {
       alert('لا يمكن حفظ فاتورة بدون أصناف');
       return;

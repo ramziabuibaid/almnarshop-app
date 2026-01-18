@@ -239,27 +239,67 @@ export default function POSPage() {
     e?.preventDefault();
     if (!barcodeInput.trim()) return;
 
-    const barcode = barcodeInput.trim();
-    const product = products.find(
-      (p) => String(p.Barcode || p.barcode || '') === barcode
+    const scannedValue = barcodeInput.trim();
+    
+    // First, try to find by Barcode
+    let product = products.find(
+      (p) => String(p.Barcode || p.barcode || '') === scannedValue
     );
 
+    // If not found, try to find by Shamel No (رقم الشامل)
+    if (!product) {
+      product = products.find(
+        (p) => String(p['Shamel No'] || p.shamel_no || '') === scannedValue
+      );
+    }
+
     if (product) {
-      addToCart(product, 'Scan', barcode);
+      addToCart(product, 'Scan', scannedValue);
       setBarcodeInput(''); // Clear after adding
       barcodeInputRef.current?.focus(); // Keep focus for next scan
     } else {
       // Product not found - could show a message
-      console.log('Product not found for barcode:', barcode);
+      console.log('Product not found for barcode/shamel no:', scannedValue);
+      alert(`المنتج غير موجود للباركود أو رقم الشامل: ${scannedValue}`);
       setBarcodeInput(''); // Clear anyway
     }
   }, [barcodeInput, products, addToCart]);
 
+  // Stop camera scanning
+  const stopScanning = useCallback(async () => {
+    try {
+      if (scannerRef.current) {
+        // Stop scanning first
+        await scannerRef.current.stop().catch((err) => {
+          console.warn('[POS] Error stopping scanner:', err);
+        });
+        // Clear the scanner
+        scannerRef.current.clear().catch((err) => {
+          console.warn('[POS] Error clearing scanner:', err);
+        });
+        scannerRef.current = null;
+      }
+      setIsScanning(false);
+      console.log('[POS] Camera stopped successfully');
+    } catch (error) {
+      console.error('[POS] Error stopping camera:', error);
+      setIsScanning(false);
+    }
+  }, []);
+
   // Handle barcode scan result
   const handleBarcodeScanned = useCallback((barcode: string) => {
-    const product = products.find(
+    // First, try to find by Barcode
+    let product = products.find(
       (p) => String(p.Barcode || p.barcode || '') === barcode
     );
+
+    // If not found, try to find by Shamel No (رقم الشامل)
+    if (!product) {
+      product = products.find(
+        (p) => String(p['Shamel No'] || p.shamel_no || '') === barcode
+      );
+    }
 
     if (product) {
       addToCart(product, 'Scan', barcode);
@@ -267,63 +307,258 @@ export default function POSPage() {
       stopScanning();
     } else {
       // Product not found - show alert and continue scanning
-      alert(`المنتج غير موجود للباركود: ${barcode}`);
+      alert(`المنتج غير موجود للباركود أو رقم الشامل: ${barcode}`);
     }
-  }, [products, addToCart]);
+  }, [products, addToCart, stopScanning]);
+
+  // Check if browser supports camera
+  const isCameraSupported = useCallback(() => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+      return false;
+    }
+    
+    // Check for MediaDevices support
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.warn('[POS] MediaDevices API not supported');
+      return false;
+    }
+    
+    // Check if html5-qrcode supports camera scanning
+    try {
+      const hasSupport = Html5Qrcode.hasCameraSupport();
+      console.log('[POS] html5-qrcode camera support:', hasSupport);
+      return hasSupport;
+    } catch (e) {
+      console.warn('[POS] Error checking camera support:', e);
+      // Fallback: if MediaDevices exists, assume support
+      return true;
+    }
+  }, []);
 
   // Start camera scanning
   const startScanning = useCallback(async () => {
     try {
+      // Check browser support first
+      if (!isCameraSupported()) {
+        throw new Error('المتصفح لا يدعم الوصول إلى الكاميرا. يرجى استخدام متصفح حديث مثل Chrome أو Safari.');
+      }
+
       setIsScanning(true);
       
-      const config = {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0,
-      };
+      // Wait a bit to ensure the DOM element is ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Check if element exists
+      const element = document.getElementById('barcode-scanner');
+      if (!element) {
+        throw new Error('عنصر الماسح غير موجود في الصفحة');
+      }
+
+      // Clear any existing scanner instance
+      if (scannerRef.current) {
+        try {
+          await scannerRef.current.stop();
+          scannerRef.current.clear();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        scannerRef.current = null;
+      }
 
       const html5QrCode = new Html5Qrcode('barcode-scanner');
       scannerRef.current = html5QrCode;
 
-      await html5QrCode.start(
-        { facingMode: 'environment' }, // Use back camera on mobile
-        config,
-        (decodedText) => {
-          // Successfully scanned
-          handleBarcodeScanned(decodedText);
-        },
-        (errorMessage) => {
-          // Ignore scanning errors (they're frequent during scanning)
+      // Try to get available cameras
+      let cameraId: string | undefined;
+      let cameraConfig: any;
+      
+      try {
+        const cameras = await Html5Qrcode.getCameras();
+        if (cameras && cameras.length > 0) {
+          console.log('[POS] Available cameras:', cameras.map(c => c.label));
+          
+          // Prefer back camera (usually the last one on mobile)
+          // Look for environment-facing camera or back/rear camera
+          const backCamera = cameras.find(cam => {
+            const label = cam.label.toLowerCase();
+            return label.includes('back') || 
+                   label.includes('rear') ||
+                   label.includes('environment') ||
+                   label.includes('facing back');
+          });
+          
+          // If no explicit back camera found, try the last camera (often back camera on mobile)
+          // Or prefer cameras that are NOT user-facing
+          if (!backCamera) {
+            const frontCamera = cameras.find(cam => {
+              const label = cam.label.toLowerCase();
+              return label.includes('front') || 
+                     label.includes('user') ||
+                     label.includes('facing user');
+            });
+            
+            // Use the camera that is NOT the front camera, or the last one
+            const nonFrontCamera = cameras.find(cam => cam.id !== frontCamera?.id);
+            cameraId = nonFrontCamera?.id || cameras[cameras.length - 1].id;
+          } else {
+            cameraId = backCamera.id;
+          }
+          
+          const selectedCamera = cameras.find(cam => cam.id === cameraId);
+          console.log('[POS] Using camera:', selectedCamera?.label || 'Unknown');
+          
+          // Use deviceId for specific camera
+          cameraConfig = { deviceId: { exact: cameraId } };
+        } else {
+          throw new Error('لا توجد كاميرات متاحة');
         }
-      );
+      } catch (camError) {
+        console.log('[POS] Could not get cameras list, using facingMode:', camError);
+        // Fallback to facingMode
+        cameraConfig = { facingMode: 'environment' };
+      }
+
+      const config = {
+        fps: 10,
+        qrbox: function(viewfinderWidth: number, viewfinderHeight: number) {
+          // Make qrbox responsive - use 80% of the smaller dimension
+          const minEdgePercentage = 0.8;
+          const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+          const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+          return {
+            width: qrboxSize,
+            height: qrboxSize
+          };
+        },
+        aspectRatio: 1.0,
+        disableFlip: false, // Allow camera flip
+      };
+
+      // Callback for successful scans
+      const onScanSuccess = (decodedText: string) => {
+        handleBarcodeScanned(decodedText);
+      };
+
+      // Callback for scan errors (ignore common ones)
+      const onScanError = (errorMessage: string) => {
+        if (!errorMessage.includes('NotFoundException') && 
+            !errorMessage.includes('No MultiFormat Readers')) {
+          console.debug('[POS] Scan error:', errorMessage);
+        }
+      };
+
+      // Try starting with the selected camera config
+      try {
+        // First try: Use deviceId if available
+        if (cameraId) {
+          try {
+            await html5QrCode.start(
+              { deviceId: { exact: cameraId } },
+              config,
+              onScanSuccess,
+              onScanError
+            );
+            console.log('[POS] Camera started successfully with exact deviceId');
+            return; // Success, exit function
+          } catch (exactError: any) {
+            console.log('[POS] Exact deviceId failed, trying non-exact:', exactError.message);
+            // Try without exact constraint
+            try {
+              await html5QrCode.start(
+                { deviceId: cameraId },
+                config,
+                onScanSuccess,
+                onScanError
+              );
+              console.log('[POS] Camera started successfully with deviceId');
+              return; // Success, exit function
+            } catch (deviceError: any) {
+              console.log('[POS] deviceId failed, trying facingMode:', deviceError.message);
+              // Fall through to facingMode
+            }
+          }
+        }
+
+        // Second try: Use facingMode (environment = back camera)
+        try {
+          await html5QrCode.start(
+            { facingMode: 'environment' },
+            config,
+            onScanSuccess,
+            onScanError
+          );
+          console.log('[POS] Camera started successfully with facingMode: environment');
+          return; // Success, exit function
+        } catch (envError: any) {
+          console.log('[POS] environment facingMode failed, trying user:', envError.message);
+          // Try user-facing camera as last resort
+          try {
+            await html5QrCode.start(
+              { facingMode: 'user' },
+              config,
+              onScanSuccess,
+              onScanError
+            );
+            console.log('[POS] Camera started successfully with facingMode: user');
+            return; // Success, exit function
+          } catch (userError: any) {
+            console.log('[POS] All camera methods failed:', userError.message);
+            throw new Error(`فشل بدء الكاميرا بعد تجربة جميع الطرق: ${userError.message}`);
+          }
+        }
+      } catch (finalError: any) {
+        throw finalError;
+      }
     } catch (error: any) {
       console.error('[POS] Error starting camera:', error);
-      alert(`فشل فتح الكاميرا: ${error?.message || 'خطأ غير معروف'}`);
       setIsScanning(false);
-    }
-  }, [handleBarcodeScanned]);
-
-  // Stop camera scanning
-  const stopScanning = useCallback(async () => {
-    try {
+      
+      // Better error messages
+      let errorMsg = 'فشل فتح الكاميرا';
+      const errorStr = String(error?.message || '').toLowerCase();
+      
+      if (errorStr.includes('streaming not supported') || errorStr.includes('not supported by the browser')) {
+        errorMsg = 'المتصفح لا يدعم بث الكاميرا. يرجى:\n1. استخدام متصفح حديث (Chrome، Safari، Firefox)\n2. التأكد من أن الموقع يعمل على HTTPS\n3. تحديث المتصفح إلى آخر إصدار';
+      } else if (errorStr.includes('permission') || errorStr.includes('notallowed')) {
+        errorMsg = 'يرجى السماح بالوصول إلى الكاميرا في إعدادات المتصفح. اذهب إلى إعدادات المتصفح واسمح بالوصول إلى الكاميرا لهذا الموقع.';
+      } else if (errorStr.includes('not found') || errorStr.includes('notfound') || errorStr.includes('no camera')) {
+        errorMsg = 'الكاميرا غير متوفرة. تأكد من وجود كاميرا في الجهاز وأنها غير مستخدمة من قبل تطبيق آخر.';
+      } else if (errorStr.includes('notreadable') || errorStr.includes('not readable')) {
+        errorMsg = 'الكاميرا مستخدمة من قبل تطبيق آخر. يرجى إغلاق التطبيقات الأخرى التي تستخدم الكاميرا.';
+      } else if (errorStr.includes('overconstrained')) {
+        errorMsg = 'الكاميرا المطلوبة غير متوفرة. سيتم استخدام كاميرا أخرى.';
+      } else if (errorStr.includes('https') || errorStr.includes('secure context')) {
+        errorMsg = 'الكاميرا تتطلب اتصال آمن (HTTPS). يرجى التأكد من استخدام الموقع عبر HTTPS.';
+      } else if (error?.message) {
+        errorMsg = `فشل فتح الكاميرا: ${error.message}`;
+      }
+      
+      alert(errorMsg);
+      
+      // Reset scanner reference on error
       if (scannerRef.current) {
-        await scannerRef.current.stop();
-        scannerRef.current.clear();
+        try {
+          await scannerRef.current.stop();
+          scannerRef.current.clear();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
         scannerRef.current = null;
       }
-      setIsScanning(false);
-    } catch (error) {
-      console.error('[POS] Error stopping camera:', error);
-      setIsScanning(false);
     }
-  }, []);
+  }, [handleBarcodeScanned, isCameraSupported]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-        scannerRef.current.clear();
+        scannerRef.current.stop().catch(() => {
+          // Ignore errors during cleanup
+        });
+        scannerRef.current.clear().catch(() => {
+          // Ignore errors during cleanup
+        });
+        scannerRef.current = null;
       }
     };
   }, []);
@@ -661,12 +896,21 @@ export default function POSPage() {
                   <button
                     type="button"
                     onClick={isScanning ? stopScanning : startScanning}
+                    disabled={typeof window !== 'undefined' && !navigator.mediaDevices}
                     className={`absolute left-2 top-1/2 transform -translate-y-1/2 p-1.5 rounded-lg transition-colors ${
                       isScanning
                         ? 'bg-red-500 text-white hover:bg-red-600'
+                        : typeof window !== 'undefined' && !navigator.mediaDevices
+                        ? 'bg-gray-400 text-white cursor-not-allowed'
                         : 'bg-blue-500 text-white hover:bg-blue-600'
                     }`}
-                    title={isScanning ? 'إيقاف الكاميرا' : 'فتح الكاميرا لمسح الباركود'}
+                    title={
+                      isScanning 
+                        ? 'إيقاف الكاميرا' 
+                        : typeof window !== 'undefined' && !navigator.mediaDevices
+                        ? 'المتصفح لا يدعم الكاميرا'
+                        : 'فتح الكاميرا لمسح الباركود'
+                    }
                   >
                     <Camera size={16} />
                   </button>
@@ -760,12 +1004,19 @@ export default function POSPage() {
                     إغلاق
                   </button>
                 </div>
-                <div
-                  id="barcode-scanner"
-                  ref={scanAreaRef}
-                  className="w-full max-w-md mx-auto bg-gray-900 rounded-lg overflow-hidden"
-                  style={{ minHeight: '300px', maxHeight: '400px' }}
-                />
+                <div className="w-full flex items-center justify-center">
+                  <div
+                    id="barcode-scanner"
+                    ref={scanAreaRef}
+                    className="w-full max-w-md mx-auto bg-gray-900 rounded-lg overflow-hidden"
+                    style={{ 
+                      minHeight: '300px', 
+                      maxHeight: '500px',
+                      width: '100%',
+                      position: 'relative'
+                    }}
+                  />
+                </div>
                 <p className="text-gray-400 text-xs text-center mt-2">
                   يمكنك أيضاً استخدام الماسح الضوئي المتصل بالحاسوب
                 </p>

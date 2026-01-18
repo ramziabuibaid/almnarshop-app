@@ -4458,6 +4458,62 @@ export async function deleteShopPayment(payId: string): Promise<any> {
   }
 }
 
+/**
+ * Update Shop Receipt Settlement Status (تحديث حالة تسوية سند القبض المحل)
+ */
+export async function updateShopReceiptSettlementStatus(
+  receiptId: string,
+  isSettled: boolean
+): Promise<any> {
+  try {
+    console.log('[API] Updating shop receipt settlement status:', receiptId, isSettled);
+
+    const { error } = await supabase
+      .from('shop_receipts')
+      .update({ is_settled: isSettled })
+      .eq('receipt_id', receiptId);
+
+    if (error) {
+      console.error('[API] Failed to update shop receipt settlement status:', error);
+      throw new Error(`Failed to update settlement status: ${error.message}`);
+    }
+
+    console.log('[API] Shop receipt settlement status updated successfully');
+    return { status: 'success', receiptID: receiptId, isSettled };
+  } catch (error: any) {
+    console.error('[API] updateShopReceiptSettlementStatus error:', error);
+    throw new Error(`Failed to update settlement status: ${error?.message || 'Unknown error'}`);
+  }
+}
+
+/**
+ * Update Shop Payment Settlement Status (تحديث حالة تسوية سند الدفع المحل)
+ */
+export async function updateShopPaymentSettlementStatus(
+  paymentId: string,
+  isSettled: boolean
+): Promise<any> {
+  try {
+    console.log('[API] Updating shop payment settlement status:', paymentId, isSettled);
+
+    const { error } = await supabase
+      .from('shop_payments')
+      .update({ is_settled: isSettled })
+      .eq('pay_id', paymentId);
+
+    if (error) {
+      console.error('[API] Failed to update shop payment settlement status:', error);
+      throw new Error(`Failed to update settlement status: ${error.message}`);
+    }
+
+    console.log('[API] Shop payment settlement status updated successfully');
+    return { status: 'success', paymentID: paymentId, isSettled };
+  } catch (error: any) {
+    console.error('[API] updateShopPaymentSettlementStatus error:', error);
+    throw new Error(`Failed to update settlement status: ${error?.message || 'Unknown error'}`);
+  }
+}
+
 // ==========================================
 // SHOP SALES INVOICES (فواتير مبيعات المحل)
 // ==========================================
@@ -7518,6 +7574,7 @@ export async function getWarehouseCashFlow(): Promise<any[]> {
       notes: r.notes,
       created_by: r.created_by || r.user_id,
       user_id: r.created_by || r.user_id,
+      is_settled: r.is_settled || r.isSettled || false,
     }));
 
     // Transform payments
@@ -7534,6 +7591,7 @@ export async function getWarehouseCashFlow(): Promise<any[]> {
       notes: p.notes,
       created_by: p.created_by || p.user_id,
       user_id: p.created_by || p.user_id,
+      is_settled: p.is_settled || p.isSettled || false,
     }));
 
     // Combine and sort
@@ -7606,6 +7664,7 @@ export async function getShopCashFlow(): Promise<any[]> {
             payment_id: paymentId,
             created_by: userId,
             user_id: userId,
+            is_settled: item.is_settled || item.isSettled || false,
           };
         });
         return transformed;
@@ -7648,6 +7707,7 @@ export async function getShopCashFlow(): Promise<any[]> {
       notes: r.notes,
       created_by: r.created_by || r.user_id,
       user_id: r.created_by || r.user_id,
+      is_settled: r.is_settled || r.isSettled || false,
     }));
 
     // Transform payments
@@ -7665,6 +7725,7 @@ export async function getShopCashFlow(): Promise<any[]> {
       notes: p.notes,
       created_by: p.created_by || p.user_id,
       user_id: p.created_by || p.user_id,
+      is_settled: p.is_settled || p.isSettled || false,
     }));
 
     // Combine and sort chronologically (for balance calculation)
@@ -8123,6 +8184,62 @@ export async function deleteWarehousePayment(paymentId: string): Promise<any> {
   } catch (error: any) {
     console.error('[API] deleteWarehousePayment error:', error);
     throw error;
+  }
+}
+
+/**
+ * Update Warehouse Receipt Settlement Status (تحديث حالة تسوية سند القبض المستودع)
+ */
+export async function updateWarehouseReceiptSettlementStatus(
+  receiptId: string,
+  isSettled: boolean
+): Promise<any> {
+  try {
+    console.log('[API] Updating warehouse receipt settlement status:', receiptId, isSettled);
+
+    const { error } = await supabase
+      .from('warehouse_receipts')
+      .update({ is_settled: isSettled })
+      .eq('receipt_id', receiptId);
+
+    if (error) {
+      console.error('[API] Failed to update warehouse receipt settlement status:', error);
+      throw new Error(`Failed to update settlement status: ${error.message}`);
+    }
+
+    console.log('[API] Warehouse receipt settlement status updated successfully');
+    return { status: 'success', receiptID: receiptId, isSettled };
+  } catch (error: any) {
+    console.error('[API] updateWarehouseReceiptSettlementStatus error:', error);
+    throw new Error(`Failed to update settlement status: ${error?.message || 'Unknown error'}`);
+  }
+}
+
+/**
+ * Update Warehouse Payment Settlement Status (تحديث حالة تسوية سند الدفع المستودع)
+ */
+export async function updateWarehousePaymentSettlementStatus(
+  paymentId: string,
+  isSettled: boolean
+): Promise<any> {
+  try {
+    console.log('[API] Updating warehouse payment settlement status:', paymentId, isSettled);
+
+    const { error } = await supabase
+      .from('warehouse_payments')
+      .update({ is_settled: isSettled })
+      .eq('payment_id', paymentId);
+
+    if (error) {
+      console.error('[API] Failed to update warehouse payment settlement status:', error);
+      throw new Error(`Failed to update settlement status: ${error.message}`);
+    }
+
+    console.log('[API] Warehouse payment settlement status updated successfully');
+    return { status: 'success', paymentID: paymentId, isSettled };
+  } catch (error: any) {
+    console.error('[API] updateWarehousePaymentSettlementStatus error:', error);
+    throw new Error(`Failed to update settlement status: ${error?.message || 'Unknown error'}`);
   }
 }
 

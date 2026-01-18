@@ -18,6 +18,8 @@ import {
   Edit,
   Eye,
   Lock,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 
 interface CashInvoice {
@@ -50,6 +52,7 @@ export default function InvoicesPage() {
   }>({ invoice: null, details: null });
   const [viewLoading, setViewLoading] = useState(false);
   const [updatingSettlement, setUpdatingSettlement] = useState(false);
+  const [updatingInvoiceId, setUpdatingInvoiceId] = useState<string | null>(null);
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
   const [dailyTotals, setDailyTotals] = useState<{
     today: number;
@@ -63,6 +66,9 @@ export default function InvoicesPage() {
 
   // Check if user has permission to view cash invoices
   const canViewCashInvoices = admin?.is_super_admin || admin?.permissions?.viewCashInvoices === true;
+  
+  // Check if user has accountant permission
+  const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
 
   useEffect(() => {
     document.title = 'الفواتير النقدية - Cash Invoices';
@@ -252,22 +258,18 @@ export default function InvoicesPage() {
     const invoiceId = viewing.invoice.InvoiceID || viewing.invoice.invoice_id;
     if (!invoiceId) return;
 
-    if (!confirm('هل أنت متأكد من تغيير حالة الفاتورة إلى مرحلة؟')) {
-      return;
-    }
-
     setUpdatingSettlement(true);
     try {
       await updateCashInvoiceSettlementStatus(invoiceId, true);
-      // Reload invoice data
-      const fullInvoice = await getCashInvoice(invoiceId);
-      setViewing({
-        invoice: fullInvoice,
-        details: fullInvoice?.details || [],
-      });
-      // Reload invoices list to update the status
-      await loadInvoices();
-      alert('تم تغيير حالة الفاتورة إلى مرحلة بنجاح');
+      // Update local state immediately (optimistic update)
+      setInvoices(prev => prev.map(inv => 
+        inv.InvoiceID === invoiceId ? { ...inv, isSettled: true } : inv
+      ));
+      // Update viewing invoice state
+      setViewing(prev => ({
+        ...prev,
+        invoice: prev.invoice ? { ...prev.invoice, isSettled: true } : null,
+      }));
     } catch (err: any) {
       console.error('[InvoicesPage] Failed to update settlement status:', err);
       alert(err?.message || 'فشل تحديث حالة الفاتورة');
@@ -276,7 +278,79 @@ export default function InvoicesPage() {
     }
   };
 
+  const handleMarkAsUnsettled = async () => {
+    if (!viewing.invoice) return;
+    
+    const invoiceId = viewing.invoice.InvoiceID || viewing.invoice.invoice_id;
+    if (!invoiceId) return;
+
+    setUpdatingSettlement(true);
+    try {
+      await updateCashInvoiceSettlementStatus(invoiceId, false);
+      // Update local state immediately (optimistic update)
+      setInvoices(prev => prev.map(inv => 
+        inv.InvoiceID === invoiceId ? { ...inv, isSettled: false } : inv
+      ));
+      // Update viewing invoice state
+      setViewing(prev => ({
+        ...prev,
+        invoice: prev.invoice ? { ...prev.invoice, isSettled: false } : null,
+      }));
+    } catch (err: any) {
+      console.error('[InvoicesPage] Failed to update settlement status:', err);
+      alert(err?.message || 'فشل تحديث حالة الفاتورة');
+    } finally {
+      setUpdatingSettlement(false);
+    }
+  };
+
+  const handleMarkInvoiceAsSettled = async (invoice: CashInvoice) => {
+    const invoiceId = invoice.InvoiceID;
+    if (!invoiceId) return;
+
+    setUpdatingSettlement(true);
+    setUpdatingInvoiceId(invoiceId);
+    try {
+      await updateCashInvoiceSettlementStatus(invoiceId, true);
+      // Update local state immediately (optimistic update)
+      setInvoices(prev => prev.map(inv => 
+        inv.InvoiceID === invoiceId ? { ...inv, isSettled: true } : inv
+      ));
+    } catch (err: any) {
+      console.error('[InvoicesPage] Failed to update settlement status:', err);
+      alert(err?.message || 'فشل تحديث حالة الفاتورة');
+    } finally {
+      setUpdatingSettlement(false);
+      setUpdatingInvoiceId(null);
+    }
+  };
+
+  const handleMarkInvoiceAsUnsettled = async (invoice: CashInvoice) => {
+    const invoiceId = invoice.InvoiceID;
+    if (!invoiceId) return;
+
+    setUpdatingSettlement(true);
+    setUpdatingInvoiceId(invoiceId);
+    try {
+      await updateCashInvoiceSettlementStatus(invoiceId, false);
+      // Update local state immediately (optimistic update)
+      setInvoices(prev => prev.map(inv => 
+        inv.InvoiceID === invoiceId ? { ...inv, isSettled: false } : inv
+      ));
+    } catch (err: any) {
+      console.error('[InvoicesPage] Failed to update settlement status:', err);
+      alert(err?.message || 'فشل تحديث حالة الفاتورة');
+    } finally {
+      setUpdatingSettlement(false);
+      setUpdatingInvoiceId(null);
+    }
+  };
+
   const handleEditInvoice = (invoice: CashInvoice) => {
+    if (invoice.isSettled) {
+      alert('لا يمكن تعديل فاتورة مرحلة');
+      return;
+    }
     router.push(`/admin/invoices/${invoice.InvoiceID}`);
   };
 
@@ -452,7 +526,7 @@ export default function InvoicesPage() {
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
                       حالة التسوية
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                    <th className="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo w-24">
                       الملاحظات
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
@@ -498,8 +572,8 @@ export default function InvoicesPage() {
                           {invoice.isSettled ? 'مرحلة' : 'غير مرحلة'}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-600 max-w-xs truncate font-cairo">
+                      <td className="px-2 py-4 w-24">
+                        <div className="text-xs text-gray-600 max-w-[100px] truncate font-cairo" title={invoice.Notes || undefined}>
                           {invoice.Notes || '—'}
                         </div>
                       </td>
@@ -509,28 +583,74 @@ export default function InvoicesPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleViewInvoice(invoice)}
-                            className="text-gray-700 hover:text-gray-900 flex items-center gap-1 font-cairo"
-                          >
-                            <Eye size={16} />
-                            عرض
-                          </button>
-                          <button
-                            onClick={() => handlePrintInvoice(invoice)}
-                            className="text-blue-600 hover:text-blue-900 flex items-center gap-1 font-cairo"
-                          >
-                            <Printer size={16} />
-                            طباعة
-                          </button>
-                          <button
-                            onClick={() => handleEditInvoice(invoice)}
-                            className="text-yellow-600 hover:text-yellow-900 flex items-center gap-1 font-cairo"
-                          >
-                            <Edit size={16} />
-                            تعديل
-                          </button>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleViewInvoice(invoice)}
+                              className="text-gray-700 hover:text-gray-900 flex items-center gap-1 font-cairo"
+                            >
+                              <Eye size={16} />
+                              عرض
+                            </button>
+                            <button
+                              onClick={() => handlePrintInvoice(invoice)}
+                              className="text-blue-600 hover:text-blue-900 flex items-center gap-1 font-cairo"
+                            >
+                              <Printer size={16} />
+                              طباعة
+                            </button>
+                            <button
+                              onClick={() => handleEditInvoice(invoice)}
+                              disabled={invoice.isSettled}
+                              className={`flex items-center gap-1 font-cairo ${
+                                invoice.isSettled
+                                  ? 'text-gray-400 cursor-not-allowed opacity-50'
+                                  : 'text-yellow-600 hover:text-yellow-900'
+                              }`}
+                              title={invoice.isSettled ? 'لا يمكن تعديل فاتورة مرحلة' : ''}
+                            >
+                              <Edit size={16} />
+                              تعديل
+                            </button>
+                          </div>
+                          {canAccountant && !invoice.isSettled && (
+                            <button
+                              onClick={() => handleMarkInvoiceAsSettled(invoice)}
+                              disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
+                              className="text-green-600 hover:text-green-900 flex items-center gap-1 font-cairo disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                            >
+                              {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
+                                <>
+                                  <Loader2 size={14} className="animate-spin" />
+                                  جاري التحديث...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle size={14} />
+                                  تغيير إلى مرحلة
+                                </>
+                              )}
+                            </button>
+                          )}
+                          {admin?.is_super_admin && invoice.isSettled && (
+                            <button
+                              onClick={() => handleMarkInvoiceAsUnsettled(invoice)}
+                              disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
+                              className="text-orange-600 hover:text-orange-900 flex items-center gap-1 font-cairo disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                            >
+                              {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
+                                <>
+                                  <Loader2 size={14} className="animate-spin" />
+                                  جاري التحديث...
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle size={14} />
+                                  إعادة إلى غير مرحلة
+                                </>
+                              )}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -567,7 +687,7 @@ export default function InvoicesPage() {
               </div>
               <div className="flex items-center gap-2">
                 {viewLoading && <Loader2 size={18} className="animate-spin text-gray-500" />}
-                {viewing.invoice && !viewing.invoice.isSettled && (
+                {canAccountant && viewing.invoice && !viewing.invoice.isSettled && (
                   <button
                     onClick={handleMarkAsSettled}
                     disabled={updatingSettlement}
@@ -580,6 +700,22 @@ export default function InvoicesPage() {
                       </>
                     ) : (
                       'تغيير إلى مرحلة'
+                    )}
+                  </button>
+                )}
+                {admin?.is_super_admin && viewing.invoice && viewing.invoice.isSettled && (
+                  <button
+                    onClick={handleMarkAsUnsettled}
+                    disabled={updatingSettlement}
+                    className="px-3 py-1.5 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-cairo flex items-center gap-1"
+                  >
+                    {updatingSettlement ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        جاري التحديث...
+                      </>
+                    ) : (
+                      'إعادة إلى غير مرحلة'
                     )}
                   </button>
                 )}

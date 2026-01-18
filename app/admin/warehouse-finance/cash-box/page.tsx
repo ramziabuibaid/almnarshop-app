@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import CustomerSelect from '@/components/admin/CustomerSelect';
-import { getWarehouseCashFlow, getAllCustomers, deleteWarehouseReceipt, deleteWarehousePayment, createWarehouseReceipt, createWarehousePayment, getWarehouseReceipt, getWarehousePayment, updateWarehouseReceipt, updateWarehousePayment } from '@/lib/api';
+import { getWarehouseCashFlow, getAllCustomers, deleteWarehouseReceipt, deleteWarehousePayment, createWarehouseReceipt, createWarehousePayment, getWarehouseReceipt, getWarehousePayment, updateWarehouseReceipt, updateWarehousePayment, updateWarehouseReceiptSettlementStatus, updateWarehousePaymentSettlementStatus } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import {
   Loader2,
@@ -21,6 +21,8 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 
 interface CashFlowTransaction {
@@ -39,6 +41,7 @@ interface CashFlowTransaction {
   payment_id?: string;
   created_by?: string;
   user_id?: string;
+  isSettled?: boolean;
 }
 
 interface TransactionWithBalance extends CashFlowTransaction {
@@ -77,6 +80,8 @@ export default function WarehouseCashBoxPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | null }>({ message: '', type: null });
+  const [updatingSettlement, setUpdatingSettlement] = useState(false);
+  const [updatingTransactionId, setUpdatingTransactionId] = useState<string | null>(null);
   
   // Search and pagination
   const [searchQuery, setSearchQuery] = useState('');
@@ -86,6 +91,7 @@ export default function WarehouseCashBoxPage() {
   // Check permissions
   const canAccess = admin?.is_super_admin || admin?.permissions?.accessWarehouseCashBox === true;
   const canViewBalance = admin?.is_super_admin || admin?.permissions?.viewCashBoxBalance === true;
+  const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
   
   // Redirect if no access
   useEffect(() => {
@@ -242,6 +248,7 @@ export default function WarehouseCashBoxPage() {
           payment_id: paymentId,
           created_by: userId,
           user_id: userId,
+          isSettled: item.is_settled || item.isSettled || false,
         };
       });
       
@@ -446,6 +453,60 @@ export default function WarehouseCashBoxPage() {
     } catch (err: any) {
       console.error('[CashBox] Failed to delete transaction:', err);
       alert(`فشل الحذف: ${err?.message || 'خطأ غير معروف'}`);
+    }
+  };
+
+  const handleMarkAsSettled = async (tx: TransactionWithBalance) => {
+    const transactionId = tx.receipt_id || tx.payment_id;
+    if (!transactionId) return;
+
+    setUpdatingSettlement(true);
+    setUpdatingTransactionId(transactionId);
+    try {
+      if (tx.receipt_id) {
+        await updateWarehouseReceiptSettlementStatus(tx.receipt_id, true);
+      } else if (tx.payment_id) {
+        await updateWarehousePaymentSettlementStatus(tx.payment_id, true);
+      }
+      // Update local state immediately (optimistic update)
+      setTransactions(prev => prev.map(t => 
+        (t.receipt_id === transactionId || t.payment_id === transactionId) 
+          ? { ...t, isSettled: true } 
+          : t
+      ));
+    } catch (err: any) {
+      console.error('[WarehouseCashBox] Failed to update settlement status:', err);
+      alert(err?.message || 'فشل تحديث حالة السند');
+    } finally {
+      setUpdatingSettlement(false);
+      setUpdatingTransactionId(null);
+    }
+  };
+
+  const handleMarkAsUnsettled = async (tx: TransactionWithBalance) => {
+    const transactionId = tx.receipt_id || tx.payment_id;
+    if (!transactionId) return;
+
+    setUpdatingSettlement(true);
+    setUpdatingTransactionId(transactionId);
+    try {
+      if (tx.receipt_id) {
+        await updateWarehouseReceiptSettlementStatus(tx.receipt_id, false);
+      } else if (tx.payment_id) {
+        await updateWarehousePaymentSettlementStatus(tx.payment_id, false);
+      }
+      // Update local state immediately (optimistic update)
+      setTransactions(prev => prev.map(t => 
+        (t.receipt_id === transactionId || t.payment_id === transactionId) 
+          ? { ...t, isSettled: false } 
+          : t
+      ));
+    } catch (err: any) {
+      console.error('[WarehouseCashBox] Failed to update settlement status:', err);
+      alert(err?.message || 'فشل تحديث حالة السند');
+    } finally {
+      setUpdatingSettlement(false);
+      setUpdatingTransactionId(null);
     }
   };
 
@@ -720,6 +781,9 @@ export default function WarehouseCashBoxPage() {
                       النوع
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      حالة التسوية
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       اسم الزبون
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -780,6 +844,17 @@ export default function WarehouseCashBoxPage() {
                             صرف
                           </span>
                         )}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${
+                            tx.isSettled
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {tx.isSettled ? 'مرحلة' : 'غير مرحلة'}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="text-gray-900">
@@ -895,6 +970,10 @@ export default function WarehouseCashBoxPage() {
                               </button>
                               <button
                                 onClick={async () => {
+                                  if (tx.isSettled) {
+                                    alert('لا يمكن تعديل سند مرحلة');
+                                    return;
+                                  }
                                   try {
                                     let transactionData: any = null;
                                     if (tx.receipt_id) {
@@ -926,11 +1005,44 @@ export default function WarehouseCashBoxPage() {
                                     alert(`فشل تحميل بيانات السند: ${err?.message || 'خطأ غير معروف'}`);
                                   }
                                 }}
-                                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                title="تعديل"
+                                disabled={tx.isSettled}
+                                className={`p-2 rounded-lg transition-colors ${
+                                  tx.isSettled
+                                    ? 'text-gray-400 cursor-not-allowed opacity-50'
+                                    : 'text-gray-600 hover:bg-gray-100'
+                                }`}
+                                title={tx.isSettled ? 'لا يمكن تعديل سند مرحلة' : 'تعديل'}
                               >
                                 <Edit size={18} />
                               </button>
+                              {canAccountant && !tx.isSettled && (
+                                <button
+                                  onClick={() => handleMarkAsSettled(tx)}
+                                  disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
+                                  className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="تغيير إلى مرحلة"
+                                >
+                                  {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
+                                    <Loader2 size={18} className="animate-spin" />
+                                  ) : (
+                                    <CheckCircle size={18} />
+                                  )}
+                                </button>
+                              )}
+                              {admin?.is_super_admin && tx.isSettled && (
+                                <button
+                                  onClick={() => handleMarkAsUnsettled(tx)}
+                                  disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
+                                  className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="إعادة إلى غير مرحلة (سوبر أدمن فقط)"
+                                >
+                                  {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
+                                    <Loader2 size={18} className="animate-spin" />
+                                  ) : (
+                                    <XCircle size={18} />
+                                  )}
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleDelete(tx)}
                                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"

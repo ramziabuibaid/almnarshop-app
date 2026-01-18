@@ -23,9 +23,9 @@ import {
   EyeOff,
   UserPlus,
   Trash2,
-  Printer,
 } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
+import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
 
 interface QuotationDetail {
   detailID?: string;
@@ -233,36 +233,38 @@ function QuotationsFormContent() {
     }
   };
 
-  const handleAddProduct = () => {
-    if (!selectedProductId) {
-      alert('يرجى اختيار منتج');
+  const handleAddProduct = (productParam?: any, quantityParam?: number, priceParam?: number) => {
+    const productToAdd = productParam || products.find((p) => p.ProductID === selectedProductId || p.id === selectedProductId || p.product_id === selectedProductId);
+    
+    if (!productToAdd) {
+      if (!selectedProductId) {
+        alert('يرجى اختيار منتج');
+      } else {
+        alert('المنتج غير موجود');
+      }
       return;
     }
 
-    const product = products.find((p) => p.ProductID === selectedProductId || p.id === selectedProductId || p.product_id === selectedProductId);
-    if (!product) {
-      alert('المنتج غير موجود');
-      return;
-    }
-
-    // Use manually entered price if provided, otherwise use default sale price (will update in background)
-    let unitPrice = product.SalePrice || product.sale_price || product.price || 0;
-    if (newProductPrice != null && newProductPrice > 0) {
+    const quantity = quantityParam != null ? quantityParam : newProductQuantity;
+    let unitPrice = productToAdd.SalePrice || productToAdd.sale_price || productToAdd.price || 0;
+    if (priceParam != null && priceParam > 0) {
+      unitPrice = priceParam;
+    } else if (newProductPrice != null && newProductPrice > 0) {
       unitPrice = newProductPrice;
     }
 
     const detailId = `temp-${Date.now()}`;
-    const productIdForSearch = product.ProductID || product.id || product.product_id;
+    const productIdForSearch = productToAdd.ProductID || productToAdd.id || productToAdd.product_id;
     
     const newDetail: QuotationDetail = {
       detailID: detailId,
       productID: productIdForSearch,
-      productName: product.Name || product.name || '',
-      quantity: newProductQuantity,
+      productName: productToAdd.Name || productToAdd.name || '',
+      quantity: quantity,
       unitPrice: unitPrice,
-      barcode: product.Barcode || product.barcode,
-      costPrice: product.CostPrice || product.cost_price || product.costPrice || 0,
-      productImage: product.Image || product.image || '',
+      barcode: productToAdd.Barcode || productToAdd.barcode,
+      costPrice: productToAdd.CostPrice || productToAdd.cost_price || productToAdd.costPrice || 0,
+      productImage: productToAdd.Image || productToAdd.image || '',
       notes: '',
     };
 
@@ -355,45 +357,6 @@ function QuotationsFormContent() {
       router.push('/admin/quotations');
     } catch (err: any) {
       console.error('[NewQuotationPage] Failed to save quotation:', err);
-      setError(err?.message || 'فشل حفظ العرض السعري');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handlePrintAndSave = async () => {
-    if (details.length === 0) {
-      alert('يرجى إضافة منتج واحد على الأقل');
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-    try {
-      const savedQuotation = await saveQuotation(null, {
-        date,
-        customerId: customerId || null,
-        notes,
-        status,
-        specialDiscountAmount,
-        giftDiscountAmount,
-        created_by: admin?.id || undefined,
-        items: details.map((item) => ({
-          productID: item.productID,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          notes: item.notes || '',
-        })),
-      });
-      
-      // Open print page in new window
-      const quotationId = savedQuotation?.QuotationID || savedQuotation?.quotation_id || savedQuotation?.quotationID;
-      if (quotationId) {
-        const url = `/admin/quotations/print/${quotationId}`;
-        window.open(url, `print-quotation-${quotationId}`, 'noopener,noreferrer');
-      }
-    } catch (err: any) {
-      console.error('[NewQuotationPage] Failed to save and print quotation:', err);
       setError(err?.message || 'فشل حفظ العرض السعري');
     } finally {
       setSaving(false);
@@ -599,6 +562,19 @@ function QuotationsFormContent() {
 
             {showAddProduct && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                {/* Barcode Scanner */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
+                  <BarcodeScannerInput
+                    onProductFound={(product) => {
+                      handleAddProduct(product, 1);
+                    }}
+                    products={products}
+                    placeholder="امسح الباركود أو رقم الشامل..."
+                    className="w-full"
+                  />
+                </div>
+                
                 <div className="relative mb-4" ref={productDropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
                   <div className="relative">
@@ -866,23 +842,6 @@ function QuotationsFormContent() {
               className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold"
             >
               إلغاء
-            </button>
-            <button
-              onClick={handlePrintAndSave}
-              disabled={saving || details.length === 0}
-              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {saving ? (
-                <>
-                  <Loader2 size={20} className="animate-spin" />
-                  جاري الحفظ...
-                </>
-              ) : (
-                <>
-                  <Printer size={20} />
-                  حفظ وطباعة
-                </>
-              )}
             </button>
             <button
               onClick={handleSave}

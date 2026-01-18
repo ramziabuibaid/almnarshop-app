@@ -62,6 +62,7 @@ export default function ShopSalesPage() {
   }>({ invoice: null, details: null });
   const [viewLoading, setViewLoading] = useState(false);
   const [updatingSettlement, setUpdatingSettlement] = useState(false);
+  const [updatingInvoiceId, setUpdatingInvoiceId] = useState<string | null>(null);
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
 
   // Check if user has permission to access shop invoices
@@ -152,6 +153,10 @@ export default function ShopSalesPage() {
   };
 
   const handleEditInvoice = (invoice: ShopSalesInvoice) => {
+    if (invoice.AccountantSign === 'مرحلة') {
+      alert('لا يمكن تعديل فاتورة مرحلة');
+      return;
+    }
     router.push(`/admin/shop-sales/edit/${invoice.InvoiceID}`);
   };
 
@@ -176,20 +181,10 @@ export default function ShopSalesPage() {
   };
 
   const handleMarkAsSettled = async () => {
-    // Check permission
-    if (!canAccountant) {
-      alert('ليس لديك صلاحية لتغيير حالة الترحيل');
-      return;
-    }
-
     if (!viewing.invoice) return;
     
     const invoiceId = viewing.invoice.InvoiceID || viewing.invoice.invoice_id;
     if (!invoiceId) return;
-
-    if (!confirm('هل أنت متأكد من تغيير حالة الترحيل إلى مرحلة؟')) {
-      return;
-    }
 
     setUpdatingSettlement(true);
     try {
@@ -204,7 +199,6 @@ export default function ShopSalesPage() {
       setAllInvoices(prev => prev.map(inv => 
         inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'مرحلة' } : inv
       ));
-      alert('تم تغيير حالة الترحيل إلى مرحلة بنجاح');
     } catch (err: any) {
       console.error('[ShopSalesPage] Failed to update settlement status:', err);
       alert(err?.message || 'فشل تحديث حالة الترحيل');
@@ -213,23 +207,45 @@ export default function ShopSalesPage() {
     }
   };
 
-  const handleToggleSign = async (invoice: ShopSalesInvoice) => {
-    // Check permission
-    if (!canAccountant) {
-      alert('ليس لديك صلاحية لتغيير حالة الترحيل');
-      return;
-    }
+  const handleMarkAsSettledFromTable = async (invoice: ShopSalesInvoice) => {
+    const invoiceId = invoice.InvoiceID;
+    if (!invoiceId) return;
 
+    setUpdatingSettlement(true);
+    setUpdatingInvoiceId(invoiceId);
     try {
-      const newSign = invoice.AccountantSign === 'مرحلة' ? 'غير مرحلة' : 'مرحلة';
-      await updateShopSalesInvoiceSign(invoice.InvoiceID, newSign as 'مرحلة' | 'غير مرحلة');
-      // Update local state immediately (optimistic update like maintenance page)
+      await updateShopSalesInvoiceSign(invoiceId, 'مرحلة');
+      // Update local state immediately
       setAllInvoices(prev => prev.map(inv => 
-        inv.InvoiceID === invoice.InvoiceID ? { ...inv, AccountantSign: newSign } : inv
+        inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'مرحلة' } : inv
       ));
     } catch (err: any) {
-      console.error('[ShopSalesPage] Failed to update sign:', err);
-      alert('فشل تحديث حالة الترحيل: ' + (err?.message || 'خطأ غير معروف'));
+      console.error('[ShopSalesPage] Failed to update settlement status:', err);
+      alert(err?.message || 'فشل تحديث حالة الفاتورة');
+    } finally {
+      setUpdatingSettlement(false);
+      setUpdatingInvoiceId(null);
+    }
+  };
+
+  const handleMarkAsUnsettled = async (invoice: ShopSalesInvoice) => {
+    const invoiceId = invoice.InvoiceID;
+    if (!invoiceId) return;
+
+    setUpdatingSettlement(true);
+    setUpdatingInvoiceId(invoiceId);
+    try {
+      await updateShopSalesInvoiceSign(invoiceId, 'غير مرحلة');
+      // Update local state immediately
+      setAllInvoices(prev => prev.map(inv => 
+        inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'غير مرحلة' } : inv
+      ));
+    } catch (err: any) {
+      console.error('[ShopSalesPage] Failed to update settlement status:', err);
+      alert(err?.message || 'فشل تحديث حالة الفاتورة');
+    } finally {
+      setUpdatingSettlement(false);
+      setUpdatingInvoiceId(null);
     }
   };
 
@@ -557,48 +573,16 @@ export default function ShopSalesPage() {
                           <span className="text-sm text-gray-900">{invoice.Status}</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        {canAccountant ? (
-                          <button
-                            onClick={() => handleToggleSign(invoice)}
-                            className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                              invoice.AccountantSign === 'مرحلة'
-                                ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                            }`}
-                            title={invoice.AccountantSign === 'مرحلة' ? 'غير مرحلة' : 'مرحلة'}
-                          >
-                            {invoice.AccountantSign === 'مرحلة' ? (
-                              <>
-                                <CheckCircle size={16} />
-                                <span>مرحلة</span>
-                              </>
-                            ) : (
-                              <>
-                                <XCircle size={16} />
-                                <span>غير مرحلة</span>
-                              </>
-                            )}
-                          </button>
-                        ) : (
-                          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium ${
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${
                             invoice.AccountantSign === 'مرحلة'
                               ? 'bg-green-100 text-green-800'
                               : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {invoice.AccountantSign === 'مرحلة' ? (
-                              <>
-                                <CheckCircle size={16} />
-                                <span>مرحلة</span>
-                              </>
-                            ) : (
-                              <>
-                                <XCircle size={16} />
-                                <span>غير مرحلة</span>
-                              </>
-                            )}
-                          </span>
-                        )}
+                          }`}
+                        >
+                          {invoice.AccountantSign === 'مرحلة' ? 'مرحلة' : 'غير مرحلة'}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="font-semibold text-gray-900">{formatCurrency(invoice.TotalAmount)}</div>
@@ -614,11 +598,44 @@ export default function ShopSalesPage() {
                           </button>
                           <button
                             onClick={() => handleEditInvoice(invoice)}
-                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="تعديل"
+                            disabled={invoice.AccountantSign === 'مرحلة'}
+                            className={`p-2 rounded-lg transition-colors ${
+                              invoice.AccountantSign === 'مرحلة'
+                                ? 'text-gray-400 cursor-not-allowed opacity-50'
+                                : 'text-gray-600 hover:bg-gray-100'
+                            }`}
+                            title={invoice.AccountantSign === 'مرحلة' ? 'لا يمكن تعديل فاتورة مرحلة' : 'تعديل'}
                           >
                             <Edit size={18} />
                           </button>
+                          {canAccountant && invoice.AccountantSign !== 'مرحلة' && (
+                            <button
+                              onClick={() => handleMarkAsSettledFromTable(invoice)}
+                              disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
+                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="تغيير إلى مرحلة"
+                            >
+                              {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
+                                <Loader2 size={18} className="animate-spin" />
+                              ) : (
+                                <CheckCircle size={18} />
+                              )}
+                            </button>
+                          )}
+                          {admin?.is_super_admin && invoice.AccountantSign === 'مرحلة' && (
+                            <button
+                              onClick={() => handleMarkAsUnsettled(invoice)}
+                              disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
+                              className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="إعادة إلى غير مرحلة (سوبر أدمن فقط)"
+                            >
+                              {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
+                                <Loader2 size={18} className="animate-spin" />
+                              ) : (
+                                <XCircle size={18} />
+                              )}
+                            </button>
+                          )}
                           <button
                             onClick={() => handlePrintInvoice(invoice)}
                             className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -723,6 +740,43 @@ export default function ShopSalesPage() {
                         </>
                       ) : (
                         'تغيير إلى مرحلة'
+                      )}
+                    </button>
+                  )}
+                  {admin?.is_super_admin && viewing.invoice && viewing.invoice.AccountantSign === 'مرحلة' && (
+                    <button
+                      onClick={async () => {
+                        if (!viewing.invoice) return;
+                        const invoiceId = viewing.invoice.InvoiceID || viewing.invoice.invoice_id;
+                        if (!invoiceId) return;
+                        setUpdatingSettlement(true);
+                        try {
+                          await updateShopSalesInvoiceSign(invoiceId, 'غير مرحلة');
+                          const fullInvoice = await getShopSalesInvoice(invoiceId);
+                          setViewing({
+                            invoice: fullInvoice,
+                            details: fullInvoice?.Items || [],
+                          });
+                          setAllInvoices(prev => prev.map(inv => 
+                            inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'غير مرحلة' } : inv
+                          ));
+                        } catch (err: any) {
+                          console.error('[ShopSalesPage] Failed to update settlement status:', err);
+                          alert(err?.message || 'فشل تحديث حالة الترحيل');
+                        } finally {
+                          setUpdatingSettlement(false);
+                        }
+                      }}
+                      disabled={updatingSettlement}
+                      className="px-3 py-1.5 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-cairo flex items-center gap-1"
+                    >
+                      {updatingSettlement ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          جاري التحديث...
+                        </>
+                      ) : (
+                        'إعادة إلى غير مرحلة'
                       )}
                     </button>
                   )}

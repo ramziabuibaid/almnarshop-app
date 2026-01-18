@@ -22,6 +22,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
+import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
 
 interface InvoiceDetail {
   detailID?: string;
@@ -104,6 +105,12 @@ export default function EditWarehouseSalesInvoicePage() {
     setError(null);
     try {
       const data = await getWarehouseSalesInvoice(invoiceId);
+      
+      // Check if invoice is settled
+      if (data.AccountantSign === 'مرحلة') {
+        setError('لا يمكن تعديل فاتورة مرحلة');
+      }
+      
       setInvoice(data);
       setDate(data.Date ? new Date(data.Date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
       const custId = data.CustomerID || '';
@@ -243,27 +250,34 @@ export default function EditWarehouseSalesInvoicePage() {
     }
   };
 
-  const handleAddProduct = () => {
-    if (!selectedProductId) {
-      alert('يرجى اختيار منتج');
+  const handleAddProduct = (productParam?: any, quantityParam?: number, priceParam?: number) => {
+    const productToAdd = productParam || products.find((p) => p.ProductID === selectedProductId || p.id === selectedProductId || p.product_id === selectedProductId);
+    
+    if (!productToAdd) {
+      if (!selectedProductId) {
+        alert('يرجى اختيار منتج');
+      } else {
+        alert('المنتج غير موجود');
+      }
       return;
     }
 
-    const product = products.find((p) => p.ProductID === selectedProductId || p.id === selectedProductId || p.product_id === selectedProductId);
-    if (!product) {
-      alert('المنتج غير موجود');
-      return;
-    }
+    const quantity = quantityParam != null ? quantityParam : newProductQuantity;
+    const unitPrice = priceParam != null && priceParam > 0 
+      ? priceParam 
+      : (newProductPrice != null && newProductPrice > 0) 
+        ? newProductPrice 
+        : (productToAdd.SalePrice || productToAdd.sale_price || productToAdd.price || 0);
 
     const newDetail: InvoiceDetail = {
       detailID: `temp-${Date.now()}`,
-      productID: product.ProductID || product.id || product.product_id,
-      productName: product.Name || product.name || '',
-      quantity: newProductQuantity,
-      unitPrice: (newProductPrice != null && newProductPrice > 0) ? newProductPrice : (product.SalePrice || product.sale_price || product.price || 0),
-      costPrice: product.CostPrice || product.cost_price || product.costPrice || 0,
+      productID: productToAdd.ProductID || productToAdd.id || productToAdd.product_id,
+      productName: productToAdd.Name || productToAdd.name || '',
+      quantity: quantity,
+      unitPrice: unitPrice,
+      costPrice: productToAdd.CostPrice || productToAdd.cost_price || productToAdd.costPrice || 0,
       isNew: true,
-      productImage: product.Image || product.image || '',
+      productImage: productToAdd.Image || productToAdd.image || '',
     };
 
     setDetails((prev) => [...prev, newDetail]);
@@ -297,6 +311,11 @@ export default function EditWarehouseSalesInvoicePage() {
   };
 
   const handleSave = async () => {
+    if (invoice?.AccountantSign === 'مرحلة') {
+      alert('لا يمكن تعديل فاتورة مرحلة');
+      return;
+    }
+
     if (details.length === 0) {
       alert('يرجى إضافة منتج واحد على الأقل');
       return;
@@ -586,6 +605,19 @@ export default function EditWarehouseSalesInvoicePage() {
 
             {showAddProduct && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                {/* Barcode Scanner */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
+                  <BarcodeScannerInput
+                    onProductFound={(product) => {
+                      handleAddProduct(product, 1);
+                    }}
+                    products={products}
+                    placeholder="امسح الباركود أو رقم الشامل..."
+                    className="w-full"
+                  />
+                </div>
+                
                 <div className="relative mb-4" ref={productDropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
                   <div className="relative">

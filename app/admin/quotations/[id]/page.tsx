@@ -30,6 +30,7 @@ import {
   Printer,
 } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
+import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
 
 interface QuotationDetail {
   QuotationDetailID: string;
@@ -253,30 +254,37 @@ export default function EditQuotationPage() {
     }
   };
 
-  const handleAddProduct = () => {
-    if (!selectedProductId) {
-      alert('يرجى اختيار منتج');
+  const handleAddProduct = (productParam?: any, quantityParam?: number, priceParam?: number) => {
+    const productToAdd = productParam || products.find((p) => p.ProductID === selectedProductId || p.id === selectedProductId || p.product_id === selectedProductId);
+    
+    if (!productToAdd) {
+      if (!selectedProductId) {
+        alert('يرجى اختيار منتج');
+      } else {
+        alert('المنتج غير موجود');
+      }
       return;
     }
 
-    const product = products.find((p) => p.ProductID === selectedProductId || p.id === selectedProductId || p.product_id === selectedProductId);
-    if (!product) {
-      alert('المنتج غير موجود');
-      return;
-    }
+    const quantity = quantityParam != null ? quantityParam : newProductQuantity;
+    const unitPrice = priceParam != null && priceParam > 0 
+      ? priceParam 
+      : (newProductPrice != null && newProductPrice > 0) 
+        ? newProductPrice 
+        : (productToAdd.SalePrice || productToAdd.sale_price || productToAdd.price || 0);
 
     const newDetail: QuotationDetail = {
       QuotationDetailID: `temp-${Date.now()}`,
       QuotationID: quotationId,
-      ProductID: product.ProductID || product.id || product.product_id,
-      Quantity: newProductQuantity,
-      UnitPrice: (newProductPrice != null && newProductPrice > 0) ? newProductPrice : (product.SalePrice || product.sale_price || product.price || 0),
+      ProductID: productToAdd.ProductID || productToAdd.id || productToAdd.product_id,
+      Quantity: quantity,
+      UnitPrice: unitPrice,
       notes: '',
       product: {
-        name: product.Name || product.name || '',
-        barcode: product.Barcode || product.barcode,
-        shamelNo: product.ShamelNo || product.shamel_no || product.shamelNo,
-        costPrice: product.CostPrice || product.cost_price || product.costPrice || 0,
+        name: productToAdd.Name || productToAdd.name || '',
+        barcode: productToAdd.Barcode || productToAdd.barcode,
+        shamelNo: productToAdd['Shamel No'] || productToAdd.ShamelNo || productToAdd.shamel_no || productToAdd.shamelNo,
+        costPrice: productToAdd.CostPrice || productToAdd.cost_price || productToAdd.costPrice || 0,
       },
     };
 
@@ -710,6 +718,19 @@ export default function EditQuotationPage() {
 
             {showAddProduct && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                {/* Barcode Scanner */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
+                  <BarcodeScannerInput
+                    onProductFound={(product) => {
+                      handleAddProduct(product, 1);
+                    }}
+                    products={products}
+                    placeholder="امسح الباركود أو رقم الشامل..."
+                    className="w-full"
+                  />
+                </div>
+                
                 <div className="relative mb-4" ref={productDropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
                   <div className="relative">
