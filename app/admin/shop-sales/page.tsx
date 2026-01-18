@@ -622,12 +622,12 @@ export default function ShopSalesPage() {
                               )}
                             </button>
                           )}
-                          {admin?.is_super_admin && invoice.AccountantSign === 'مرحلة' && (
+                          {canAccountant && invoice.AccountantSign === 'مرحلة' && (
                             <button
                               onClick={() => handleMarkAsUnsettled(invoice)}
                               disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
                               className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="إعادة إلى غير مرحلة (سوبر أدمن فقط)"
+                              title="إعادة إلى غير مرحلة"
                             >
                               {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
                                 <Loader2 size={18} className="animate-spin" />
@@ -743,7 +743,7 @@ export default function ShopSalesPage() {
                       )}
                     </button>
                   )}
-                  {admin?.is_super_admin && viewing.invoice && viewing.invoice.AccountantSign === 'مرحلة' && (
+                  {canAccountant && viewing.invoice && viewing.invoice.AccountantSign === 'مرحلة' && (
                     <button
                       onClick={async () => {
                         if (!viewing.invoice) return;

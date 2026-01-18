@@ -771,17 +771,11 @@ export default function ShopCashBoxPage() {
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       النوع
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      حالة التسوية
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th colSpan={2} className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       البيان/الطرف
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      وارد (داخل)
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      صادر (خارج)
+                      المبالغ
                     </th>
                     {canViewBalance && (
                       <>
@@ -827,30 +821,30 @@ export default function ShopCashBoxPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {tx.direction === 'in' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            <ArrowUp size={12} />
-                            قبض
+                        <div className="flex flex-col gap-1.5 items-end">
+                          {tx.direction === 'in' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              <ArrowUp size={12} />
+                              قبض
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              <ArrowDown size={12} />
+                              صرف
+                            </span>
+                          )}
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${
+                              tx.isSettled
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {tx.isSettled ? 'مرحلة' : 'غير مرحلة'}
                           </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            <ArrowDown size={12} />
-                            صرف
-                          </span>
-                        )}
+                        </div>
                       </td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${
-                            tx.isSettled
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          {tx.isSettled ? 'مرحلة' : 'غير مرحلة'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
+                      <td colSpan={2} className="px-4 py-3 text-right">
                         <div className="text-gray-900">
                           {(() => {
                             const customerId = tx.customer_id || tx.related_party || '';
@@ -897,64 +891,54 @@ export default function ShopCashBoxPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {tx.direction === 'in' ? (
-                          <div className="space-y-1">
-                            {tx.cash_amount > 0 && (
-                              <div className="text-sm font-semibold text-green-700">
-                                نقدي: {formatCurrency(tx.cash_amount)}
-                              </div>
-                            )}
-                            {tx.check_amount > 0 && (
-                              <div className="text-sm font-semibold text-green-700">
-                                شيك: {formatCurrency(tx.check_amount)}
-                              </div>
-                            )}
-                            {tx.cash_amount === 0 && tx.check_amount === 0 && (
-                              <span className="text-gray-400">—</span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
+                        <div className="space-y-1">
+                          {tx.direction === 'in' ? (
+                            <>
+                              {tx.cash_amount > 0 && (
+                                <div className="text-sm font-semibold text-green-700">
+                                  نقدي: {formatCurrency(tx.cash_amount)}
+                                </div>
+                              )}
+                              {tx.check_amount > 0 && (
+                                <div className="text-sm font-semibold text-green-700">
+                                  شيك: {formatCurrency(tx.check_amount)}
+                                </div>
+                              )}
+                              {tx.cash_amount === 0 && tx.check_amount === 0 && <span className="text-gray-400">—</span>}
+                            </>
+                          ) : (
+                            <>
+                              {tx.cash_amount > 0 && (
+                                <div className="text-sm font-semibold text-red-700">
+                                  نقدي: {formatCurrency(tx.cash_amount)}
+                                </div>
+                              )}
+                              {tx.check_amount > 0 && (
+                                <div className="text-sm font-semibold text-red-700">
+                                  شيك: {formatCurrency(tx.check_amount)}
+                                </div>
+                              )}
+                              {tx.cash_amount === 0 && tx.check_amount === 0 && <span className="text-gray-400">—</span>}
+                            </>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        {tx.direction === 'out' ? (
-                          <div className="space-y-1">
-                            {tx.cash_amount > 0 && (
-                              <div className="text-sm font-semibold text-red-700">
-                                نقدي: {formatCurrency(tx.cash_amount)}
-                              </div>
-                            )}
-                            {tx.check_amount > 0 && (
-                              <div className="text-sm font-semibold text-red-700">
-                                شيك: {formatCurrency(tx.check_amount)}
-                              </div>
-                            )}
-                            {tx.cash_amount === 0 && tx.check_amount === 0 && (
-                              <span className="text-gray-400">—</span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </td>
-                      {canViewBalance && (
+                      {canViewBalance ? (
                         <>
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-4 py-3 text-right align-top">
                             <div className={`font-semibold ${tx.cash_balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
                               {formatCurrency(tx.cash_balance)}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-4 py-3 text-right align-top">
                             <div className={`font-semibold ${tx.check_balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
                               {formatCurrency(tx.check_balance)}
                             </div>
                           </td>
-                        </>
-                      )}
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center gap-2 justify-end">
-                          <button
+                          <td className="px-4 py-3 text-right align-top">
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="flex items-center gap-2 justify-end">
+                                <button
                             onClick={() => {
                               if (tx.receipt_id) {
                                 const printUrl = `/admin/receipts/print/${tx.receipt_id}`;
@@ -964,12 +948,12 @@ export default function ShopCashBoxPage() {
                                 window.open(printUrl, `print-shop-payment-${tx.payment_id}`, 'noopener,noreferrer');
                               }
                             }}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="طباعة"
-                          >
-                            <Printer size={18} />
-                          </button>
-                          <button
+                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="طباعة"
+                                >
+                                  <Printer size={18} />
+                                </button>
+                                <button
                             onClick={async () => {
                               if (tx.isSettled) {
                                 alert('لا يمكن تعديل سند مرحلة');
@@ -1020,55 +1004,186 @@ export default function ShopCashBoxPage() {
                               } catch (err: any) {
                                 console.error('[ShopCashBox] Failed to load transaction:', err);
                                 alert(`فشل تحميل بيانات السند: ${err?.message || 'خطأ غير معروف'}`);
-                              }
-                            }}
-                            disabled={tx.isSettled}
-                            className={`p-2 rounded-lg transition-colors ${
-                              tx.isSettled
-                                ? 'text-gray-400 cursor-not-allowed opacity-50'
-                                : 'text-gray-600 hover:bg-gray-100'
-                            }`}
-                            title={tx.isSettled ? 'لا يمكن تعديل سند مرحلة' : 'تعديل'}
-                          >
-                            <Edit size={18} />
-                          </button>
-                          {canAccountant && !tx.isSettled && (
-                            <button
-                              onClick={() => handleMarkAsSettled(tx)}
-                              disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
-                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="تغيير إلى مرحلة"
+                                }
+                              }}
+                              disabled={tx.isSettled}
+                              className={`p-2 rounded-lg transition-colors ${
+                                tx.isSettled
+                                  ? 'text-gray-400 cursor-not-allowed opacity-50'
+                                  : 'text-gray-600 hover:bg-gray-100'
+                              }`}
+                              title={tx.isSettled ? 'لا يمكن تعديل سند مرحلة' : 'تعديل'}
                             >
-                              {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
-                                <Loader2 size={18} className="animate-spin" />
-                              ) : (
-                                <CheckCircle size={18} />
-                              )}
+                              <Edit size={18} />
                             </button>
-                          )}
-                          {admin?.is_super_admin && tx.isSettled && (
+                            {canAccountant && !tx.isSettled && (
+                              <button
+                                onClick={() => handleMarkAsSettled(tx)}
+                                disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="تغيير إلى مرحلة"
+                              >
+                                {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
+                                  <Loader2 size={18} className="animate-spin" />
+                                ) : (
+                                  <CheckCircle size={18} />
+                                )}
+                              </button>
+                            )}
+                            {canAccountant && tx.isSettled && (
+                              <button
+                                onClick={() => handleMarkAsUnsettled(tx)}
+                                disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
+                                className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="إعادة إلى غير مرحلة"
+                              >
+                                {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
+                                  <Loader2 size={18} className="animate-spin" />
+                                ) : (
+                                  <XCircle size={18} />
+                                )}
+                              </button>
+                            )}
                             <button
-                              onClick={() => handleMarkAsUnsettled(tx)}
-                              disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
-                              className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="إعادة إلى غير مرحلة (سوبر أدمن فقط)"
+                              onClick={() => handleDelete(tx)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="حذف"
                             >
-                              {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
-                                <Loader2 size={18} className="animate-spin" />
-                              ) : (
-                                <XCircle size={18} />
-                              )}
+                              <Trash2 size={18} />
                             </button>
-                          )}
-                          <button
-                            onClick={() => handleDelete(tx)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="حذف"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
+                              </div>
+                              {tx.notes && tx.notes.trim() && (
+                                <div className="text-xs text-gray-600 max-w-full leading-tight mt-1">
+                                  {tx.notes}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <td className="px-4 py-3 text-right align-top">
+                          <div className="flex flex-col items-end gap-2">
+                            <div className="flex items-center gap-2 justify-end">
+                              <button
+                                onClick={() => {
+                                  if (tx.receipt_id) {
+                                    const printUrl = `/admin/receipts/print/${tx.receipt_id}`;
+                                    window.open(printUrl, `print-shop-receipt-${tx.receipt_id}`, 'noopener,noreferrer');
+                                  } else if (tx.payment_id) {
+                                    const printUrl = `/admin/payments/print/${tx.payment_id}`;
+                                    window.open(printUrl, `print-shop-payment-${tx.payment_id}`, 'noopener,noreferrer');
+                                  }
+                                }}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="طباعة"
+                              >
+                                <Printer size={18} />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (tx.isSettled) {
+                                    alert('لا يمكن تعديل سند مرحلة');
+                                    return;
+                                  }
+                                  try {
+                                    let transactionData: any = null;
+                                    if (tx.receipt_id) {
+                                      transactionData = await getShopReceipt(tx.receipt_id);
+                                      const dateValue = transactionData.Date || transactionData.date || '';
+                                      const formattedDate = dateValue 
+                                        ? (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateValue) 
+                                            ? dateValue.split('T')[0] 
+                                            : new Date(dateValue).toISOString().split('T')[0])
+                                        : new Date().toISOString().split('T')[0];
+                                      
+                                      setFormData({
+                                        customerID: transactionData.CustomerID || transactionData.customer_id || '',
+                                        date: formattedDate,
+                                        cash_amount: (transactionData.CashAmount || transactionData.cash_amount || 0).toString(),
+                                        check_amount: (transactionData.ChequeAmount || transactionData.cheque_amount || transactionData.check_amount || 0).toString(),
+                                        notes: transactionData.Notes || transactionData.notes || '',
+                                      });
+                                      setEditingTransaction(tx);
+                                      setReceiptModalOpen(true);
+                                    } else if (tx.payment_id) {
+                                      transactionData = await getShopPayment(tx.payment_id);
+                                      const dateValue = transactionData.Date || transactionData.date || '';
+                                      const formattedDate = dateValue 
+                                        ? (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateValue) 
+                                            ? dateValue.split('T')[0] 
+                                            : new Date(dateValue).toISOString().split('T')[0])
+                                        : new Date().toISOString().split('T')[0];
+                                      
+                                      setFormData({
+                                        customerID: transactionData.CustomerID || transactionData.customer_id || '',
+                                        date: formattedDate,
+                                        cash_amount: (transactionData.CashAmount || transactionData.cash_amount || 0).toString(),
+                                        check_amount: (transactionData.ChequeAmount || transactionData.cheque_amount || transactionData.check_amount || 0).toString(),
+                                        notes: transactionData.Notes || transactionData.notes || '',
+                                      });
+                                      setEditingTransaction(tx);
+                                      setPaymentModalOpen(true);
+                                    }
+                                    setFormError(null);
+                                  } catch (err: any) {
+                                    console.error('[ShopCashBox] Failed to load transaction:', err);
+                                    alert(`فشل تحميل بيانات السند: ${err?.message || 'خطأ غير معروف'}`);
+                                  }
+                                }}
+                                disabled={tx.isSettled}
+                                className={`p-2 rounded-lg transition-colors ${
+                                  tx.isSettled
+                                    ? 'text-gray-400 cursor-not-allowed opacity-50'
+                                    : 'text-gray-600 hover:bg-gray-100'
+                                }`}
+                                title={tx.isSettled ? 'لا يمكن تعديل سند مرحلة' : 'تعديل'}
+                              >
+                                <Edit size={18} />
+                              </button>
+                              {canAccountant && !tx.isSettled && (
+                                <button
+                                  onClick={() => handleMarkAsSettled(tx)}
+                                  disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
+                                  className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="تغيير إلى مرحلة"
+                                >
+                                  {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
+                                    <Loader2 size={18} className="animate-spin" />
+                                  ) : (
+                                    <CheckCircle size={18} />
+                                  )}
+                                </button>
+                              )}
+                              {canAccountant && tx.isSettled && (
+                                <button
+                                  onClick={() => handleMarkAsUnsettled(tx)}
+                                  disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
+                                  className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="إعادة إلى غير مرحلة"
+                                >
+                                  {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
+                                    <Loader2 size={18} className="animate-spin" />
+                                  ) : (
+                                    <XCircle size={18} />
+                                  )}
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDelete(tx)}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="حذف"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                            {tx.notes && tx.notes.trim() && (
+                              <div className="text-[10px] text-gray-600 bg-blue-50 rounded px-2 py-1 border-r-2 border-blue-300 max-w-full">
+                                <span className="font-medium text-gray-700">ملاحظات:</span> <span className="text-gray-600">{tx.notes}</span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

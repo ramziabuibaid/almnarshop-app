@@ -7,6 +7,7 @@ import ProductFormModal from '@/components/admin/ProductFormModal';
 import MarketingCardGenerator from '@/components/admin/MarketingCardGenerator';
 import { DataTable } from '@/components/ui/data-table';
 import { Plus, Edit, Image as ImageIcon, Loader2, Package, Sparkles, CheckCircle2, Trash, Eye, X, Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
 import { deleteProduct, getProducts } from '@/lib/api';
@@ -14,6 +15,7 @@ import { ColumnDef } from '@tanstack/react-table';
 
 export default function ProductsManagerPage() {
   const { admin } = useAdminAuth();
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -348,11 +350,30 @@ export default function ProductsManagerPage() {
           const product = row.original;
           const name = product.name || product.Name || 'N/A';
           const brand = product.brand || product.Brand;
+          const productId = product.ProductID || product.id || '';
           return (
             <div>
-              <div className="font-medium text-gray-900">{name}</div>
+              {productId ? (
+                <button
+                  onClick={(e) => {
+                    if (e.metaKey || e.ctrlKey) {
+                      // Open in new tab when Command/Ctrl is pressed
+                      window.open(`/admin/products/${productId}`, '_blank');
+                    } else {
+                      // Navigate in same tab
+                      router.push(`/admin/products/${productId}`);
+                    }
+                  }}
+                  className="text-left font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                  title="عرض بروفايل المنتج (اضغط Command/Ctrl لفتح في نافذة جديدة)"
+                >
+                  {name}
+                </button>
+              ) : (
+                <div className="font-medium text-gray-900">{name}</div>
+              )}
               {brand && <div className="text-xs text-gray-500 mt-1">{brand}</div>}
-                          </div>
+            </div>
           );
         },
       },
@@ -650,6 +671,7 @@ export default function ProductsManagerPage() {
         minSize: 150,
         cell: ({ row }) => {
           const product = row.original;
+          const productId = product.ProductID || product.id || '';
           return (
                           <div className="flex items-center gap-2">
                             <button
@@ -680,7 +702,7 @@ export default function ProductsManagerPage() {
         },
       },
     ],
-    [canViewCost, canAccountant, imageErrors]
+    [canViewCost, canAccountant, imageErrors, router]
   );
 
   // Filter products based on search query (additional to column filters)

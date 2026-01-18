@@ -780,10 +780,7 @@ export default function WarehouseCashBoxPage() {
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       النوع
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      حالة التسوية
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th colSpan={2} className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       اسم الزبون
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -833,30 +830,30 @@ export default function WarehouseCashBoxPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {tx.direction === 'in' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            <ArrowUp size={12} />
-                            قبض
+                        <div className="flex flex-col gap-1.5 items-end">
+                          {tx.direction === 'in' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              <ArrowUp size={12} />
+                              قبض
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              <ArrowDown size={12} />
+                              صرف
+                            </span>
+                          )}
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${
+                              tx.isSettled
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {tx.isSettled ? 'مرحلة' : 'غير مرحلة'}
                           </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            <ArrowDown size={12} />
-                            صرف
-                          </span>
-                        )}
+                        </div>
                       </td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${
-                            tx.isSettled
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          {tx.isSettled ? 'مرحلة' : 'غير مرحلة'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
+                      <td colSpan={2} className="px-4 py-3 text-right">
                         <div className="text-gray-900">
                           {(() => {
                             // Try to get customer name from map
@@ -936,22 +933,21 @@ export default function WarehouseCashBoxPage() {
                           )}
                         </div>
                       </td>
-                      {canViewBalance && (
+                      {canViewBalance ? (
                         <>
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-4 py-3 text-right align-top">
                             <div className={`font-semibold ${tx.cash_balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
                               {formatCurrency(tx.cash_balance)}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-4 py-3 text-right align-top">
                             <div className={`font-semibold ${tx.check_balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
                               {formatCurrency(tx.check_balance)}
                             </div>
                           </td>
-                        </>
-                      )}
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center gap-2 justify-end">
+                          <td className="px-4 py-3 text-right align-top">
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="flex items-center gap-2 justify-end">
                           <>
                             <button
                                 onClick={() => {
@@ -1029,12 +1025,12 @@ export default function WarehouseCashBoxPage() {
                                   )}
                                 </button>
                               )}
-                              {admin?.is_super_admin && tx.isSettled && (
+                              {canAccountant && tx.isSettled && (
                                 <button
                                   onClick={() => handleMarkAsUnsettled(tx)}
                                   disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
                                   className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  title="إعادة إلى غير مرحلة (سوبر أدمن فقط)"
+                                  title="إعادة إلى غير مرحلة"
                                 >
                                   {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
                                     <Loader2 size={18} className="animate-spin" />
@@ -1050,9 +1046,128 @@ export default function WarehouseCashBoxPage() {
                               >
                                 <Trash2 size={18} />
                               </button>
-                          </>
-                        </div>
-                      </td>
+                              </>
+                              </div>
+                              {tx.notes && tx.notes.trim() && (
+                                <div className="text-xs text-gray-600 max-w-full leading-tight mt-1">
+                                  {tx.notes}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <td className="px-4 py-3 text-right align-top">
+                          <div className="flex flex-col items-end gap-2">
+                            <div className="flex items-center gap-2 justify-end">
+                              <>
+                                <button
+                                    onClick={() => {
+                                      if (tx.receipt_id) {
+                                        const printUrl = `/admin/warehouse-finance/receipts/print/${tx.receipt_id}`;
+                                        window.open(printUrl, `print-warehouse-receipt-${tx.receipt_id}`, 'noopener,noreferrer');
+                                      } else if (tx.payment_id) {
+                                        const printUrl = `/admin/warehouse-finance/payments/print/${tx.payment_id}`;
+                                        window.open(printUrl, `print-warehouse-payment-${tx.payment_id}`, 'noopener,noreferrer');
+                                      }
+                                    }}
+                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                    title="طباعة"
+                                  >
+                                    <Printer size={18} />
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (tx.isSettled) {
+                                        alert('لا يمكن تعديل سند مرحلة');
+                                        return;
+                                      }
+                                      try {
+                                        let transactionData: any = null;
+                                        if (tx.receipt_id) {
+                                          transactionData = await getWarehouseReceipt(tx.receipt_id);
+                                          setFormData({
+                                            customerID: transactionData.customer_id || '',
+                                            date: transactionData.date ? (typeof transactionData.date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(transactionData.date) ? transactionData.date.split('T')[0] : new Date(transactionData.date).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
+                                            cash_amount: (transactionData.cash_amount || 0).toString(),
+                                            check_amount: (transactionData.check_amount || 0).toString(),
+                                            notes: transactionData.notes || '',
+                                          });
+                                          setEditingTransaction(tx);
+                                          setReceiptModalOpen(true);
+                                        } else if (tx.payment_id) {
+                                          transactionData = await getWarehousePayment(tx.payment_id);
+                                          setFormData({
+                                            customerID: transactionData.customer_id || '',
+                                            date: transactionData.date ? (typeof transactionData.date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(transactionData.date) ? transactionData.date.split('T')[0] : new Date(transactionData.date).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
+                                            cash_amount: (transactionData.cash_amount || 0).toString(),
+                                            check_amount: (transactionData.check_amount || 0).toString(),
+                                            notes: transactionData.notes || '',
+                                          });
+                                          setEditingTransaction(tx);
+                                          setPaymentModalOpen(true);
+                                        }
+                                        setFormError(null);
+                                      } catch (err: any) {
+                                        console.error('[WarehouseCashBox] Failed to load transaction:', err);
+                                        alert(`فشل تحميل بيانات السند: ${err?.message || 'خطأ غير معروف'}`);
+                                      }
+                                    }}
+                                    disabled={tx.isSettled}
+                                    className={`p-2 rounded-lg transition-colors ${
+                                      tx.isSettled
+                                        ? 'text-gray-400 cursor-not-allowed opacity-50'
+                                        : 'text-gray-600 hover:bg-gray-100'
+                                    }`}
+                                    title={tx.isSettled ? 'لا يمكن تعديل سند مرحلة' : 'تعديل'}
+                                  >
+                                    <Edit size={18} />
+                                  </button>
+                                  {canAccountant && !tx.isSettled && (
+                                    <button
+                                      onClick={() => handleMarkAsSettled(tx)}
+                                      disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
+                                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title="تغيير إلى مرحلة"
+                                    >
+                                      {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
+                                        <Loader2 size={18} className="animate-spin" />
+                                      ) : (
+                                        <CheckCircle size={18} />
+                                      )}
+                                    </button>
+                                  )}
+                                  {canAccountant && tx.isSettled && (
+                                    <button
+                                      onClick={() => handleMarkAsUnsettled(tx)}
+                                      disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
+                                      className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title="إعادة إلى غير مرحلة"
+                                    >
+                                      {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
+                                        <Loader2 size={18} className="animate-spin" />
+                                      ) : (
+                                        <XCircle size={18} />
+                                      )}
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleDelete(tx)}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="حذف"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                              </>
+                            </div>
+                            {tx.notes && tx.notes.trim() && (
+                              <div className="text-xs text-gray-600 max-w-full leading-tight mt-1">
+                                {tx.notes}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

@@ -25,6 +25,8 @@ export default function BarcodeScannerInput({
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scanAreaRef = useRef<HTMLDivElement>(null);
   const scannerIdRef = useRef(`scanner-${Math.random().toString(36).substr(2, 9)}`);
+  const lastScannedRef = useRef<string>('');
+  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check if browser supports camera
   const isCameraSupported = useCallback(() => {
@@ -94,15 +96,27 @@ export default function BarcodeScannerInput({
 
   // Handle barcode scan result
   const handleBarcodeScanned = useCallback((barcode: string) => {
+    // Prevent duplicate scans (like supermarket scanners)
+    if (barcode === lastScannedRef.current) {
+      return;
+    }
+
     const product = findProduct(barcode);
 
     if (product) {
+      lastScannedRef.current = barcode;
       onProductFound(product);
-      stopScanning();
+      // Don't stop scanning - keep it running for continuous scanning
+      
+      // Reset last scanned after a delay to allow rescanning same item
+      setTimeout(() => {
+        lastScannedRef.current = '';
+      }, 2000);
     } else {
       alert(`المنتج غير موجود للباركود أو رقم الشامل: ${barcode}`);
+      // Keep scanning even if product not found
     }
-  }, [findProduct, onProductFound, stopScanning]);
+  }, [findProduct, onProductFound]);
 
   // Handle barcode input submit
   const handleBarcodeSubmit = useCallback((e?: React.FormEvent) => {
@@ -110,18 +124,58 @@ export default function BarcodeScannerInput({
     if (!barcodeInput.trim() || disabled) return;
 
     const scannedValue = barcodeInput.trim();
+    
+    // Prevent duplicate scans (like supermarket scanners)
+    if (scannedValue === lastScannedRef.current) {
+      setBarcodeInput('');
+      barcodeInputRef.current?.focus();
+      return;
+    }
+
     const product = findProduct(scannedValue);
 
     if (product) {
+      lastScannedRef.current = scannedValue;
       onProductFound(product);
       setBarcodeInput('');
       barcodeInputRef.current?.focus();
+      
+      // Reset last scanned after a delay to allow rescanning same item
+      setTimeout(() => {
+        lastScannedRef.current = '';
+      }, 2000);
     } else {
       console.log('Product not found for barcode/shamel no:', scannedValue);
       alert(`المنتج غير موجود للباركود أو رقم الشامل: ${scannedValue}`);
       setBarcodeInput('');
+      barcodeInputRef.current?.focus();
     }
   }, [barcodeInput, disabled, findProduct, onProductFound]);
+
+  // Auto-submit when barcode is entered (like supermarket scanner)
+  const handleBarcodeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setBarcodeInput(value);
+
+    // Clear existing timeout
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+    }
+
+    // Auto-submit if barcode looks complete
+    // Typical barcodes are 8+ characters, but we'll auto-submit after a short delay
+    // This works with both manual typing and barcode scanners
+    if (value.trim().length >= 3) {
+      scanTimeoutRef.current = setTimeout(() => {
+        const currentValue = barcodeInputRef.current?.value.trim();
+        if (currentValue && currentValue === value.trim()) {
+          // Simulate form submit
+          const fakeEvent = new Event('submit', { bubbles: true, cancelable: true });
+          handleBarcodeSubmit(fakeEvent as any);
+        }
+      }, 300); // Delay to allow complete barcode entry from scanner
+    }
+  }, [handleBarcodeSubmit]);
 
   // Start camera scanning
   const startScanning = useCallback(async () => {
@@ -280,13 +334,21 @@ export default function BarcodeScannerInput({
     }
   }, [isCameraSupported, handleBarcodeScanned]);
 
-  // Cleanup on unmount
+  // Auto-focus input on mount and cleanup
   useEffect(() => {
+    // Auto-focus the barcode input for quick scanning
+    setTimeout(() => {
+      barcodeInputRef.current?.focus();
+    }, 100);
+
     return () => {
       if (scannerRef.current) {
         scannerRef.current.stop().catch(() => {});
         scannerRef.current.clear().catch(() => {});
         scannerRef.current = null;
+      }
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
       }
     };
   }, []);
@@ -299,7 +361,7 @@ export default function BarcodeScannerInput({
           type="text"
           placeholder={placeholder}
           value={barcodeInput}
-          onChange={(e) => setBarcodeInput(e.target.value)}
+          onChange={handleBarcodeChange}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               handleBarcodeSubmit(e);

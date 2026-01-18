@@ -20,6 +20,7 @@ export default function LabelsPage() {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [labelType, setLabelType] = useState<LabelType>('A');
   const [useQuantity, setUseQuantity] = useState<boolean>(true); // true = حسب الكمية, false = ليبل واحد لكل منتج
+  const [showZeroQuantity, setShowZeroQuantity] = useState<boolean>(true); // true = إظهار الأصناف ذات الكمية صفر, false = إخفاءها
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -162,6 +163,7 @@ export default function LabelsPage() {
       products: selectedProductsList,
       labelType: labelType,
       useQuantity: labelType === 'C' ? useQuantity : true, // Only relevant for Type C
+      showZeroQuantity: labelType === 'C' ? showZeroQuantity : true, // Only relevant for Type C
       timestamp: Date.now(),
     };
     
@@ -287,7 +289,7 @@ export default function LabelsPage() {
                             }}
                           >
                             <div className="flex items-center justify-end gap-1">
-                              <span>كمية المحل</span>
+                              <span>المخزون</span>
                               {sortField === 'quantity' && (
                                 sortDirection === 'asc' ? (
                                   <ArrowUp size={14} className="text-gray-900" />
@@ -312,7 +314,9 @@ export default function LabelsPage() {
                             const isSelected = selectedProducts.has(productId);
                             const imageUrl = getDirectImageUrl(product.Image || product.image || '');
                             const price = product.SalePrice || product.price || 0;
-                            const shopQty = product.CS_Shop || 0;
+                            const shopQty = product.CS_Shop !== undefined && product.CS_Shop !== null ? (product.CS_Shop || 0) : null;
+                            const warehouseQty = product.CS_War !== undefined && product.CS_War !== null ? (product.CS_War || 0) : null;
+                            const totalQty = (shopQty || 0) + (warehouseQty || 0);
 
                             return (
                               <tr
@@ -346,8 +350,15 @@ export default function LabelsPage() {
                                   )}
                                 </td>
                                 <td className="py-3 px-3">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {product.Name || product.name || '—'}
+                                  <div className="flex flex-col gap-1">
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {product.Name || product.name || '—'}
+                                    </div>
+                                    {(product['Shamel No'] || product.ShamelNo || product.shamel_no) && (
+                                      <div className="text-xs text-gray-500">
+                                        رقم الشامل: {product['Shamel No'] || product.ShamelNo || product.shamel_no}
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
                                 <td className="py-3 px-3">
@@ -356,7 +367,33 @@ export default function LabelsPage() {
                                   </div>
                                 </td>
                                 <td className="py-3 px-3">
-                                  <div className="text-sm text-gray-600">{shopQty}</div>
+                                  <div className="text-sm text-gray-600 flex flex-col gap-1">
+                                    {shopQty !== null && (
+                                      <span className="text-xs text-gray-500">
+                                        مح: <span className={`font-medium ${
+                                          shopQty > 0 ? 'text-green-700' : 'text-red-700'
+                                        }`}>{shopQty}</span>
+                                      </span>
+                                    )}
+                                    {warehouseQty !== null && (
+                                      <span className="text-xs text-gray-500">
+                                        م: <span className={`font-medium ${
+                                          warehouseQty > 0 ? 'text-green-700' : 'text-red-700'
+                                        }`}>{warehouseQty}</span>
+                                      </span>
+                                    )}
+                                    {totalQty > 0 && (
+                                      <span
+                                        className={`px-2 py-1 rounded-full text-xs font-medium mt-1 ${
+                                          totalQty > 0
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-red-100 text-red-800'
+                                        }`}
+                                      >
+                                        المجموع: {totalQty}
+                                      </span>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -451,6 +488,20 @@ export default function LabelsPage() {
                         <div className="text-xs text-gray-500">طباعة ملصق واحد بغض النظر عن الكمية</div>
                       </div>
                     </label>
+                    <div className="pt-2 border-t border-gray-200">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={showZeroQuantity}
+                          onChange={(e) => setShowZeroQuantity(e.target.checked)}
+                          className="w-4 h-4 text-gray-900 focus:ring-gray-900 rounded"
+                        />
+                        <div>
+                          <div className="font-medium text-gray-900">إظهار الأصناف ذات الكمية صفر</div>
+                          <div className="text-xs text-gray-500">طباعة ملصقات للأصناف التي لا يوجد لها كمية في المحل</div>
+                        </div>
+                      </label>
+                    </div>
                   </div>
                 </div>
               )}

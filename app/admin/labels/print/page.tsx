@@ -12,6 +12,7 @@ function LabelsPrintContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [labelType, setLabelType] = useState<LabelType>('A');
   const [useQuantity, setUseQuantity] = useState<boolean>(true);
+  const [showZeroQuantity, setShowZeroQuantity] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +67,13 @@ function LabelsPrintContent() {
             setUseQuantity(true); // Default behavior
           }
           
+          // Set showZeroQuantity option (default to true if not provided for backward compatibility)
+          if (typeof printData.showZeroQuantity === 'boolean') {
+            setShowZeroQuantity(printData.showZeroQuantity);
+          } else {
+            setShowZeroQuantity(true); // Default behavior
+          }
+          
           // Clean up localStorage after reading
           localStorage.removeItem('labelsPrintData');
         } else {
@@ -108,14 +116,26 @@ function LabelsPrintContent() {
   }, [searchParams]);
 
   // For Type C, flatten products based on cs_shop quantity or use one per product
+  // Also filter out zero quantity products if showZeroQuantity is false
   const flattenedProducts = labelType === 'C'
-    ? (useQuantity
-        ? products.flatMap((product) => {
-            const quantity = product.cs_shop || product.CS_Shop || 0;
-            const count = Math.max(1, Math.floor(quantity));
-            return Array(count).fill(product);
-          })
-        : products) // One label per product regardless of quantity
+    ? (() => {
+        // First, filter products based on showZeroQuantity option
+        const filteredProducts = showZeroQuantity
+          ? products
+          : products.filter((product) => {
+              const quantity = product.cs_shop || product.CS_Shop || 0;
+              return quantity > 0;
+            });
+        
+        // Then flatten based on useQuantity option
+        return useQuantity
+          ? filteredProducts.flatMap((product) => {
+              const quantity = product.cs_shop || product.CS_Shop || 0;
+              const count = Math.max(1, Math.floor(quantity));
+              return Array(count).fill(product);
+            })
+          : filteredProducts; // One label per product regardless of quantity
+      })()
     : products;
 
   if (loading) {
@@ -388,7 +408,7 @@ function LabelsPrintContent() {
           /* Type C: A4 Sheet with 70mm x 29.7mm labels */
           @page type-c {
             size: A4;
-            margin: 3mm;
+            margin: 0;
           }
 
           .label-type-c-container {
@@ -405,8 +425,8 @@ function LabelsPrintContent() {
           }
 
           .label-type-c {
-            width: 64mm;
-            height: 26mm;
+            width: 65mm;
+            height: 27mm;
             border: 0.5mm solid #000;
             padding: 2mm;
             display: flex;

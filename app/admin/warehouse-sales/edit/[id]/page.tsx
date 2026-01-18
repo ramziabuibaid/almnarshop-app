@@ -9,6 +9,7 @@ import {
   deleteWarehouseSalesInvoice,
   getProducts,
   getAllCustomers,
+  getCustomerLastPriceForProduct,
 } from '@/lib/api';
 import {
   Loader2,
@@ -257,16 +258,17 @@ export default function EditWarehouseSalesInvoicePage() {
     
     // Otherwise, use selectedProduct (from manual selection) - this preserves all product data
     if (!productToAdd) {
-      // Use the selected product object directly if available
+      // Priority 1: Use the selected product object directly if available (preserves all data including Name)
       if (selectedProduct) {
-        productToAdd = selectedProduct;
+        productToAdd = { ...selectedProduct }; // Make a copy to avoid mutations
         console.log('[WarehouseSales] Using selectedProduct directly:', {
           ProductID: productToAdd.ProductID || productToAdd.id || productToAdd.product_id,
           Name: productToAdd.Name,
-          name: productToAdd.name
+          name: productToAdd.name,
+          hasName: !!(productToAdd.Name || productToAdd.name)
         });
       } else if (selectedProductId) {
-        // Fallback: find product by selectedProductId
+        // Priority 2: Fallback - find product by selectedProductId
         const selectedId = String(selectedProductId || '').trim();
         
         productToAdd = products.find((p) => {
@@ -330,40 +332,152 @@ export default function EditWarehouseSalesInvoicePage() {
     }
     
     console.log('[WarehouseSales] Final product ID extracted:', productIdForSearch);
-    
-    // Extract product name - use same simple logic as POS
-    // Since we're using selectedProduct or productParam directly, the name should be available
-    const productName = productToAdd.Name || productToAdd.name || 'غير معروف';
-    
-    if (!productName || productName === 'غير معروف') {
-      console.warn('[WarehouseSales] Product name not found in productToAdd:', {
-        ProductID: productIdForSearch,
+    console.log('[WarehouseSales] productToAdd before name extraction:', {
+      ProductID: productToAdd.ProductID || productToAdd.id || productToAdd.product_id,
+      Name: productToAdd.Name,
+      name: productToAdd.name,
+      hasName: !!(productToAdd.Name || productToAdd.name),
+      allKeys: Object.keys(productToAdd).slice(0, 20),
+      sampleValues: {
         Name: productToAdd.Name,
         name: productToAdd.name,
-        selectedProduct: selectedProduct ? {
-          Name: selectedProduct.Name,
-          name: selectedProduct.name
-        } : null,
-        allKeys: Object.keys(productToAdd).slice(0, 15)
+        'Name (string)': String(productToAdd.Name || ''),
+        'name (string)': String(productToAdd.name || '')
+      }
+    });
+    
+    // Extract product name - check multiple possible fields
+    let productName = '';
+    
+    // Try all possible name fields
+    if (productToAdd.Name && String(productToAdd.Name).trim()) {
+      productName = String(productToAdd.Name).trim();
+    } else if (productToAdd.name && String(productToAdd.name).trim()) {
+      productName = String(productToAdd.name).trim();
+    } else if (productToAdd.product_name && String(productToAdd.product_name).trim()) {
+      productName = String(productToAdd.product_name).trim();
+    }
+    
+    // If still no name, try to get it from selectedProduct (for manual selection)
+    if (!productName && selectedProduct) {
+      productName = selectedProduct.Name || selectedProduct.name || '';
+      if (productName) {
+        productName = String(productName).trim();
+      }
+    }
+    
+    // Final fallback - search in products array
+    if (!productName) {
+      const originalProduct = products.find(p => {
+        const pId = String(p.ProductID || p.id || p.product_id || '').trim();
+        return pId === productIdForSearch;
+      });
+      if (originalProduct) {
+        productName = originalProduct.Name || originalProduct.name || '';
+        if (productName) {
+          productName = String(productName).trim();
+        }
+      }
+    }
+    
+    // Last resort
+    if (!productName) {
+      productName = 'غير معروف';
+      console.error('[WarehouseSales] Product name not found after all attempts:', {
+        ProductID: productIdForSearch,
+        productToAddKeys: Object.keys(productToAdd).slice(0, 20),
+        selectedProductExists: !!selectedProduct,
+        selectedProductName: selectedProduct ? (selectedProduct.Name || selectedProduct.name) : null
       });
     }
     
+    console.log('[WarehouseSales] Final product name:', productName);
+    
+    // Extract product image - check multiple possible fields
+    let productImage = '';
+    
+    // Try all possible image fields from productToAdd
+    if (productToAdd.Image && String(productToAdd.Image).trim()) {
+      productImage = String(productToAdd.Image).trim();
+    } else if (productToAdd.image && String(productToAdd.image).trim()) {
+      productImage = String(productToAdd.image).trim();
+    } else if (productToAdd['Image'] && String(productToAdd['Image']).trim()) {
+      productImage = String(productToAdd['Image']).trim();
+    } else if (productToAdd['image'] && String(productToAdd['image']).trim()) {
+      productImage = String(productToAdd['image']).trim();
+    }
+    
+    // If still no image, try to get it from selectedProduct (for manual selection)
+    if (!productImage && selectedProduct) {
+      productImage = selectedProduct.Image || selectedProduct.image || selectedProduct['Image'] || selectedProduct['image'] || '';
+      if (productImage) {
+        productImage = String(productImage).trim();
+      }
+    }
+    
+    // Final fallback - search in products array
+    if (!productImage) {
+      const originalProduct = products.find(p => {
+        const pId = String(p.ProductID || p.id || p.product_id || '').trim();
+        return pId === productIdForSearch;
+      });
+      if (originalProduct) {
+        productImage = originalProduct.Image || originalProduct.image || originalProduct['Image'] || originalProduct['image'] || '';
+        if (productImage) {
+          productImage = String(productImage).trim();
+        }
+      }
+    }
+    
+    console.log('[WarehouseSales] Final product image:', productImage ? `${productImage.substring(0, 50)}...` : 'No image');
+    
+    const detailId = `temp-${Date.now()}`;
+    
     const newDetail: InvoiceDetail = {
-      detailID: `temp-${Date.now()}`,
+      detailID: detailId,
       productID: productIdForSearch,
       productName: productName,
       quantity: quantity,
       unitPrice: unitPrice,
       costPrice: productToAdd.CostPrice || productToAdd.cost_price || productToAdd.costPrice || 0,
       isNew: true,
-      productImage: productToAdd.Image || productToAdd.image || '',
+      productImage: productImage,
     };
     
+    // Check if product already exists in details
+    const existingDetailIndex = details.findIndex((item) => {
+      const itemProductId = String(item.productID || '').trim();
+      return itemProductId === productIdForSearch;
+    });
+
+    if (existingDetailIndex !== -1) {
+      // Product already exists, increase quantity
+      setDetails((prev) =>
+        prev.map((item, index) =>
+          index === existingDetailIndex
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        )
+      );
+      
+      // Clear form and close
+      setSelectedProductId('');
+      setSelectedProduct(null);
+      setNewProductQuantity(1);
+      setNewProductPrice(0);
+      setShowAddProduct(false);
+      setProductSearchQuery('');
+      
+      // Don't fetch last price as product already exists
+      return;
+    }
+
     console.log('[WarehouseSales] Adding product:', {
       productID: productIdForSearch,
       productName: productName,
       quantity: quantity,
-      unitPrice: unitPrice
+      unitPrice: unitPrice,
+      productImage: productImage ? `${productImage.substring(0, 50)}...` : 'No image'
     });
 
     setDetails((prev) => [...prev, newDetail]);
@@ -373,6 +487,32 @@ export default function EditWarehouseSalesInvoicePage() {
     setNewProductPrice(0);
     setShowAddProduct(false);
     setProductSearchQuery('');
+
+    // Fetch last customer price in background and update if found
+    // Only fetch if customer is selected and no price was passed from barcode (priceParam)
+    // Always fetch for both barcode and manual selection
+    if (customerId && (!priceParam || priceParam === 0)) {
+      // Use setTimeout to run in background without blocking UI
+      setTimeout(async () => {
+        try {
+          const lastPrice = await getCustomerLastPriceForProduct(
+            customerId,
+            productIdForSearch
+          );
+          
+          if (lastPrice && lastPrice > 0) {
+            // Update the price for this specific detail
+            setDetails((prev) =>
+              prev.map((item) =>
+                item.detailID === detailId ? { ...item, unitPrice: lastPrice } : item
+              )
+            );
+          }
+        } catch (error) {
+          console.error('[WarehouseSales] Error fetching last customer price:', error);
+        }
+      }, 0);
+    }
   };
 
   const calculateSubtotal = () => {
@@ -690,20 +830,21 @@ export default function EditWarehouseSalesInvoicePage() {
                   </button>
                 </div>
 
+            {/* Barcode Scanner - Always visible */}
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
+              <BarcodeScannerInput
+                onProductFound={(product) => {
+                  handleAddProduct(product, 1);
+                }}
+                products={products}
+                placeholder="امسح الباركود أو رقم الشامل..."
+                className="w-full"
+              />
+            </div>
+
             {showAddProduct && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                {/* Barcode Scanner */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
-                  <BarcodeScannerInput
-                    onProductFound={(product) => {
-                      handleAddProduct(product, 1);
-                    }}
-                    products={products}
-                    placeholder="امسح الباركود أو رقم الشامل..."
-                    className="w-full"
-                  />
-                </div>
                 
                 <div className="relative mb-4" ref={productDropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>

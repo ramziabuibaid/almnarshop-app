@@ -221,77 +221,42 @@ function WarehouseSalesFormContent() {
     // If product is provided directly (from barcode scanner), use it
     let productToAdd = productParam;
     
-    // Otherwise, find product by selectedProductId (manual selection)
+    // Otherwise, use selectedProduct (from manual selection) - this preserves all product data
     if (!productToAdd) {
-      if (!selectedProductId) {
+      // Priority 1: Use the selected product object directly if available (preserves all data including Name)
+      if (selectedProduct) {
+        productToAdd = { ...selectedProduct }; // Make a copy to avoid mutations
+        console.log('[WarehouseSales] Using selectedProduct directly:', {
+          ProductID: productToAdd.ProductID || productToAdd.id || productToAdd.product_id,
+          Name: productToAdd.Name,
+          name: productToAdd.name,
+          hasName: !!(productToAdd.Name || productToAdd.name)
+        });
+      } else if (selectedProductId) {
+        // Priority 2: Fallback - find product by selectedProductId
+        const selectedId = String(selectedProductId || '').trim();
+        
+        productToAdd = products.find((p) => {
+          const possibleIds = [
+            p.ProductID,
+            p.id,
+            p.product_id,
+            p['ProductID'],
+            p['id'],
+            p['product_id']
+          ].filter(id => id != null).map(id => String(id).trim());
+          
+          return possibleIds.includes(selectedId);
+        });
+        
+        if (!productToAdd) {
+          alert(`المنتج غير موجود. المنتج المحدد: ${selectedProductId}`);
+          return;
+        }
+      } else {
         alert('يرجى اختيار منتج من القائمة أولاً');
         return;
       }
-      
-      // Try to find the product with multiple possible ID fields
-      const selectedId = String(selectedProductId || '').trim();
-      
-      console.log('[WarehouseSales] Looking for product with ID:', selectedId, 'from', products.length, 'products');
-      
-      productToAdd = products.find((p) => {
-        // Try all possible ID fields
-        const possibleIds = [
-          p.ProductID,
-          p.id,
-          p.product_id,
-          p['ProductID'],
-          p['id'],
-          p['product_id']
-        ].filter(id => id != null).map(id => String(id).trim());
-        
-        return possibleIds.includes(selectedId);
-      });
-      
-      if (!productToAdd) {
-        console.error('[WarehouseSales] Product not found:', {
-          selectedProductId,
-          selectedId,
-          totalProducts: products.length,
-          availableProducts: products.slice(0, 5).map(p => ({
-            ProductID: p.ProductID,
-            id: p.id,
-            product_id: p.product_id,
-            Name: p.Name,
-            name: p.name
-          }))
-        });
-        alert(`المنتج غير موجود. المنتج المحدد: ${selectedProductId}`);
-        return;
-      }
-      
-      // Ensure we have the product ID - use selectedId as fallback
-      if (!productToAdd.ProductID && !productToAdd.id && !productToAdd.product_id) {
-        // If product doesn't have ID field, use the selectedId
-        productToAdd.ProductID = selectedId;
-        productToAdd.id = selectedId;
-        productToAdd.product_id = selectedId;
-        console.log('[WarehouseSales] Added ID to product:', selectedId);
-      }
-      
-      console.log('[WarehouseSales] Product found:', {
-        selectedProductId,
-        selectedId,
-        foundProduct: {
-          ProductID: productToAdd.ProductID,
-          id: productToAdd.id,
-          product_id: productToAdd.product_id,
-          Name: productToAdd.Name,
-          name: productToAdd.name,
-          product_name: productToAdd.product_name,
-          SalePrice: productToAdd.SalePrice || productToAdd.sale_price || productToAdd.price,
-          allKeys: Object.keys(productToAdd),
-          allValues: {
-            ProductID: productToAdd.ProductID,
-            id: productToAdd.id,
-            product_id: productToAdd.product_id
-          }
-        }
-      });
     }
 
     const quantity = quantityParam != null ? quantityParam : newProductQuantity;
@@ -335,23 +300,104 @@ function WarehouseSalesFormContent() {
     }
     
     console.log('[WarehouseSales] Final product ID extracted:', productIdForSearch);
-    
-    // Extract product name - use same simple logic as POS
-    // Since we're using selectedProduct or productParam directly, the name should be available
-    const productName = productToAdd.Name || productToAdd.name || 'غير معروف';
-    
-    if (!productName || productName === 'غير معروف') {
-      console.warn('[WarehouseSales] Product name not found in productToAdd:', {
-        ProductID: productIdForSearch,
+    console.log('[WarehouseSales] productToAdd before name extraction:', {
+      ProductID: productToAdd.ProductID || productToAdd.id || productToAdd.product_id,
+      Name: productToAdd.Name,
+      name: productToAdd.name,
+      hasName: !!(productToAdd.Name || productToAdd.name),
+      allKeys: Object.keys(productToAdd).slice(0, 20),
+      sampleValues: {
         Name: productToAdd.Name,
         name: productToAdd.name,
-        selectedProduct: selectedProduct ? {
-          Name: selectedProduct.Name,
-          name: selectedProduct.name
-        } : null,
-        allKeys: Object.keys(productToAdd).slice(0, 15)
+        'Name (string)': String(productToAdd.Name || ''),
+        'name (string)': String(productToAdd.name || '')
+      }
+    });
+    
+    // Extract product name - check multiple possible fields
+    let productName = '';
+    
+    // Try all possible name fields
+    if (productToAdd.Name && String(productToAdd.Name).trim()) {
+      productName = String(productToAdd.Name).trim();
+    } else if (productToAdd.name && String(productToAdd.name).trim()) {
+      productName = String(productToAdd.name).trim();
+    } else if (productToAdd.product_name && String(productToAdd.product_name).trim()) {
+      productName = String(productToAdd.product_name).trim();
+    }
+    
+    // If still no name, try to get it from selectedProduct (for manual selection)
+    if (!productName && selectedProduct) {
+      productName = selectedProduct.Name || selectedProduct.name || '';
+      if (productName) {
+        productName = String(productName).trim();
+      }
+    }
+    
+    // Final fallback - search in products array
+    if (!productName) {
+      const originalProduct = products.find(p => {
+        const pId = String(p.ProductID || p.id || p.product_id || '').trim();
+        return pId === productIdForSearch;
+      });
+      if (originalProduct) {
+        productName = originalProduct.Name || originalProduct.name || '';
+        if (productName) {
+          productName = String(productName).trim();
+        }
+      }
+    }
+    
+    // Last resort
+    if (!productName) {
+      productName = 'غير معروف';
+      console.error('[WarehouseSales] Product name not found after all attempts:', {
+        ProductID: productIdForSearch,
+        productToAddKeys: Object.keys(productToAdd).slice(0, 20),
+        selectedProductExists: !!selectedProduct,
+        selectedProductName: selectedProduct ? (selectedProduct.Name || selectedProduct.name) : null
       });
     }
+    
+    console.log('[WarehouseSales] Final product name:', productName);
+    
+    // Extract product image - check multiple possible fields
+    let productImage = '';
+    
+    // Try all possible image fields from productToAdd
+    if (productToAdd.Image && String(productToAdd.Image).trim()) {
+      productImage = String(productToAdd.Image).trim();
+    } else if (productToAdd.image && String(productToAdd.image).trim()) {
+      productImage = String(productToAdd.image).trim();
+    } else if (productToAdd['Image'] && String(productToAdd['Image']).trim()) {
+      productImage = String(productToAdd['Image']).trim();
+    } else if (productToAdd['image'] && String(productToAdd['image']).trim()) {
+      productImage = String(productToAdd['image']).trim();
+    }
+    
+    // If still no image, try to get it from selectedProduct (for manual selection)
+    if (!productImage && selectedProduct) {
+      productImage = selectedProduct.Image || selectedProduct.image || selectedProduct['Image'] || selectedProduct['image'] || '';
+      if (productImage) {
+        productImage = String(productImage).trim();
+      }
+    }
+    
+    // Final fallback - search in products array
+    if (!productImage) {
+      const originalProduct = products.find(p => {
+        const pId = String(p.ProductID || p.id || p.product_id || '').trim();
+        return pId === productIdForSearch;
+      });
+      if (originalProduct) {
+        productImage = originalProduct.Image || originalProduct.image || originalProduct['Image'] || originalProduct['image'] || '';
+        if (productImage) {
+          productImage = String(productImage).trim();
+        }
+      }
+    }
+    
+    console.log('[WarehouseSales] Final product image:', productImage ? `${productImage.substring(0, 50)}...` : 'No image');
     
     const newDetail: InvoiceDetail = {
       detailID: detailId,
@@ -360,14 +406,43 @@ function WarehouseSalesFormContent() {
       quantity: quantity,
       unitPrice: unitPrice,
       costPrice: productToAdd.CostPrice || productToAdd.cost_price || productToAdd.costPrice || 0,
-      productImage: productToAdd.Image || productToAdd.image || '',
+      productImage: productImage,
     };
     
+    // Check if product already exists in details
+    const existingDetailIndex = details.findIndex((item) => {
+      const itemProductId = String(item.productID || '').trim();
+      return itemProductId === productIdForSearch;
+    });
+
+    if (existingDetailIndex !== -1) {
+      // Product already exists, increase quantity
+      setDetails((prev) =>
+        prev.map((item, index) =>
+          index === existingDetailIndex
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        )
+      );
+      
+      // Clear form and close
+      setSelectedProductId('');
+      setSelectedProduct(null);
+      setNewProductQuantity(1);
+      setNewProductPrice(0);
+      setShowAddProduct(false);
+      setProductSearchQuery('');
+      
+      // Don't fetch last price as product already exists
+      return;
+    }
+
     console.log('[WarehouseSales] Adding product:', {
       productID: productIdForSearch,
       productName: productName,
       quantity: quantity,
-      unitPrice: unitPrice
+      unitPrice: unitPrice,
+      productImage: productImage ? `${productImage.substring(0, 50)}...` : 'No image'
     });
 
     // Add product immediately
@@ -379,9 +454,10 @@ function WarehouseSalesFormContent() {
     setShowAddProduct(false);
     setProductSearchQuery('');
 
-    // Fetch last customer price in background and update if found (only if no manual price was entered)
-    // Only fetch if we added the product manually (not from barcode) and no price was entered
-    if (!productParam && customerId && (!priceParam || priceParam === 0) && (!newProductPrice || newProductPrice === 0)) {
+    // Fetch last customer price in background and update if found
+    // Only fetch if customer is selected and no price was passed from barcode (priceParam)
+    // Always fetch for both barcode and manual selection
+    if (customerId && (!priceParam || priceParam === 0)) {
       // Use setTimeout to run in background without blocking UI
       setTimeout(async () => {
         try {
@@ -649,20 +725,21 @@ function WarehouseSalesFormContent() {
                   </button>
                 </div>
                 
+            {/* Barcode Scanner - Always visible */}
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
+              <BarcodeScannerInput
+                onProductFound={(product) => {
+                  handleAddProduct(product, 1);
+                }}
+                products={products}
+                placeholder="امسح الباركود أو رقم الشامل..."
+                className="w-full"
+              />
+            </div>
+                
             {showAddProduct && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                {/* Barcode Scanner */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
-                  <BarcodeScannerInput
-                    onProductFound={(product) => {
-                      handleAddProduct(product, 1);
-                    }}
-                    products={products}
-                    placeholder="امسح الباركود أو رقم الشامل..."
-                    className="w-full"
-                  />
-                </div>
                 
                 <div className="relative mb-4" ref={productDropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>

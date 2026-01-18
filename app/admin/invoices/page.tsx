@@ -632,7 +632,7 @@ export default function InvoicesPage() {
                               )}
                             </button>
                           )}
-                          {admin?.is_super_admin && invoice.isSettled && (
+                          {canAccountant && invoice.isSettled && (
                             <button
                               onClick={() => handleMarkInvoiceAsUnsettled(invoice)}
                               disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
@@ -703,7 +703,7 @@ export default function InvoicesPage() {
                     )}
                   </button>
                 )}
-                {admin?.is_super_admin && viewing.invoice && viewing.invoice.isSettled && (
+                {canAccountant && viewing.invoice && viewing.invoice.isSettled && (
                   <button
                     onClick={handleMarkAsUnsettled}
                     disabled={updatingSettlement}

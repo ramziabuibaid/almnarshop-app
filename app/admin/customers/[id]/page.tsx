@@ -266,6 +266,8 @@ export default function CustomerProfilePage() {
         items: invoice.Items || invoice.items || [],
         source: invoice.Source || invoice.source || 'Shop',
         status: invoice.Status || invoice.status,
+        AccountantSign: invoice.AccountantSign || invoice.accountant_sign || 'غير مرحلة',
+        isSettled: invoice.isSettled !== undefined ? invoice.isSettled : (invoice.is_settled === true || invoice.is_settled === 'true'),
         ...invoice,
       });
     });
@@ -1222,21 +1224,54 @@ export default function CustomerProfilePage() {
                                   <Printer size={16} />
                                 </button>
                                 {/* Edit Button (only for invoices) */}
-                                {item.type === 'invoice' && (
-                                  <button
-                                    onClick={() => {
-                                      if (item.source === 'Shop') {
-                                        router.push(`/admin/shop-sales/edit/${item.id}`);
-                                      } else if (item.source === 'Warehouse') {
-                                        router.push(`/admin/warehouse-sales/edit/${item.id}`);
-                                      }
-                                    }}
-                                    className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
-                                    title="تعديل"
-                                  >
-                                    <Edit size={16} />
-                                  </button>
-                                )}
+                                {item.type === 'invoice' && (() => {
+                                  // Check if invoice is settled (cannot be edited)
+                                  const isShopSettled = item.source === 'Shop' && (item.AccountantSign === 'مرحلة' || item.accountant_sign === 'مرحلة');
+                                  const isWarehouseSettled = item.source === 'Warehouse' && (item.AccountantSign === 'مرحلة' || item.accountant_sign === 'مرحلة');
+                                  const isCashSettled = item.source === 'Cash' && (item.isSettled === true || item.is_settled === true);
+                                  const isSettled = isShopSettled || isWarehouseSettled || isCashSettled;
+                                  
+                                  if (isSettled) {
+                                    return (
+                                      <button
+                                        disabled
+                                        className="p-1.5 text-gray-400 cursor-not-allowed rounded-lg transition-colors opacity-50"
+                                        title="لا يمكن تعديل فاتورة مرحلة"
+                                      >
+                                        <Edit size={16} />
+                                      </button>
+                                    );
+                                  }
+                                  
+                                  return (
+                                    <button
+                                      onClick={(e) => {
+                                        let editUrl = '';
+                                        if (item.source === 'Shop') {
+                                          editUrl = `/admin/shop-sales/edit/${item.id}`;
+                                        } else if (item.source === 'Warehouse') {
+                                          editUrl = `/admin/warehouse-sales/edit/${item.id}`;
+                                        } else if (item.source === 'Cash') {
+                                          editUrl = `/admin/invoices/edit/${item.id}`;
+                                        }
+                                        
+                                        if (editUrl) {
+                                          if (e.metaKey || e.ctrlKey) {
+                                            // Open in new tab when Command/Ctrl is pressed
+                                            window.open(editUrl, '_blank');
+                                          } else {
+                                            // Navigate in same tab
+                                            router.push(editUrl);
+                                          }
+                                        }
+                                      }}
+                                      className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                      title="تعديل (اضغط Command/Ctrl لفتح في نافذة جديدة)"
+                                    >
+                                      <Edit size={16} />
+                                    </button>
+                                  );
+                                })()}
                               </div>
                             </div>
 

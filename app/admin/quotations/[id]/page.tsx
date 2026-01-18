@@ -17,6 +17,7 @@ import {
   getAllCustomers,
   saveShopSalesInvoice,
   saveWarehouseSalesInvoice,
+  getCustomerLastPriceForProduct,
 } from '@/lib/api';
 import {
   Loader2,
@@ -98,6 +99,7 @@ export default function EditQuotationPage() {
   const [error, setError] = useState<string | null>(null);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<any>(null); // Store the full product object
   const [newProductQuantity, setNewProductQuantity] = useState(1);
   const [newProductPrice, setNewProductPrice] = useState(0);
   const [productSearchQuery, setProductSearchQuery] = useState('');
@@ -255,45 +257,264 @@ export default function EditQuotationPage() {
   };
 
   const handleAddProduct = (productParam?: any, quantityParam?: number, priceParam?: number) => {
-    const productToAdd = productParam || products.find((p) => p.ProductID === selectedProductId || p.id === selectedProductId || p.product_id === selectedProductId);
+    // If product is provided directly (from barcode scanner), use it
+    let productToAdd = productParam;
     
+    // Otherwise, use selectedProduct (from manual selection) - this preserves all product data
     if (!productToAdd) {
-      if (!selectedProductId) {
-        alert('يرجى اختيار منتج');
+      // Priority 1: Use the selected product object directly if available (preserves all data including Name)
+      if (selectedProduct) {
+        productToAdd = { ...selectedProduct }; // Make a copy to avoid mutations
+        console.log('[Quotations] Using selectedProduct directly:', {
+          ProductID: productToAdd.ProductID || productToAdd.id || productToAdd.product_id,
+          Name: productToAdd.Name,
+          name: productToAdd.name,
+          hasName: !!(productToAdd.Name || productToAdd.name)
+        });
+      } else if (selectedProductId) {
+        // Priority 2: Fallback - find product by selectedProductId
+        const selectedId = String(selectedProductId || '').trim();
+        
+        productToAdd = products.find((p) => {
+          const possibleIds = [
+            p.ProductID,
+            p.id,
+            p.product_id,
+            p['ProductID'],
+            p['id'],
+            p['product_id']
+          ].filter(id => id != null).map(id => String(id).trim());
+          
+          return possibleIds.includes(selectedId);
+        });
+        
+        if (!productToAdd) {
+          alert('المنتج غير موجود');
+          return;
+        }
       } else {
-        alert('المنتج غير موجود');
+        alert('يرجى اختيار منتج');
+        return;
       }
-      return;
     }
 
     const quantity = quantityParam != null ? quantityParam : newProductQuantity;
-    const unitPrice = priceParam != null && priceParam > 0 
-      ? priceParam 
-      : (newProductPrice != null && newProductPrice > 0) 
-        ? newProductPrice 
-        : (productToAdd.SalePrice || productToAdd.sale_price || productToAdd.price || 0);
+
+    const detailId = `temp-${Date.now()}`;
+    
+    // Extract product ID first - productToAdd should have ID fields now
+    // Since we ensured productToAdd has ID in previous steps, extract it directly
+    const productIdForSearch = String(
+      productToAdd.ProductID || 
+      productToAdd.id || 
+      productToAdd.product_id || 
+      (productParam ? (productParam.ProductID || productParam.id || productParam.product_id) : null) ||
+      selectedProductId || 
+      ''
+    ).trim();
+    
+    if (!productIdForSearch) {
+      console.error('[Quotations] CRITICAL: Product ID is still undefined!', {
+        productToAdd: {
+          ProductID: productToAdd.ProductID,
+          id: productToAdd.id,
+          product_id: productToAdd.product_id,
+          allKeys: Object.keys(productToAdd).slice(0, 20)
+        },
+        selectedProductId,
+        selectedProduct: selectedProduct ? {
+          ProductID: selectedProduct.ProductID,
+          id: selectedProduct.id,
+          product_id: selectedProduct.product_id
+        } : null,
+        productParam: productParam ? {
+          ProductID: productParam.ProductID,
+          id: productParam.id,
+          product_id: productParam.product_id
+        } : null
+      });
+      alert('خطأ فني: المنتج لا يحتوي على معرف صالح. يرجى المحاولة مرة أخرى أو اختيار منتج آخر.');
+      return;
+    }
+    
+    console.log('[Quotations] Final product ID extracted:', productIdForSearch);
+    
+    // Use provided price, manually entered price, or default sale price
+    // Priority: priceParam > newProductPrice (if > 0) > productToAdd.SalePrice > selectedProduct > products array
+    let unitPrice = productToAdd.SalePrice || productToAdd.sale_price || productToAdd.price || 0;
+    if (priceParam != null && priceParam > 0) {
+      unitPrice = priceParam;
+    } else if (newProductPrice != null && newProductPrice > 0) {
+      unitPrice = newProductPrice;
+    } else if (!unitPrice || unitPrice === 0) {
+      // If still no price, try to get it from selectedProduct
+      if (selectedProduct) {
+        unitPrice = selectedProduct.SalePrice || selectedProduct.sale_price || selectedProduct.price || 0;
+      }
+      // Final fallback - search in products array
+      if ((!unitPrice || unitPrice === 0) && productIdForSearch) {
+        const originalProduct = products.find(p => {
+          const pId = String(p.ProductID || p.id || p.product_id || '').trim();
+          return pId === productIdForSearch;
+        });
+        if (originalProduct) {
+          unitPrice = originalProduct.SalePrice || originalProduct.sale_price || originalProduct.price || 0;
+        }
+      }
+    }
+
+    // Extract product name and image - check multiple possible fields
+    let productName = '';
+    
+    // Try all possible name fields
+    if (productToAdd.Name && String(productToAdd.Name).trim()) {
+      productName = String(productToAdd.Name).trim();
+    } else if (productToAdd.name && String(productToAdd.name).trim()) {
+      productName = String(productToAdd.name).trim();
+    } else if (productToAdd.product_name && String(productToAdd.product_name).trim()) {
+      productName = String(productToAdd.product_name).trim();
+    }
+    
+    // If still no name, try to get it from selectedProduct (for manual selection)
+    if (!productName && selectedProduct) {
+      productName = selectedProduct.Name || selectedProduct.name || '';
+      if (productName) {
+        productName = String(productName).trim();
+      }
+    }
+    
+    // Final fallback - search in products array
+    if (!productName && productIdForSearch) {
+      const originalProduct = products.find(p => {
+        const pId = String(p.ProductID || p.id || p.product_id || '').trim();
+        return pId === productIdForSearch;
+      });
+      if (originalProduct) {
+        productName = originalProduct.Name || originalProduct.name || '';
+        if (productName) {
+          productName = String(productName).trim();
+        }
+      }
+    }
+    
+    // Last resort
+    if (!productName) {
+      productName = 'غير معروف';
+    }
+    
+    // Extract product image - check multiple possible fields
+    let productImage = '';
+    
+    // Try all possible image fields from productToAdd
+    if (productToAdd.Image && String(productToAdd.Image).trim()) {
+      productImage = String(productToAdd.Image).trim();
+    } else if (productToAdd.image && String(productToAdd.image).trim()) {
+      productImage = String(productToAdd.image).trim();
+    } else if (productToAdd['Image'] && String(productToAdd['Image']).trim()) {
+      productImage = String(productToAdd['Image']).trim();
+    } else if (productToAdd['image'] && String(productToAdd['image']).trim()) {
+      productImage = String(productToAdd['image']).trim();
+    }
+    
+    // If still no image, try to get it from selectedProduct (for manual selection)
+    if (!productImage && selectedProduct) {
+      productImage = selectedProduct.Image || selectedProduct.image || selectedProduct['Image'] || selectedProduct['image'] || '';
+      if (productImage) {
+        productImage = String(productImage).trim();
+      }
+    }
+    
+    // Final fallback - search in products array
+    if (!productImage && productIdForSearch) {
+      const originalProduct = products.find(p => {
+        const pId = String(p.ProductID || p.id || p.product_id || '').trim();
+        return pId === productIdForSearch;
+      });
+      if (originalProduct) {
+        productImage = originalProduct.Image || originalProduct.image || originalProduct['Image'] || originalProduct['image'] || '';
+        if (productImage) {
+          productImage = String(productImage).trim();
+        }
+      }
+    }
+    
+    // Check if product already exists in details
+    const existingDetailIndex = details.findIndex((item) => {
+      const itemProductId = String(item.ProductID || '').trim();
+      return itemProductId === productIdForSearch;
+    });
+
+    if (existingDetailIndex !== -1) {
+      // Product already exists, increase quantity
+      setDetails((prev) =>
+        prev.map((item, index) =>
+          index === existingDetailIndex
+            ? { ...item, Quantity: item.Quantity + quantity }
+            : item
+        )
+      );
+      
+      // Clear form and close
+      setSelectedProductId('');
+      setSelectedProduct(null);
+      setNewProductQuantity(1);
+      setNewProductPrice(0);
+      setShowAddProduct(false);
+      setProductSearchQuery('');
+      
+      // Don't fetch last price as product already exists
+      return;
+    }
 
     const newDetail: QuotationDetail = {
-      QuotationDetailID: `temp-${Date.now()}`,
+      QuotationDetailID: detailId,
       QuotationID: quotationId,
-      ProductID: productToAdd.ProductID || productToAdd.id || productToAdd.product_id,
+      ProductID: productIdForSearch,
       Quantity: quantity,
       UnitPrice: unitPrice,
       notes: '',
       product: {
-        name: productToAdd.Name || productToAdd.name || '',
+        name: productName,
         barcode: productToAdd.Barcode || productToAdd.barcode,
         shamelNo: productToAdd['Shamel No'] || productToAdd.ShamelNo || productToAdd.shamel_no || productToAdd.shamelNo,
         costPrice: productToAdd.CostPrice || productToAdd.cost_price || productToAdd.costPrice || 0,
+        image: productImage,
       },
     };
 
     setDetails((prev) => [...prev, newDetail]);
     setSelectedProductId('');
+    setSelectedProduct(null); // Clear selected product
     setNewProductQuantity(1);
     setNewProductPrice(0);
     setShowAddProduct(false);
     setProductSearchQuery('');
+
+    // Fetch last customer price in background and update if found
+    // Only fetch if customer is selected and no price was passed from barcode (priceParam)
+    // Always fetch for manual selection, as newProductPrice might be the default product price
+    if (customerId && (!priceParam || priceParam === 0)) {
+      // Use setTimeout to run in background without blocking UI
+      setTimeout(async () => {
+        try {
+          const lastPrice = await getCustomerLastPriceForProduct(
+            customerId,
+            productIdForSearch
+          );
+          
+          if (lastPrice && lastPrice > 0) {
+            // Update the price for this specific detail
+            setDetails((prev) =>
+              prev.map((item) =>
+                item.QuotationDetailID === detailId ? { ...item, UnitPrice: lastPrice } : item
+              )
+            );
+          }
+        } catch (error) {
+          console.error('[Quotations] Error fetching last customer price:', error);
+        }
+      }, 0);
+    }
   };
 
   const calculateSubtotal = () => {
@@ -704,32 +925,33 @@ export default function EditQuotationPage() {
           </div>
 
           {/* Products */}
-          <div>
+                  <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 font-cairo">المنتجات</h2>
-              <button
+                  <button
                 onClick={() => setShowAddProduct(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
-              >
+                  >
                 <Plus size={20} />
                 إضافة منتج
-              </button>
+                  </button>
+                </div>
+
+            {/* Barcode Scanner - Always visible */}
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
+              <BarcodeScannerInput
+                onProductFound={(product) => {
+                  handleAddProduct(product, 1);
+                }}
+                products={products}
+                placeholder="امسح الباركود أو رقم الشامل..."
+                className="w-full"
+              />
             </div>
 
             {showAddProduct && (
               <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                {/* Barcode Scanner */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
-                  <BarcodeScannerInput
-                    onProductFound={(product) => {
-                      handleAddProduct(product, 1);
-                    }}
-                    products={products}
-                    placeholder="امسح الباركود أو رقم الشامل..."
-                    className="w-full"
-                  />
-                </div>
                 
                 <div className="relative mb-4" ref={productDropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
@@ -754,10 +976,21 @@ export default function EditQuotationPage() {
                             key={product.ProductID || product.id || product.product_id}
                             type="button"
                             onClick={() => {
-                              setSelectedProductId(product.ProductID || product.id || product.product_id);
-                              setNewProductPrice(product.SalePrice || product.sale_price || product.price || 0);
-                              setIsProductDropdownOpen(false);
-                              setProductSearchQuery(product.Name || product.name || '');
+                              const productId = String(product.ProductID || product.id || product.product_id || '').trim();
+                              const productName = product.Name || product.name || '';
+                              
+                              if (productId) {
+                                // Store the full product object to preserve all data including Name and Image
+                                setSelectedProduct(product);
+                                setSelectedProductId(productId);
+                                // Set default price from product
+                                const defaultPrice = product.SalePrice || product.sale_price || product.price || 0;
+                                setNewProductPrice(defaultPrice);
+                                setIsProductDropdownOpen(false);
+                                setProductSearchQuery(productName || product.Name || product.name || '');
+                              } else {
+                                alert('خطأ: المنتج لا يحتوي على معرف صالح');
+                              }
                             }}
                             className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
                           >

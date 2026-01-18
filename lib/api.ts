@@ -8807,3 +8807,619 @@ export async function deleteCampaign(campaignId: string): Promise<void> {
     throw error;
   }
 }
+
+/**
+ * Get shop sales invoices by product ID
+ */
+export async function getShopSalesInvoicesByProduct(productId: string): Promise<any[]> {
+  try {
+    console.log('[API] Fetching shop sales invoices by product ID:', productId);
+    
+    // Get invoice IDs from shop_sales_details
+    const { data: details, error: detailsError } = await supabase
+      .from('shop_sales_details')
+      .select('invoice_id, quantity, unit_price, created_at')
+      .eq('product_id', productId)
+      .order('created_at', { ascending: false });
+    
+    if (detailsError) {
+      console.error('[API] Failed to fetch shop sales details:', detailsError);
+      throw new Error(`Failed to fetch shop sales details: ${detailsError.message}`);
+    }
+    
+    if (!details || details.length === 0) {
+      return [];
+    }
+    
+    // Get unique invoice IDs
+    const invoiceIds = Array.from(new Set(details.map((d: any) => d.invoice_id)));
+    
+    // Fetch invoices
+    const { data: invoices, error: invoicesError } = await supabase
+      .from('shop_sales_invoices')
+      .select('*')
+      .in('invoice_id', invoiceIds)
+      .order('created_at', { ascending: false });
+    
+    if (invoicesError) {
+      console.error('[API] Failed to fetch shop sales invoices:', invoicesError);
+      throw new Error(`Failed to fetch shop sales invoices: ${invoicesError.message}`);
+    }
+    
+    // Map invoices with product details
+    const invoicesMap = new Map(invoices.map((inv: any) => [inv.invoice_id, inv]));
+    const detailsMap = new Map<string, any[]>();
+    
+    // Group details by invoice_id
+    details.forEach((detail: any) => {
+      if (!detailsMap.has(detail.invoice_id)) {
+        detailsMap.set(detail.invoice_id, []);
+      }
+      detailsMap.get(detail.invoice_id)!.push(detail);
+    });
+    
+    // Get all customer IDs
+    const customerIds = Array.from(new Set(invoices.map((inv: any) => inv.customer_id).filter(Boolean)));
+    
+    // Fetch customer information
+    const customersMap = new Map<string, any>();
+    if (customerIds.length > 0) {
+      const { data: customers } = await supabase
+        .from('customers')
+        .select('customer_id, name, phone')
+        .in('customer_id', customerIds);
+      
+      if (customers) {
+        customers.forEach((c: any) => {
+          customersMap.set(c.customer_id, c);
+        });
+      }
+    }
+    
+    // Get all invoice details to calculate totals and get all items
+    const { data: allDetails, error: allDetailsError } = await supabase
+      .from('shop_sales_details')
+      .select('invoice_id, product_id, quantity, unit_price')
+      .in('invoice_id', invoiceIds);
+    
+    // Get all product IDs from invoice details
+    const allProductIds = Array.from(new Set((allDetails || []).map((d: any) => d.product_id).filter(Boolean)));
+    
+    // Fetch product information
+    const productsMap = new Map<string, any>();
+    if (allProductIds.length > 0) {
+      const { data: products } = await supabase
+        .from('products')
+        .select('product_id, name, barcode, shamel_no')
+        .in('product_id', allProductIds);
+      
+      if (products) {
+        products.forEach((p: any) => {
+          productsMap.set(p.product_id, p);
+        });
+      }
+    }
+    
+    // Calculate totals and group items by invoice
+    const invoiceTotalsMap = new Map<string, { subtotal: number; total: number; items: any[] }>();
+    if (allDetails) {
+      const totalsByInvoice = new Map<string, number>();
+      const itemsByInvoice = new Map<string, any[]>();
+      
+      allDetails.forEach((detail: any) => {
+        const invoiceId = detail.invoice_id;
+        
+        // Calculate totals
+        const current = totalsByInvoice.get(invoiceId) || 0;
+        totalsByInvoice.set(invoiceId, current + (parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0))));
+        
+        // Group items
+        if (!itemsByInvoice.has(invoiceId)) {
+          itemsByInvoice.set(invoiceId, []);
+        }
+        
+        const product = productsMap.get(detail.product_id);
+        itemsByInvoice.get(invoiceId)!.push({
+          ProductID: detail.product_id,
+          Name: product?.name || '',
+          Quantity: parseFloat(String(detail.quantity || 0)),
+          Price: parseFloat(String(detail.unit_price || 0)),
+          TotalPrice: parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0)),
+        });
+      });
+      
+      invoices.forEach((invoice: any) => {
+        const subtotal = totalsByInvoice.get(invoice.invoice_id) || 0;
+        const discount = parseFloat(String(invoice.discount || 0));
+        const total = subtotal - discount;
+        const items = itemsByInvoice.get(invoice.invoice_id) || [];
+        invoiceTotalsMap.set(invoice.invoice_id, { subtotal, total, items });
+      });
+    }
+    
+    // Combine invoices with their product details
+    const result = invoices.map((invoice: any) => {
+      const invoiceDetails = detailsMap.get(invoice.invoice_id) || [];
+      const productDetail = invoiceDetails.find((d: any) => d.product_id === productId);
+      const customer = invoice.customer_id ? customersMap.get(invoice.customer_id) : null;
+      const totals = invoiceTotalsMap.get(invoice.invoice_id) || { subtotal: 0, total: 0, items: [] };
+      
+      return {
+        InvoiceID: invoice.invoice_id,
+        CustomerID: invoice.customer_id,
+        CustomerName: customer?.name || '',
+        CustomerPhone: customer?.phone || '',
+        Date: invoice.date,
+        Status: invoice.status,
+        AccountantSign: invoice.accountant_sign || 'غير مرحلة',
+        Discount: parseFloat(String(invoice.discount || 0)),
+        Notes: invoice.notes || '',
+        CreatedAt: invoice.created_at,
+        Source: 'Shop',
+        Subtotal: totals.subtotal,
+        TotalAmount: totals.total,
+        Items: totals.items || [],
+        ProductQuantity: productDetail ? parseFloat(String(productDetail.quantity || 0)) : 0,
+        ProductUnitPrice: productDetail ? parseFloat(String(productDetail.unit_price || 0)) : 0,
+        ProductTotal: productDetail ? parseFloat(String(productDetail.quantity || 0)) * parseFloat(String(productDetail.unit_price || 0)) : 0,
+      };
+    });
+    
+    return result;
+  } catch (error: any) {
+    console.error('[API] getShopSalesInvoicesByProduct error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get warehouse sales invoices by product ID
+ */
+export async function getWarehouseSalesInvoicesByProduct(productId: string): Promise<any[]> {
+  try {
+    console.log('[API] Fetching warehouse sales invoices by product ID:', productId);
+    
+    // Get invoice IDs from warehouse_sales_details
+    const { data: details, error: detailsError } = await supabase
+      .from('warehouse_sales_details')
+      .select('invoice_id, quantity, unit_price, created_at')
+      .eq('product_id', productId)
+      .order('created_at', { ascending: false });
+    
+    if (detailsError) {
+      console.error('[API] Failed to fetch warehouse sales details:', detailsError);
+      throw new Error(`Failed to fetch warehouse sales details: ${detailsError.message}`);
+    }
+    
+    if (!details || details.length === 0) {
+      return [];
+    }
+    
+    // Get unique invoice IDs
+    const invoiceIds = Array.from(new Set(details.map((d: any) => d.invoice_id)));
+    
+    // Fetch invoices
+    const { data: invoices, error: invoicesError } = await supabase
+      .from('warehouse_sales_invoices')
+      .select('*')
+      .in('invoice_id', invoiceIds)
+      .order('created_at', { ascending: false });
+    
+    if (invoicesError) {
+      console.error('[API] Failed to fetch warehouse sales invoices:', invoicesError);
+      throw new Error(`Failed to fetch warehouse sales invoices: ${invoicesError.message}`);
+    }
+    
+    // Map invoices with product details
+    const invoicesMap = new Map(invoices.map((inv: any) => [inv.invoice_id, inv]));
+    const detailsMap = new Map<string, any[]>();
+    
+    // Group details by invoice_id
+    details.forEach((detail: any) => {
+      if (!detailsMap.has(detail.invoice_id)) {
+        detailsMap.set(detail.invoice_id, []);
+      }
+      detailsMap.get(detail.invoice_id)!.push(detail);
+    });
+    
+    // Get all customer IDs
+    const customerIds = Array.from(new Set(invoices.map((inv: any) => inv.customer_id).filter(Boolean)));
+    
+    // Fetch customer information
+    const customersMap = new Map<string, any>();
+    if (customerIds.length > 0) {
+      const { data: customers } = await supabase
+        .from('customers')
+        .select('customer_id, name, phone')
+        .in('customer_id', customerIds);
+      
+      if (customers) {
+        customers.forEach((c: any) => {
+          customersMap.set(c.customer_id, c);
+        });
+      }
+    }
+    
+    // Get all invoice details to calculate totals and get all items
+    const { data: allDetails, error: allDetailsError } = await supabase
+      .from('warehouse_sales_details')
+      .select('invoice_id, product_id, quantity, unit_price')
+      .in('invoice_id', invoiceIds);
+    
+    // Get all product IDs from invoice details
+    const allProductIds = Array.from(new Set((allDetails || []).map((d: any) => d.product_id).filter(Boolean)));
+    
+    // Fetch product information
+    const productsMap = new Map<string, any>();
+    if (allProductIds.length > 0) {
+      const { data: products } = await supabase
+        .from('products')
+        .select('product_id, name, barcode, shamel_no')
+        .in('product_id', allProductIds);
+      
+      if (products) {
+        products.forEach((p: any) => {
+          productsMap.set(p.product_id, p);
+        });
+      }
+    }
+    
+    // Calculate totals and group items by invoice
+    const invoiceTotalsMap = new Map<string, { subtotal: number; total: number; items: any[] }>();
+    if (allDetails) {
+      const totalsByInvoice = new Map<string, number>();
+      const itemsByInvoice = new Map<string, any[]>();
+      
+      allDetails.forEach((detail: any) => {
+        const invoiceId = detail.invoice_id;
+        
+        // Calculate totals
+        const current = totalsByInvoice.get(invoiceId) || 0;
+        totalsByInvoice.set(invoiceId, current + (parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0))));
+        
+        // Group items
+        if (!itemsByInvoice.has(invoiceId)) {
+          itemsByInvoice.set(invoiceId, []);
+        }
+        
+        const product = productsMap.get(detail.product_id);
+        itemsByInvoice.get(invoiceId)!.push({
+          ProductID: detail.product_id,
+          Name: product?.name || '',
+          Quantity: parseFloat(String(detail.quantity || 0)),
+          Price: parseFloat(String(detail.unit_price || 0)),
+          TotalPrice: parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0)),
+        });
+      });
+      
+      invoices.forEach((invoice: any) => {
+        const subtotal = totalsByInvoice.get(invoice.invoice_id) || 0;
+        const discount = parseFloat(String(invoice.discount || 0));
+        const total = subtotal - discount;
+        const items = itemsByInvoice.get(invoice.invoice_id) || [];
+        invoiceTotalsMap.set(invoice.invoice_id, { subtotal, total, items });
+      });
+    }
+    
+    // Combine invoices with their product details
+    const result = invoices.map((invoice: any) => {
+      const invoiceDetails = detailsMap.get(invoice.invoice_id) || [];
+      const productDetail = invoiceDetails.find((d: any) => d.product_id === productId);
+      const customer = invoice.customer_id ? customersMap.get(invoice.customer_id) : null;
+      const totals = invoiceTotalsMap.get(invoice.invoice_id) || { subtotal: 0, total: 0, items: [] };
+      
+      return {
+        InvoiceID: invoice.invoice_id,
+        CustomerID: invoice.customer_id,
+        CustomerName: customer?.name || '',
+        CustomerPhone: customer?.phone || '',
+        Date: invoice.date,
+        Status: invoice.status,
+        AccountantSign: invoice.accountant_sign || 'غير مرحلة',
+        Discount: parseFloat(String(invoice.discount || 0)),
+        Notes: invoice.notes || '',
+        CreatedAt: invoice.created_at,
+        Source: 'Warehouse',
+        Subtotal: totals.subtotal,
+        TotalAmount: totals.total,
+        Items: totals.items || [],
+        ProductQuantity: productDetail ? parseFloat(String(productDetail.quantity || 0)) : 0,
+        ProductUnitPrice: productDetail ? parseFloat(String(productDetail.unit_price || 0)) : 0,
+        ProductTotal: productDetail ? parseFloat(String(productDetail.quantity || 0)) * parseFloat(String(productDetail.unit_price || 0)) : 0,
+      };
+    });
+    
+    return result;
+  } catch (error: any) {
+    console.error('[API] getWarehouseSalesInvoicesByProduct error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get quotations by product ID
+ */
+export async function getQuotationsByProduct(productId: string): Promise<any[]> {
+  try {
+    console.log('[API] Fetching quotations by product ID:', productId);
+    
+    // Get quotation IDs from quotation_details
+    const { data: details, error: detailsError } = await supabase
+      .from('quotation_details')
+      .select('quotation_id, quantity, unit_price, created_at')
+      .eq('product_id', productId)
+      .order('created_at', { ascending: false });
+    
+    if (detailsError) {
+      console.error('[API] Failed to fetch quotation details:', detailsError);
+      throw new Error(`Failed to fetch quotation details: ${detailsError.message}`);
+    }
+    
+    if (!details || details.length === 0) {
+      return [];
+    }
+    
+    // Get unique quotation IDs
+    const quotationIds = Array.from(new Set(details.map((d: any) => d.quotation_id)));
+    
+    // Fetch quotations
+    const { data: quotations, error: quotationsError } = await supabase
+      .from('quotations')
+      .select('*')
+      .in('quotation_id', quotationIds)
+      .order('created_at', { ascending: false });
+    
+    if (quotationsError) {
+      console.error('[API] Failed to fetch quotations:', quotationsError);
+      throw new Error(`Failed to fetch quotations: ${quotationsError.message}`);
+    }
+    
+    // Map quotations with product details
+    const quotationsMap = new Map(quotations.map((q: any) => [q.quotation_id, q]));
+    const detailsMap = new Map<string, any[]>();
+    
+    // Group details by quotation_id (for finding the specific product)
+    details.forEach((detail: any) => {
+      if (!detailsMap.has(detail.quotation_id)) {
+        detailsMap.set(detail.quotation_id, []);
+      }
+      detailsMap.get(detail.quotation_id)!.push(detail);
+    });
+    
+    // Get all quotation details to get all items FIRST
+    const { data: allDetails, error: allDetailsError } = await supabase
+      .from('quotation_details')
+      .select('quotation_id, product_id, quantity, unit_price')
+      .in('quotation_id', quotationIds);
+    
+    // Get all product IDs from ALL quotation details (not just the specific product)
+    const allProductIds = Array.from(new Set((allDetails || []).map((d: any) => d.product_id).filter(Boolean)));
+    
+    // Fetch product information for ALL products in quotations
+    const productsMap = new Map<string, any>();
+    if (allProductIds.length > 0) {
+      const { data: products } = await supabase
+        .from('products')
+        .select('product_id, name, barcode, shamel_no')
+        .in('product_id', allProductIds);
+      
+      if (products) {
+        products.forEach((p: any) => {
+          productsMap.set(p.product_id, p);
+        });
+      }
+    }
+    
+    // Group items by quotation_id and calculate totals
+    const quotationItemsMap = new Map<string, { items: any[]; subtotal: number; total: number }>();
+    if (allDetails) {
+      const itemsByQuotation = new Map<string, any[]>();
+      const subtotalsByQuotation = new Map<string, number>();
+      
+      allDetails.forEach((detail: any) => {
+        const quotationId = detail.quotation_id;
+        
+        // Group items
+        if (!itemsByQuotation.has(quotationId)) {
+          itemsByQuotation.set(quotationId, []);
+        }
+        
+        const product = productsMap.get(detail.product_id);
+        const itemTotal = parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0));
+        
+        itemsByQuotation.get(quotationId)!.push({
+          ProductID: detail.product_id,
+          Name: product?.name || '',
+          Quantity: parseFloat(String(detail.quantity || 0)),
+          Price: parseFloat(String(detail.unit_price || 0)),
+          TotalPrice: itemTotal,
+        });
+        
+        // Calculate subtotal
+        const currentSubtotal = subtotalsByQuotation.get(quotationId) || 0;
+        subtotalsByQuotation.set(quotationId, currentSubtotal + itemTotal);
+      });
+      
+      quotations.forEach((quotation: any) => {
+        const items = itemsByQuotation.get(quotation.quotation_id) || [];
+        const subtotal = subtotalsByQuotation.get(quotation.quotation_id) || 0;
+        const specialDiscount = parseFloat(String(quotation.special_discount_amount || 0));
+        const giftDiscount = parseFloat(String(quotation.gift_discount_amount || 0));
+        const total = subtotal - specialDiscount - giftDiscount;
+        quotationItemsMap.set(quotation.quotation_id, { items, subtotal, total });
+      });
+    }
+    
+    // Combine quotations with their product details
+    const result = quotations.map((quotation: any) => {
+      const quotationDetails = detailsMap.get(quotation.quotation_id) || [];
+      const productDetail = quotationDetails.find((d: any) => d.product_id === productId);
+      const quotationData = quotationItemsMap.get(quotation.quotation_id) || { items: [], subtotal: 0, total: 0 };
+      
+      return {
+        QuotationID: quotation.quotation_id,
+        CustomerID: quotation.customer_id,
+        Date: quotation.date,
+        Status: quotation.status,
+        SpecialDiscount: parseFloat(String(quotation.special_discount_amount || 0)),
+        GiftDiscount: parseFloat(String(quotation.gift_discount_amount || 0)),
+        Notes: quotation.notes || '',
+        CreatedAt: quotation.created_at,
+        Subtotal: quotationData.subtotal,
+        TotalAmount: quotationData.total,
+        Items: quotationData.items || [],
+        ProductQuantity: productDetail ? parseFloat(String(productDetail.quantity || 0)) : 0,
+        ProductUnitPrice: productDetail ? parseFloat(String(productDetail.unit_price || 0)) : 0,
+        ProductTotal: productDetail ? parseFloat(String(productDetail.quantity || 0)) * parseFloat(String(productDetail.unit_price || 0)) : 0,
+      };
+    });
+    
+    return result;
+  } catch (error: any) {
+    console.error('[API] getQuotationsByProduct error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get cash invoices by product ID
+ */
+export async function getCashInvoicesByProduct(productId: string): Promise<any[]> {
+  try {
+    console.log('[API] Fetching cash invoices by product ID:', productId);
+    
+    // Get invoice IDs from cash_invoice_details
+    const { data: details, error: detailsError } = await supabase
+      .from('cash_invoice_details')
+      .select('invoice_id, quantity, unit_price, created_at')
+      .eq('product_id', productId)
+      .order('created_at', { ascending: false });
+    
+    if (detailsError) {
+      console.error('[API] Failed to fetch cash invoice details:', detailsError);
+      throw new Error(`Failed to fetch cash invoice details: ${detailsError.message}`);
+    }
+    
+    if (!details || details.length === 0) {
+      return [];
+    }
+    
+    // Get unique invoice IDs
+    const invoiceIds = Array.from(new Set(details.map((d: any) => d.invoice_id)));
+    
+    // Fetch invoices
+    const { data: invoices, error: invoicesError } = await supabase
+      .from('cash_invoices')
+      .select('*')
+      .in('invoice_id', invoiceIds)
+      .order('date_time', { ascending: false });
+    
+    if (invoicesError) {
+      console.error('[API] Failed to fetch cash invoices:', invoicesError);
+      throw new Error(`Failed to fetch cash invoices: ${invoicesError.message}`);
+    }
+    
+    // Map invoices with product details
+    const invoicesMap = new Map(invoices.map((inv: any) => [inv.invoice_id, inv]));
+    const detailsMap = new Map<string, any[]>();
+    
+    // Group details by invoice_id
+    details.forEach((detail: any) => {
+      if (!detailsMap.has(detail.invoice_id)) {
+        detailsMap.set(detail.invoice_id, []);
+      }
+      detailsMap.get(detail.invoice_id)!.push(detail);
+    });
+    
+    // Get all invoice details to get all items
+    const { data: allDetails, error: allDetailsError } = await supabase
+      .from('cash_invoice_details')
+      .select('invoice_id, product_id, quantity, unit_price')
+      .in('invoice_id', invoiceIds);
+    
+    // Get all product IDs from invoice details
+    const allProductIds = Array.from(new Set((allDetails || []).map((d: any) => d.product_id).filter(Boolean)));
+    
+    // Fetch product information
+    const productsMap = new Map<string, any>();
+    if (allProductIds.length > 0) {
+      const { data: products } = await supabase
+        .from('products')
+        .select('product_id, name, barcode, shamel_no')
+        .in('product_id', allProductIds);
+      
+      if (products) {
+        products.forEach((p: any) => {
+          productsMap.set(p.product_id, p);
+        });
+      }
+    }
+    
+    // Calculate totals and group items by invoice
+    const invoiceTotalsMap = new Map<string, { subtotal: number; total: number; items: any[] }>();
+    if (allDetails) {
+      const totalsByInvoice = new Map<string, number>();
+      const itemsByInvoice = new Map<string, any[]>();
+      
+      allDetails.forEach((detail: any) => {
+        const invoiceId = detail.invoice_id;
+        
+        // Calculate totals
+        const current = totalsByInvoice.get(invoiceId) || 0;
+        totalsByInvoice.set(invoiceId, current + (parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0))));
+        
+        // Group items
+        if (!itemsByInvoice.has(invoiceId)) {
+          itemsByInvoice.set(invoiceId, []);
+        }
+        
+        const product = productsMap.get(detail.product_id);
+        itemsByInvoice.get(invoiceId)!.push({
+          ProductID: detail.product_id,
+          Name: product?.name || '',
+          Quantity: parseFloat(String(detail.quantity || 0)),
+          Price: parseFloat(String(detail.unit_price || 0)),
+          TotalPrice: parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0)),
+        });
+      });
+      
+      invoices.forEach((invoice: any) => {
+        const subtotal = totalsByInvoice.get(invoice.invoice_id) || 0;
+        const discount = parseFloat(String(invoice.discount || 0));
+        const total = subtotal - discount;
+        const items = itemsByInvoice.get(invoice.invoice_id) || [];
+        invoiceTotalsMap.set(invoice.invoice_id, { subtotal, total, items });
+      });
+    }
+    
+    // Combine invoices with their product details
+    const result = invoices.map((invoice: any) => {
+      const invoiceDetails = detailsMap.get(invoice.invoice_id) || [];
+      const productDetail = invoiceDetails.find((d: any) => d.product_id === productId);
+      const totals = invoiceTotalsMap.get(invoice.invoice_id) || { subtotal: 0, total: 0, items: [] };
+      
+      return {
+        InvoiceID: invoice.invoice_id,
+        InvoiceNumber: invoice.invoice_id, // Cash invoices use invoice_id as number
+        Date: invoice.date_time || invoice.date || invoice.created_at,
+        Status: invoice.settlement_status || invoice.status || '',
+        isSettled: invoice.is_settled === true || invoice.is_settled === 'true' || invoice.isSettled === true,
+        Discount: parseFloat(String(invoice.discount || 0)),
+        Notes: invoice.notes || '',
+        CreatedAt: invoice.date_time || invoice.created_at || invoice.date,
+        Source: 'Cash',
+        Subtotal: totals.subtotal,
+        TotalAmount: totals.total,
+        Items: totals.items || [],
+        ProductQuantity: productDetail ? parseFloat(String(productDetail.quantity || 0)) : 0,
+        ProductUnitPrice: productDetail ? parseFloat(String(productDetail.unit_price || 0)) : 0,
+        ProductTotal: productDetail ? parseFloat(String(productDetail.quantity || 0)) * parseFloat(String(productDetail.unit_price || 0)) : 0,
+      };
+    });
+    
+    return result;
+  } catch (error: any) {
+    console.error('[API] getCashInvoicesByProduct error:', error);
+    throw error;
+  }
+}
