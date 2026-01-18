@@ -65,6 +65,7 @@ export default function EditWarehouseSalesInvoicePage() {
   const [error, setError] = useState<string | null>(null);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<any>(null); // Store the full product object
   const [newProductQuantity, setNewProductQuantity] = useState(1);
   const [newProductPrice, setNewProductPrice] = useState(0);
   const [productSearchQuery, setProductSearchQuery] = useState('');
@@ -251,15 +252,44 @@ export default function EditWarehouseSalesInvoicePage() {
   };
 
   const handleAddProduct = (productParam?: any, quantityParam?: number, priceParam?: number) => {
-    const productToAdd = productParam || products.find((p) => p.ProductID === selectedProductId || p.id === selectedProductId || p.product_id === selectedProductId);
+    // If product is provided directly (from barcode scanner), use it
+    let productToAdd = productParam;
     
+    // Otherwise, use selectedProduct (from manual selection) - this preserves all product data
     if (!productToAdd) {
-      if (!selectedProductId) {
-        alert('يرجى اختيار منتج');
+      // Use the selected product object directly if available
+      if (selectedProduct) {
+        productToAdd = selectedProduct;
+        console.log('[WarehouseSales] Using selectedProduct directly:', {
+          ProductID: productToAdd.ProductID || productToAdd.id || productToAdd.product_id,
+          Name: productToAdd.Name,
+          name: productToAdd.name
+        });
+      } else if (selectedProductId) {
+        // Fallback: find product by selectedProductId
+        const selectedId = String(selectedProductId || '').trim();
+        
+        productToAdd = products.find((p) => {
+          const possibleIds = [
+            p.ProductID,
+            p.id,
+            p.product_id,
+            p['ProductID'],
+            p['id'],
+            p['product_id']
+          ].filter(id => id != null).map(id => String(id).trim());
+          
+          return possibleIds.includes(selectedId);
+        });
+        
+        if (!productToAdd) {
+          alert(`المنتج غير موجود. المنتج المحدد: ${selectedProductId}`);
+          return;
+        }
       } else {
-        alert('المنتج غير موجود');
+        alert('يرجى اختيار منتج من القائمة أولاً');
+        return;
       }
-      return;
     }
 
     const quantity = quantityParam != null ? quantityParam : newProductQuantity;
@@ -269,19 +299,76 @@ export default function EditWarehouseSalesInvoicePage() {
         ? newProductPrice 
         : (productToAdd.SalePrice || productToAdd.sale_price || productToAdd.price || 0);
 
+    // Extract product ID - productToAdd should have ID fields now
+    // Since we ensured productToAdd has ID in previous steps, extract it directly
+    const productIdForSearch = String(
+      productToAdd.ProductID || 
+      productToAdd.id || 
+      productToAdd.product_id || 
+      (productParam ? (productParam.ProductID || productParam.id || productParam.product_id) : null) ||
+      selectedProductId || 
+      ''
+    ).trim();
+    
+    if (!productIdForSearch) {
+      console.error('[WarehouseSales] CRITICAL: Product ID is still undefined!', {
+        productToAdd: {
+          ProductID: productToAdd.ProductID,
+          id: productToAdd.id,
+          product_id: productToAdd.product_id,
+          allKeys: Object.keys(productToAdd).slice(0, 20)
+        },
+        selectedProductId,
+        productParam: productParam ? {
+          ProductID: productParam.ProductID,
+          id: productParam.id,
+          product_id: productParam.product_id
+        } : null
+      });
+      alert('خطأ فني: المنتج لا يحتوي على معرف صالح. يرجى المحاولة مرة أخرى أو اختيار منتج آخر.');
+      return;
+    }
+    
+    console.log('[WarehouseSales] Final product ID extracted:', productIdForSearch);
+    
+    // Extract product name - use same simple logic as POS
+    // Since we're using selectedProduct or productParam directly, the name should be available
+    const productName = productToAdd.Name || productToAdd.name || 'غير معروف';
+    
+    if (!productName || productName === 'غير معروف') {
+      console.warn('[WarehouseSales] Product name not found in productToAdd:', {
+        ProductID: productIdForSearch,
+        Name: productToAdd.Name,
+        name: productToAdd.name,
+        selectedProduct: selectedProduct ? {
+          Name: selectedProduct.Name,
+          name: selectedProduct.name
+        } : null,
+        allKeys: Object.keys(productToAdd).slice(0, 15)
+      });
+    }
+    
     const newDetail: InvoiceDetail = {
       detailID: `temp-${Date.now()}`,
-      productID: productToAdd.ProductID || productToAdd.id || productToAdd.product_id,
-      productName: productToAdd.Name || productToAdd.name || '',
+      productID: productIdForSearch,
+      productName: productName,
       quantity: quantity,
       unitPrice: unitPrice,
       costPrice: productToAdd.CostPrice || productToAdd.cost_price || productToAdd.costPrice || 0,
       isNew: true,
       productImage: productToAdd.Image || productToAdd.image || '',
     };
+    
+    console.log('[WarehouseSales] Adding product:', {
+      productID: productIdForSearch,
+      productName: productName,
+      quantity: quantity,
+      unitPrice: unitPrice
+    });
 
     setDetails((prev) => [...prev, newDetail]);
     setSelectedProductId('');
+    setSelectedProduct(null); // Clear selected product
     setNewProductQuantity(1);
     setNewProductPrice(0);
     setShowAddProduct(false);
@@ -641,10 +728,30 @@ export default function EditWarehouseSalesInvoicePage() {
                             key={product.ProductID || product.id || product.product_id}
                             type="button"
                             onClick={() => {
-                              setSelectedProductId(product.ProductID || product.id || product.product_id);
-                              setNewProductPrice(product.SalePrice || product.sale_price || product.price || 0);
-                              setIsProductDropdownOpen(false);
-                              setProductSearchQuery(product.Name || product.name || '');
+                              const productId = String(product.ProductID || product.id || product.product_id || '').trim();
+                              const productName = product.Name || product.name || '';
+                              
+                              if (productId) {
+                                // Store the full product object to preserve all data including Name
+                                setSelectedProduct(product);
+                                setSelectedProductId(productId);
+                                setNewProductPrice(product.SalePrice || product.sale_price || product.price || 0);
+                                setIsProductDropdownOpen(false);
+                                setProductSearchQuery(productName || product.Name || product.name || '');
+                                
+                                console.log('[WarehouseSales] Product selected from dropdown:', {
+                                  productId,
+                                  productName,
+                                  hasName: !!(product.Name || product.name),
+                                  productData: {
+                                    ProductID: product.ProductID || product.id || product.product_id,
+                                    Name: product.Name,
+                                    name: product.name
+                                  }
+                                });
+                              } else {
+                                alert('خطأ: المنتج لا يحتوي على معرف صالح');
+                              }
                             }}
                             className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
                           >

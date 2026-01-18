@@ -58,17 +58,34 @@ export default function BarcodeScannerInput({
     }
   }, []);
 
-  // Find product by barcode or Shamel No
+  // Find product by barcode or Shamel No - same logic as POS
   const findProduct = useCallback((scannedValue: string) => {
+    const trimmedValue = scannedValue.trim();
+    if (!trimmedValue) return undefined;
+
     // First, try to find by Barcode
     let product = products.find(
-      (p) => String(p.Barcode || p.barcode || '') === scannedValue
+      (p) => {
+        const barcode = String(p.Barcode || p.barcode || '').trim();
+        return barcode === trimmedValue;
+      }
     );
 
-    // If not found, try to find by Shamel No (رقم الشامل)
+    // If not found, try to find by Shamel No (رقم الشامل) - same as POS
     if (!product) {
       product = products.find(
-        (p) => String(p['Shamel No'] || p.shamel_no || '') === scannedValue
+        (p) => {
+          // Try all possible Shamel No fields
+          const shamelNo = String(
+            p['Shamel No'] || 
+            p.shamel_no || 
+            p.ShamelNo || 
+            p.Shamel_No ||
+            p['shamel_no'] ||
+            ''
+          ).trim();
+          return shamelNo === trimmedValue && shamelNo !== '';
+        }
       );
     }
 
