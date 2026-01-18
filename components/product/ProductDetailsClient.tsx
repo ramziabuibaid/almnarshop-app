@@ -128,8 +128,6 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
     { label: 'الضمان', value: product.Warranty || product.warranty },
     { label: 'الباركود', value: product.Barcode || product.barcode },
     { label: 'رقم شامل', value: product['Shamel No'] || product.shamel_no },
-    { label: 'المخزن', value: warehouseStock > 0 ? `${warehouseStock} قطعة` : 'غير متوفر' },
-    { label: 'المتجر', value: shopStock > 0 ? `${shopStock} قطعة` : 'غير متوفر' },
   ].filter((spec) => spec.value && spec.value !== '' && spec.value !== 0);
 
   const productName = product.name || product.Name || 'منتج';
