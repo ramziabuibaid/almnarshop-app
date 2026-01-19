@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, Save, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { X, Save, Loader2, Camera } from 'lucide-react';
 import { Product } from '@/types';
 import { saveProduct } from '@/lib/api';
 import ImageUploadField from './ImageUploadField';
 import { useAdminAuth } from '@/context/AdminAuthContext';
+import { Html5Qrcode } from 'html5-qrcode';
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -26,6 +27,11 @@ export default function ProductFormModal({
   const [formData, setFormData] = useState<Partial<Product>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  
+  // Barcode scanner state
+  const [isScanningBarcode, setIsScanningBarcode] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerIdRef = useRef(`barcode-scanner-${Math.random().toString(36).substr(2, 9)}`);
   
   // Check if user can view cost
   const canViewCost = admin?.is_super_admin || admin?.permissions?.viewCost === true;
@@ -86,7 +92,189 @@ export default function ProductFormModal({
       }
       setError('');
     }
+    
+    // Cleanup scanner when modal closes
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+        scannerRef.current.clear().catch(() => {});
+        scannerRef.current = null;
+      }
+      setIsScanningBarcode(false);
+    };
   }, [isOpen, product]);
+
+  // Stop barcode scanning
+  const stopBarcodeScanning = useCallback(async () => {
+    try {
+      if (scannerRef.current) {
+        await scannerRef.current.stop().catch(() => {});
+        await scannerRef.current.clear().catch(() => {});
+        scannerRef.current = null;
+      }
+      setIsScanningBarcode(false);
+    } catch (error) {
+      console.error('[ProductFormModal] Error stopping barcode scanner:', error);
+      setIsScanningBarcode(false);
+    }
+  }, []);
+
+  // Start barcode scanning
+  const startBarcodeScanning = useCallback(async () => {
+    try {
+      if (typeof window === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('المتصفح لا يدعم الوصول إلى الكاميرا. يرجى استخدام متصفح حديث مثل Chrome أو Safari.');
+        return;
+      }
+
+      setIsScanningBarcode(true);
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const element = document.getElementById(scannerIdRef.current);
+      if (!element) {
+        throw new Error('عنصر الماسح غير موجود في الصفحة');
+      }
+
+      if (scannerRef.current) {
+        await scannerRef.current.stop();
+        await scannerRef.current.clear();
+        scannerRef.current = null;
+      }
+
+      const html5QrCode = new Html5Qrcode(scannerIdRef.current);
+      scannerRef.current = html5QrCode;
+
+      let cameraId: string | undefined;
+      try {
+        const cameras = await Html5Qrcode.getCameras();
+        if (cameras && cameras.length > 0) {
+          const backCamera = cameras.find(cam => {
+            const label = cam.label.toLowerCase();
+            return label.includes('back') || 
+                   label.includes('rear') ||
+                   label.includes('environment');
+          });
+          
+          if (!backCamera) {
+            const frontCamera = cameras.find(cam => {
+              const label = cam.label.toLowerCase();
+              return label.includes('front') || 
+                     label.includes('user');
+            });
+            
+            const nonFrontCamera = cameras.find(cam => cam.id !== frontCamera?.id);
+            cameraId = nonFrontCamera?.id || cameras[cameras.length - 1].id;
+          } else {
+            cameraId = backCamera.id;
+          }
+        }
+      } catch (camError) {
+        console.log('[ProductFormModal] Could not get cameras list, using facingMode:', camError);
+      }
+
+      const config = {
+        fps: 10,
+        qrbox: function(viewfinderWidth: number, viewfinderHeight: number) {
+          const minEdgePercentage = 0.8;
+          const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+          const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+          return {
+            width: qrboxSize,
+            height: qrboxSize
+          };
+        },
+        aspectRatio: 1.0,
+        disableFlip: false,
+      };
+
+      const onScanSuccess = (decodedText: string) => {
+        // Set the scanned barcode value
+        handleChange('Barcode', decodedText);
+        // Stop scanning after successful scan
+        stopBarcodeScanning();
+      };
+
+      const onScanError = (errorMessage: string) => {
+        if (!errorMessage.includes('NotFoundException') && 
+            !errorMessage.includes('No MultiFormat Readers')) {
+          console.debug('[ProductFormModal] Barcode scan error:', errorMessage);
+        }
+      };
+
+      try {
+        if (cameraId) {
+          try {
+            await html5QrCode.start(
+              { deviceId: { exact: cameraId } },
+              config,
+              onScanSuccess,
+              onScanError
+            );
+            return;
+          } catch (exactError: any) {
+            try {
+              await html5QrCode.start(
+                { deviceId: cameraId },
+                config,
+                onScanSuccess,
+                onScanError
+              );
+              return;
+            } catch (deviceError: any) {
+              // Fall through to facingMode
+            }
+          }
+        }
+
+        try {
+          await html5QrCode.start(
+            { facingMode: 'environment' },
+            config,
+            onScanSuccess,
+            onScanError
+          );
+        } catch (envError: any) {
+          await html5QrCode.start(
+            { facingMode: 'user' },
+            config,
+            onScanSuccess,
+            onScanError
+          );
+        }
+      } catch (finalError: any) {
+        throw finalError;
+      }
+    } catch (error: any) {
+      console.error('[ProductFormModal] Error starting barcode scanner:', error);
+      setIsScanningBarcode(false);
+      
+      let errorMsg = 'فشل فتح الكاميرا';
+      const errorStr = String(error?.message || '').toLowerCase();
+      
+      if (errorStr.includes('streaming not supported') || errorStr.includes('not supported by the browser')) {
+        errorMsg = 'المتصفح لا يدعم بث الكاميرا. يرجى:\n1. استخدام متصفح حديث (Chrome، Safari، Firefox)\n2. التأكد من أن الموقع يعمل على HTTPS\n3. تحديث المتصفح إلى آخر إصدار';
+      } else if (errorStr.includes('permission') || errorStr.includes('notallowed')) {
+        errorMsg = 'يرجى السماح بالوصول إلى الكاميرا في إعدادات المتصفح.';
+      } else if (errorStr.includes('not found') || errorStr.includes('notfound')) {
+        errorMsg = 'الكاميرا غير متوفرة.';
+      } else if (errorStr.includes('https') || errorStr.includes('secure context')) {
+        errorMsg = 'الكاميرا تتطلب اتصال آمن (HTTPS).';
+      } else if (error?.message) {
+        errorMsg = `فشل فتح الكاميرا: ${error.message}`;
+      }
+      
+      alert(errorMsg);
+      
+      if (scannerRef.current) {
+        try {
+          await scannerRef.current.stop();
+          await scannerRef.current.clear();
+        } catch (e) {}
+        scannerRef.current = null;
+      }
+    }
+  }, [stopBarcodeScanning]);
 
   const handleChange = (field: keyof Product, value: string | number) => {
     setFormData((prev) => ({
@@ -277,12 +465,65 @@ export default function ProductFormModal({
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Barcode
                     </label>
-                    <input
-                      type="text"
-                      value={formData.Barcode || ''}
-                      onChange={(e) => handleChange('Barcode', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={formData.Barcode || ''}
+                        onChange={(e) => handleChange('Barcode', e.target.value)}
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                        placeholder="أدخل الباركود أو اضغط على أيقونة الكاميرا"
+                      />
+                      <button
+                        type="button"
+                        onClick={isScanningBarcode ? stopBarcodeScanning : startBarcodeScanning}
+                        disabled={typeof window !== 'undefined' && !navigator.mediaDevices}
+                        className={`absolute left-2 top-1/2 transform -translate-y-1/2 p-1.5 rounded-lg transition-colors ${
+                          isScanningBarcode
+                            ? 'bg-red-500 text-white hover:bg-red-600'
+                            : typeof window !== 'undefined' && !navigator.mediaDevices
+                            ? 'bg-gray-400 text-white cursor-not-allowed'
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
+                        title={isScanningBarcode ? 'إيقاف الكاميرا' : 'فتح الكاميرا لمسح الباركود'}
+                      >
+                        <Camera size={16} />
+                      </button>
+                    </div>
+                    
+                    {/* Camera Scanner View */}
+                    {isScanningBarcode && (
+                      <div className="mt-4 p-4 bg-black border border-gray-200 rounded-lg">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <p className="text-white text-sm font-medium mb-1">امسح الباركود بالكاميرا</p>
+                            <p className="text-gray-400 text-xs">وجه الكاميرا نحو الباركود</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={stopBarcodeScanning}
+                            className="px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm flex items-center gap-1"
+                          >
+                            <X size={16} />
+                            إغلاق
+                          </button>
+                        </div>
+                        <div className="w-full flex items-center justify-center">
+                          <div
+                            id={scannerIdRef.current}
+                            className="w-full max-w-md mx-auto bg-gray-900 rounded-lg overflow-hidden"
+                            style={{ 
+                              minHeight: '300px', 
+                              maxHeight: '500px',
+                              width: '100%',
+                              position: 'relative'
+                            }}
+                          />
+                        </div>
+                        <p className="text-gray-400 text-xs text-center mt-2">
+                          يمكنك أيضاً استخدام الماسح الضوئي المتصل بالحاسوب
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -323,8 +323,8 @@ export default function ProductsManagerPage() {
           const hasImageError = imageErrors[productId] || !imageUrl;
                     
                     return (
-                          <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
-                            {hasImageError ? (
+                          <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden relative flex items-center justify-center">
+                            {hasImageError || !imageUrl ? (
                               <ImageIcon size={24} className="text-gray-300" />
                             ) : (
                               <img
@@ -332,7 +332,7 @@ export default function ProductsManagerPage() {
                   alt={product.name || product.Name || ''}
                                 className="object-contain w-full h-full"
                   onError={() => handleImageError(productId)}
-                                loading="lazy"
+                                loading="eager"
                               />
                             )}
                           </div>

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import ProductFormModal from '@/components/admin/ProductFormModal';
-import { getProductById, getShopSalesInvoicesByProduct, getWarehouseSalesInvoicesByProduct, getQuotationsByProduct, getCashInvoicesByProduct } from '@/lib/api';
+import { getProductById, getShopSalesInvoicesByProduct, getWarehouseSalesInvoicesByProduct, getQuotationsByProduct, getCashInvoicesByProduct, getProducts } from '@/lib/api';
 import { getDirectImageUrl } from '@/lib/utils';
 import {
   Loader2,
@@ -22,6 +22,8 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Search,
+  ArrowRight,
 } from 'lucide-react';
 
 interface TimelineItem {
@@ -77,6 +79,15 @@ export default function ProductProfilePage() {
   const [loadingHeavyData, setLoadingHeavyData] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [imageErrors, setImageErrors] = useState<Record<number, boolean>>({});
+  
+  // Product search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   // Check permission and redirect if unauthorized
   useEffect(() => {
@@ -105,16 +116,117 @@ export default function ProductProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId, canViewCost]);
 
+  // Load all products for search
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setIsLoadingProducts(true);
+        const products = await getProducts();
+        setAllProducts(products || []);
+      } catch (error) {
+        console.error('[ProductProfile] Error loading products for search:', error);
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+    loadProducts();
+  }, []);
+
+  // Search products
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setIsSearchOpen(false);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    const results = allProducts
+      .filter((p) => {
+        const name = String(p.Name || p.name || '').toLowerCase();
+        const id = String(p.ProductID || p.id || '').toLowerCase();
+        const barcode = String(p.Barcode || p.barcode || '').toLowerCase();
+        const brand = String(p.Brand || p.brand || '').toLowerCase();
+        const shamelNo = String(p['Shamel No'] || p.ShamelNo || '').toLowerCase();
+        
+        return (
+          name.includes(query) ||
+          id.includes(query) ||
+          barcode.includes(query) ||
+          brand.includes(query) ||
+          shamelNo.includes(query)
+        );
+      })
+      .slice(0, 10); // Limit to 10 results
+
+    setSearchResults(results);
+    setIsSearchOpen(results.length > 0);
+  }, [searchQuery, allProducts]);
+
+  // Close search on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.product-search-container')) {
+        setIsSearchOpen(false);
+      }
+    };
+
+    if (isSearchOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isSearchOpen]);
+
+  // Keyboard shortcuts for search (Ctrl+K or Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+K or Cmd+K to focus search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      // ESC to close search
+      if (e.key === 'Escape' && isSearchOpen) {
+        setIsSearchOpen(false);
+        setSearchQuery('');
+        searchInputRef.current?.blur();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isSearchOpen]);
+
   // Get all product images with direct URLs
   const productImages = useMemo(() => {
     if (!product) return [];
-    return [
+    const images = [
       product.Image || product.image,
       product['Image 2'] || product.image2,
       product['image 3'] || product.image3,
     ]
       .filter(Boolean)
-      .map((img) => getDirectImageUrl(img));
+      .map((img) => {
+        if (!img) return '';
+        const trimmed = String(img).trim();
+        // If it's already a full URL (starts with http), return as is
+        if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+          return trimmed;
+        }
+        // Otherwise, use getDirectImageUrl for legacy Google Drive URLs
+        const converted = getDirectImageUrl(trimmed);
+        return converted;
+      })
+      .filter((url) => url && url.trim() !== ''); // Remove empty strings
+    
+    console.log('[ProductProfile] Product images:', images);
+    console.log('[ProductProfile] Product raw image data:', {
+      Image: product.Image || product.image,
+      'Image 2': product['Image 2'] || product.image2,
+      'image 3': product['image 3'] || product.image3,
+    });
+    return images;
   }, [product]);
 
   // Handle ESC key and arrow keys for lightbox
@@ -160,6 +272,14 @@ export default function ProductProfilePage() {
       }
 
       setProduct(foundProduct);
+      // Log product images for debugging
+      console.log('[ProductProfile] Product loaded:', {
+        id: foundProduct?.ProductID || foundProduct?.id,
+        name: foundProduct?.Name || foundProduct?.name,
+        Image: foundProduct?.Image || foundProduct?.image,
+        'Image 2': foundProduct?.['Image 2'] || foundProduct?.image2,
+        'image 3': foundProduct?.['image 3'] || foundProduct?.image3,
+      });
       // Basic info loaded, show UI immediately
       setLoading(false);
     } catch (error: any) {
@@ -547,6 +667,133 @@ export default function ProductProfilePage() {
               <p className="text-gray-600 mt-1 text-sm md:text-base">View product information and sales history</p>
             </div>
           </div>
+
+          {/* Product Search Bar */}
+          <div className="relative product-search-container">
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="ابحث عن منتج بالاسم، الرمز، الباركود، العلامة التجارية... (Ctrl+K)"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (e.target.value.trim()) {
+                    setIsSearchOpen(true);
+                  }
+                }}
+                onFocus={() => {
+                  if (searchResults.length > 0) {
+                    setIsSearchOpen(true);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  // Arrow down to navigate results
+                  if (e.key === 'ArrowDown' && searchResults.length > 0) {
+                    e.preventDefault();
+                    const firstResult = document.querySelector('.product-search-container button');
+                    (firstResult as HTMLElement)?.focus();
+                  }
+                }}
+                className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500"
+                dir="rtl"
+              />
+              {isLoadingProducts && (
+                <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                  <Loader2 size={18} className="animate-spin text-gray-400" />
+                </div>
+              )}
+            </div>
+
+            {/* Search Results Dropdown */}
+            {isSearchOpen && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+                {searchResults.map((result) => {
+                  const resultId = result.ProductID || result.id || '';
+                  const resultName = result.Name || result.name || '';
+                  const resultImage = getDirectImageUrl(result.Image || result.image || '');
+                  const isCurrentProduct = resultId === productId;
+
+                  return (
+                    <button
+                      key={resultId}
+                      onClick={() => {
+                        if (!isCurrentProduct) {
+                          router.push(`/admin/products/${resultId}`);
+                        }
+                        setSearchQuery('');
+                        setIsSearchOpen(false);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          if (!isCurrentProduct) {
+                            router.push(`/admin/products/${resultId}`);
+                          }
+                          setSearchQuery('');
+                          setIsSearchOpen(false);
+                        } else if (e.key === 'ArrowDown') {
+                          e.preventDefault();
+                          const next = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
+                          next?.focus();
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault();
+                          const prev = (e.currentTarget as HTMLElement).previousElementSibling as HTMLElement;
+                          if (prev) {
+                            prev.focus();
+                          } else {
+                            searchInputRef.current?.focus();
+                          }
+                        }
+                      }}
+                      disabled={isCurrentProduct}
+                      className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-colors text-right ${
+                        isCurrentProduct ? 'bg-gray-100 opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                      }`}
+                    >
+                      <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                        {resultImage ? (
+                          <img
+                            src={resultImage}
+                            alt={resultName}
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <Package size={20} className="text-gray-400" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 truncate">{resultName}</div>
+                        <div className="text-sm text-gray-500 flex items-center gap-2 mt-0.5">
+                          <span>الرمز: {resultId}</span>
+                          {result.Brand || result.brand ? (
+                            <>
+                              <span>•</span>
+                              <span>العلامة: {result.Brand || result.brand}</span>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+                      {isCurrentProduct ? (
+                        <div className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-medium">
+                          الحالي
+                        </div>
+                      ) : (
+                        <ArrowRight size={18} className="text-gray-400 flex-shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* No Results */}
+            {isSearchOpen && searchQuery.trim() && searchResults.length === 0 && !isLoadingProducts && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4 text-center text-gray-500">
+                لا توجد نتائج للبحث
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -561,28 +808,57 @@ export default function ProductProfilePage() {
                     {productImages.slice(0, 3).map((img: string, idx: number) => (
                       <div
                         key={idx}
-                        className="aspect-square bg-white border border-gray-200 rounded-lg overflow-hidden cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group relative"
+                        className="relative w-full aspect-square bg-white border border-gray-200 rounded-lg overflow-hidden cursor-pointer hover:shadow-md hover:border-gray-300 transition-all"
                         onClick={() => {
                           setSelectedImageIndex(idx);
                           setLightboxOpen(true);
                         }}
+                        style={img && !imageErrors[idx] ? {
+                          backgroundImage: `url("${img}")`,
+                          backgroundSize: 'contain',
+                          backgroundPosition: 'center',
+                          backgroundRepeat: 'no-repeat'
+                        } : {}}
                       >
-                        <img
-                          src={img}
-                          alt={`${product.Name || product.name || 'Product'} ${idx + 1}`}
-                          className="w-full h-full object-contain bg-white"
-                          style={{ 
-                            backgroundColor: '#ffffff',
-                            minWidth: '100%',
-                            minHeight: '100%'
-                          }}
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                        <div className="absolute inset-0 bg-white bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 flex items-center justify-center pointer-events-none">
-                          <ImageIcon size={20} className="text-gray-600 opacity-0 group-hover:opacity-60 transition-opacity" />
-                        </div>
+                        {imageErrors[idx] || !img ? (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ImageIcon size={48} className="text-gray-400" />
+                          </div>
+                        ) : (
+                          <>
+                            <img
+                              src={img}
+                              alt={`${product.Name || product.name || 'Product'} ${idx + 1}`}
+                              className="w-full h-full object-contain"
+                              style={{ 
+                                display: 'block',
+                                maxWidth: '100%',
+                                maxHeight: '100%'
+                              }}
+                              onError={(e) => {
+                                console.error('[ProductProfile] Image failed to load:', img);
+                                setImageErrors((prev) => ({ ...prev, [idx]: true }));
+                              }}
+                              onLoad={(e) => {
+                                console.log('[ProductProfile] Image loaded successfully:', img);
+                                const target = e.target as HTMLImageElement;
+                                console.log('[ProductProfile] Image element:', {
+                                  display: target.style.display,
+                                  visibility: target.style.visibility,
+                                  opacity: target.style.opacity,
+                                  width: target.offsetWidth,
+                                  height: target.offsetHeight,
+                                  naturalWidth: target.naturalWidth,
+                                  naturalHeight: target.naturalHeight,
+                                  src: target.src
+                                });
+                                target.style.display = 'block';
+                                target.style.visibility = 'visible';
+                                target.style.opacity = '1';
+                              }}
+                            />
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1078,7 +1354,10 @@ export default function ProductProfilePage() {
       {/* Image Lightbox Modal */}
       {lightboxOpen && productImages.length > 0 && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4 animate-in fade-in duration-200"
+          className="fixed top-0 left-0 bottom-0 right-0 md:right-64 z-40 flex items-center justify-center backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          style={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.15)'
+          }}
           onClick={() => setLightboxOpen(false)}
         >
           {/* Close Button */}
@@ -1087,7 +1366,7 @@ export default function ProductProfilePage() {
               e.stopPropagation();
               setLightboxOpen(false);
             }}
-            className="absolute top-4 right-4 z-10 p-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full text-white transition-all duration-200 hover:scale-110"
+            className="absolute top-4 right-4 z-10 p-2 bg-gray-900 bg-opacity-70 hover:bg-opacity-90 rounded-full text-white transition-all duration-200 hover:scale-110 shadow-lg"
             title="إغلاق (ESC)"
           >
             <X size={24} />
@@ -1100,7 +1379,7 @@ export default function ProductProfilePage() {
                 e.stopPropagation();
                 setSelectedImageIndex((prev) => (prev === 0 ? productImages.length - 1 : prev - 1));
               }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full text-white transition-all duration-200 hover:scale-110"
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-gray-900 bg-opacity-70 hover:bg-opacity-90 rounded-full text-white transition-all duration-200 hover:scale-110 shadow-lg"
               title="الصورة السابقة (←)"
             >
               <ChevronRight size={28} />
@@ -1114,7 +1393,7 @@ export default function ProductProfilePage() {
                 e.stopPropagation();
                 setSelectedImageIndex((prev) => (prev === productImages.length - 1 ? 0 : prev + 1));
               }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full text-white transition-all duration-200 hover:scale-110"
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-gray-900 bg-opacity-70 hover:bg-opacity-90 rounded-full text-white transition-all duration-200 hover:scale-110 shadow-lg"
               title="الصورة التالية (→)"
             >
               <ChevronLeft size={28} />
@@ -1138,7 +1417,7 @@ export default function ProductProfilePage() {
 
             {/* Image Counter */}
             {productImages.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white px-4 py-2 rounded-full text-sm font-medium">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 bg-opacity-80 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg">
                 {selectedImageIndex + 1} / {productImages.length}
               </div>
             )}

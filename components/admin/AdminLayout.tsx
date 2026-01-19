@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useShop } from '@/context/ShopContext';
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -56,6 +56,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -82,6 +84,43 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const handleGoToShop = () => {
     router.push('/');
+  };
+
+  // Swipe gesture handlers for mobile
+  const minSwipeDistance = 50;
+  const edgeThreshold = 30; // Distance from edge to trigger swipe
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchEndX.current = null;
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    // In RTL mode, sidebar is on the right side (visually on the left)
+    // Swipe from right edge to left (opening sidebar)
+    // clientX: 0 is left edge, window.innerWidth is right edge
+    // So right edge = high clientX value
+    if (isLeftSwipe && !sidebarOpen) {
+      // Check if swipe started from the right edge (where sidebar is)
+      if (touchStartX.current > window.innerWidth - edgeThreshold) {
+        setSidebarOpen(true);
+      }
+    }
+    
+    // Swipe from left to right (closing sidebar) - swipe anywhere on the sidebar
+    if (isRightSwipe && sidebarOpen) {
+      setSidebarOpen(false);
+    }
   };
 
   return (
@@ -282,27 +321,51 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <div className="md:mr-64">
+      <div 
+        className="md:mr-64"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
         {/* Top Bar */}
         <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm" dir="rtl">
           <div className="px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-600 hidden sm:inline">
+            {/* Right side (visually left in RTL): Menu button and Notifications */}
+            <div className="flex items-center gap-2 md:hidden">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Menu size={24} className="text-gray-700" />
+              </button>
+              <NotificationCenter />
+            </div>
+            
+            {/* Desktop: Admin name in center */}
+            <div className="hidden md:flex items-center gap-3 flex-1">
+              <span className="text-sm text-gray-600">
                 {admin.username}
               </span>
               <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
                 {admin.is_super_admin ? 'Super Admin' : 'Admin'}
               </span>
             </div>
-            <div className="flex-1" />
-            <div className="flex items-center gap-2">
+            
+            <div className="flex-1 md:hidden" />
+            
+            {/* Left side (visually right in RTL): Admin Name on Mobile */}
+            <div className="flex items-center gap-3 md:hidden">
+              <span className="text-sm font-medium text-gray-900">
+                {admin.username}
+              </span>
+              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
+                {admin.is_super_admin ? 'Super Admin' : 'Admin'}
+              </span>
+            </div>
+            
+            {/* Desktop: Notifications */}
+            <div className="hidden md:flex items-center gap-2">
               <NotificationCenter />
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <Menu size={24} className="text-gray-700" />
-              </button>
             </div>
           </div>
         </header>

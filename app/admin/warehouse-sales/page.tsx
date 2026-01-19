@@ -668,7 +668,7 @@ export default function WarehouseSalesPage() {
 
         {/* Modal عرض الفاتورة */}
         {viewing.invoice && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" dir="rtl">
+          <div className="fixed top-0 left-0 bottom-0 right-0 md:right-64 z-50 flex items-center justify-center bg-black/40 px-4" dir="rtl">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl overflow-hidden border border-gray-200">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
                 <div>
