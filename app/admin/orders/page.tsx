@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useLayoutEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import {
   getOnlineOrdersFromSupabase,
@@ -17,7 +18,6 @@ import {
   Edit,
   ChevronDown,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 interface OnlineOrder {
   OrderID: string;
@@ -609,7 +609,24 @@ export default function OrdersPage() {
                         <tbody className="divide-y divide-gray-200">
                           {orderDetails.map((detail) => (
                             <tr key={detail.DetailID}>
-                              <td className="px-4 py-3 text-sm text-gray-900">{detail.ProductName}</td>
+                              <td className="px-4 py-3 text-sm text-gray-900">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    const productId = detail.ProductID || detail.product_id;
+                                    if (!productId) return;
+                                    if (e.metaKey || e.ctrlKey) {
+                                      window.open(`/admin/products/${productId}`, '_blank');
+                                    } else {
+                                      router.push(`/admin/products/${productId}`);
+                                    }
+                                  }}
+                                  className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                                  title="عرض بروفايل المنتج (اضغط Command/Ctrl لفتح في نافذة جديدة)"
+                                >
+                                  {detail.ProductName || '—'}
+                                </button>
+                              </td>
                               <td className="px-4 py-3 text-sm text-center text-gray-900">{detail.Quantity}</td>
                               <td className="px-4 py-3 text-sm text-right text-gray-900">
                                 {formatCurrency(detail.UnitPrice)}

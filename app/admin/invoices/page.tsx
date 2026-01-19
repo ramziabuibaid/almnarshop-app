@@ -785,7 +785,22 @@ export default function InvoicesPage() {
                       <tr key={item.detailID || item.detail_id || idx} className="border-b border-gray-100">
                         <td className="px-3 py-2 text-right text-gray-800">{idx + 1}</td>
                         <td className="px-3 py-2 text-right text-gray-800">
-                          {item.ProductName || item.productName || item.product_name || item.Name || item.name || '—'}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              const productId = item.ProductID || item.product_id || item.ProductID || item.id;
+                              if (!productId) return;
+                              if (e.metaKey || e.ctrlKey) {
+                                window.open(`/admin/products/${productId}`, '_blank');
+                              } else {
+                                router.push(`/admin/products/${productId}`);
+                              }
+                            }}
+                            className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                            title="عرض بروفايل المنتج (اضغط Command/Ctrl لفتح في نافذة جديدة)"
+                          >
+                            {item.ProductName || item.productName || item.product_name || item.Name || item.name || '—'}
+                          </button>
                         </td>
                         <td className="px-3 py-2 text-right text-gray-800">
                           {item.Quantity || item.quantity || 0}

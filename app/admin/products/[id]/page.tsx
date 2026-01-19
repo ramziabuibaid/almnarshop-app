@@ -132,7 +132,7 @@ export default function ProductProfilePage() {
     loadProducts();
   }, []);
 
-  // Search products
+  // Search products - Smart search like main products page
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
@@ -140,7 +140,13 @@ export default function ProductProfilePage() {
       return;
     }
 
-    const query = searchQuery.toLowerCase().trim();
+    // Split search query into words (supports multiple words, non-consecutive)
+    const searchWords = searchQuery
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter((word) => word.length > 0);
+
     const results = allProducts
       .filter((p) => {
         const name = String(p.Name || p.name || '').toLowerCase();
@@ -148,14 +154,14 @@ export default function ProductProfilePage() {
         const barcode = String(p.Barcode || p.barcode || '').toLowerCase();
         const brand = String(p.Brand || p.brand || '').toLowerCase();
         const shamelNo = String(p['Shamel No'] || p.ShamelNo || '').toLowerCase();
+        const type = String(p.Type || p.type || '').toLowerCase();
         
-        return (
-          name.includes(query) ||
-          id.includes(query) ||
-          barcode.includes(query) ||
-          brand.includes(query) ||
-          shamelNo.includes(query)
-        );
+        // Combine all searchable fields into one text
+        const searchableText = `${name} ${id} ${barcode} ${brand} ${shamelNo} ${type}`;
+        
+        // Check if ALL search words are found in the searchable text (partial matching)
+        // This allows non-consecutive words and partial word matching
+        return searchWords.every((word) => searchableText.includes(word));
       })
       .slice(0, 10); // Limit to 10 results
 

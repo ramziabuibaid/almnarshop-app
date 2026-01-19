@@ -7,6 +7,7 @@ import { Search, Printer, Loader2, CheckSquare, Square, ArrowUp, ArrowDown } fro
 import { Product } from '@/types';
 import { getProducts } from '@/lib/api';
 import { getDirectImageUrl } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 type LabelType = 'A' | 'B' | 'C';
 type SortField = 'price' | 'quantity' | null;
@@ -14,6 +15,7 @@ type SortDirection = 'asc' | 'desc';
 
 export default function LabelsPage() {
   const { admin } = useAdminAuth();
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -351,9 +353,25 @@ export default function LabelsPage() {
                                 </td>
                                 <td className="py-3 px-3">
                                   <div className="flex flex-col gap-1">
-                                    <div className="text-sm font-medium text-gray-900">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation(); // Prevent row click
+                                        const productId = product.ProductID || product.id || '';
+                                        if (productId) {
+                                          if (e.metaKey || e.ctrlKey) {
+                                            // Open in new tab when Command/Ctrl is pressed
+                                            window.open(`/admin/products/${productId}`, '_blank');
+                                          } else {
+                                            // Navigate in same tab
+                                            router.push(`/admin/products/${productId}`);
+                                          }
+                                        }
+                                      }}
+                                      className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline text-right cursor-pointer transition-colors"
+                                      title="عرض بروفايل المنتج (اضغط Command/Ctrl لفتح في نافذة جديدة)"
+                                    >
                                       {product.Name || product.name || '—'}
-                                    </div>
+                                    </button>
                                     {(product['Shamel No'] || product.ShamelNo || product.shamel_no) && (
                                       <div className="text-xs text-gray-500">
                                         رقم الشامل: {product['Shamel No'] || product.ShamelNo || product.shamel_no}
