@@ -10,7 +10,7 @@ interface PrintTemplatesProps {
 }
 
 export default function PrintTemplates({ products, labelType }: PrintTemplatesProps) {
-  // For Type C, flatten products based on cs_shop quantity
+  // For Type C, flatten products based on count/quantity
   const flattenedProducts = useMemo(() => {
     if (labelType !== 'C') {
       return products;
@@ -18,9 +18,12 @@ export default function PrintTemplates({ products, labelType }: PrintTemplatesPr
 
     const flattened: Product[] = [];
     products.forEach((product) => {
-      const quantity = product.CS_Shop || 0;
-      // If quantity is 0 or negative, still print at least 1 label
-      const count = Math.max(1, Math.floor(quantity));
+      const rawCount =
+        typeof (product as any)?.count === 'number'
+          ? (product as any).count
+          : (product.CS_Shop ?? 0);
+      // If count is 0 or negative, still print at least 1 label
+      const count = Math.max(1, Math.floor(Number(rawCount) || 0));
       for (let i = 0; i < count; i++) {
         flattened.push(product);
       }
@@ -47,6 +50,12 @@ export default function PrintTemplates({ products, labelType }: PrintTemplatesPr
       @media print {
         @page {
           size: A4;
+          margin: 0;
+        }
+
+        /* Type C Thermal Roll: 50mm x 25mm per label */
+        @page thermal-c {
+          size: 50mm 25mm;
           margin: 0;
         }
 
@@ -220,49 +229,69 @@ export default function PrintTemplates({ products, labelType }: PrintTemplatesPr
           margin-top: auto;
         }
 
-        /* Type C: A4 Sheet with 70mm x 29.7mm labels */
+        /* Type C (Thermal): Single-column, one label per page */
         .label-type-c-container {
-          width: 210mm;
-          min-height: 297mm;
-          page-break-after: always;
-          display: flex !important;
-          flex-wrap: wrap;
-          gap: 0;
-          padding: 0;
-          margin: 0;
-          background: white;
+          width: 50mm !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: white !important;
+          display: block !important;
         }
 
         .label-type-c {
-          width: 70mm;
-          height: 29.7mm;
-          border: 0.5mm solid #000;
-          padding: 2mm;
+          page: thermal-c;
+          width: 50mm !important;
+          height: 25mm !important;
+          margin: 0 !important;
+          padding: 1.5mm 2mm !important;
           display: flex !important;
-          flex-direction: column;
-          justify-content: space-between;
-          background: white;
-          page-break-inside: avoid;
+          flex-direction: column !important;
+          justify-content: space-between !important;
+          align-items: center !important;
+          text-align: center !important;
+          background: white !important;
+          overflow: hidden !important;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          page-break-after: always !important;
+          break-after: page !important;
         }
 
         .label-type-c .product-name {
-          font-size: 9pt;
-          font-weight: bold;
-          text-align: right;
-          color: #000;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          margin-bottom: 1mm;
+          width: 100% !important;
+          font-size: 12px !important;
+          font-weight: 700 !important;
+          color: #000 !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+          line-height: 1.2 !important;
+        }
+
+        .label-type-c .barcode-text {
+          width: 100% !important;
+          font-size: 9px !important;
+          color: #111 !important;
+          direction: ltr !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+          line-height: 1.1 !important;
+        }
+
+        .label-type-c .shop-name {
+          width: 100% !important;
+          font-size: 9px !important;
+          color: #111 !important;
+          line-height: 1.1 !important;
         }
 
         .label-type-c .product-price {
-          font-size: 14pt;
-          font-weight: bold;
-          text-align: center;
-          color: #000;
-          border-top: 0.5mm solid #000;
-          padding-top: 1mm;
+          width: 100% !important;
+          font-size: 18px !important;
+          font-weight: 800 !important;
+          color: #000 !important;
+          line-height: 1.1 !important;
         }
       }
     `;
@@ -387,10 +416,22 @@ export default function PrintTemplates({ products, labelType }: PrintTemplatesPr
           {flattenedProducts.map((product, index) => {
             const price = product.SalePrice || product.price || 0;
             const name = product.Name || product.name || '—';
+            const barcodeValue =
+              (product as any).barcode ||
+              (product as any).Barcode ||
+              (product as any).shamel_no ||
+              (product as any)['Shamel No'] ||
+              (product as any).ShamelNo ||
+              '';
 
             return (
               <div key={`${product.ProductID || product.id || index}-${index}`} className="label-type-c">
                 <div className="product-name">{name}</div>
+                {barcodeValue ? (
+                  <div className="barcode-text">{barcodeValue}</div>
+                ) : (
+                  <div className="shop-name">MyShop</div>
+                )}
                 <div className="product-price">{price.toLocaleString('en-US')} ₪</div>
               </div>
             );

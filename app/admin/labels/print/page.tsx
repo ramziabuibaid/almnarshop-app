@@ -16,6 +16,43 @@ function LabelsPrintContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Get base URL for product links
+  const getBaseUrl = () => {
+    if (typeof window !== 'undefined') {
+      return window.location.origin;
+    }
+    // Fallback for SSR - use environment variable or hardcoded domain
+    return process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_VERCEL_URL 
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` 
+      : 'https://almnarshop-app.vercel.app';
+  };
+
+  // Generate product URL for QR code
+  const getProductUrl = (product: Product) => {
+    const productId = product.ProductID || product.id || '';
+    if (!productId) return '';
+    const baseUrl = getBaseUrl();
+    return `${baseUrl}/product/${productId}`;
+  };
+
+  // Set unique document title with date and time
+  useEffect(() => {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('ar-EG', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).replace(/\//g, '-');
+    const timeStr = now.toLocaleTimeString('ar-EG', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).replace(/:/g, '-');
+    const uniqueTitle = `ملصقات_${dateStr}_${timeStr}`;
+    document.title = uniqueTitle;
+  }, []);
+
   // Auto print when products are loaded
   useEffect(() => {
     if (!loading && products.length > 0 && !error) {
@@ -130,8 +167,11 @@ function LabelsPrintContent() {
         // Then flatten based on useQuantity option
         return useQuantity
           ? filteredProducts.flatMap((product) => {
-              const quantity = product.cs_shop || product.CS_Shop || 0;
-              const count = Math.max(1, Math.floor(quantity));
+              const rawCount =
+                typeof (product as any)?.count === 'number'
+                  ? (product as any).count
+                  : (product.cs_shop || product.CS_Shop || 0);
+              const count = Math.max(1, Math.floor(Number(rawCount) || 0));
               return Array(count).fill(product);
             })
           : filteredProducts; // One label per product regardless of quantity
@@ -172,9 +212,20 @@ function LabelsPrintContent() {
           }
         }
 
-        /* Default page size - A6 for Type A and B, A4 for Type C */
+        /* Default page size - 100mm x 100mm for Type A, A6 for Type B, A4 for Type C */
         @page {
           size: A6 portrait;
+          margin: 0;
+        }
+
+        @page type-a {
+          size: 100mm 100mm;
+          margin: 0;
+          padding: 0;
+        }
+
+        @page {
+          size: 100mm 100mm;
           margin: 0;
         }
 
@@ -192,93 +243,91 @@ function LabelsPrintContent() {
             padding: 0 !important;
             background: white !important;
             width: 100% !important;
-            height: 100% !important;
+            height: auto !important;
             font-family: 'Cairo', sans-serif;
             direction: rtl;
           }
 
-          /* Type A: A6 Single Label - Dynamic sizing */
+          /* Type A: 100mm x 100mm Single Label - Full Page */
           .label-type-a {
-            width: 100%;
-            height: 100vh;
-            min-height: 100%;
-            page-break-after: always;
-            page-break-inside: avoid;
-            page-break-before: auto;
+            page: type-a;
+            width: 100mm !important;
+            height: 100mm !important;
+            min-width: 100mm !important;
+            min-height: 100mm !important;
+            max-width: 100mm !important;
+            max-height: 100mm !important;
+            page-break-after: always !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            break-after: page !important;
             border: 2mm solid #000;
-            padding: 5mm;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            background: white;
-            margin: 0;
-            box-sizing: border-box;
-            overflow: hidden;
-            position: relative;
+            padding: 2.5mm;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            background: white !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            position: relative !important;
           }
 
-          /* Fix first page issue */
-          .label-type-a:first-of-type {
-            page-break-before: auto;
+          /* Remove margins from parent containers for Type A */
+          body > div {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: auto !important;
+            height: auto !important;
+            position: relative !important;
           }
 
-          /* For Type C, use A4 page size */
-          .label-type-c-container {
-            page-size: A4;
+          /* Ensure Type A labels start at page edge */
+          body > div > div > .label-type-a,
+          body > div > .label-type-a {
+            margin: 0 !important;
+            padding: 2.5mm !important;
           }
 
           .label-type-a .logo-container {
             display: flex;
-            justify-content: flex-end;
+            justify-content: flex-start;
             align-items: flex-start;
-            margin-bottom: 3mm;
+            margin-bottom: 2mm;
             width: 100%;
+            direction: ltr;
+            height: 12mm;
           }
 
           .label-type-a .logo {
-            max-width: 50mm;
-            max-height: 20mm;
+            max-width: 40mm;
+            max-height: 12mm;
             object-fit: contain;
             display: block;
           }
 
           .label-type-a .product-name {
-            font-size: 16pt;
-            font-weight: bold;
-            margin-bottom: 4mm;
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 2mm;
             text-align: right;
             color: #000;
             width: 100%;
-          }
-
-          .label-type-a .bottom-section {
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: auto;
-            gap: 5mm;
-            width: 100%;
-          }
-
-          .label-type-a .product-price {
-            font-size: 36pt;
-            font-weight: bold;
-            color: #000;
-            text-align: right;
-            border: 1mm solid #000;
-            padding: 4mm;
-            flex: 1;
-            min-height: 20mm;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-height: 1.35;
+            word-wrap: break-word;
+            min-height: 2.7em;
+            max-height: 2.7em;
           }
 
           .label-type-a .product-specs {
             list-style: none;
-            font-size: 11pt;
-            line-height: 2;
+            font-size: 11px;
+            line-height: 1.6;
             text-align: right;
             color: #000;
             margin: 0;
@@ -286,172 +335,123 @@ function LabelsPrintContent() {
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
           }
 
           .label-type-a .product-specs li {
-            margin-bottom: 2mm;
-            padding-right: 2mm;
+            margin-bottom: 1mm;
+            padding-right: 0;
           }
 
           .label-type-a .product-specs li strong {
-            font-weight: bold;
+            font-weight: 700;
+          }
+
+          .label-type-a .bottom-section {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-top: auto;
+            gap: 3mm;
+            width: 100%;
+            direction: ltr;
+            min-height: 32mm;
           }
 
           .label-type-a .barcode-container {
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            flex: 1;
-            min-height: 20mm;
-            max-width: 20mm;
+            flex-shrink: 0;
+            width: 32mm;
+            min-width: 32mm;
+            max-width: 32mm;
+            height: 100%;
           }
 
           .label-type-a .barcode-container img {
-            width: 20mm;
-            height: 20mm;
+            width: 32mm;
+            height: 32mm;
             object-fit: contain;
             display: block;
-          }
-
-          /* Type B: A6 Quad (4 Vertical Sections) - Dynamic sizing */
-          .label-type-b-container {
-            width: 100%;
-            height: 100vh;
-            min-height: 100%;
-            page-break-after: always;
-            page-break-inside: avoid;
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-            border: 1mm solid #000;
-            margin: 0;
-          }
-
-          .label-type-b {
-            width: 100%;
-            height: 25%;
-            flex: 1;
-            border-bottom: 1mm dashed #666;
-            padding: 3mm;
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 2mm;
-            background: white;
-          }
-
-          .label-type-b:last-child {
-            border-bottom: none;
-          }
-
-          .label-type-b .text-section {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-            align-items: flex-end;
-            justify-content: flex-start;
-            text-align: right;
-            width: 100%;
-          }
-
-          .label-type-b .product-name {
-            font-size: 11pt;
-            font-weight: bold;
-            text-align: right;
-            margin-bottom: 1mm;
-            color: #000;
-            width: 100%;
-          }
-
-          .label-type-b .product-origin {
-            font-size: 8pt;
-            text-align: right;
-            color: #666;
-            margin-bottom: 1mm;
-            width: 100%;
-          }
-
-          .label-type-b .barcode-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
             flex-shrink: 0;
           }
 
-          .label-type-b .barcode-container img {
-            max-width: 100%;
-            height: auto;
-            max-height: 12mm;
-            max-width: 12mm;
-          }
-
-          .label-type-b .barcode-value {
-            font-size: 7pt;
+          .label-type-a .barcode-value {
+            font-size: 8px;
             text-align: center;
-            color: #666;
-            margin-top: 0.5mm;
+            color: #333;
+            margin-top: 1.5mm;
             direction: ltr;
+            line-height: 1.1;
+            font-weight: 500;
+            word-break: break-all;
+            max-width: 32mm;
           }
 
-          .label-type-b .product-price {
-            font-size: 16pt;
-            font-weight: bold;
-            text-align: right;
+          .label-type-a .product-price {
+            font-size: 40px;
+            font-weight: 800;
             color: #000;
-            margin-top: 0;
-            width: 100%;
-          }
-
-          /* Type C: A4 Sheet with 70mm x 29.7mm labels */
-          @page type-c {
-            size: A4;
-            margin: 0;
-          }
-
-          .label-type-c-container {
-            width: 100%;
-            min-height: 100vh;
-            page-break-after: always;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0;
-            padding: 0;
-            margin: 0;
-            background: white;
-            page: type-c;
-          }
-
-          .label-type-c {
-            width: 65mm;
-            height: 27mm;
-            border: 0.5mm solid #000;
-            padding: 2mm;
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 2mm;
-            background: white;
-            page-break-inside: avoid;
-          }
-
-          .label-type-c .text-section {
-            display: flex;
-            flex-direction: column;
+            text-align: center;
+            border: 1.5mm solid #000;
+            padding: 3mm;
             flex: 1;
-            align-items: flex-end;
-            justify-content: space-between;
-            text-align: right;
-            min-width: 0;
-            min-height: 100%;
+            height: 100%;
+            min-height: 32mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            direction: rtl;
           }
 
-          .label-type-c .product-name {
-            font-size: 9pt;
-            font-weight: bold;
+          /* Type B: Thermal Roll 60mm x 40mm (one label per page) */
+          @page type-b {
+            size: 60mm 40mm;
+            margin: 0 !important;
+          }
+
+          .label-type-b-container {
+            width: 60mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            display: block !important;
+            page: type-b;
+          }
+
+          .label-type-b {
+            page: type-b !important;
+            width: 60mm !important;
+            height: 40mm !important;
+            min-width: 60mm !important;
+            min-height: 40mm !important;
+            max-width: 60mm !important;
+            max-height: 40mm !important;
+            border: 0;
+            padding: 2mm 3mm;
+            display: flex !important;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: stretch;
+            gap: 0;
+            background: white !important;
+            overflow: hidden;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+            position: relative;
+          }
+
+          .label-type-b .product-name {
+            font-size: 13px;
+            font-weight: 700;
             text-align: right;
             color: #000;
             overflow: hidden;
@@ -460,49 +460,198 @@ function LabelsPrintContent() {
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             line-height: 1.3;
-            margin-bottom: auto;
+            margin: 0 0 2.5mm 0;
             width: 100%;
+            flex-shrink: 0;
+            padding-bottom: 1.5mm;
+            border-bottom: 0.5mm solid #ddd;
             word-wrap: break-word;
           }
 
-          .label-type-c .product-price {
-            font-size: 16pt;
-            font-weight: bold;
+          .label-type-b .content-row {
+            display: flex !important;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 3mm;
+            width: 100% !important;
+            flex: 1;
+            flex-shrink: 0;
+            min-height: 0;
+          }
+
+          .label-type-b .left-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            flex-shrink: 0;
+            width: auto;
+            min-width: 22mm;
+            max-width: 22mm;
+          }
+
+          .label-type-b .barcode-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+          }
+
+          .label-type-b .barcode-container img {
+            max-width: 22mm !important;
+            max-height: 22mm !important;
+            width: 22mm !important;
+            height: 22mm !important;
+            object-fit: contain;
+            display: block;
+          }
+
+          .label-type-b .barcode-value {
+            font-size: 8px;
+            text-align: center;
+            color: #333;
+            margin-top: 1mm;
+            direction: ltr;
+            line-height: 1.1;
+            font-weight: 500;
+            word-break: break-all;
+            max-width: 22mm;
+          }
+
+          .label-type-b .right-section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: flex-start;
+            flex: 1;
+            text-align: right;
+            min-width: 0;
+            padding-left: 0;
+          }
+
+          .label-type-b .product-origin {
+            font-size: 11px;
+            text-align: right;
+            color: #666;
+            margin: 0 0 2mm 0;
+            width: 100%;
+            line-height: 1.3;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .label-type-b .product-price {
+            font-size: 28px;
+            font-weight: 800;
             text-align: right;
             color: #000;
-            margin-top: auto;
+            margin: 0;
+            line-height: 1.1;
+            white-space: nowrap;
+          }
+
+          /* Type C: Thermal Roll 50mm x 25mm (one label per page) */
+          @page type-c {
+            size: 50mm 25mm;
+            margin: 0;
+          }
+
+          .label-type-c-container {
+            width: 50mm;
+            margin: 0;
+            padding: 0;
+            background: white;
+            display: block;
+          }
+
+          .label-type-c {
+            page: type-c;
+            width: 50mm;
+            height: 25mm;
+            border: 0;
+            padding: 1.5mm 2mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: stretch;
+            gap: 2mm;
+            background: white;
+            overflow: hidden;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            page-break-after: always;
+            break-after: page;
+          }
+
+          .label-type-c .product-name {
+            font-size: 11px;
+            font-weight: 700;
+            text-align: right;
+            color: #000;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            line-height: 1.3;
+            margin: 0;
             width: 100%;
+            flex-shrink: 0;
+          }
+
+          .label-type-c .bottom-row {
+            width: 100%;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2mm;
+            flex-shrink: 0;
+          }
+
+          .label-type-c .product-price {
+            font-size: 20px;
+            font-weight: 800;
+            text-align: right;
+            color: #000;
+            margin: 0;
+            flex-shrink: 0;
+            white-space: nowrap;
           }
 
           .label-type-c .barcode-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: center;
             flex-shrink: 0;
-            flex-grow: 0;
             width: auto;
             min-width: 12mm;
           }
 
           .label-type-c .barcode-container img {
-            max-width: 100%;
+            max-width: 12mm;
+            max-height: 12mm;
+            width: auto;
             height: auto;
-            max-height: 10mm;
-            max-width: 10mm;
+            object-fit: contain;
+            display: block;
           }
 
           .label-type-c .barcode-value {
-            font-size: 6pt;
+            font-size: 6px;
             text-align: center;
             color: #666;
             margin-top: 0.5mm;
             direction: ltr;
+            line-height: 1;
           }
         }
       `}</style>
 
-      <div style={{ padding: 0, margin: 0, fontFamily: 'Cairo, sans-serif', direction: 'rtl' }}>
+      <div style={{ padding: 0, margin: 0, fontFamily: 'Cairo, sans-serif', direction: 'rtl', width: labelType === 'A' ? '100mm' : 'auto', height: labelType === 'A' ? '100mm' : 'auto' }}>
         {labelType === 'A' && (
           <>
             {products.map((product, index) => {
@@ -513,8 +662,10 @@ function LabelsPrintContent() {
               const dimention = product.dimention || product.Dimention || '';
               const warranty = product.warranty || product.Warranty || '';
               const origin = product.origin || product.Origin || '';
-              // Barcode: use barcode or shamel_no as fallback
+              // Barcode: use barcode or shamel_no as fallback (for display only)
               const barcodeValue = product.barcode || product.Barcode || product.shamel_no || product['Shamel No'] || product.ShamelNo || '';
+              // QR Code: Use full product URL for hybrid functionality
+              const qrCodeValue = getProductUrl(product);
 
               return (
                 <div key={`${product.ProductID || product.id || index}-${index}`} className="label-type-a">
@@ -542,7 +693,7 @@ function LabelsPrintContent() {
                     )}
                     {warranty && (
                       <li>
-                        <strong>الكفالة:</strong> {warranty}
+                        <strong>مدة الكفالة:</strong> {warranty}
                       </li>
                     )}
                     {origin && (
@@ -552,15 +703,16 @@ function LabelsPrintContent() {
                     )}
                   </ul>
                   <div className="bottom-section">
-                    {barcodeValue && (
+                    {qrCodeValue && (
                       <div className="barcode-container">
                         <QRCode
-                          value={barcodeValue}
-                          size={200}
+                          value={qrCodeValue}
+                          size={250}
                           margin={1}
                           color="#000000"
                           backgroundColor="#ffffff"
                         />
+                        <div className="barcode-value">{barcodeValue || product.ProductID || product.id || ''}</div>
                       </div>
                     )}
                     <div className="product-price">{price.toLocaleString('en-US')} ₪</div>
@@ -572,57 +724,43 @@ function LabelsPrintContent() {
         )}
 
         {labelType === 'B' && (
-          <>
-            {Array.from({ length: Math.ceil(products.length / 4) }).map((_, pageIndex) => {
-              const pageProducts = products.slice(pageIndex * 4, (pageIndex + 1) * 4);
-              const filledProducts = [...pageProducts];
-              while (filledProducts.length < 4) {
-                filledProducts.push(null as any);
-              }
+          <div className="label-type-b-container">
+            {products.map((product, index) => {
+              const price = product.SalePrice || product.price || 0;
+              const name = product.Name || product.name || '—';
+              const origin = product.origin || product.Origin || '';
+              // Barcode: use barcode or shamel_no as fallback
+              const barcodeValue = product.barcode || product.Barcode || product.shamel_no || product['Shamel No'] || product.ShamelNo || '';
 
               return (
-                <div key={`page-${pageIndex}`} className="label-type-b-container">
-                  {filledProducts.map((product, cellIndex) => {
-                    if (!product) {
-                      return <div key={`empty-${cellIndex}`} className="label-type-b" />;
-                    }
-
-                    const price = product.SalePrice || product.price || 0;
-                    const name = product.Name || product.name || '—';
-                    const origin = product.origin || product.Origin || '';
-                    // Barcode: use barcode or shamel_no as fallback
-                    const barcodeValue = product.barcode || product.Barcode || product.shamel_no || product['Shamel No'] || product.ShamelNo || '';
-
-                    return (
-                      <div key={`${product.ProductID || product.id || cellIndex}-${cellIndex}`} className="label-type-b">
-                        <div className="text-section">
-                          <div className="product-name">{name}</div>
-                          {origin && (
-                            <div className="product-origin">
-                              بلد المنشأ: {origin}
-                            </div>
-                          )}
-                          <div className="product-price">{price.toLocaleString('en-US')} ₪</div>
+                <div key={`${product.ProductID || product.id || index}-${index}`} className="label-type-b">
+                  <div className="product-name">{name}</div>
+                  <div className="content-row">
+                    {barcodeValue && (
+                      <div className="left-section">
+                        <div className="barcode-container">
+                          <QRCode
+                            value={barcodeValue}
+                            size={200}
+                            margin={1}
+                            color="#000000"
+                            backgroundColor="#ffffff"
+                          />
+                          <div className="barcode-value">{barcodeValue}</div>
                         </div>
-                          {barcodeValue && (
-                            <div className="barcode-container">
-                              <QRCode
-                                value={barcodeValue}
-                                size={120}
-                                margin={1}
-                                color="#000000"
-                                backgroundColor="#ffffff"
-                              />
-                              <div className="barcode-value">{barcodeValue}</div>
-                            </div>
-                          )}
                       </div>
-                    );
-                  })}
+                    )}
+                    <div className="right-section">
+                      {origin && (
+                        <div className="product-origin">بلد المنشأ: {origin}</div>
+                      )}
+                      <div className="product-price">{price.toLocaleString('en-US')} ₪</div>
+                    </div>
+                  </div>
                 </div>
               );
             })}
-          </>
+          </div>
         )}
 
         {labelType === 'C' && (
@@ -630,27 +768,29 @@ function LabelsPrintContent() {
             {flattenedProducts.map((product, index) => {
               const price = product.SalePrice || product.price || 0;
               const name = product.Name || product.name || '—';
-              // Barcode: use barcode or shamel_no as fallback
+              // Barcode: use barcode or shamel_no as fallback (for display only)
               const barcodeValue = product.barcode || product.Barcode || product.shamel_no || product['Shamel No'] || product.ShamelNo || '';
+              // QR Code: Use full product URL for hybrid functionality
+              const qrCodeValue = getProductUrl(product);
 
               return (
                 <div key={`${product.ProductID || product.id || index}-${index}`} className="label-type-c">
-                  <div className="text-section">
-                    <div className="product-name">{name}</div>
+                  <div className="product-name">{name}</div>
+                  <div className="bottom-row">
                     <div className="product-price">{price.toLocaleString('en-US')} ₪</div>
+                    {qrCodeValue && (
+                      <div className="barcode-container">
+                        <QRCode
+                          value={qrCodeValue}
+                          size={80}
+                          margin={0}
+                          color="#000000"
+                          backgroundColor="#ffffff"
+                        />
+                        <div className="barcode-value">{barcodeValue || product.ProductID || product.id || ''}</div>
+                      </div>
+                    )}
                   </div>
-                  {barcodeValue && (
-                    <div className="barcode-container">
-                      <QRCode
-                        value={barcodeValue}
-                        size={100}
-                        margin={1}
-                        color="#000000"
-                        backgroundColor="#ffffff"
-                      />
-                      <div className="barcode-value">{barcodeValue}</div>
-                    </div>
-                  )}
                 </div>
               );
             })}

@@ -234,6 +234,24 @@ export default function POSPage() {
     });
   }, []); // No dependencies needed - uses setCart with callback
 
+  // Extract product ID from URL if scanned value is a URL
+  const extractProductIdFromUrl = useCallback((scannedValue: string): string | null => {
+    // Check if it's a URL (contains http or https or domain)
+    if (scannedValue.includes('http') || scannedValue.includes('/product/')) {
+      try {
+        // Try to extract product ID from URL
+        // Pattern: .../product/PRODUCT_ID or .../product/PRODUCT_ID?
+        const urlMatch = scannedValue.match(/\/product\/([^/?]+)/);
+        if (urlMatch && urlMatch[1]) {
+          return urlMatch[1];
+        }
+      } catch (error) {
+        console.warn('[POS] Error parsing URL:', error);
+      }
+    }
+    return null;
+  }, []);
+
   // Handle barcode input (separate from search)
   const handleBarcodeSubmit = useCallback((e?: React.FormEvent) => {
     e?.preventDefault();
@@ -241,15 +259,29 @@ export default function POSPage() {
 
     const scannedValue = barcodeInput.trim();
     
-    // First, try to find by Barcode
-    let product = products.find(
-      (p) => String(p.Barcode || p.barcode || '') === scannedValue
-    );
+    // Check if scanned value is a URL and extract product ID
+    const productIdFromUrl = extractProductIdFromUrl(scannedValue);
+    const searchValue = productIdFromUrl || scannedValue;
+    
+    // First, try to find by ProductID if we extracted it from URL
+    let product: any = null;
+    if (productIdFromUrl) {
+      product = products.find(
+        (p) => String(p.ProductID || p.id || '') === productIdFromUrl
+      );
+    }
+
+    // If not found, try to find by Barcode
+    if (!product) {
+      product = products.find(
+        (p) => String(p.Barcode || p.barcode || '') === searchValue
+      );
+    }
 
     // If not found, try to find by Shamel No (رقم الشامل)
     if (!product) {
       product = products.find(
-        (p) => String(p['Shamel No'] || p.shamel_no || '') === scannedValue
+        (p) => String(p['Shamel No'] || p.shamel_no || '') === searchValue
       );
     }
 
@@ -263,7 +295,7 @@ export default function POSPage() {
       alert(`المنتج غير موجود للباركود أو رقم الشامل: ${scannedValue}`);
       setBarcodeInput(''); // Clear anyway
     }
-  }, [barcodeInput, products, addToCart]);
+  }, [barcodeInput, products, addToCart, extractProductIdFromUrl]);
 
   // Stop camera scanning
   const stopScanning = useCallback(async () => {
@@ -289,15 +321,29 @@ export default function POSPage() {
 
   // Handle barcode scan result
   const handleBarcodeScanned = useCallback((barcode: string) => {
-    // First, try to find by Barcode
-    let product = products.find(
-      (p) => String(p.Barcode || p.barcode || '') === barcode
-    );
+    // Check if scanned value is a URL and extract product ID
+    const productIdFromUrl = extractProductIdFromUrl(barcode);
+    const searchValue = productIdFromUrl || barcode;
+    
+    // First, try to find by ProductID if we extracted it from URL
+    let product: any = null;
+    if (productIdFromUrl) {
+      product = products.find(
+        (p) => String(p.ProductID || p.id || '') === productIdFromUrl
+      );
+    }
+
+    // If not found, try to find by Barcode
+    if (!product) {
+      product = products.find(
+        (p) => String(p.Barcode || p.barcode || '') === searchValue
+      );
+    }
 
     // If not found, try to find by Shamel No (رقم الشامل)
     if (!product) {
       product = products.find(
-        (p) => String(p['Shamel No'] || p.shamel_no || '') === barcode
+        (p) => String(p['Shamel No'] || p.shamel_no || '') === searchValue
       );
     }
 
@@ -309,7 +355,7 @@ export default function POSPage() {
       // Product not found - show alert and continue scanning
       alert(`المنتج غير موجود للباركود أو رقم الشامل: ${barcode}`);
     }
-  }, [products, addToCart, stopScanning]);
+  }, [products, addToCart, stopScanning, extractProductIdFromUrl]);
 
   // Check if browser supports camera
   const isCameraSupported = useCallback(() => {
