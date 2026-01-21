@@ -15,6 +15,7 @@ function LabelsPrintContent() {
   const [showZeroQuantity, setShowZeroQuantity] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [useQrProductUrl, setUseQrProductUrl] = useState<boolean>(true);
 
   // Get base URL for product links
   const getBaseUrl = () => {
@@ -33,6 +34,24 @@ function LabelsPrintContent() {
     if (!productId) return '';
     const baseUrl = getBaseUrl();
     return `${baseUrl}/product/${productId}`;
+  };
+
+  // Decide QR code payload based on user preference
+  // If useQrProductUrl => full URL, else fallback to barcode/shamel/productId
+  const getQrCodeValue = (product: Product) => {
+    if (useQrProductUrl) {
+      return getProductUrl(product);
+    }
+    const fallback =
+      product.barcode ||
+      product.Barcode ||
+      product.shamel_no ||
+      product['Shamel No'] ||
+      product.ShamelNo ||
+      product.ProductID ||
+      product.id ||
+      '';
+    return fallback;
   };
 
   // Set unique document title with date and time
@@ -109,6 +128,13 @@ function LabelsPrintContent() {
             setShowZeroQuantity(printData.showZeroQuantity);
           } else {
             setShowZeroQuantity(true); // Default behavior
+          }
+
+          // Set QR behavior (default to true = product URL)
+          if (typeof printData.useQrProductUrl === 'boolean') {
+            setUseQrProductUrl(printData.useQrProductUrl);
+          } else {
+            setUseQrProductUrl(true);
           }
           
           // Clean up localStorage after reading
@@ -322,6 +348,20 @@ function LabelsPrintContent() {
             word-wrap: break-word;
             min-height: 2.7em;
             max-height: 2.7em;
+          }
+
+          .label-type-a .shamel-under-name {
+            font-size: 9px;
+            font-weight: 500;
+            color: #666;
+            text-align: right;
+            direction: ltr;
+            margin-top: 0.5mm;
+            margin-bottom: 0;
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
 
           .label-type-a .product-specs {
@@ -601,6 +641,20 @@ function LabelsPrintContent() {
             flex-shrink: 0;
           }
 
+          .label-type-c .shamel-under-name {
+            font-size: 7px;
+            font-weight: 500;
+            color: #666;
+            text-align: right;
+            direction: ltr;
+            margin-top: 0.5mm;
+            margin-bottom: 0;
+            line-height: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
           .label-type-c .bottom-row {
             width: 100%;
             display: flex;
@@ -662,10 +716,11 @@ function LabelsPrintContent() {
               const dimention = product.dimention || product.Dimention || '';
               const warranty = product.warranty || product.Warranty || '';
               const origin = product.origin || product.Origin || '';
-              // Barcode: use barcode or shamel_no as fallback (for display only)
-              const barcodeValue = product.barcode || product.Barcode || product.shamel_no || product['Shamel No'] || product.ShamelNo || '';
-              // QR Code: Use full product URL for hybrid functionality
-              const qrCodeValue = getProductUrl(product);
+              const barcodeOnly = product.barcode || product.Barcode || '';
+              const shamelOnly = product.shamel_no || product['Shamel No'] || product.ShamelNo || '';
+              const barcodeDisplayValue = barcodeOnly || shamelOnly;
+              // QR Code value based on user preference
+              const qrCodeValue = getQrCodeValue(product);
 
               return (
                 <div key={`${product.ProductID || product.id || index}-${index}`} className="label-type-a">
@@ -679,7 +734,10 @@ function LabelsPrintContent() {
                       }}
                     />
                   </div>
-                  <div className="product-name">{name}</div>
+                  <div>
+                    <div className="product-name">{name}</div>
+                    {shamelOnly && <div className="shamel-under-name">{shamelOnly}</div>}
+                  </div>
                   <ul className="product-specs">
                     {dimention && (
                       <li>
@@ -712,7 +770,7 @@ function LabelsPrintContent() {
                           color="#000000"
                           backgroundColor="#ffffff"
                         />
-                        <div className="barcode-value">{barcodeValue || product.ProductID || product.id || ''}</div>
+                        <div className="barcode-value">{barcodeDisplayValue}</div>
                       </div>
                     )}
                     <div className="product-price">{price.toLocaleString('en-US')} ₪</div>
@@ -729,24 +787,28 @@ function LabelsPrintContent() {
               const price = product.SalePrice || product.price || 0;
               const name = product.Name || product.name || '—';
               const origin = product.origin || product.Origin || '';
-              // Barcode: use barcode or shamel_no as fallback
-              const barcodeValue = product.barcode || product.Barcode || product.shamel_no || product['Shamel No'] || product.ShamelNo || '';
+              // Barcode: use barcode or shamel_no as fallback (for display only)
+              const barcodeOnly = product.barcode || product.Barcode || '';
+              const shamelOnly = product.shamel_no || product['Shamel No'] || product.ShamelNo || '';
+              const barcodeDisplayValue = barcodeOnly || shamelOnly;
+              // QR Code value based on user preference
+              const qrCodeValue = getQrCodeValue(product);
 
               return (
                 <div key={`${product.ProductID || product.id || index}-${index}`} className="label-type-b">
                   <div className="product-name">{name}</div>
                   <div className="content-row">
-                    {barcodeValue && (
+                    {qrCodeValue && (
                       <div className="left-section">
                         <div className="barcode-container">
                           <QRCode
-                            value={barcodeValue}
+                            value={qrCodeValue}
                             size={200}
                             margin={1}
                             color="#000000"
                             backgroundColor="#ffffff"
                           />
-                          <div className="barcode-value">{barcodeValue}</div>
+                          <div className="barcode-value">{barcodeDisplayValue}</div>
                         </div>
                       </div>
                     )}
@@ -768,14 +830,18 @@ function LabelsPrintContent() {
             {flattenedProducts.map((product, index) => {
               const price = product.SalePrice || product.price || 0;
               const name = product.Name || product.name || '—';
-              // Barcode: use barcode or shamel_no as fallback (for display only)
-              const barcodeValue = product.barcode || product.Barcode || product.shamel_no || product['Shamel No'] || product.ShamelNo || '';
-              // QR Code: Use full product URL for hybrid functionality
-              const qrCodeValue = getProductUrl(product);
+              const barcodeOnly = product.barcode || product.Barcode || '';
+              const shamelOnly = product['Shamel No'] || product.shamel_no || product.ShamelNo || '';
+              const barcodeDisplayValue = barcodeOnly || shamelOnly;
+              // QR Code value based on user preference
+              const qrCodeValue = getQrCodeValue(product);
 
               return (
                 <div key={`${product.ProductID || product.id || index}-${index}`} className="label-type-c">
-                  <div className="product-name">{name}</div>
+                  <div>
+                    <div className="product-name">{name}</div>
+                    {shamelOnly && <div className="shamel-under-name">{shamelOnly}</div>}
+                  </div>
                   <div className="bottom-row">
                     <div className="product-price">{price.toLocaleString('en-US')} ₪</div>
                     {qrCodeValue && (
@@ -787,7 +853,7 @@ function LabelsPrintContent() {
                           color="#000000"
                           backgroundColor="#ffffff"
                         />
-                        <div className="barcode-value">{barcodeValue || product.ProductID || product.id || ''}</div>
+                        <div className="barcode-value">{barcodeDisplayValue}</div>
                       </div>
                     )}
                   </div>

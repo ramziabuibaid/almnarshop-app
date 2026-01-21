@@ -23,6 +23,7 @@ export default function LabelsPage() {
   const [labelType, setLabelType] = useState<LabelType>('A');
   const [useQuantity, setUseQuantity] = useState<boolean>(true); // true = حسب الكمية, false = ليبل واحد لكل منتج
   const [showZeroQuantity, setShowZeroQuantity] = useState<boolean>(true); // true = إظهار الأصناف ذات الكمية صفر, false = إخفاءها
+  const [useQrProductUrl, setUseQrProductUrl] = useState<boolean>(true); // true = QR يفتح صفحة المنتج، false = QR = الباركود/الشامل
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -166,6 +167,7 @@ export default function LabelsPage() {
       labelType: labelType,
       useQuantity: labelType === 'C' ? useQuantity : true, // Only relevant for Type C
       showZeroQuantity: labelType === 'C' ? showZeroQuantity : true, // Only relevant for Type C
+      useQrProductUrl,
       timestamp: Date.now(),
     };
     
@@ -523,6 +525,39 @@ export default function LabelsPage() {
                   </div>
                 </div>
               )}
+
+              {/* QR Code Behavior */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 no-print">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">سلوك رمز QR</h2>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="qrOption"
+                      checked={useQrProductUrl}
+                      onChange={() => setUseQrProductUrl(true)}
+                      className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">فتح صفحة المنتج</div>
+                      <div className="text-xs text-gray-500">QR = رابط صفحة المنتج (للهواتف والمتجر)</div>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="qrOption"
+                      checked={!useQrProductUrl}
+                      onChange={() => setUseQrProductUrl(false)}
+                      className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">استخدام الباركود/الشامل</div>
+                      <div className="text-xs text-gray-500">QR = رقم الباركود أو الشامل (للقراءات القديمة)</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
 
               {/* Print Button */}
               <button

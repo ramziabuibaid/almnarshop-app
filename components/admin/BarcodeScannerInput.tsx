@@ -60,39 +60,61 @@ export default function BarcodeScannerInput({
     }
   }, []);
 
-  // Find product by barcode or Shamel No - same logic as POS
+  // Extract product ID from scanned value (supports URL as well)
+  const extractProductIdFromScannedValue = useCallback((scannedValue: string): string | null => {
+    const trimmedValue = scannedValue.trim();
+    if (!trimmedValue) return null;
+
+    // If looks like URL, try to extract after /product/
+    if (trimmedValue.includes('http') || trimmedValue.includes('/product/')) {
+      const match = trimmedValue.match(/\/product\/([^/?#]+)/);
+      if (match && match[1]) return match[1];
+    }
+
+    return null;
+  }, []);
+
+  // Find product by ProductID, Barcode, or Shamel No - same logic as POS
   const findProduct = useCallback((scannedValue: string) => {
     const trimmedValue = scannedValue.trim();
     if (!trimmedValue) return undefined;
 
-    // First, try to find by Barcode
-    let product = products.find(
-      (p) => {
-        const barcode = String(p.Barcode || p.barcode || '').trim();
-        return barcode === trimmedValue;
-      }
-    );
+    // Try to extract product ID from URL if present
+    const productIdFromUrl = extractProductIdFromScannedValue(trimmedValue);
+    const searchValue = productIdFromUrl || trimmedValue;
 
-    // If not found, try to find by Shamel No (رقم الشامل) - same as POS
+    // 1) Try ProductID (if extracted)
+    let product = productIdFromUrl
+      ? products.find(
+          (p) => String(p.ProductID || p.id || '').trim() === productIdFromUrl
+        )
+      : undefined;
+
+    // 2) Try Barcode
     if (!product) {
-      product = products.find(
-        (p) => {
-          // Try all possible Shamel No fields
-          const shamelNo = String(
-            p['Shamel No'] || 
-            p.shamel_no || 
-            p.ShamelNo || 
+      product = products.find((p) => {
+        const barcode = String(p.Barcode || p.barcode || '').trim();
+        return barcode === searchValue && barcode !== '';
+      });
+    }
+
+    // 3) Try Shamel No (رقم الشامل)
+    if (!product) {
+      product = products.find((p) => {
+        const shamelNo = String(
+          p['Shamel No'] ||
+            p.shamel_no ||
+            p.ShamelNo ||
             p.Shamel_No ||
             p['shamel_no'] ||
             ''
-          ).trim();
-          return shamelNo === trimmedValue && shamelNo !== '';
-        }
-      );
+        ).trim();
+        return shamelNo === searchValue && shamelNo !== '';
+      });
     }
 
     return product;
-  }, [products]);
+  }, [products, extractProductIdFromScannedValue]);
 
   // Handle barcode scan result
   const handleBarcodeScanned = useCallback((barcode: string) => {
@@ -369,6 +391,13 @@ export default function BarcodeScannerInput({
           }}
           className={`w-full pr-12 pl-3 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
           disabled={disabled || isScanning}
+          dir="ltr"
+          lang="en"
+          inputMode="url"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
           id={`barcode-input-${Math.random().toString(36).substr(2, 9)}`}
         />
         <button
