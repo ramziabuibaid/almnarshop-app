@@ -91,30 +91,30 @@ export default function CategoryHighlights({ onCategoryClick }: CategoryHighligh
   }
 
   return (
-    <section className="py-12 md:py-16 bg-white border-b border-gray-200" dir="rtl">
-      <div className="max-w-7xl mx-auto px-4">
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 text-center">
+    <section className="py-8 sm:py-12 md:py-16 bg-white border-b border-gray-200" dir="rtl">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-6 sm:mb-8 text-center">
           تصفح حسب الفئة
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2.5 sm:gap-3 md:gap-4">
           {categories.map(({ type, count }) => {
             const IconComponent = categoryIcons[type] || categoryIcons['default'];
             return (
               <button
                 key={type}
                 onClick={() => handleCategoryClick(type)}
-                className="group flex flex-col items-center justify-center p-4 md:p-6 bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-200 hover:border-[#D4AF37]"
+                className="group flex flex-col items-center justify-center p-3 sm:p-4 md:p-6 bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-200 hover:border-[#D4AF37]"
               >
-                <div className="mb-3 p-3 md:p-4 bg-white rounded-full group-hover:bg-[#D4AF37] transition-all duration-300 shadow-sm group-hover:shadow-md">
+                <div className="mb-2 sm:mb-3 p-2 sm:p-3 md:p-4 bg-white rounded-full group-hover:bg-[#D4AF37] transition-all duration-300 shadow-sm group-hover:shadow-md">
                   <IconComponent 
-                    size={28} 
-                    className="text-gray-700 group-hover:text-white transition-colors duration-300 md:w-8 md:h-8 w-7 h-7" 
+                    size={24} 
+                    className="text-gray-700 group-hover:text-white transition-colors duration-300 sm:w-7 sm:h-7 md:w-8 md:h-8" 
                   />
                 </div>
-                <span className="font-semibold text-gray-900 text-xs md:text-sm text-center mb-1 line-clamp-2 group-hover:text-[#D4AF37] transition-colors">
+                <span className="font-semibold text-gray-900 text-[10px] sm:text-xs md:text-sm text-center mb-0.5 sm:mb-1 line-clamp-2 group-hover:text-[#D4AF37] transition-colors">
                   {type}
                 </span>
-                <span className="text-xs text-gray-500 group-hover:text-gray-700">
+                <span className="text-[10px] sm:text-xs text-gray-500 group-hover:text-gray-700">
                   {count} منتج
                 </span>
               </button>

@@ -8410,22 +8410,141 @@ export async function getCampaigns(): Promise<any[]> {
 /**
  * Get a single campaign by ID
  */
-export async function getCampaign(campaignId: string): Promise<any> {
+export async function getCampaign(campaignId: string): Promise<any | null> {
   try {
     const { data, error } = await supabase
       .from('campaigns')
       .select('*')
       .eq('campaign_id', campaignId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('[API] Error fetching campaign:', error);
+      // If it's a "not found" error (PGRST116), return null instead of throwing
+      if (error.code === 'PGRST116' || error.message?.includes('No rows found')) {
+        return null;
+      }
       throw new Error(`Failed to fetch campaign: ${error.message}`);
     }
 
     return data;
   } catch (error: any) {
     console.error('[API] getCampaign error:', error);
+    // If error message indicates not found, return null
+    if (error?.message?.includes('No rows') || error?.code === 'PGRST116') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Get a single campaign by slug
+ */
+export async function getCampaignBySlug(slug: string): Promise<any | null> {
+  try {
+    console.log('[API] getCampaignBySlug - Searching for slug:', slug);
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('slug', slug)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[API] Error fetching campaign by slug:', error);
+      // If it's a "not found" error (PGRST116), return null instead of throwing
+      if (error.code === 'PGRST116' || error.message?.includes('No rows found')) {
+        console.log('[API] Campaign not found (expected)');
+        return null;
+      }
+      throw new Error(`Failed to fetch campaign: ${error.message}`);
+    }
+
+    console.log('[API] getCampaignBySlug - Result:', data ? `Found: ${data.title}` : 'Not found');
+    return data;
+  } catch (error: any) {
+    console.error('[API] getCampaignBySlug error:', error);
+    // If error message indicates not found, return null
+    if (error?.message?.includes('No rows') || error?.code === 'PGRST116') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Get campaign with its products by slug
+ */
+export async function getCampaignWithProductsBySlug(slug: string): Promise<any | null> {
+  try {
+    // Get campaign by slug
+    const campaign = await getCampaignBySlug(slug);
+
+    if (!campaign) {
+      return null;
+    }
+
+    // Get campaign products
+    const { data: campaignProducts, error: productsError } = await supabase
+      .from('campaign_products')
+      .select('*')
+      .eq('campaign_id', campaign.campaign_id);
+
+    if (productsError) {
+      console.error('[API] Error fetching campaign products:', productsError);
+      throw new Error(`Failed to fetch campaign products: ${productsError.message}`);
+    }
+
+    // Fetch product details for each campaign product
+    const productsWithDetails = [];
+    if (campaignProducts && campaignProducts.length > 0) {
+      const productIds = campaignProducts.map((cp: any) => cp.product_id).filter(Boolean);
+      if (productIds.length > 0) {
+        const { data: products, error: productsDataError } = await supabase
+          .from('products')
+          .select('*')
+          .in('product_id', productIds);
+
+        if (!productsDataError && products) {
+          for (const cp of campaignProducts) {
+            const product = products.find((p: any) => p.product_id === cp.product_id);
+            if (product) {
+              // Map product and use campaign price if available
+              const mappedProduct = mapProductFromSupabase(product);
+              // Store original price before overriding
+              const originalPrice = mappedProduct.SalePrice || mappedProduct.price || 0;
+              
+              // Override price with campaign offer_price if available
+              if (cp.offer_price) {
+                mappedProduct.originalPrice = originalPrice;
+                mappedProduct.campaignPrice = cp.offer_price;
+                mappedProduct.price = cp.offer_price;
+                mappedProduct.SalePrice = cp.offer_price;
+              } else {
+                // If no campaign price, use original price
+                mappedProduct.originalPrice = originalPrice;
+                mappedProduct.campaignPrice = originalPrice;
+              }
+              productsWithDetails.push({
+                ...mappedProduct,
+                campaign_product_id: cp.campaign_product_id,
+                offer_price: cp.offer_price || originalPrice,
+              });
+            }
+          }
+        } else {
+          // If product fetch fails, just return campaign products without details
+          productsWithDetails.push(...campaignProducts.map((cp: any) => ({ ...cp, products: null })));
+        }
+      }
+    }
+
+    return {
+      ...campaign,
+      products: productsWithDetails,
+    };
+  } catch (error: any) {
+    console.error('[API] getCampaignWithProductsBySlug error:', error);
     throw error;
   }
 }
@@ -8433,10 +8552,14 @@ export async function getCampaign(campaignId: string): Promise<any> {
 /**
  * Get campaign with its products
  */
-export async function getCampaignWithProducts(campaignId: string): Promise<any> {
+export async function getCampaignWithProducts(campaignId: string): Promise<any | null> {
   try {
     // Get campaign
     const campaign = await getCampaign(campaignId);
+
+    if (!campaign) {
+      return null;
+    }
 
     // Get campaign products
     const { data: campaignProducts, error: productsError } = await supabase
@@ -8462,10 +8585,29 @@ export async function getCampaignWithProducts(campaignId: string): Promise<any> 
         if (!productsDataError && products) {
           for (const cp of campaignProducts) {
             const product = products.find((p: any) => p.product_id === cp.product_id);
-            productsWithDetails.push({
-              ...cp,
-              products: product || null,
-            });
+            if (product) {
+              // Map product and use campaign price if available
+              const mappedProduct = mapProductFromSupabase(product);
+              // Store original price before overriding
+              const originalPrice = mappedProduct.SalePrice || mappedProduct.price || 0;
+              
+              // Override price with campaign offer_price if available
+              if (cp.offer_price) {
+                mappedProduct.originalPrice = originalPrice;
+                mappedProduct.campaignPrice = cp.offer_price;
+                mappedProduct.price = cp.offer_price;
+                mappedProduct.SalePrice = cp.offer_price;
+              } else {
+                // If no campaign price, use original price
+                mappedProduct.originalPrice = originalPrice;
+                mappedProduct.campaignPrice = originalPrice;
+              }
+              productsWithDetails.push({
+                ...mappedProduct,
+                campaign_product_id: cp.campaign_product_id,
+                offer_price: cp.offer_price || originalPrice,
+              });
+            }
           }
         } else {
           // If product fetch fails, just return campaign products without details

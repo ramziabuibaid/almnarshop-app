@@ -25,8 +25,8 @@ function CartItem({ item, updateCartQuantity, removeFromCart }: CartItemProps) {
   const hasValidImage = imageUrl && !imageError;
 
   return (
-    <div className="flex gap-4 p-3 bg-gray-50 rounded-lg">
-      <div className="relative w-20 h-20 bg-white rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+    <div className="flex gap-2.5 sm:gap-4 p-2.5 sm:p-3 bg-gray-50 rounded-lg" dir="rtl">
+      <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
         {hasValidImage && imageUrl ? (
           <img
             src={imageUrl}
@@ -39,39 +39,39 @@ function CartItem({ item, updateCartQuantity, removeFromCart }: CartItemProps) {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">
+        <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2 text-sm sm:text-base">
           {item.name}
         </h3>
-        <p className="text-sm text-gray-600 mb-2">
-          ₪{item.price.toFixed(2)} each
+        <p className="text-xs sm:text-sm text-gray-600 mb-1.5 sm:mb-2">
+          ₪{item.price.toFixed(2)} للقطعة
         </p>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
-              className="p-1 hover:bg-gray-200 rounded transition-colors"
+              className="p-0.5 sm:p-1 hover:bg-gray-200 rounded transition-colors"
             >
-              <Minus size={16} className="text-gray-600" />
+              <Minus size={14} className="text-gray-600 sm:w-4 sm:h-4" />
             </button>
-            <span className="w-8 text-center font-medium text-gray-900">
+            <span className="w-6 sm:w-8 text-center font-medium text-gray-900 text-sm sm:text-base">
               {item.quantity}
             </span>
             <button
               onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
-              className="p-1 hover:bg-gray-200 rounded transition-colors"
+              className="p-0.5 sm:p-1 hover:bg-gray-200 rounded transition-colors"
             >
-              <Plus size={16} className="text-gray-600" />
+              <Plus size={14} className="text-gray-600 sm:w-4 sm:h-4" />
             </button>
           </div>
-          <div className="flex items-center gap-2">
-            <p className="font-bold text-gray-900">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <p className="font-bold text-gray-900 text-sm sm:text-base">
               ₪{(item.price * item.quantity).toFixed(2)}
             </p>
             <button
               onClick={() => removeFromCart(item.id)}
-              className="p-1 hover:bg-red-100 rounded transition-colors"
+              className="p-0.5 sm:p-1 hover:bg-red-100 rounded transition-colors"
             >
-              <X size={16} className="text-red-600" />
+              <X size={14} className="text-red-600 sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>
@@ -279,12 +279,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       />
 
       {/* Drawer */}
-      <div className="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-xl z-[70] flex flex-col">
+      <div className="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-xl z-[70] flex flex-col" dir="rtl">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <ShoppingBag size={24} />
-            Cart ({cart.length})
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-4 flex items-center justify-between">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-1.5 sm:gap-2">
+            <ShoppingBag size={20} className="sm:w-6 sm:h-6" />
+            <span>السلة ({cart.length})</span>
           </h2>
           <button
             onClick={onClose}
@@ -295,14 +295,14 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         </div>
 
         {/* Cart Items */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4">
           {cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
-              <ShoppingBag size={64} className="text-gray-300 mb-4" />
-              <p className="text-gray-500 text-lg">Your cart is empty</p>
+              <ShoppingBag size={48} className="text-gray-300 mb-3 sm:mb-4 sm:w-16 sm:h-16" />
+              <p className="text-gray-500 text-base sm:text-lg">السلة فارغة</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {cart.map((item) => (
                 <CartItem
                   key={item.id}
@@ -436,8 +436,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
         {/* Footer */}
         {cart.length > 0 && !showCheckoutForm && (
-          <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 space-y-3">
-            <div className="flex items-center justify-between text-lg">
+          <div className="sticky bottom-0 bg-white border-t border-gray-200 p-3 sm:p-4 space-y-2 sm:space-y-3">
+            <div className="flex items-center justify-between text-base sm:text-lg">
               <span className="font-semibold text-gray-900">المجموع:</span>
               <span className="font-bold text-gray-900">₪{total.toFixed(2)}</span>
             </div>
@@ -457,7 +457,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             <button
               onClick={handleCheckoutClick}
               disabled={isSubmitting || checkoutSuccess}
-              className="w-full bg-gray-900 text-white py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-gray-900 text-white py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg hover:bg-gray-800 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
             >
               {isSubmitting ? (
                 <>

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { Search, Filter, ShoppingCart, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Search, Filter, ShoppingCart, User, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useShop } from '@/context/ShopContext';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -24,6 +24,8 @@ export default function Home() {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<FilterState>({
     selectedTypes: [],
@@ -37,6 +39,13 @@ export default function Home() {
 
   useEffect(() => {
     setIsMounted(true);
+    // Check if mobile on mount
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   useEffect(() => {
@@ -162,7 +171,11 @@ export default function Home() {
   const endIndex = startIndex + PRODUCTS_PER_PAGE;
   const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
 
-  const cartItemCount = isMounted ? cart.reduce((sum, item) => sum + item.quantity, 0) : 0;
+  // Calculate cart item count - use useMemo to prevent hydration mismatch
+  const cartItemCount = useMemo(() => {
+    if (!isMounted) return 0;
+    return cart.reduce((sum, item) => sum + item.quantity, 0);
+  }, [isMounted, cart]);
 
   // Build active filters for ActiveFiltersBar
   const activeFilters = useMemo(() => {
@@ -260,32 +273,60 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50" dir="rtl">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Company Logo (Just Name) */}
             <div className="flex-shrink-0">
-              <Image
-                src="/logo just name.png"
-                alt="ALMNAR"
-                width={120}
-                height={40}
-                className="h-8 md:h-10 w-auto object-contain"
-                priority
-              />
+              <button
+                onClick={() => router.push('/')}
+                className="cursor-pointer"
+              >
+                <Image
+                  src="/logo just name.png"
+                  alt="ALMNAR"
+                  width={120}
+                  height={40}
+                  className="h-7 sm:h-8 md:h-10 w-auto object-contain"
+                  priority
+                />
+              </button>
             </div>
 
-            {/* Search Bar */}
-            <div className="flex-1 relative">
+            {/* Search Bar - Always visible, optimized for all screen sizes */}
+            <div className="flex-1 relative min-w-0">
               <Search
-                size={20}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={18}
+                className="absolute right-2.5 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 sm:w-5 sm:h-5 pointer-events-none"
               />
               <input
+                ref={searchInputRef}
                 type="text"
                 placeholder="بحث عن منتجات..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-gray-900 placeholder:text-gray-500 text-right"
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  // Auto-scroll to products when user starts typing (all devices)
+                  if (e.target.value.trim() && isMounted) {
+                    setTimeout(() => {
+                      const productsSection = document.getElementById('products-section');
+                      if (productsSection) {
+                        productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }, 300);
+                  }
+                }}
+                onFocus={() => {
+                  // Auto-scroll to products when search is focused (all devices)
+                  if (isMounted) {
+                    setTimeout(() => {
+                      const productsSection = document.getElementById('products-section');
+                      if (productsSection) {
+                        productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }, 100);
+                  }
+                }}
+                className="w-full pr-8 sm:pr-10 pl-3 sm:pl-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-gray-900 placeholder:text-gray-500 text-right text-sm sm:text-base"
                 dir="rtl"
               />
             </div>
@@ -293,17 +334,17 @@ export default function Home() {
             {/* Filter Button - Mobile only */}
             <button
               onClick={() => setIsFilterDrawerOpen(true)}
-              className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors relative"
+              className="md:hidden p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors relative flex-shrink-0"
               aria-label="Filter"
             >
-              <Filter size={24} className="text-gray-700" />
+              <Filter size={20} className="text-gray-700 sm:w-6 sm:h-6" />
               {(filters.selectedTypes.length > 0 ||
                 filters.selectedBrands.length > 0 ||
                 filters.selectedSizes.length > 0 ||
                 filters.selectedColors.length > 0 ||
                 (filters.priceRange.min > priceRange.min || filters.priceRange.max < priceRange.max)) && (
-                <span className="absolute -top-1 -right-1 bg-gray-900 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                  {activeFilters.length}
+                <span className="absolute -top-0.5 -right-0.5 bg-gray-900 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none">
+                  {activeFilters.length > 9 ? '9+' : activeFilters.length}
                 </span>
               )}
             </button>
@@ -311,22 +352,22 @@ export default function Home() {
             {/* Cart Button */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="relative p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
               aria-label="Cart"
             >
-              <ShoppingCart size={24} className="text-gray-700" />
+              <ShoppingCart size={20} className="text-gray-700 sm:w-6 sm:h-6" />
               {cartItemCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-gray-900 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {cartItemCount}
+                <span className="absolute -top-1 -right-1 bg-gray-900 text-white text-[10px] sm:text-xs font-bold rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
+                  {cartItemCount > 99 ? '99+' : cartItemCount}
                 </span>
               )}
             </button>
 
             {/* Admin Panel Button - Only for Admin users */}
-            {user && (user.Role === 'Admin' || user.role === 'Admin') && (
+            {isMounted && user && (user.Role === 'Admin' || user.role === 'Admin') && (
               <button
                 onClick={() => router.push('/admin')}
-                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium text-sm"
+                className="hidden sm:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium text-xs sm:text-sm"
               >
                 <span>Admin Panel</span>
               </button>
@@ -335,11 +376,11 @@ export default function Home() {
             {/* Profile Button */}
             <button
               onClick={() => router.push(user ? '/profile' : '/login')}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
               aria-label="Profile"
               title={user ? 'الملف الشخصي' : 'تسجيل الدخول'}
             >
-              <User size={24} className="text-gray-700" />
+              <User size={20} className="text-gray-700 sm:w-6 sm:h-6" />
             </button>
           </div>
         </div>
@@ -352,32 +393,32 @@ export default function Home() {
       <CategoryHighlights onCategoryClick={handleCategoryClick} />
 
       {/* Flash Sale Section */}
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4">
         <FlashSaleSection />
       </div>
 
       {/* Main Content - 2 Column Layout (Desktop) */}
-      <main id="products-section" className="max-w-7xl mx-auto px-4 py-8">
+      <main id="products-section" className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
         {/* Section Title */}
-        <div className="mb-6">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 text-right mb-2">
+        <div className="mb-4 sm:mb-6">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 text-right mb-2">
             تصفح جميع المنتجات
           </h2>
-          <p className="text-gray-600 text-right">
+          <p className="text-sm sm:text-base text-gray-600 text-right">
             اكتشف مجموعتنا الكاملة من الأجهزة الإلكترونية والأجهزة المنزلية
           </p>
         </div>
         {/* Loading State */}
         {loading && (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
-            <p className="text-gray-500 text-lg">جاري تحميل المنتجات...</p>
+          <div className="text-center py-8 sm:py-12">
+            <div className="inline-block animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-gray-900 mb-4"></div>
+            <p className="text-gray-500 text-base sm:text-lg">جاري تحميل المنتجات...</p>
             <p className="text-gray-400 text-sm mt-2">يرجى الانتظار</p>
           </div>
         )}
 
         {!loading && (
-          <div className="flex gap-6">
+          <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
             {/* Desktop Sidebar - Hidden on mobile */}
             <aside className="hidden lg:block">
               <FilterSidebar filters={filters} onFilterChange={setFilters} />
@@ -403,13 +444,13 @@ export default function Home() {
 
               {/* Products Grid */}
               {filteredProducts.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-500 text-lg">لم يتم العثور على منتجات</p>
+                <div className="text-center py-8 sm:py-12">
+                  <p className="text-gray-500 text-base sm:text-lg">لم يتم العثور على منتجات</p>
                   <p className="text-gray-400 text-sm mt-2">جرب تعديل البحث أو الفلاتر</p>
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                     {paginatedProducts.map((product) => (
                       <ProductCard key={product.id} product={product} />
                     ))}
@@ -417,14 +458,14 @@ export default function Home() {
 
                   {/* Pagination Controls */}
                   {totalPages > 1 && (
-                    <div className="mt-8 flex items-center justify-center gap-2">
+                    <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-2">
                       <button
                         onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                         disabled={currentPage === 1}
-                        className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-900"
+                        className="flex items-center gap-1 px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-900 text-sm sm:text-base"
                       >
-                        <ChevronRight size={20} className="text-gray-900" />
-                        السابق
+                        <ChevronRight size={18} className="text-gray-900 sm:w-5 sm:h-5" />
+                        <span className="hidden sm:inline">السابق</span>
                       </button>
 
                       <div className="flex items-center gap-1">
@@ -444,7 +485,7 @@ export default function Home() {
                             <button
                               key={pageNum}
                               onClick={() => setCurrentPage(pageNum)}
-                              className={`px-3 py-2 rounded-lg transition-colors ${
+                              className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-sm sm:text-base ${
                                 currentPage === pageNum
                                   ? 'bg-gray-900 text-white'
                                   : 'border border-gray-300 hover:bg-gray-50 text-gray-900'
@@ -459,10 +500,10 @@ export default function Home() {
                       <button
                         onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                         disabled={currentPage === totalPages}
-                        className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-900"
+                        className="flex items-center gap-1 px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-900 text-sm sm:text-base"
                       >
-                        التالي
-                        <ChevronLeft size={20} className="text-gray-900" />
+                        <span className="hidden sm:inline">التالي</span>
+                        <ChevronLeft size={18} className="text-gray-900 sm:w-5 sm:h-5" />
                       </button>
                     </div>
                   )}
@@ -483,6 +524,7 @@ export default function Home() {
 
       {/* Cart Drawer */}
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+
     </div>
   );
 }

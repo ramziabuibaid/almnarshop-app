@@ -63,7 +63,11 @@ export default function StoreHeader({
     }
   }, [isSearchFocused, shouldShowSearchResults]);
 
-  const cartItemCount = isMounted ? cart.reduce((sum, item) => sum + item.quantity, 0) : 0;
+  // Calculate cart item count - use useMemo to prevent hydration mismatch
+  const cartItemCount = useMemo(() => {
+    if (!isMounted) return 0;
+    return cart.reduce((sum, item) => sum + item.quantity, 0);
+  }, [isMounted, cart]);
 
   // Filter products based on search query
   const searchResults = useMemo(() => {
@@ -280,7 +284,7 @@ export default function StoreHeader({
             </button>
 
             {/* Admin Panel Button - Only for Admin users */}
-            {user && (user.Role === 'Admin' || user.role === 'Admin') && (
+            {isMounted && user && (user.Role === 'Admin' || user.role === 'Admin') && (
               <button
                 onClick={() => router.push('/admin')}
                 className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium text-sm"

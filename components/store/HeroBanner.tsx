@@ -27,23 +27,23 @@ export default function HeroBanner() {
 
       {/* Content */}
       <div className="relative h-full flex items-center justify-center">
-        <div className="max-w-7xl mx-auto px-4 text-center text-white" dir="rtl">
-          <div className="mb-6 md:mb-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 text-center text-white" dir="rtl">
+          <div className="mb-4 sm:mb-6 md:mb-8">
             {/* Full Logo */}
-            <div className="mb-4 md:mb-6 flex justify-center">
+            <div className="mb-3 sm:mb-4 md:mb-6 flex justify-center">
               <Image
                 src="/logo.png"
                 alt="ALMNAR Logo"
                 width={200}
                 height={200}
-                className="h-24 md:h-32 lg:h-40 w-auto object-contain"
+                className="h-20 sm:h-24 md:h-32 lg:h-40 w-auto object-contain"
                 priority
               />
             </div>
-            <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold mb-2 text-gray-100">
+            <p className="text-base sm:text-lg md:text-2xl lg:text-3xl font-semibold mb-1.5 sm:mb-2 text-gray-100 px-2">
               متجر الإلكترونيات والأجهزة المنزلية
             </p>
-            <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-300 max-w-2xl mx-auto px-4">
+            <p className="text-xs sm:text-sm md:text-lg lg:text-xl text-gray-300 max-w-2xl mx-auto px-3 sm:px-4">
               اكتشف أحدث الأجهزة الإلكترونية والأجهزة المنزلية بأسعار تنافسية وجودة عالية
             </p>
           </div>
@@ -51,11 +51,11 @@ export default function HeroBanner() {
           {/* CTA Button */}
           <button
             onClick={scrollToProducts}
-            className="inline-flex items-center gap-2 md:gap-3 px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-[#D4AF37] to-[#B8941F] text-white rounded-lg hover:from-[#B8941F] hover:to-[#9A7D1A] transition-all duration-300 font-semibold text-base md:text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="inline-flex items-center gap-1.5 sm:gap-2 md:gap-3 px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 bg-gradient-to-r from-[#D4AF37] to-[#B8941F] text-white rounded-lg hover:from-[#B8941F] hover:to-[#9A7D1A] transition-all duration-300 font-semibold text-sm sm:text-base md:text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
           >
-            <ShoppingBag size={20} className="md:w-6 md:h-6" />
+            <ShoppingBag size={18} className="sm:w-5 sm:h-5 md:w-6 md:h-6" />
             <span>تسوق الآن</span>
-            <ChevronDown size={18} className="animate-bounce md:w-5 md:h-5" />
+            <ChevronDown size={16} className="animate-bounce sm:w-4 sm:h-4 md:w-5 md:h-5" />
           </button>
         </div>
       </div>

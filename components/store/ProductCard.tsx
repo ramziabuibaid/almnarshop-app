@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { useShop } from '@/context/ShopContext';
@@ -19,6 +19,10 @@ interface ProductCardProps {
     CS_Shop?: number;
     cs_war?: number;
     cs_shop?: number;
+    originalPrice?: number;
+    campaignPrice?: number;
+    discount?: number;
+    isCampaignMode?: boolean;
     [key: string]: any;
   };
 }
@@ -45,9 +49,18 @@ export default function ProductCard({ product }: ProductCardProps) {
   const isAvailable = totalStock > 0;
   
   // Check if product is new (created within last 30 days)
-  const isNew = product.created_at
-    ? (Date.now() - new Date(product.created_at).getTime()) < 30 * 24 * 60 * 60 * 1000
-    : false;
+  // Use useState to prevent hydration mismatch (Date.now() differs between server and client)
+  const [isNew, setIsNew] = useState(false);
+  
+  useEffect(() => {
+    if (product.created_at) {
+      const now = Date.now();
+      const createdTime = new Date(product.created_at).getTime();
+      setIsNew((now - createdTime) < 30 * 24 * 60 * 60 * 1000);
+    } else {
+      setIsNew(false);
+    }
+  }, [product.created_at]);
 
   // Intersection Observer for lazy loading
   useEffect(() => {
@@ -98,15 +111,21 @@ export default function ProductCard({ product }: ProductCardProps) {
           className="relative w-full aspect-square bg-gray-50 flex items-center justify-center cursor-pointer overflow-hidden block"
         >
           {/* Badges */}
-          <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
-            {isNew && (
-              <div className="bg-green-600 text-white px-2 py-1 rounded-full text-xs font-semibold shadow-lg flex items-center gap-1">
-                <Sparkles size={12} />
+          <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 z-10 flex flex-col gap-1.5 sm:gap-2" suppressHydrationWarning>
+            {/* Discount Badge - Priority in campaign mode */}
+            {product.isCampaignMode && product.discount && product.discount > 0 && (
+              <div className="bg-red-600 text-white px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold shadow-lg">
+                خصم {product.discount}%
+              </div>
+            )}
+            {isNew && !product.isCampaignMode && (
+              <div className="bg-green-600 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold shadow-lg flex items-center gap-0.5 sm:gap-1">
+                <Sparkles size={10} className="sm:w-3 sm:h-3" />
                 جديد
               </div>
             )}
             {!isAvailable && (
-              <div className="bg-red-600 text-white px-2 py-1 rounded-full text-xs font-semibold shadow-lg">
+              <div className="bg-red-600 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold shadow-lg">
                 غير متوفر
               </div>
             )}
@@ -142,47 +161,61 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
 
           {/* Quick Add to Cart Button (Desktop - appears on hover) */}
-          <div className="absolute bottom-0 left-0 right-0 p-2 bg-white/95 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity md:block hidden">
+          <div className="absolute bottom-0 left-0 right-0 p-1.5 sm:p-2 bg-white/95 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity md:block hidden">
             <button
               onClick={handleAddToCart}
               disabled={!isAvailable}
-              className={`w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg transition-colors font-medium text-sm ${
+              className={`w-full flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors font-medium text-xs sm:text-sm ${
                 isAvailable
                   ? 'bg-gray-900 text-white hover:bg-gray-800'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              <ShoppingCart size={16} />
+              <ShoppingCart size={14} className="sm:w-4 sm:h-4" />
               {isAvailable ? 'إضافة إلى السلة' : 'غير متوفر'}
             </button>
           </div>
         </Link>
 
         {/* Product Info */}
-        <div className="p-4" dir="rtl">
+        <div className="p-3 sm:p-4" dir="rtl">
           <Link href={productUrl}>
-            <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 min-h-[2.5rem] cursor-pointer hover:text-gray-700 transition-colors text-sm">
+            <h3 className="font-semibold text-gray-900 mb-1.5 sm:mb-2 line-clamp-2 min-h-[2.5rem] cursor-pointer hover:text-gray-700 transition-colors text-xs sm:text-sm">
               {product.name}
             </h3>
           </Link>
           
           {/* Price */}
-          <p className="text-xl font-bold text-gray-900 mb-3">
-            ₪{product.price.toFixed(2)}
-          </p>
+          <div className="mb-2 sm:mb-3">
+            {product.isCampaignMode && product.originalPrice && product.originalPrice > product.price ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm sm:text-base text-gray-500 line-through">
+                  ₪{product.originalPrice.toFixed(2)}
+                </span>
+                <span className="text-lg sm:text-xl font-bold text-red-600">
+                  ₪{product.price.toFixed(2)}
+                </span>
+              </div>
+            ) : (
+              <p className="text-lg sm:text-xl font-bold text-gray-900">
+                ₪{product.price.toFixed(2)}
+              </p>
+            )}
+          </div>
 
           {/* Mobile Add to Cart Button */}
           <button
             onClick={handleAddToCart}
             disabled={!isAvailable}
-            className={`w-full md:hidden flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg transition-colors font-medium text-sm ${
+            className={`w-full md:hidden flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg transition-colors font-medium text-xs sm:text-sm ${
               isAvailable
                 ? 'bg-gray-900 text-white hover:bg-gray-800'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            <ShoppingCart size={18} />
-            {isAvailable ? 'إضافة إلى السلة' : 'غير متوفر'}
+            <ShoppingCart size={16} className="sm:w-[18px] sm:h-[18px]" />
+            <span className="hidden xs:inline">{isAvailable ? 'إضافة إلى السلة' : 'غير متوفر'}</span>
+            <span className="xs:hidden">{isAvailable ? 'إضافة' : 'غير متوفر'}</span>
           </button>
         </div>
       </div>

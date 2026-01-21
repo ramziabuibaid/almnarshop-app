@@ -33,6 +33,7 @@ interface Campaign {
   banner_image?: string;
   start_date: string;
   end_date: string;
+  slug?: string;
   products: CampaignProduct[];
 }
 
@@ -103,6 +104,25 @@ export default function FlashSaleSection() {
     }
   };
 
+  // Get campaign URL - check both slug and campaign_id as fallback
+  const campaignUrl = campaign?.slug 
+    ? `/offers/${campaign.slug}` 
+    : campaign?.campaign_id 
+      ? `/offers/${campaign.campaign_id}` 
+      : null;
+  
+  // Debug: log campaign data to check if slug exists
+  useEffect(() => {
+    if (campaign) {
+      console.log('[FlashSaleSection] Campaign data:', {
+        campaign_id: campaign.campaign_id,
+        slug: campaign.slug,
+        title: campaign.title,
+        hasUrl: !!campaignUrl,
+      });
+    }
+  }, [campaign, campaignUrl]);
+
   if (loading) {
     return null; // Don't show anything while loading
   }
@@ -119,46 +139,74 @@ export default function FlashSaleSection() {
     return orig > 0 ? Math.round(((orig - product.offer_price) / orig) * 100) : 0;
   };
 
+  const handleSectionClick = () => {
+    if (campaignUrl) {
+      router.push(campaignUrl);
+    }
+  };
+
   return (
-    <section className="w-full my-8" dir="rtl">
-      <div className="bg-gradient-to-r from-red-600 via-red-500 to-orange-500 rounded-2xl shadow-xl overflow-hidden">
+    <section className="w-full my-6 sm:my-8" dir="rtl">
+      <div 
+        className={`bg-gradient-to-r from-red-600 via-red-500 to-orange-500 rounded-xl sm:rounded-2xl shadow-xl overflow-hidden ${
+          campaignUrl ? 'cursor-pointer hover:shadow-2xl transition-all duration-300' : ''
+        }`}
+        onClick={campaignUrl ? handleSectionClick : undefined}
+      >
         {/* Header */}
-        <div className="bg-black/20 backdrop-blur-sm px-6 py-4 flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-white/20 p-2 rounded-lg">
-              <Tag size={24} className="text-white" />
+        <div className="bg-black/20 backdrop-blur-sm px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="bg-white/20 p-1.5 sm:p-2 rounded-lg">
+              <Tag size={20} className="text-white sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-white">{campaign.title}</h2>
-              <p className="text-white/90 text-sm mt-1">عرض محدود الوقت - لا تفوت الفرصة!</p>
+              <h2 className="text-lg sm:text-2xl md:text-3xl font-bold text-white">{campaign.title}</h2>
+              <p className="text-white/90 text-xs sm:text-sm mt-0.5 sm:mt-1">
+                {campaignUrl ? 'عرض محدود الوقت - لا تفوت الفرصة! اضغط لعرض المزيد' : 'عرض محدود الوقت - لا تفوت الفرصة!'}
+              </p>
             </div>
           </div>
 
           {/* Countdown Timer */}
-          <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm">
-            <Clock size={20} className="text-white" />
-            <div className="flex items-center gap-2 text-white font-mono">
-              <div className="bg-white/30 px-3 py-1 rounded">
-                <span className="text-lg font-bold">{String(timeLeft.hours).padStart(2, '0')}</span>
-                <span className="text-xs mr-1">س</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-white/20 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg backdrop-blur-sm">
+            <Clock size={16} className="text-white sm:w-5 sm:h-5" />
+            <div className="flex items-center gap-1 sm:gap-2 text-white font-mono">
+              <div className="bg-white/30 px-2 sm:px-3 py-0.5 sm:py-1 rounded">
+                <span className="text-sm sm:text-lg font-bold">{String(timeLeft.hours).padStart(2, '0')}</span>
+                <span className="text-[10px] sm:text-xs mr-0.5 sm:mr-1">س</span>
               </div>
-              <span className="text-xl">:</span>
-              <div className="bg-white/30 px-3 py-1 rounded">
-                <span className="text-lg font-bold">{String(timeLeft.minutes).padStart(2, '0')}</span>
-                <span className="text-xs mr-1">د</span>
+              <span className="text-base sm:text-xl">:</span>
+              <div className="bg-white/30 px-2 sm:px-3 py-0.5 sm:py-1 rounded">
+                <span className="text-sm sm:text-lg font-bold">{String(timeLeft.minutes).padStart(2, '0')}</span>
+                <span className="text-[10px] sm:text-xs mr-0.5 sm:mr-1">د</span>
               </div>
-              <span className="text-xl">:</span>
-              <div className="bg-white/30 px-3 py-1 rounded">
-                <span className="text-lg font-bold">{String(timeLeft.seconds).padStart(2, '0')}</span>
-                <span className="text-xs mr-1">ث</span>
+              <span className="text-base sm:text-xl">:</span>
+              <div className="bg-white/30 px-2 sm:px-3 py-0.5 sm:py-1 rounded">
+                <span className="text-sm sm:text-lg font-bold">{String(timeLeft.seconds).padStart(2, '0')}</span>
+                <span className="text-[10px] sm:text-xs mr-0.5 sm:mr-1">ث</span>
               </div>
             </div>
           </div>
         </div>
 
+        {/* View All Button - Show if slug exists */}
+        {campaignUrl && (
+          <div className="px-3 sm:px-6 pb-3 sm:pb-4">
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(campaignUrl);
+              }}
+              className="block w-full text-center bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 hover:scale-105 cursor-pointer"
+            >
+              عرض جميع منتجات العرض ←
+            </div>
+          </div>
+        )}
+
         {/* Products Grid */}
-        <div className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="p-3 sm:p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-4">
             {campaign.products.map((product) => {
               const prodId = productId(product);
               const prodName = productName(product);
@@ -195,34 +243,34 @@ export default function FlashSaleSection() {
 
                     {/* Discount Badge */}
                     {disc > 0 && (
-                      <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg">
+                      <div className="absolute top-1 sm:top-2 right-1 sm:right-2 bg-red-600 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold shadow-lg">
                         خصم {disc}%
                       </div>
                     )}
 
                     {/* Limited Offer Badge */}
-                    <div className="absolute top-2 left-2 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg">
+                    <div className="absolute top-1 sm:top-2 left-1 sm:left-2 bg-orange-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold shadow-lg">
                       عرض محدود
                     </div>
                   </Link>
 
                   {/* Product Info */}
-                  <div className="p-3" dir="rtl">
+                  <div className="p-2.5 sm:p-3" dir="rtl">
                     <Link href={productUrl}>
-                      <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 min-h-[2.5rem] text-sm hover:text-gray-700 transition-colors">
+                      <h3 className="font-semibold text-gray-900 mb-1.5 sm:mb-2 line-clamp-2 min-h-[2.5rem] text-xs sm:text-sm hover:text-gray-700 transition-colors">
                         {prodName}
                       </h3>
                     </Link>
 
                     {/* Price */}
-                    <div className="mb-3">
-                      <div className="flex items-center gap-2 flex-wrap">
+                    <div className="mb-2 sm:mb-3">
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                         {origPrice > product.offer_price && (
-                          <span className="text-sm text-gray-500 line-through">
+                          <span className="text-xs sm:text-sm text-gray-500 line-through">
                             ₪{origPrice.toFixed(2)}
                           </span>
                         )}
-                        <span className="text-xl font-bold text-red-600">
+                        <span className="text-lg sm:text-xl font-bold text-red-600">
                           ₪{product.offer_price.toFixed(2)}
                         </span>
                       </div>
@@ -232,13 +280,14 @@ export default function FlashSaleSection() {
                     <button
                       onClick={() => handleAddToCart(product)}
                       disabled={!isAvailable}
-                      className={`w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg transition-colors font-medium text-sm ${
+                      className={`w-full flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-2 sm:px-3 rounded-lg transition-colors font-medium text-xs sm:text-sm ${
                         isAvailable
                           ? 'bg-red-600 text-white hover:bg-red-700'
                           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
                     >
-                      {isAvailable ? 'إضافة إلى السلة' : 'غير متوفر'}
+                      <span className="hidden xs:inline">{isAvailable ? 'إضافة إلى السلة' : 'غير متوفر'}</span>
+                      <span className="xs:hidden">{isAvailable ? 'إضافة' : 'غير متوفر'}</span>
                     </button>
                   </div>
                 </div>
