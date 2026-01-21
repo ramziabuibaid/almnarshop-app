@@ -330,6 +330,7 @@ function LabelsPrintContent() {
             max-height: 12mm;
             object-fit: contain;
             display: block;
+            filter: grayscale(100%) brightness(0);
           }
 
           .label-type-a .product-name {
