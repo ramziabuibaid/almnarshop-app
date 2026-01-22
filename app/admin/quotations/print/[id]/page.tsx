@@ -11,6 +11,7 @@ interface QuotationItem {
   Quantity: number;
   UnitPrice: number;
   notes?: string;
+  isGift?: boolean;
 }
 
 export default function QuotationPrintPage() {
@@ -121,6 +122,17 @@ export default function QuotationPrintPage() {
     return (totalDiscount / subtotal) * 100;
   }, [data]);
 
+  // Separate regular items from gifts
+  const regularItems = useMemo(() => {
+    if (!data) return [];
+    return data.items.filter(item => !item.isGift);
+  }, [data]);
+
+  const giftItems = useMemo(() => {
+    if (!data) return [];
+    return data.items.filter(item => item.isGift);
+  }, [data]);
+
   if (loading) {
     return (
       <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Tajawal' }}>
@@ -141,16 +153,21 @@ export default function QuotationPrintPage() {
     <div style={{ background: 'white', color: 'black', direction: 'rtl' }}>
       <style jsx global>{`
         :root {
-          --border: #222;
-          --pad: 5px;
-          --gap: 6px;
-          --fs: 12px;      /* نص أساسي مقروء لـ A6 (الوضع الافتراضي) */
-          --fs-sm: 11px;   /* ميتا */
-          --fs-lg: 14px;   /* الإجماليات */
-          --w-no: 14mm;
-          --w-qty: 8mm;
-          --w-price: 15mm;
-          --w-amt: 17mm;
+          --border: #1a1a1a;
+          --border-light: #d1d5db;
+          --pad: 10px;
+          --gap: 10px;
+          --fs: 16px;      /* نص أساسي كبير وواضح لـ A4 */
+          --fs-sm: 14px;   /* ميتا */
+          --fs-lg: 20px;   /* الإجماليات */
+          --fs-xl: 24px;   /* العنوان الرئيسي */
+          --w-no: 25mm;
+          --w-qty: 15mm;
+          --w-price: 30mm;
+          --w-amt: 35mm;
+          --header-bg: #f8f9fa;
+          --gift-bg: #fef3c7;
+          --gift-border: #f59e0b;
         }
 
         html, body {
@@ -161,18 +178,19 @@ export default function QuotationPrintPage() {
         }
 
         body {
-          font-family: 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-          font-weight: 700;
+          font-family: 'Cairo', 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+          font-weight: 600;
           margin: 0;
           padding: 0;
           background: white !important;
           color: black !important;
           direction: rtl;
+          line-height: 1.6;
         }
 
         @page {
-          size: A6 portrait;
-          margin: 8mm 7mm 8mm 7mm;
+          size: A4 portrait;
+          margin: 15mm 20mm 15mm 20mm;
         }
 
         @media print {
@@ -180,25 +198,66 @@ export default function QuotationPrintPage() {
             display: none;
           }
 
-          /* تكبير الخط تلقائياً عند الطباعة على A4 مع إبقاء A6 كما هو */
-          /* العرض الفعلي لـ A4 حوالي 210mm؛ نستخدم حد أدنى 180mm لالتقاط A4/A5 */
-          @media (min-width: 180mm) {
-            :root {
-              --pad: 6px;
-              --gap: 7px;
-              --fs: 14px;
-              --fs-sm: 13px;
-              --fs-lg: 16px;
-              /* تكبير الأعمدة للسعر والمبلغ و Item No في A4 فقط */
-              --w-no: 18mm;
-              --w-qty: 9mm;
-              --w-price: 22mm;
-              --w-amt: 26mm;
-            }
+          * {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
 
-            table.items th {
-              font-size: 12px;
-            }
+          thead {
+            display: table-header-group;
+          }
+
+          tfoot {
+            display: table-footer-group;
+          }
+
+          /* Prevent page breaks inside rows */
+          tr {
+            page-break-inside: avoid;
+          }
+
+          /* Allow page breaks between rows in tbody */
+          tbody tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+          }
+
+          /* Ensure header appears on every page */
+          table.sheet thead {
+            display: table-header-group;
+          }
+
+          table.sheet thead tr {
+            page-break-after: auto;
+            page-break-inside: avoid;
+          }
+
+          /* Customer info should stay with first items - no page break after */
+          tbody tr:first-child {
+            page-break-after: auto;
+            page-break-inside: avoid;
+          }
+
+          /* Items should flow naturally */
+          table.items {
+            page-break-inside: auto;
+          }
+
+          table.items tbody tr {
+            page-break-inside: avoid;
+          }
+
+          /* Reduce header spacing to fit more content on first page */
+          table.sheet thead td {
+            padding-bottom: 10px;
+          }
+
+          .box.headerRow {
+            margin-bottom: 15px !important;
+          }
+
+          .titleRow {
+            margin: 10px 0 !important;
           }
         }
 
@@ -218,8 +277,9 @@ export default function QuotationPrintPage() {
         }
 
         .box {
-          border: 1px solid var(--border);
+          border: 2px solid var(--border);
           padding: var(--pad);
+          border-radius: 4px;
         }
 
         .headerRow {
@@ -227,50 +287,60 @@ export default function QuotationPrintPage() {
           flex-direction: row;
           align-items: flex-start;
           justify-content: flex-start;
-          gap: 8px;
+          gap: 12px;
         }
 
         .brand {
           text-align: right;
-          margin-left: auto; /* ادفع الترويسة إلى اليمين */
+          margin-left: auto;
           font-size: var(--fs-sm);
-          line-height: 1.3;
+          line-height: 1.5;
+          font-weight: 600;
         }
 
         .titleRow {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 8px;
-          margin: 8px 0 6px;
+          gap: 12px;
+          margin: 12px 0;
         }
 
         .titleMain {
           flex: 1;
           text-align: center;
-          border: 1px solid var(--border);
-          padding: 4px;
+          border: 2px solid var(--border);
+          padding: 12px;
           font-weight: 700;
+          font-size: var(--fs-xl);
+          background: var(--header-bg);
+          border-radius: 4px;
         }
 
         .titleId {
-          border: 1px solid var(--border);
-          padding: 4px 8px;
+          border: 2px solid var(--border);
+          padding: 12px 16px;
           white-space: nowrap;
-          font-size: var(--fs);
+          font-size: var(--fs-lg);
+          font-weight: 700;
+          background: var(--header-bg);
+          border-radius: 4px;
         }
 
         .meta {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: var(--gap);
-          margin-bottom: 6px;
+          margin-bottom: 12px;
         }
 
         .chip {
-          border: 1px solid var(--border);
-          padding: 4px 6px;
+          border: 1px solid var(--border-light);
+          padding: 8px 12px;
           font-size: var(--fs-sm);
+          background: #ffffff;
+          border-radius: 4px;
+          font-weight: 600;
         }
 
         table.items {
@@ -279,6 +349,7 @@ export default function QuotationPrintPage() {
           table-layout: fixed;
           font-size: var(--fs);
           direction: rtl;
+          margin-bottom: 20px;
         }
 
         table.items col.col-no { width: var(--w-no); }
@@ -289,21 +360,22 @@ export default function QuotationPrintPage() {
 
         table.items th,
         table.items td {
-          border: 1px solid var(--border);
-          padding: 4px;
+          border: 1px solid var(--border-light);
+          padding: 10px 8px;
         }
 
         table.items th {
-          background: #f5f5f5;
+          background: var(--header-bg);
           text-align: center;
           font-weight: 700;
-          font-size: 11px;
+          font-size: var(--fs-sm);
           white-space: nowrap;
+          border-bottom: 2px solid var(--border);
         }
 
         table.items td {
           vertical-align: top;
-          font-weight: 700;
+          font-weight: 600;
         }
 
         .ta-c { text-align: center; }
@@ -316,44 +388,98 @@ export default function QuotationPrintPage() {
           text-align: right;
         }
 
+        .gift-section {
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 3px solid var(--gift-border);
+        }
+
+        .gift-title {
+          font-size: var(--fs-lg);
+          font-weight: 700;
+          color: #92400e;
+          margin-bottom: 12px;
+          text-align: center;
+          padding: 8px;
+          background: var(--gift-bg);
+          border-radius: 4px;
+        }
+
+        .gift-items {
+          background: var(--gift-bg);
+          border: 2px solid var(--gift-border);
+          border-radius: 4px;
+          padding: 8px;
+        }
+
+        .gift-items table.items th {
+          background: #fde68a;
+          border-color: var(--gift-border);
+        }
+
+        .gift-items table.items td {
+          background: #fffbeb;
+        }
+
         table.summary {
           width: 100%;
-          margin-top: 6px;
+          margin-top: 20px;
           border-collapse: collapse;
           table-layout: fixed;
           direction: rtl;
+          border: 2px solid var(--border);
+          border-radius: 4px;
+          overflow: hidden;
         }
 
         table.summary td {
-          border: 1px solid var(--border);
-          padding: 6px;
+          border: 1px solid var(--border-light);
+          padding: 12px;
           font-size: var(--fs);
         }
 
-        table.summary .label { width: 60%; text-align: right; }
-        table.summary .value { width: 40%; text-align: left; white-space: nowrap; }
+        table.summary .label { 
+          width: 60%; 
+          text-align: right; 
+          font-weight: 600;
+          background: var(--header-bg);
+        }
+        table.summary .value { 
+          width: 40%; 
+          text-align: left; 
+          white-space: nowrap; 
+          font-weight: 700;
+        }
 
         .notesBox {
-          border: 1px solid var(--border);
-          padding: 6px;
-          margin-top: 6px;
+          border: 2px solid var(--border);
+          padding: 12px;
+          margin-top: 20px;
           font-size: var(--fs);
           page-break-inside: auto;
+          border-radius: 4px;
+          background: #f9fafb;
         }
 
-        .notesHeader { font-weight: 700; margin-bottom: 4px; }
+        .notesHeader { 
+          font-weight: 700; 
+          margin-bottom: 8px; 
+          font-size: var(--fs-sm);
+          color: #374151;
+        }
 
         .notesContent {
           white-space: pre-wrap;
           word-break: break-word;
           overflow-wrap: anywhere;
-          line-height: 1.4;
-          font-weight: 700;
+          line-height: 1.6;
+          font-weight: 600;
           color: #000;
         }
       `}</style>
       <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700&display=swap" rel="stylesheet" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;900&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
 
       <div className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
         <button onClick={() => window.print()}>إعادة الطباعة</button>
@@ -364,11 +490,17 @@ export default function QuotationPrintPage() {
           <tr>
             <td>
               {/* Header box */}
-              <div className="box headerRow">
+              <div className="box headerRow" style={{ marginBottom: '20px' }}>
                 <div className="brand">
-                  <div>شركة المنار للأجهزة الكهربائية</div>
-                  <div>جنين - شارع الناصرة</div>
-                  <div>0599-048348 | 04-2438815</div>
+                  <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, marginBottom: '4px' }}>
+                    شركة المنار للأجهزة الكهربائية
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-sm)', marginBottom: '2px' }}>
+                    جنين - شارع الناصرة
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-sm)' }}>
+                    0599-048348 | 04-2438815
+                  </div>
                 </div>
               </div>
 
@@ -377,88 +509,125 @@ export default function QuotationPrintPage() {
                 <div className="titleMain">عرض سعر</div>
                 <div className="titleId">{data.quotationID}</div>
               </div>
-
-              {/* Meta */}
-              <div className="meta">
-                <div className="chip">
-                  التاريخ: <span>{formatDate(data.date)}</span>
-                </div>
-                <div className="chip">
-                  رقم الزبون (شامل): <span>{data.customer?.shamelNo || '—'}</span>
-                </div>
-                <div className="chip" style={{ gridColumn: '1 / span 2' }}>
-                  الزبون: <span>{data.customer?.name || data.customerId || '—'}</span>
-                </div>
-                {data.customer?.phone && (
-                  <div className="chip">
-                    الهاتف: <span>{data.customer.phone}</span>
-                  </div>
-                )}
-                {data.customer?.address && (
-                  <div className="chip">
-                    العنوان: <span>{data.customer.address}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Table header */}
-              <table className="items" style={{ marginTop: '2px' }}>
-                <colgroup>
-                  <col className="col-no" />
-                  <col className="col-name" />
-                  <col className="col-qty" />
-                  <col className="col-price" />
-                  <col className="col-amt" />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>Item No</th>
-                    <th>ITEM NAME</th>
-                    <th>QTY</th>
-                    <th>Price</th>
-                    <th>AMOUNT</th>
-                  </tr>
-                </thead>
-              </table>
             </td>
           </tr>
         </thead>
 
         <tbody>
+          {/* Customer Info and Items - first page content */}
           <tr>
             <td>
-              {/* Items body */}
-              <table className="items">
-                <colgroup>
-                  <col className="col-no" />
-                  <col className="col-name" />
-                  <col className="col-qty" />
-                  <col className="col-price" />
-                  <col className="col-amt" />
-                </colgroup>
-                <tbody>
-                  {data.items.map((item, index) => (
-                    <tr key={item.QuotationDetailID || index}>
-                      <td className="ta-c nowrap">
-                        {item.product?.shamelNo || item.product?.barcode || item.ProductID}
-                      </td>
-                      <td className="ta-r nameCell">
-                        <div>
-                          <div>{item.product?.name || `Product ${item.ProductID}`}</div>
-                          {item.notes && item.notes.trim() && (
-                            <div style={{ fontSize: '10px', color: '#666', marginTop: '2px', fontStyle: 'italic' }}>
-                              {item.notes}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="ta-c nowrap">{item.Quantity}</td>
-                      <td className="ta-c nowrap">{item.UnitPrice.toFixed(2)} ₪</td>
-                      <td className="ta-c nowrap">{(item.Quantity * item.UnitPrice).toFixed(2)} ₪</td>
+              {/* Meta */}
+              <div className="meta" style={{ marginBottom: '20px' }}>
+                {/* Row 1: Customer Name + Shamel No | Date */}
+                <div className="chip" style={{ gridColumn: '1 / span 1' }}>
+                  الزبون: <span style={{ fontWeight: 700 }}>{data.customer?.name || data.customerId || '—'}</span>
+                  {data.customer?.shamelNo && (
+                    <span style={{ marginRight: '8px', color: '#666' }}>({data.customer.shamelNo})</span>
+                  )}
+                </div>
+                <div className="chip" style={{ gridColumn: '2 / span 1' }}>
+                  التاريخ: <span style={{ fontWeight: 700 }}>{formatDate(data.date)}</span>
+                </div>
+                
+                {/* Row 2: Phone */}
+                {data.customer?.phone && (
+                  <div className="chip" style={{ gridColumn: '1 / span 1' }}>
+                    الهاتف: <span>{data.customer.phone}</span>
+                  </div>
+                )}
+                
+                {/* Row 3: Address */}
+                {data.customer?.address && (
+                  <div className="chip" style={{ gridColumn: data.customer?.phone ? '2 / span 1' : '1 / span 2' }}>
+                    العنوان: <span>{data.customer.address}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Regular Items */}
+              {regularItems.length > 0 && (
+                <table className="items">
+                  <colgroup>
+                    <col className="col-no" />
+                    <col className="col-name" />
+                    <col className="col-qty" />
+                    <col className="col-price" />
+                    <col className="col-amt" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Item No</th>
+                      <th>ITEM NAME</th>
+                      <th>QTY</th>
+                      <th>Price</th>
+                      <th>AMOUNT</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {regularItems.map((item, index) => (
+                      <tr key={item.QuotationDetailID || index}>
+                        <td className="ta-c nowrap">
+                          {item.product?.shamelNo || item.product?.barcode || item.ProductID}
+                        </td>
+                        <td className="ta-r nameCell">
+                          <div>
+                            <div>{item.product?.name || `Product ${item.ProductID}`}</div>
+                            {item.notes && item.notes.trim() && (
+                              <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
+                                {item.notes}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="ta-c nowrap">{item.Quantity}</td>
+                        <td className="ta-c nowrap">{item.UnitPrice.toFixed(2)} ₪</td>
+                        <td className="ta-c nowrap">{(item.Quantity * item.UnitPrice).toFixed(2)} ₪</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              {/* Gift Items Section */}
+              {giftItems.length > 0 && (
+                <div className="gift-section">
+                  <div className="gift-title">🎁 الهدايا</div>
+                  <div className="gift-items">
+                    <table className="items">
+                      <colgroup>
+                        <col className="col-no" />
+                        <col className="col-name" />
+                        <col className="col-qty" />
+                        <col className="col-price" />
+                        <col className="col-amt" />
+                      </colgroup>
+                      <tbody>
+                        {giftItems.map((item, index) => (
+                          <tr key={item.QuotationDetailID || `gift-${index}`}>
+                            <td className="ta-c nowrap">
+                              {item.product?.shamelNo || item.product?.barcode || item.ProductID}
+                            </td>
+                            <td className="ta-r nameCell">
+                              <div>
+                                <div>{item.product?.name || `Product ${item.ProductID}`}</div>
+                                {item.notes && item.notes.trim() && (
+                                  <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
+                                    {item.notes}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="ta-c nowrap">{item.Quantity}</td>
+                            <td className="ta-c nowrap">{item.UnitPrice.toFixed(2)} ₪</td>
+                            <td className="ta-c nowrap">{(item.Quantity * item.UnitPrice).toFixed(2)} ₪</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {/* Summary */}
               <table className="summary">

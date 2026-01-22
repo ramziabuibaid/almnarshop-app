@@ -7185,6 +7185,7 @@ export async function getQuotationDetailsFromSupabase(quotationId: string): Prom
         Quantity: parseFloat(String(detail.quantity || 0)) || 0,
         UnitPrice: parseFloat(String(detail.unit_price || 0)) || 0,
         notes: detail.notes || '',
+        isGift: detail.is_gift || false,
         product: {
           product_id: product.product_id || '',
           name: product.name || '',
@@ -7263,6 +7264,7 @@ export async function saveQuotation(
       quantity: number;
       unitPrice: number;
       notes?: string;
+      isGift?: boolean;
     }>;
   }
 ): Promise<any> {
@@ -7319,6 +7321,7 @@ export async function saveQuotation(
         quantity: item.quantity,
         unit_price: item.unitPrice,
         notes: item.notes || null,
+        is_gift: item.isGift || false,
       }));
       
       const { error: detailsError } = await supabase

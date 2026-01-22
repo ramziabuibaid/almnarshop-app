@@ -3,6 +3,23 @@ export const dynamic = 'force-dynamic';
 
 import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import AdminLayout from '@/components/admin/AdminLayout';
 import CustomerFormModal from '@/components/admin/CustomerFormModal';
 import {
@@ -23,6 +40,8 @@ import {
   EyeOff,
   UserPlus,
   Trash2,
+  Gift,
+  GripVertical,
 } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
@@ -37,6 +56,7 @@ interface QuotationDetail {
   costPrice?: number;
   productImage?: string;
   notes?: string;
+  isGift?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -47,6 +67,271 @@ const STATUS_OPTIONS = [
   'مسلمة بالكامل',
   'ملغي',
 ];
+
+// Sortable Row Component for Desktop Table
+function SortableTableRow({
+  item,
+  index,
+  showCosts,
+  canViewCost,
+  onUpdateQuantity,
+  onUpdatePrice,
+  onUpdateNotes,
+  onToggleGift,
+  onRemoveItem,
+}: {
+  item: QuotationDetail;
+  index: number;
+  showCosts: boolean;
+  canViewCost: boolean;
+  onUpdateQuantity: (detailID: string | undefined, newQuantity: number) => void;
+  onUpdatePrice: (detailID: string | undefined, newPrice: number) => void;
+  onUpdateNotes: (detailID: string | undefined, newNotes: string) => void;
+  onToggleGift: (detailID: string | undefined) => void;
+  onRemoveItem: (detailID: string | undefined) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.detailID || `temp-${index}` });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const imageUrl = item.productImage && item.productImage.trim() !== '' ? item.productImage.trim() : '';
+
+  return (
+    <tr
+      ref={setNodeRef}
+      {...attributes}
+      style={style}
+      className={`bg-white ${isDragging ? 'shadow-lg opacity-50' : ''}`}
+    >
+      <td 
+        {...listeners}
+        className="px-2 py-3 w-8 cursor-grab active:cursor-grabbing"
+        title="اسحب لإعادة الترتيب"
+      >
+        <div className="text-gray-400 hover:text-gray-600 p-1 flex items-center justify-center">
+          <GripVertical size={16} />
+        </div>
+      </td>
+      <td className="px-3 py-3 text-sm text-gray-900 font-cairo min-w-[200px]">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={item.productName}
+                className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                <span className="text-gray-400 text-xs">—</span>
+              </div>
+            )}
+            <span className="text-sm font-medium">{item.productName}</span>
+          </div>
+          <textarea
+            value={item.notes || ''}
+            onChange={(e) => onUpdateNotes(item.detailID, e.target.value)}
+            placeholder="ملاحظات..."
+            rows={1}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo resize-none"
+          />
+        </div>
+      </td>
+      <td className="px-3 py-3 text-center">
+        <input
+          type="number"
+          step="1"
+          value={item.quantity}
+          onChange={(e) => onUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
+          onWheel={(e) => e.currentTarget.blur()}
+          className="w-16 px-2 py-1.5 border border-gray-300 rounded text-gray-900 font-bold text-sm"
+        />
+      </td>
+      <td className="px-3 py-3 text-center">
+        <input
+          type="number"
+          step="1"
+          value={item.unitPrice}
+          onChange={(e) => onUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
+          onWheel={(e) => e.currentTarget.blur()}
+          className="w-20 px-2 py-1.5 border border-gray-300 rounded text-gray-900 font-bold text-sm"
+        />
+      </td>
+      {showCosts && canViewCost && (
+        <td className="px-3 py-3 text-sm font-semibold text-gray-900 font-cairo text-center">
+          ₪{(item.costPrice || 0).toFixed(2)}
+        </td>
+      )}
+      <td className={`px-3 py-3 text-sm font-semibold font-cairo text-center ${
+        item.isGift ? 'text-green-600' : 'text-gray-900'
+      }`}>
+        ₪{(item.quantity * item.unitPrice).toFixed(2)}
+        {item.isGift && (
+          <span className="text-xs text-green-600 mr-1 block">(هدية)</span>
+        )}
+      </td>
+      <td className="px-3 py-3 text-center">
+        <button
+          onClick={() => onToggleGift(item.detailID)}
+          className={`p-1.5 rounded-lg transition-colors ${
+            item.isGift
+              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+          title={item.isGift ? 'إلغاء تحديد كهدية' : 'تحديد كهدية'}
+        >
+          <Gift size={16} />
+        </button>
+      </td>
+      <td className="px-3 py-3 text-center">
+        <button
+          onClick={() => onRemoveItem(item.detailID)}
+          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          title="حذف المنتج"
+        >
+          <Trash2 size={16} />
+        </button>
+      </td>
+    </tr>
+  );
+}
+
+// Card Component for Mobile (without drag and drop)
+function CardRow({
+  item,
+  index,
+  showCosts,
+  canViewCost,
+  onUpdateQuantity,
+  onUpdatePrice,
+  onUpdateNotes,
+  onToggleGift,
+  onRemoveItem,
+}: {
+  item: QuotationDetail;
+  index: number;
+  showCosts: boolean;
+  canViewCost: boolean;
+  onUpdateQuantity: (detailID: string | undefined, newQuantity: number) => void;
+  onUpdatePrice: (detailID: string | undefined, newPrice: number) => void;
+  onUpdateNotes: (detailID: string | undefined, newNotes: string) => void;
+  onToggleGift: (detailID: string | undefined) => void;
+  onRemoveItem: (detailID: string | undefined) => void;
+}) {
+  const imageUrl = item.productImage && item.productImage.trim() !== '' ? item.productImage.trim() : '';
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4 mb-3 shadow-sm">
+      <div className="flex items-start gap-3 mb-3">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={item.productName}
+            className="w-16 h-16 object-contain rounded border border-gray-200 flex-shrink-0"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        ) : (
+          <div className="w-16 h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+            <span className="text-gray-400 text-xs">—</span>
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-gray-900 font-cairo mb-1">{item.productName}</h3>
+          <div className={`text-lg font-bold font-cairo ${
+            item.isGift ? 'text-green-600' : 'text-gray-900'
+          }`}>
+            ₪{(item.quantity * item.unitPrice).toFixed(2)}
+            {item.isGift && (
+              <span className="text-xs text-green-600 mr-1">(هدية)</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label className="block text-xs text-gray-600 mb-1 font-cairo">الكمية</label>
+          <input
+            type="number"
+            step="1"
+            value={item.quantity}
+            onChange={(e) => onUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
+            onWheel={(e) => e.currentTarget.blur()}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-600 mb-1 font-cairo">سعر الوحدة</label>
+          <input
+            type="number"
+            step="1"
+            value={item.unitPrice}
+            onChange={(e) => onUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
+            onWheel={(e) => e.currentTarget.blur()}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
+          />
+        </div>
+      </div>
+
+      {showCosts && canViewCost && (
+        <div className="mb-3">
+          <label className="block text-xs text-gray-600 mb-1 font-cairo">تكلفة الوحدة</label>
+          <div className="text-sm font-semibold text-gray-900 font-cairo">
+            ₪{(item.costPrice || 0).toFixed(2)}
+          </div>
+        </div>
+      )}
+
+      <div className="mb-3">
+        <label className="block text-xs text-gray-600 mb-1 font-cairo">ملاحظات</label>
+        <textarea
+          value={item.notes || ''}
+          onChange={(e) => onUpdateNotes(item.detailID, e.target.value)}
+          placeholder="ملاحظات..."
+          rows={2}
+          className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg text-gray-900 font-cairo resize-none"
+        />
+      </div>
+
+      <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-200">
+        <button
+          onClick={() => onToggleGift(item.detailID)}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-cairo ${
+            item.isGift
+              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          <Gift size={16} />
+          <span>{item.isGift ? 'إلغاء الهدية' : 'تحديد كهدية'}</span>
+        </button>
+        <button
+          onClick={() => onRemoveItem(item.detailID)}
+          className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm font-cairo"
+        >
+          <Trash2 size={16} />
+          <span>حذف</span>
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function QuotationsFormContent() {
   const router = useRouter();
@@ -64,6 +349,18 @@ function QuotationsFormContent() {
   const [specialDiscountAmount, setSpecialDiscountAmount] = useState(0);
   const [giftDiscountAmount, setGiftDiscountAmount] = useState(0);
   const [details, setDetails] = useState<QuotationDetail[]>([]);
+  
+  // Calculate gift discount automatically from items marked as gifts
+  const calculatedGiftDiscount = useMemo(() => {
+    return details
+      .filter(item => item.isGift)
+      .reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  }, [details]);
+  
+  // Update giftDiscountAmount when calculatedGiftDiscount changes
+  useEffect(() => {
+    setGiftDiscountAmount(calculatedGiftDiscount);
+  }, [calculatedGiftDiscount]);
   const [products, setProducts] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -226,6 +523,48 @@ function QuotationsFormContent() {
         item.detailID === detailID ? { ...item, notes: newNotes } : item
       )
     );
+  };
+
+  const handleToggleGift = (detailID: string | undefined) => {
+    setDetails((prev) =>
+      prev.map((item) =>
+        item.detailID === detailID ? { ...item, isGift: !item.isGift } : item
+      )
+    );
+  };
+
+  // Drag and Drop handlers
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || !over.id || active.id === over.id) {
+      return;
+    }
+
+    setDetails((items) => {
+      // Create a map of IDs to indices for faster lookup
+      const idToIndexMap = new Map<string, number>();
+      items.forEach((item, idx) => {
+        const itemId = item.detailID || `temp-${idx}`;
+        idToIndexMap.set(String(itemId), idx);
+      });
+
+      const oldIndex = idToIndexMap.get(String(active.id));
+      const newIndex = idToIndexMap.get(String(over.id));
+
+      if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
+        return arrayMove(items, oldIndex, newIndex);
+      }
+      
+      return items;
+    });
   };
 
   const handleRemoveItem = (detailID: string | undefined) => {
@@ -415,6 +754,46 @@ function QuotationsFormContent() {
         }
       }
     }
+
+    // Extract product cost price - check multiple possible fields
+    let costPrice = 0;
+    
+    // Try all possible cost price fields from productToAdd
+    if (productToAdd.CostPrice != null && productToAdd.CostPrice !== undefined) {
+      costPrice = parseFloat(String(productToAdd.CostPrice)) || 0;
+    } else if (productToAdd.cost_price != null && productToAdd.cost_price !== undefined) {
+      costPrice = parseFloat(String(productToAdd.cost_price)) || 0;
+    } else if (productToAdd.costPrice != null && productToAdd.costPrice !== undefined) {
+      costPrice = parseFloat(String(productToAdd.costPrice)) || 0;
+    }
+    
+    // If still no cost price, try to get it from selectedProduct (for manual selection)
+    if (costPrice === 0 && selectedProduct) {
+      if (selectedProduct.CostPrice != null && selectedProduct.CostPrice !== undefined) {
+        costPrice = parseFloat(String(selectedProduct.CostPrice)) || 0;
+      } else if (selectedProduct.cost_price != null && selectedProduct.cost_price !== undefined) {
+        costPrice = parseFloat(String(selectedProduct.cost_price)) || 0;
+      } else if (selectedProduct.costPrice != null && selectedProduct.costPrice !== undefined) {
+        costPrice = parseFloat(String(selectedProduct.costPrice)) || 0;
+      }
+    }
+    
+    // Final fallback - search in products array
+    if (costPrice === 0) {
+      const originalProduct = products.find(p => {
+        const pId = String(p.ProductID || p.id || p.product_id || '').trim();
+        return pId === productIdForSearch;
+      });
+      if (originalProduct) {
+        if (originalProduct.CostPrice != null && originalProduct.CostPrice !== undefined) {
+          costPrice = parseFloat(String(originalProduct.CostPrice)) || 0;
+        } else if (originalProduct.cost_price != null && originalProduct.cost_price !== undefined) {
+          costPrice = parseFloat(String(originalProduct.cost_price)) || 0;
+        } else if (originalProduct.costPrice != null && originalProduct.costPrice !== undefined) {
+          costPrice = parseFloat(String(originalProduct.costPrice)) || 0;
+        }
+      }
+    }
     
     // Check if product already exists in details
     const existingDetailIndex = details.findIndex((item) => {
@@ -451,9 +830,10 @@ function QuotationsFormContent() {
       quantity: quantity,
       unitPrice: unitPrice,
       barcode: productToAdd.Barcode || productToAdd.barcode,
-      costPrice: productToAdd.CostPrice || productToAdd.cost_price || productToAdd.costPrice || 0,
+      costPrice: costPrice,
       productImage: productImage,
       notes: '',
+      isGift: false,
     };
 
     // Add product immediately
@@ -547,6 +927,7 @@ function QuotationsFormContent() {
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           notes: item.notes || '',
+          isGift: item.isGift || false,
         })),
       });
       router.push('/admin/quotations');
@@ -605,9 +986,9 @@ function QuotationsFormContent() {
         )}
 
         {/* Form */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Basic Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">التاريخ</label>
               <input
@@ -720,15 +1101,29 @@ function QuotationsFormContent() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">خصم الهدايا</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">
+                خصم الهدايا
+                {calculatedGiftDiscount > 0 && (
+                  <span className="text-xs text-green-600 mr-2">(محسوب تلقائياً)</span>
+                )}
+              </label>
               <input
                 type="number"
                 step="1"
                 value={giftDiscountAmount}
                 onChange={(e) => setGiftDiscountAmount(parseFloat(e.target.value) || 0)}
                 onWheel={(e) => e.currentTarget.blur()}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                disabled={calculatedGiftDiscount > 0}
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold ${
+                  calculatedGiftDiscount > 0 ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
+                title={calculatedGiftDiscount > 0 ? 'يتم الحساب تلقائياً من الأصناف المحددة كهدايا' : ''}
               />
+              {calculatedGiftDiscount > 0 && (
+                <p className="text-xs text-gray-500 mt-1 font-cairo">
+                  يتم حساب قيمة الهدايا تلقائياً من الأصناف المحددة كهدايا
+                </p>
+              )}
             </div>
           </div>
 
@@ -744,19 +1139,19 @@ function QuotationsFormContent() {
 
           {/* Products */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 font-cairo">المنتجات</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 font-cairo">المنتجات</h2>
               <button
                 onClick={() => setShowAddProduct(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
+                className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo text-sm sm:text-base w-full sm:w-auto justify-center"
               >
-                <Plus size={20} />
-                إضافة منتج
+                <Plus size={18} />
+                <span>إضافة منتج</span>
               </button>
             </div>
             
             {/* Barcode Scanner - Always visible */}
-            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
               <BarcodeScannerInput
                 onProductFound={(product) => {
@@ -769,7 +1164,7 @@ function QuotationsFormContent() {
             </div>
             
             {showAddProduct && (
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
                 
                 <div className="relative mb-4" ref={productDropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
@@ -846,7 +1241,7 @@ function QuotationsFormContent() {
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الكمية</label>
                     <input
@@ -855,7 +1250,7 @@ function QuotationsFormContent() {
                       value={newProductQuantity}
                       onChange={(e) => setNewProductQuantity(parseFloat(e.target.value) || 1)}
                       onWheel={(e) => e.currentTarget.blur()}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold text-sm sm:text-base"
                     />
                   </div>
                   <div>
@@ -866,14 +1261,14 @@ function QuotationsFormContent() {
                       value={newProductPrice}
                       onChange={(e) => setNewProductPrice(parseFloat(e.target.value) || 0)}
                       onWheel={(e) => e.currentTarget.blur()}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold text-sm sm:text-base"
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <button
                     onClick={handleAddProduct}
-                    className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
+                    className="flex-1 sm:flex-none px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo text-sm sm:text-base"
                   >
                     إضافة
                   </button>
@@ -883,7 +1278,7 @@ function QuotationsFormContent() {
                       setSelectedProductId('');
                       setProductSearchQuery('');
                     }}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold"
+                    className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold text-sm sm:text-base"
                   >
                     إلغاء
                   </button>
@@ -894,112 +1289,79 @@ function QuotationsFormContent() {
             {details.length === 0 ? (
               <div className="text-center py-8 text-gray-500 font-cairo">لا توجد منتجات</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">المنتج</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الكمية</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">سعر الوحدة</th>
-                      {showCosts && canViewCost && (
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
-                      )}
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الإجمالي</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">إجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {details.map((item, index) => {
-                      const imageUrl = item.productImage && item.productImage.trim() !== '' ? item.productImage.trim() : '';
-                      return (
-                      <tr key={item.detailID || index}>
-                        <td className="px-4 py-3 text-sm text-gray-900 font-cairo">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              {imageUrl ? (
-                                <>
-                                  <img
-                                    src={imageUrl}
-                                    alt={item.productName}
-                                    className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                      const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
-                                      if (placeholder) placeholder.style.display = 'flex';
-                                    }}
-                                  />
-                                  <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
-                                    <span className="text-gray-400 text-xs">—</span>
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                  <span className="text-gray-400 text-xs">—</span>
-                                </div>
-                              )}
-                              <span>{item.productName}</span>
-                            </div>
-                            <div>
-                              <textarea
-                                value={item.notes || ''}
-                                onChange={(e) => handleUpdateNotes(item.detailID, e.target.value)}
-                                placeholder="ملاحظات..."
-                                rows={2}
-                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo resize-none"
-                              />
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <input
-                            type="number"
-                            step="1"
-                            value={item.quantity}
-                            onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
-                            onWheel={(e) => e.currentTarget.blur()}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <input
-                            type="number"
-                            step="1"
-                            value={item.unitPrice}
-                            onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
-                            onWheel={(e) => e.currentTarget.blur()}
-                            className="w-24 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
-                          />
-                        </td>
-                        {showCosts && canViewCost && (
-                          <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo">
-                            ₪{(item.costPrice || 0).toFixed(2)}
-                          </td>
-                        )}
-                        <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo">
-                          ₪{(item.quantity * item.unitPrice).toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={() => handleRemoveItem(item.detailID)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="حذف المنتج"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </td>
-                      </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                {/* Desktop Table View with Drag and Drop */}
+                <div className="hidden md:block overflow-x-auto">
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={details.map((item, index) => item.detailID || `temp-${index}`)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <table className="w-full">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo w-8"></th>
+                            <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo min-w-[200px]">المنتج</th>
+                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الكمية</th>
+                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">سعر الوحدة</th>
+                            {showCosts && canViewCost && (
+                              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
+                            )}
+                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الإجمالي</th>
+                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">هدية</th>
+                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">إجراءات</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {details.map((item, index) => (
+                            <SortableTableRow
+                              key={item.detailID || `temp-${index}`}
+                              item={item}
+                              index={index}
+                              showCosts={showCosts}
+                              canViewCost={canViewCost}
+                              onUpdateQuantity={handleUpdateQuantity}
+                              onUpdatePrice={handleUpdatePrice}
+                              onUpdateNotes={handleUpdateNotes}
+                              onToggleGift={handleToggleGift}
+                              onRemoveItem={handleRemoveItem}
+                            />
+                          ))}
+                        </tbody>
+                      </table>
+                    </SortableContext>
+                  </DndContext>
+                </div>
+
+                {/* Mobile Card View (without drag and drop) */}
+                <div className="md:hidden">
+                  {details.map((item, index) => (
+                    <CardRow
+                      key={item.detailID || `temp-${index}`}
+                      item={item}
+                      index={index}
+                      showCosts={showCosts}
+                      canViewCost={canViewCost}
+                      onUpdateQuantity={handleUpdateQuantity}
+                      onUpdatePrice={handleUpdatePrice}
+                      onUpdateNotes={handleUpdateNotes}
+                      onToggleGift={handleToggleGift}
+                      onRemoveItem={handleRemoveItem}
+                    />
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
           {/* Summary */}
           <div className="border-t border-gray-200 pt-4">
             <div className="flex justify-end">
-              <div className="w-full md:w-1/3 space-y-2">
+              <div className="w-full sm:w-auto sm:min-w-[280px] space-y-2">
                 <div className="flex justify-between text-sm text-gray-600 font-cairo">
                   <span>المجموع الفرعي:</span>
                   <span className="font-semibold">₪{calculateSubtotal().toFixed(2)}</span>

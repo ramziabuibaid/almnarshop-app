@@ -49,14 +49,29 @@ export default function BarcodeScannerInput({
   const stopScanning = useCallback(async () => {
     try {
       if (scannerRef.current) {
-        await scannerRef.current.stop().catch(() => {});
-        await scannerRef.current.clear().catch(() => {});
+        const scanner = scannerRef.current;
+        try {
+          await scanner.stop().catch(() => {});
+        } catch (stopError) {
+          console.debug('[BarcodeScanner] Error stopping scanner:', stopError);
+        }
+        
+        // Check if clear method exists before calling it
+        if (scanner && typeof scanner.clear === 'function') {
+          try {
+            await scanner.clear().catch(() => {});
+          } catch (clearError) {
+            console.debug('[BarcodeScanner] Error clearing scanner:', clearError);
+          }
+        }
+        
         scannerRef.current = null;
       }
       setIsScanning(false);
     } catch (error) {
       console.error('[BarcodeScanner] Error stopping camera:', error);
       setIsScanning(false);
+      scannerRef.current = null;
     }
   }, []);
 
@@ -216,8 +231,22 @@ export default function BarcodeScannerInput({
       }
 
       if (scannerRef.current) {
-        await scannerRef.current.stop();
-        await scannerRef.current.clear();
+        const scanner = scannerRef.current;
+        try {
+          await scanner.stop().catch(() => {});
+        } catch (stopError) {
+          console.debug('[BarcodeScanner] Error stopping existing scanner:', stopError);
+        }
+        
+        // Check if clear method exists before calling it
+        if (scanner && typeof scanner.clear === 'function') {
+          try {
+            await scanner.clear().catch(() => {});
+          } catch (clearError) {
+            console.debug('[BarcodeScanner] Error clearing existing scanner:', clearError);
+          }
+        }
+        
         scannerRef.current = null;
       }
 
@@ -347,10 +376,22 @@ export default function BarcodeScannerInput({
       alert(errorMsg);
       
       if (scannerRef.current) {
+        const scanner = scannerRef.current;
         try {
-          await scannerRef.current.stop();
-          await scannerRef.current.clear();
-        } catch (e) {}
+          await scanner.stop().catch(() => {});
+        } catch (stopError) {
+          console.debug('[BarcodeScanner] Error stopping scanner in error handler:', stopError);
+        }
+        
+        // Check if clear method exists before calling it
+        if (scanner && typeof scanner.clear === 'function') {
+          try {
+            await scanner.clear().catch(() => {});
+          } catch (clearError) {
+            console.debug('[BarcodeScanner] Error clearing scanner in error handler:', clearError);
+          }
+        }
+        
         scannerRef.current = null;
       }
     }
@@ -365,8 +406,14 @@ export default function BarcodeScannerInput({
 
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-        scannerRef.current.clear().catch(() => {});
+        const scanner = scannerRef.current;
+        scanner.stop().catch(() => {});
+        
+        // Check if clear method exists before calling it
+        if (scanner && typeof scanner.clear === 'function') {
+          scanner.clear().catch(() => {});
+        }
+        
         scannerRef.current = null;
       }
       if (scanTimeoutRef.current) {

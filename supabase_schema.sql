@@ -646,6 +646,8 @@ CREATE TABLE IF NOT EXISTS quotation_details (
   product_id TEXT NOT NULL,
   quantity NUMERIC(10, 2) NOT NULL DEFAULT 1,
   unit_price NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  is_gift BOOLEAN DEFAULT FALSE,
+  notes TEXT,
   
   -- Timestamps
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -659,6 +661,7 @@ CREATE TABLE IF NOT EXISTS quotation_details (
 -- Indexes for quotation_details
 CREATE INDEX IF NOT EXISTS idx_quotation_details_quotation_id ON quotation_details(quotation_id);
 CREATE INDEX IF NOT EXISTS idx_quotation_details_product_id ON quotation_details(product_id);
+CREATE INDEX IF NOT EXISTS idx_quotation_details_is_gift ON quotation_details(is_gift);
 
 -- Trigger to update updated_at for quotations
 DROP TRIGGER IF EXISTS update_quotations_updated_at ON quotations;
