@@ -42,15 +42,14 @@ export default function InvoicePrintPage() {
   }, [invoiceId]);
 
   useEffect(() => {
-    // Set document title for PDF filename (cash invoice - no customer name)
+    // Set document title for PDF filename
     if (invoiceData && !loading) {
       document.title = invoiceData.invoiceID;
       
       // Auto-print when page loads in the new window
-      // This won't freeze the main app because it's in a separate window
       const timer = setTimeout(() => {
         window.print();
-      }, 500); // Slightly longer delay to ensure content is fully rendered
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [invoiceData, loading]);
@@ -116,21 +115,25 @@ export default function InvoicePrintPage() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
+    // Use en-US locale to ensure English numbers
+    const dateStr = date.toLocaleDateString('en-US', {
       timeZone: 'Asia/Jerusalem',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
+    });
+    const timeStr = date.toLocaleTimeString('en-US', {
+      timeZone: 'Asia/Jerusalem',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit',
       hour12: false,
     });
+    return `${dateStr} ${timeStr}`;
   };
 
   if (loading) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Tajawal' }}>
+      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Cairo, Arial, sans-serif' }}>
         <p>جاري تحميل الفاتورة...</p>
       </div>
     );
@@ -138,391 +141,364 @@ export default function InvoicePrintPage() {
 
   if (error || !invoiceData) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Tajawal' }}>
+      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Cairo, Arial, sans-serif' }}>
         <p style={{ color: 'red' }}>خطأ: {error || 'فشل تحميل الفاتورة'}</p>
       </div>
     );
   }
 
   return (
-    <div style={{ background: 'white', color: 'black', direction: 'rtl' }}>
+    <>
       <style jsx global>{`
-        :root {
-          --border: #222;
-          --pad: 5px;
-          --gap: 6px;
-          --fs: 12px;      /* نص أساسي مقروء لـ A6 */
-          --fs-sm: 11px;   /* ميتا */
-          --fs-lg: 14px;   /* الإجماليات */
-          /* أعمدة A6 محسّنة */
-          --w-no: 14mm;    /* Item No - مضيق */
-          --w-qty: 8mm;   /* QTY - مضيق */
-          --w-price: 15mm; /* Price */
-          --w-amt: 17mm;   /* AMOUNT */
-          /* ITEM NAME يأخذ الباقي (أعرض) */
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
         }
 
         html, body {
+          width: 100%;
           height: 100%;
           background: white !important;
           color: black !important;
           direction: rtl;
+          font-family: 'Cairo', Arial, sans-serif;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
 
-        body {
-          font-family: 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-          font-weight: 700;
-          margin: 0;
-          padding: 0;
-          background: white !important;
-          color: black !important;
-          direction: rtl;
-        }
-
-        /* ورقة A6 وحدود مريحة للطابعات */
+        /* A6 Page Setup - 105mm x 148mm */
         @page {
           size: A6 portrait;
-          margin: 0;
+          margin: 3mm;
         }
 
         @media print {
           .no-print {
-            display: none;
+            display: none !important;
+          }
+
+          body {
+            margin: 0;
+            padding: 0;
+          }
+
+          .invoice-container {
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
           }
         }
 
-        /* الحاوية التي تكرّر الترويسة بكل صفحة عبر thead */
-        table.sheet {
-          width: 100%;
-          border-collapse: collapse;
-          table-layout: fixed;
+        @media screen {
+          .invoice-container {
+            width: 105mm;
+            min-height: 148mm;
+            margin: 20px auto;
+            padding: 3mm;
+            background: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+          }
+        }
+
+        .invoice-container {
           direction: rtl;
+          font-family: 'Cairo', Arial, sans-serif;
+          color: #000;
+          background: white;
         }
 
-        thead {
-          display: table-header-group;
+        /* Header Section */
+        .header-section {
+          border-bottom: 2px solid #000;
+          padding-bottom: 4px;
+          margin-bottom: 5px;
         }
 
-        tfoot {
-          display: table-footer-group;
-        }
-
-        .box {
-          border: 1px solid var(--border);
-          padding: var(--pad);
-        }
-
-        .headerRow {
-          display: flex;
-          flex-direction: row-reverse;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 8px;
-        }
-
-        .brand {
-          text-align: right;
-          font-size: var(--fs-sm);
+        .company-name {
+          font-size: 11px;
+          font-weight: 700;
+          text-align: center;
+          margin-bottom: 2px;
           line-height: 1.3;
         }
 
-        .logo {
-          width: 34px;
-          height: auto;
-          object-fit: contain;
+        .company-address {
+          font-size: 9px;
+          text-align: center;
+          margin-bottom: 2px;
+          line-height: 1.3;
         }
 
-        .titleRow {
+        .company-phone {
+          font-size: 9px;
+          text-align: center;
+          line-height: 1.3;
+        }
+
+        /* Title Section */
+        .title-section {
           display: flex;
-          align-items: center;
           justify-content: space-between;
-          gap: 8px;
-          margin: 8px 0 6px;
+          align-items: center;
+          margin: 5px 0;
+          padding: 3px 0;
+          border-bottom: 1px solid #000;
         }
 
-        .titleMain {
+        .invoice-title {
+          font-size: 12px;
+          font-weight: 700;
+          text-align: center;
           flex: 1;
-          text-align: center;
-          border: 1px solid var(--border);
-          padding: 4px;
-          font-weight: 700;
         }
 
-        .titleId {
-          border: 1px solid var(--border);
-          padding: 4px 8px;
-          white-space: nowrap;
-          font-size: var(--fs);
-        }
-
-        .meta {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: var(--gap);
-          margin-bottom: 6px;
-        }
-
-        .chip {
-          border: 1px solid var(--border);
-          padding: 4px 6px;
-          font-size: var(--fs-sm);
-        }
-
-        /* جدول العناصر */
-        table.items {
-          width: 100%;
-          border-collapse: collapse;
-          table-layout: fixed;
-          font-size: var(--fs);
-          direction: rtl;
-        }
-
-        table.items col.col-no {
-          width: var(--w-no);
-        }
-
-        table.items col.col-name {
-          width: auto; /* يأخذ الباقي */
-        }
-
-        table.items col.col-qty {
-          width: var(--w-qty);
-        }
-
-        table.items col.col-price {
-          width: var(--w-price);
-        }
-
-        table.items col.col-amt {
-          width: var(--w-amt);
-        }
-
-        table.items th,
-        table.items td {
-          border: 1px solid var(--border);
-          padding: 4px;
-        }
-
-        table.items th {
-          background: #f5f5f5;
-          text-align: center;
-          font-weight: 700;
+        .invoice-number {
           font-size: 11px;
+          font-weight: 700;
+          padding: 2px 6px;
+          border: 1px solid #000;
           white-space: nowrap;
         }
 
-        table.items td {
-          vertical-align: top;
-          font-weight: 700;
-        }
-
-        .ta-c {
+        /* Date Section */
+        .date-section {
+          font-size: 9px;
           text-align: center;
+          margin: 3px 0;
+          padding: 2px;
+          border: 1px solid #000;
         }
 
-        .ta-r {
-          text-align: right;
-        }
-
-        .nowrap {
-          white-space: nowrap;
-        }
-
-        .nameCell {
-          word-break: break-word;
-          overflow-wrap: anywhere;
-          text-align: right;
-        }
-
-        /* ملخصات */
-        table.summary {
+        /* Items Table */
+        .items-table {
           width: 100%;
-          margin-top: 6px;
           border-collapse: collapse;
-          table-layout: fixed;
-          direction: rtl;
+          margin: 4px 0;
+          font-size: 9px;
         }
 
-        table.summary td {
-          border: 1px solid var(--border);
-          padding: 6px;
-          font-size: var(--fs);
+        .items-table thead {
+          background-color: #f0f0f0;
         }
 
-        table.summary .label {
-          width: 60%;
-          text-align: right;
-        }
-
-        table.summary .value {
-          width: 40%;
-          text-align: left;
+        .items-table th {
+          border: 1px solid #000;
+          padding: 3px 2px;
+          text-align: center;
+          font-weight: 700;
+          font-size: 8px;
           white-space: nowrap;
         }
 
-        /* ملاحظات */
-        .notesBox {
-          border: 1px solid var(--border);
-          padding: 6px;
-          margin-top: 6px;
-          font-size: var(--fs);
-          page-break-inside: auto;
+        .items-table td {
+          border: 1px solid #000;
+          padding: 2px;
+          vertical-align: top;
         }
 
-        .notesHeader {
+        .col-no {
+          width: 12%;
+          text-align: center;
+          font-size: 8px;
+        }
+
+        .col-name {
+          width: 40%;
+          text-align: right;
+          font-size: 9px;
+          word-break: break-word;
+          overflow-wrap: break-word;
+        }
+
+        .col-qty {
+          width: 10%;
+          text-align: center;
+          font-size: 9px;
+        }
+
+        .col-price {
+          width: 18%;
+          text-align: center;
+          font-size: 9px;
+        }
+
+        .col-amount {
+          width: 20%;
+          text-align: center;
+          font-size: 9px;
+          font-weight: 600;
+        }
+
+        /* Summary Section */
+        .summary-section {
+          margin-top: 5px;
+          border-top: 1px solid #000;
+        }
+
+        .summary-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 9px;
+        }
+
+        .summary-table td {
+          border: 1px solid #000;
+          padding: 3px 4px;
+        }
+
+        .summary-label {
+          text-align: right;
+          font-weight: 600;
+          width: 65%;
+        }
+
+        .summary-value {
+          text-align: left;
+          font-weight: 600;
+          width: 35%;
+          white-space: nowrap;
+        }
+
+        .summary-total {
           font-weight: 700;
-          margin-bottom: 4px;
+          font-size: 10px;
         }
 
-        .notesContent {
+        .summary-total .summary-value {
+          font-size: 11px;
+        }
+
+        /* Notes Section */
+        .notes-section {
+          margin-top: 5px;
+          border: 1px solid #000;
+          padding: 3px;
+          font-size: 9px;
+        }
+
+        .notes-header {
+          font-weight: 700;
+          margin-bottom: 2px;
+          font-size: 9px;
+        }
+
+        .notes-content {
           white-space: pre-wrap;
           word-break: break-word;
-          overflow-wrap: anywhere;
+          overflow-wrap: break-word;
           line-height: 1.4;
-          font-weight: 700;
-          color: #000;
+          font-size: 8px;
+        }
+
+        /* Print Button */
+        .no-print {
+          text-align: center;
+          padding: 10px;
+          background: #f5f5f5;
+        }
+
+        .print-button {
+          padding: 8px 16px;
+          background: #000;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-family: 'Cairo', Arial, sans-serif;
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        .print-button:hover {
+          background: #333;
         }
       `}</style>
-      <link
-        rel="preconnect"
-        href="https://fonts.googleapis.com"
-      />
-      <link
-        href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700&display=swap"
-        rel="stylesheet"
-      />
-      <div className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
-        <button onClick={() => window.print()}>إعادة الطباعة</button>
+
+      <div className="no-print">
+        <button className="print-button" onClick={() => window.print()}>
+          طباعة الفاتورة
+        </button>
       </div>
-      <table className="sheet">
-        <thead>
-          <tr>
-            <td>
-              {/* الترويسة (تتكرر بكل صفحة) */}
-              <div className="box headerRow">
-                <div className="brand">
-                  <div>شركة المنار للأجهزة الكهربائية</div>
-                  <div>جنين - شارع الناصرة</div>
-                  <div>0599-048348 | 04-2438815</div>
-                </div>
-              </div>
 
-              {/* العنوان + رقم الفاتورة */}
-              <div className="titleRow">
-                <div className="titleMain">فاتورة نقدية</div>
-                <div className="titleId">{invoiceData.invoiceID}</div>
-              </div>
+      <div className="invoice-container">
+        {/* Header */}
+        <div className="header-section">
+          <div className="company-name">شركة المنار للأجهزة الكهربائية</div>
+          <div className="company-address">جنين - شارع الناصرة</div>
+          <div className="company-phone">0599-048348 | 04-2438815</div>
+        </div>
 
-              {/* بيانات أساسية */}
-              <div className="meta">
-                <div className="chip">
-                  التاريخ والوقت: <span>{formatDate(invoiceData.dateTime)}</span>
-                </div>
-              </div>
+        {/* Title */}
+        <div className="title-section">
+          <div className="invoice-title">فاتورة نقدية</div>
+          <div className="invoice-number">#{invoiceData.invoiceID}</div>
+        </div>
 
-              {/* رأس جدول العناصر */}
-              <table className="items" style={{ marginTop: '2px' }}>
-                <colgroup>
-                  <col className="col-no" />
-                  <col className="col-name" />
-                  <col className="col-qty" />
-                  <col className="col-price" />
-                  <col className="col-amt" />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>Item No</th>
-                    <th>ITEM NAME</th>
-                    <th>QTY</th>
-                    <th>Price</th>
-                    <th>AMOUNT</th>
-                  </tr>
-                </thead>
-              </table>
-            </td>
-          </tr>
-        </thead>
+        {/* Date */}
+        <div className="date-section">
+          التاريخ والوقت: {formatDate(invoiceData.dateTime)}
+        </div>
 
-        <tbody>
-          <tr>
-            <td>
-              {/* جسم جدول العناصر */}
-              <table className="items">
-                <colgroup>
-                  <col className="col-no" />
-                  <col className="col-name" />
-                  <col className="col-qty" />
-                  <col className="col-price" />
-                  <col className="col-amt" />
-                </colgroup>
-                <tbody>
-                  {invoiceData.items.map((item, index) => (
-                    <tr key={index}>
-                      <td className="ta-c nowrap">
-                        {item.shamelNo || item.barcode || item.productID}
-                      </td>
-                      <td className="ta-r nameCell">{item.name}</td>
-                      <td className="ta-c nowrap">{item.quantity}</td>
-                      <td className="ta-c nowrap">
-                        {item.unitPrice.toFixed(2)} ₪
-                      </td>
-                      <td className="ta-c nowrap">
-                        {item.total.toFixed(2)} ₪
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* Items Table */}
+        <table className="items-table">
+          <thead>
+            <tr>
+              <th className="col-no">رقم</th>
+              <th className="col-name">اسم الصنف</th>
+              <th className="col-qty">الكمية</th>
+              <th className="col-price">السعر</th>
+              <th className="col-amount">المبلغ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invoiceData.items.map((item, index) => (
+              <tr key={index}>
+                <td className="col-no">
+                  {item.shamelNo || item.barcode || item.productID}
+                </td>
+                <td className="col-name">{item.name}</td>
+                <td className="col-qty">{item.quantity}</td>
+                <td className="col-price">{item.unitPrice.toFixed(2)} ₪</td>
+                <td className="col-amount">{item.total.toFixed(2)} ₪</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-              {/* الملخصات */}
-              <table className="summary">
-                <tbody>
-                  <tr>
-                    <td className="label" style={{ fontWeight: 700 }}>المجموع</td>
-                    <td className="value" style={{ fontWeight: 700 }}>{invoiceData.subtotal.toFixed(2)} ₪</td>
-                  </tr>
-
-                  {invoiceData.discount > 0 && (
-                    <tr>
-                      <td className="label" style={{ fontWeight: 700 }}>خصم خاص</td>
-                      <td className="value" style={{ fontWeight: 700 }}>- {invoiceData.discount.toFixed(2)} ₪</td>
-                    </tr>
-                  )}
-
-                  <tr>
-                    <td className="label" style={{ fontWeight: 700 }}>
-                      الصافي للدفع
-                    </td>
-                    <td
-                      className="value"
-                      style={{
-                        fontWeight: 700,
-                        fontSize: 'var(--fs-lg)',
-                      }}
-                    >
-                      {invoiceData.netTotal.toFixed(2)} ₪
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-
-              {/* ملاحظات (تظهر فقط عند وجودها) */}
-              {invoiceData.notes && invoiceData.notes.trim().length > 0 && (
-                <div className="notesBox">
-                  <div className="notesHeader">ملاحظات:</div>
-                  <div className="notesContent">{invoiceData.notes}</div>
-                </div>
+        {/* Summary */}
+        <div className="summary-section">
+          <table className="summary-table">
+            <tbody>
+              <tr>
+                <td className="summary-label">المجموع</td>
+                <td className="summary-value">{invoiceData.subtotal.toFixed(2)} ₪</td>
+              </tr>
+              {invoiceData.discount > 0 && (
+                <tr>
+                  <td className="summary-label">خصم خاص</td>
+                  <td className="summary-value">- {invoiceData.discount.toFixed(2)} ₪</td>
+                </tr>
               )}
-            </td>
-          </tr>
-        </tbody>
+              <tr className="summary-total">
+                <td className="summary-label">الصافي للدفع</td>
+                <td className="summary-value">{invoiceData.netTotal.toFixed(2)} ₪</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-        <tfoot>
-          <tr>
-            <td></td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+        {/* Notes */}
+        {invoiceData.notes && invoiceData.notes.trim().length > 0 && (
+          <div className="notes-section">
+            <div className="notes-header">ملاحظات:</div>
+            <div className="notes-content">{invoiceData.notes}</div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

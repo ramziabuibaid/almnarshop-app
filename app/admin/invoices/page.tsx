@@ -20,6 +20,7 @@ import {
   Lock,
   CheckCircle,
   XCircle,
+  X,
 } from 'lucide-react';
 
 interface CashInvoice {
@@ -233,8 +234,15 @@ export default function InvoicesPage() {
 
 
   const handleViewInvoice = async (invoice: CashInvoice) => {
+    // Show modal immediately with basic invoice data (optimistic display)
+    setViewing({
+      invoice: invoice,
+      details: null,
+    });
+    setViewLoading(true);
+    
+    // Load full invoice details asynchronously
     try {
-      setViewLoading(true);
       const fullInvoice = await getCashInvoice(invoice.InvoiceID);
       setViewing({
         invoice: fullInvoice,
@@ -243,6 +251,7 @@ export default function InvoicesPage() {
     } catch (err: any) {
       console.error('[InvoicesPage] Failed to view invoice:', err);
       alert(err?.message || 'فشل تحميل بيانات الفاتورة');
+      // Keep the modal open with basic data even if details fail to load
     } finally {
       setViewLoading(false);
     }
@@ -455,36 +464,36 @@ export default function InvoicesPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 font-cairo" dir="rtl">
+      <div className="space-y-4 sm:space-y-6 font-cairo" dir="rtl">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">أرشيف الفواتير النقدية</h1>
-            <p className="text-gray-600 mt-1">عرض وإدارة جميع الفواتير النقدية</p>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cairo">أرشيف الفواتير النقدية</h1>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base font-cairo">عرض وإدارة جميع الفواتير النقدية</p>
           </div>
           
           {/* Daily Totals */}
-          <div className="flex items-center gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-4 w-full sm:w-auto">
             {/* Day Before Yesterday */}
-            <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 min-w-[140px]">
-              <div className="text-xs text-gray-500 mb-1">قبل أمس</div>
-              <div className="text-xl font-bold text-gray-900">
+            <div className="bg-white rounded-lg border border-gray-200 px-3 sm:px-4 py-2 sm:py-3 flex-1 sm:min-w-[140px]">
+              <div className="text-xs text-gray-500 mb-1 font-cairo">قبل أمس</div>
+              <div className="text-base sm:text-xl font-bold text-gray-900 font-cairo">
                 {formatCurrency(dailyTotals.dayBeforeYesterday)}
               </div>
             </div>
             
             {/* Yesterday */}
-            <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 min-w-[140px]">
-              <div className="text-xs text-gray-500 mb-1">أمس</div>
-              <div className="text-xl font-bold text-gray-900">
+            <div className="bg-white rounded-lg border border-gray-200 px-3 sm:px-4 py-2 sm:py-3 flex-1 sm:min-w-[140px]">
+              <div className="text-xs text-gray-500 mb-1 font-cairo">أمس</div>
+              <div className="text-base sm:text-xl font-bold text-gray-900 font-cairo">
                 {formatCurrency(dailyTotals.yesterday)}
               </div>
             </div>
             
             {/* Today */}
-            <div className="bg-blue-50 rounded-lg border-2 border-blue-500 px-4 py-3 min-w-[140px]">
-              <div className="text-xs text-blue-600 mb-1 font-medium">اليوم</div>
-              <div className="text-xl font-bold text-blue-900">
+            <div className="bg-blue-50 rounded-lg border-2 border-blue-500 px-3 sm:px-4 py-2 sm:py-3 flex-1 sm:min-w-[140px]">
+              <div className="text-xs text-blue-600 mb-1 font-medium font-cairo">اليوم</div>
+              <div className="text-base sm:text-xl font-bold text-blue-900 font-cairo">
                 {formatCurrency(dailyTotals.today)}
               </div>
             </div>
@@ -492,7 +501,7 @@ export default function InvoicesPage() {
         </div>
 
         {/* Search */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
           <div className="relative">
             <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
@@ -500,70 +509,188 @@ export default function InvoicesPage() {
               placeholder="بحث برقم الفاتورة..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 font-cairo text-sm sm:text-base"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                title="مسح البحث"
+              >
+                <X size={18} />
+              </button>
+            )}
           </div>
         </div>
 
         {/* Invoices List */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          {filteredInvoices.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText size={48} className="text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">لا توجد فواتير</p>
+        {filteredInvoices.length === 0 ? (
+          <div className="bg-white rounded-lg border border-gray-200 p-8 sm:p-12 text-center">
+            <FileText size={48} className="text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-600 text-base sm:text-lg font-cairo">لا توجد فواتير</p>
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                        # الفاتورة
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                        التاريخ
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                        حالة التسوية
+                      </th>
+                      <th className="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo w-24">
+                        الملاحظات
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                        مبلغ الفاتورة
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                        الإجراءات
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredInvoices.map((invoice, index) => (
+                      <tr key={invoice.InvoiceID || `invoice-${index}`} className="hover:bg-gray-200 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900 font-cairo">{invoice.InvoiceID}</div>
+                          {(() => {
+                            const userId = invoice.created_by || invoice.createdBy || invoice.user_id || '';
+                            if (userId && userMap.has(userId)) {
+                              const username = userMap.get(userId);
+                              return (
+                                <div className="text-xs text-gray-500 mt-1 font-cairo">
+                                  {username}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-600 font-cairo">
+                            <div>{formatDate(invoice.DateTime)}</div>
+                            <div className="text-xs text-gray-500 mt-0.5">{formatTime(invoice.DateTime)}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${
+                              invoice.isSettled
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {invoice.isSettled ? 'مرحلة' : 'غير مرحلة'}
+                          </span>
+                        </td>
+                        <td className="px-2 py-4 w-24">
+                          <div className="text-xs text-gray-600 max-w-[100px] truncate font-cairo" title={invoice.Notes || undefined}>
+                            {invoice.Notes || '—'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-semibold text-gray-900 font-cairo">
+                            {formatCurrency(invoice.totalAmount || 0)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleViewInvoice(invoice)}
+                                className="text-gray-700 hover:text-gray-900 flex items-center gap-1 font-cairo"
+                              >
+                                <Eye size={16} />
+                                عرض
+                              </button>
+                              <button
+                                onClick={() => handlePrintInvoice(invoice)}
+                                className="text-blue-600 hover:text-blue-900 flex items-center gap-1 font-cairo"
+                              >
+                                <Printer size={16} />
+                                طباعة
+                              </button>
+                              <button
+                                onClick={() => handleEditInvoice(invoice)}
+                                disabled={invoice.isSettled}
+                                className={`flex items-center gap-1 font-cairo ${
+                                  invoice.isSettled
+                                    ? 'text-gray-400 cursor-not-allowed opacity-50'
+                                    : 'text-yellow-600 hover:text-yellow-900'
+                                }`}
+                                title={invoice.isSettled ? 'لا يمكن تعديل فاتورة مرحلة' : ''}
+                              >
+                                <Edit size={16} />
+                                تعديل
+                              </button>
+                            </div>
+                            {canAccountant && !invoice.isSettled && (
+                              <button
+                                onClick={() => handleMarkInvoiceAsSettled(invoice)}
+                                disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
+                                className="text-green-600 hover:text-green-900 flex items-center gap-1 font-cairo disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                              >
+                                {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
+                                  <>
+                                    <Loader2 size={14} className="animate-spin" />
+                                    جاري التحديث...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle size={14} />
+                                    تغيير إلى مرحلة
+                                  </>
+                                )}
+                              </button>
+                            )}
+                            {canAccountant && invoice.isSettled && (
+                              <button
+                                onClick={() => handleMarkInvoiceAsUnsettled(invoice)}
+                                disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
+                                className="text-orange-600 hover:text-orange-900 flex items-center gap-1 font-cairo disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                              >
+                                {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
+                                  <>
+                                    <Loader2 size={14} className="animate-spin" />
+                                    جاري التحديث...
+                                  </>
+                                ) : (
+                                  <>
+                                    <XCircle size={14} />
+                                    إعادة إلى غير مرحلة
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
-                      # الفاتورة
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
-                      التاريخ
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
-                      حالة التسوية
-                    </th>
-                    <th className="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo w-24">
-                      الملاحظات
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
-                      مبلغ الفاتورة
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
-                      الإجراءات
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredInvoices.map((invoice, index) => (
-                    <tr key={invoice.InvoiceID || `invoice-${index}`} className="hover:bg-gray-200 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900 font-cairo">{invoice.InvoiceID}</div>
-                        {(() => {
-                          const userId = invoice.created_by || invoice.createdBy || invoice.user_id || '';
-                          if (userId && userMap.has(userId)) {
-                            const username = userMap.get(userId);
-                            return (
-                              <div className="text-xs text-gray-500 mt-1">
-                                {username}
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-600 font-cairo">
-                          <div>{formatDate(invoice.DateTime)}</div>
-                          <div className="text-xs text-gray-500 mt-0.5">{formatTime(invoice.DateTime)}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+              {filteredInvoices.map((invoice, index) => (
+                <div key={invoice.InvoiceID || `invoice-${index}`} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  {/* Header Row */}
+                  <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-base font-bold text-gray-900 font-cairo">#{invoice.InvoiceID}</h3>
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${
+                          className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-lg font-cairo ${
                             invoice.isSettled
                               ? 'bg-green-100 text-green-800'
                               : 'bg-gray-100 text-gray-800'
@@ -571,100 +698,112 @@ export default function InvoicesPage() {
                         >
                           {invoice.isSettled ? 'مرحلة' : 'غير مرحلة'}
                         </span>
-                      </td>
-                      <td className="px-2 py-4 w-24">
-                        <div className="text-xs text-gray-600 max-w-[100px] truncate font-cairo" title={invoice.Notes || undefined}>
-                          {invoice.Notes || '—'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900 font-cairo">
-                          {formatCurrency(invoice.totalAmount || 0)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleViewInvoice(invoice)}
-                              className="text-gray-700 hover:text-gray-900 flex items-center gap-1 font-cairo"
-                            >
-                              <Eye size={16} />
-                              عرض
-                            </button>
-                            <button
-                              onClick={() => handlePrintInvoice(invoice)}
-                              className="text-blue-600 hover:text-blue-900 flex items-center gap-1 font-cairo"
-                            >
-                              <Printer size={16} />
-                              طباعة
-                            </button>
-                            <button
-                              onClick={() => handleEditInvoice(invoice)}
-                              disabled={invoice.isSettled}
-                              className={`flex items-center gap-1 font-cairo ${
-                                invoice.isSettled
-                                  ? 'text-gray-400 cursor-not-allowed opacity-50'
-                                  : 'text-yellow-600 hover:text-yellow-900'
-                              }`}
-                              title={invoice.isSettled ? 'لا يمكن تعديل فاتورة مرحلة' : ''}
-                            >
-                              <Edit size={16} />
-                              تعديل
-                            </button>
-                          </div>
-                          {canAccountant && !invoice.isSettled && (
-                            <button
-                              onClick={() => handleMarkInvoiceAsSettled(invoice)}
-                              disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
-                              className="text-green-600 hover:text-green-900 flex items-center gap-1 font-cairo disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                            >
-                              {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
-                                <>
-                                  <Loader2 size={14} className="animate-spin" />
-                                  جاري التحديث...
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle size={14} />
-                                  تغيير إلى مرحلة
-                                </>
-                              )}
-                            </button>
-                          )}
-                          {canAccountant && invoice.isSettled && (
-                            <button
-                              onClick={() => handleMarkInvoiceAsUnsettled(invoice)}
-                              disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
-                              className="text-orange-600 hover:text-orange-900 flex items-center gap-1 font-cairo disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                            >
-                              {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
-                                <>
-                                  <Loader2 size={14} className="animate-spin" />
-                                  جاري التحديث...
-                                </>
-                              ) : (
-                                <>
-                                  <XCircle size={14} />
-                                  إعادة إلى غير مرحلة
-                                </>
-                              )}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                      {(() => {
+                        const userId = invoice.created_by || invoice.createdBy || invoice.user_id || '';
+                        if (userId && userMap.has(userId)) {
+                          const username = userMap.get(userId);
+                          return (
+                            <div className="text-xs text-gray-500 font-cairo">
+                              {username}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-lg font-bold text-gray-900 font-cairo mb-1">
+                        {formatCurrency(invoice.totalAmount || 0)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Date */}
+                  <div className="mb-3">
+                    <div className="text-xs text-gray-500 font-cairo mb-1">التاريخ</div>
+                    <div className="text-sm text-gray-900 font-cairo">
+                      {formatDate(invoice.DateTime)}
+                      <div className="text-xs text-gray-500 mt-0.5">{formatTime(invoice.DateTime)}</div>
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  {invoice.Notes && (
+                    <div className="mb-3">
+                      <div className="text-xs text-gray-500 font-cairo mb-1">الملاحظات</div>
+                      <div className="text-sm text-gray-900 font-cairo line-clamp-2">{invoice.Notes}</div>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+                    <button
+                      onClick={() => handleViewInvoice(invoice)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-cairo"
+                    >
+                      <Eye size={16} />
+                      <span>عرض</span>
+                    </button>
+                    <button
+                      onClick={() => handlePrintInvoice(invoice)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-cairo"
+                    >
+                      <Printer size={16} />
+                      <span>طباعة</span>
+                    </button>
+                    <button
+                      onClick={() => handleEditInvoice(invoice)}
+                      disabled={invoice.isSettled}
+                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors font-cairo ${
+                        invoice.isSettled
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                      }`}
+                      title={invoice.isSettled ? 'لا يمكن تعديل فاتورة مرحلة' : 'تعديل'}
+                    >
+                      <Edit size={16} />
+                      <span>تعديل</span>
+                    </button>
+                    {canAccountant && !invoice.isSettled && (
+                      <button
+                        onClick={() => handleMarkInvoiceAsSettled(invoice)}
+                        disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
+                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="تغيير إلى مرحلة"
+                      >
+                        {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
+                          <Loader2 size={18} className="animate-spin" />
+                        ) : (
+                          <CheckCircle size={18} />
+                        )}
+                      </button>
+                    )}
+                    {canAccountant && invoice.isSettled && (
+                      <button
+                        onClick={() => handleMarkInvoiceAsUnsettled(invoice)}
+                        disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
+                        className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="إعادة إلى غير مرحلة"
+                      >
+                        {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
+                          <Loader2 size={18} className="animate-spin" />
+                        ) : (
+                          <XCircle size={18} />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
+          </>
+        )}
 
         {/* Summary */}
         {filteredInvoices.length > 0 && (
-          <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
-            <p className="text-sm text-gray-600 font-cairo">
+          <div className="bg-gray-50 rounded-lg border border-gray-200 p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-600 font-cairo text-center sm:text-right">
               إجمالي الفواتير: <span className="font-semibold">{filteredInvoices.length}</span>
             </p>
           </div>
@@ -673,20 +812,36 @@ export default function InvoicesPage() {
 
       {/* Modal عرض الفاتورة */}
       {viewing.invoice && (
-        <div className="fixed top-0 left-0 bottom-0 right-0 md:right-64 z-50 flex items-center justify-center bg-black/40 px-4" dir="rtl">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl overflow-hidden border border-gray-200">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 font-cairo">
+        <div 
+          className="fixed inset-0 md:right-64 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4" 
+          dir="rtl"
+          onClick={closeView}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-hidden border border-gray-200 flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3 sm:px-4 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 font-cairo">
                   معاينة الفاتورة: {viewing.invoice.InvoiceID || viewing.invoice.invoice_id}
                 </h3>
-                <div className="text-sm text-gray-600 font-cairo">
+                <div className="text-xs sm:text-sm text-gray-600 font-cairo">
                   <div>التاريخ: {formatDate(viewing.invoice.DateTime || viewing.invoice.date_time)}</div>
                   <div className="text-xs text-gray-500 mt-0.5">الوقت: {formatTime(viewing.invoice.DateTime || viewing.invoice.date_time)}</div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {viewLoading && <Loader2 size={18} className="animate-spin text-gray-500" />}
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => {
+                    const printUrl = `/admin/invoices/print/${viewing.invoice.InvoiceID || viewing.invoice.invoice_id}`;
+                    window.open(printUrl, `print-cash-invoice-${viewing.invoice.InvoiceID || viewing.invoice.invoice_id}`, 'noopener,noreferrer');
+                  }}
+                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-cairo"
+                >
+                  <Printer size={16} />
+                  <span className="hidden sm:inline">طباعة</span>
+                </button>
                 {canAccountant && viewing.invoice && !viewing.invoice.isSettled && (
                   <button
                     onClick={handleMarkAsSettled}
@@ -728,8 +883,8 @@ export default function InvoicesPage() {
               </div>
             </div>
 
-            <div className="p-4 space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-gray-700 font-cairo">
+            <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 overflow-y-auto flex-1">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs sm:text-sm text-gray-700 font-cairo">
                 <div>
                   <div className="text-gray-500">رقم الفاتورة</div>
                   <div className="font-semibold">{viewing.invoice.InvoiceID || viewing.invoice.invoice_id}</div>
@@ -769,8 +924,8 @@ export default function InvoicesPage() {
                 </div>
               )}
 
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
+                <table className="w-full text-xs sm:text-sm min-w-[500px]">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <th className="px-3 py-2 text-right font-semibold text-gray-700">#</th>
@@ -781,46 +936,56 @@ export default function InvoicesPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(viewing.details || []).map((item, idx) => (
-                      <tr key={item.detailID || item.detail_id || idx} className="border-b border-gray-100">
-                        <td className="px-3 py-2 text-right text-gray-800">{idx + 1}</td>
-                        <td className="px-3 py-2 text-right text-gray-800">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              const productId = item.ProductID || item.product_id || item.ProductID || item.id;
-                              if (!productId) return;
-                              if (e.metaKey || e.ctrlKey) {
-                                window.open(`/admin/products/${productId}`, '_blank');
-                              } else {
-                                router.push(`/admin/products/${productId}`);
-                              }
-                            }}
-                            className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-                            title="عرض بروفايل المنتج (اضغط Command/Ctrl لفتح في نافذة جديدة)"
-                          >
-                            {item.ProductName || item.productName || item.product_name || item.Name || item.name || '—'}
-                          </button>
-                        </td>
-                        <td className="px-3 py-2 text-right text-gray-800">
-                          {item.Quantity || item.quantity || 0}
-                        </td>
-                        <td className="px-3 py-2 text-right text-gray-800">
-                          {formatCurrency(item.UnitPrice || item.unit_price || 0)}
-                        </td>
-                        <td className="px-3 py-2 text-right text-gray-800 font-semibold">
-                          {formatCurrency(
-                            (item.Quantity || item.quantity || 0) * (item.UnitPrice || item.unit_price || 0)
-                          )}
+                    {viewLoading ? (
+                      <tr>
+                        <td colSpan={5} className="px-3 py-8 text-center">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <Loader2 size={32} className="animate-spin text-gray-400" />
+                            <p className="text-sm text-gray-600 font-cairo">جاري التحميل...</p>
+                          </div>
                         </td>
                       </tr>
-                    ))}
-                    {(viewing.details || []).length === 0 && (
+                    ) : (viewing.details || []).length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-3 py-4 text-center text-gray-500 font-cairo">
                           لا توجد بنود للعرض
                         </td>
                       </tr>
+                    ) : (
+                      (viewing.details || []).map((item, idx) => (
+                        <tr key={item.detailID || item.detail_id || idx} className="border-b border-gray-100">
+                          <td className="px-3 py-2 text-right text-gray-800 font-cairo">{idx + 1}</td>
+                          <td className="px-3 py-2 text-right text-gray-800">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                const productId = item.ProductID || item.product_id || item.ProductID || item.id;
+                                if (!productId) return;
+                                if (e.metaKey || e.ctrlKey) {
+                                  window.open(`/admin/products/${productId}`, '_blank');
+                                } else {
+                                  router.push(`/admin/products/${productId}`);
+                                }
+                              }}
+                              className="text-blue-600 hover:text-blue-800 hover:underline transition-colors font-cairo"
+                              title="عرض بروفايل المنتج (اضغط Command/Ctrl لفتح في نافذة جديدة)"
+                            >
+                              {item.ProductName || item.productName || item.product_name || item.Name || item.name || '—'}
+                            </button>
+                          </td>
+                          <td className="px-3 py-2 text-right text-gray-800 font-cairo">
+                            {item.Quantity || item.quantity || 0}
+                          </td>
+                          <td className="px-3 py-2 text-right text-gray-800 font-cairo">
+                            {formatCurrency(item.UnitPrice || item.unit_price || 0)}
+                          </td>
+                          <td className="px-3 py-2 text-right text-gray-800 font-semibold font-cairo">
+                            {formatCurrency(
+                              (item.Quantity || item.quantity || 0) * (item.UnitPrice || item.unit_price || 0)
+                            )}
+                          </td>
+                        </tr>
+                      ))
                     )}
                   </tbody>
                 </table>

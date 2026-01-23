@@ -69,6 +69,7 @@ export default function POSPage() {
   } | null>(null);
   const [currentInvoiceID, setCurrentInvoiceID] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [showCartOnMobile, setShowCartOnMobile] = useState(false);
   
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -908,21 +909,37 @@ export default function POSPage() {
 
   return (
     <AdminLayout>
-      <div className="h-screen flex flex-col no-print" dir="rtl">
+      <div className="h-screen flex flex-col no-print overflow-hidden" dir="rtl" style={{ height: '100vh', maxHeight: '100vh' }}>
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 p-4">
-          <h1 className="text-2xl font-bold text-gray-900">نظام نقطة البيع النقدية</h1>
+        <div className="bg-white border-b border-gray-200 p-3 sm:p-4 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 font-cairo">نظام نقطة البيع النقدية</h1>
+            {/* Mobile Cart Toggle Button */}
+            <button
+              onClick={() => setShowCartOnMobile(!showCartOnMobile)}
+              className="md:hidden relative flex items-center justify-center w-12 h-12 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+              title="السلة"
+            >
+              <ShoppingCart size={20} />
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {cart.length}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* Main Content - Split Screen */}
-        <div className="flex-1 flex overflow-hidden">
+        {/* Main Content - Responsive Layout */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
           {/* Right Side - Catalog */}
-          <div className="w-1/2 border-l border-gray-200 flex flex-col bg-gray-50">
+          <div className={`${showCartOnMobile ? 'hidden' : 'flex'} md:flex w-full md:w-1/2 md:border-l border-gray-200 flex-col bg-gray-50 min-h-0`}>
             {/* Search and Filters */}
-            <div className="p-4 bg-white border-b border-gray-200">
-              <div className="flex gap-2 mb-3">
+            <div className="p-3 sm:p-4 bg-white border-b border-gray-200 flex-shrink-0">
+              {/* Barcode Input Row */}
+              <div className="flex flex-col sm:flex-row gap-2 mb-3">
                 {/* Barcode Input (Separate) */}
-                <div className="w-48 relative">
+                <div className="w-full sm:w-48 relative">
                   <input
                     ref={barcodeInputRef}
                     type="text"
@@ -941,7 +958,7 @@ export default function POSPage() {
                     autoCorrect="off"
                     autoCapitalize="off"
                     spellCheck="false"
-                    className="w-full pr-3 pl-3 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    className="w-full pr-10 pl-10 py-2.5 sm:py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm sm:text-base"
                     autoFocus
                     disabled={isScanning}
                   />
@@ -950,7 +967,7 @@ export default function POSPage() {
                     type="button"
                     onClick={isScanning ? stopScanning : startScanning}
                     disabled={typeof window !== 'undefined' && !navigator.mediaDevices}
-                    className={`absolute left-2 top-1/2 transform -translate-y-1/2 p-1.5 rounded-lg transition-colors ${
+                    className={`absolute left-2 top-1/2 transform -translate-y-1/2 p-1.5 sm:p-1 rounded-lg transition-colors ${
                       isScanning
                         ? 'bg-red-500 text-white hover:bg-red-600'
                         : typeof window !== 'undefined' && !navigator.mediaDevices
@@ -977,13 +994,13 @@ export default function POSPage() {
                     placeholder="بحث بالاسم أو رقم الصنف..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                    className="w-full pr-10 pl-4 py-2.5 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 text-sm sm:text-base font-cairo"
                   />
                 </div>
               </div>
 
               {/* Filters - Cascading & Searchable */}
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <SearchableSelect
                   value={filters.type}
                   options={availableTypes}
@@ -1043,18 +1060,18 @@ export default function POSPage() {
 
             {/* Barcode Scanner Camera View */}
             {isScanning && (
-              <div className="p-4 bg-black border-b border-gray-200">
+              <div className="p-3 sm:p-4 bg-black border-b border-gray-200 flex-shrink-0">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-white text-sm font-medium mb-1">امسح الباركود بالكاميرا</p>
-                    <p className="text-gray-400 text-xs">وجه الكاميرا نحو الباركود</p>
+                    <p className="text-white text-sm font-medium mb-1 font-cairo">امسح الباركود بالكاميرا</p>
+                    <p className="text-gray-400 text-xs font-cairo">وجه الكاميرا نحو الباركود</p>
                   </div>
                   <button
                     onClick={stopScanning}
-                    className="px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm flex items-center gap-1"
+                    className="px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm flex items-center gap-1 font-cairo"
                   >
                     <X size={16} />
-                    إغلاق
+                    <span className="hidden sm:inline">إغلاق</span>
                   </button>
                 </div>
                 <div className="w-full flex items-center justify-center">
@@ -1063,25 +1080,25 @@ export default function POSPage() {
                     ref={scanAreaRef}
                     className="w-full max-w-md mx-auto bg-gray-900 rounded-lg overflow-hidden"
                     style={{ 
-                      minHeight: '300px', 
+                      minHeight: '250px',
                       maxHeight: '500px',
                       width: '100%',
                       position: 'relative'
                     }}
                   />
                 </div>
-                <p className="text-gray-400 text-xs text-center mt-2">
+                <p className="text-gray-400 text-xs text-center mt-2 font-cairo">
                   يمكنك أيضاً استخدام الماسح الضوئي المتصل بالحاسوب
                 </p>
               </div>
             )}
 
             {/* Products Grid */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-2 sm:p-4 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
               {isLoadingProducts ? (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 gap-2 sm:gap-3">
                   {[...Array(12)].map((_, index) => (
-                    <div key={index} className="bg-white rounded-lg border border-gray-200 p-3 animate-pulse">
+                    <div key={index} className="bg-white rounded-lg border border-gray-200 p-2 sm:p-3 animate-pulse">
                       <div className="aspect-square bg-gray-200 rounded-lg mb-2"></div>
                       <div className="h-4 bg-gray-200 rounded mb-2"></div>
                       <div className="h-3 bg-gray-200 rounded mb-1"></div>
@@ -1090,15 +1107,21 @@ export default function POSPage() {
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 gap-2 sm:gap-3">
                   {filteredProducts.map((product, index) => {
                   const imageUrl = product.ImageUrl || product.imageUrl || product.Image || product.image || '';
                   const productKey = product.ProductID || product.id || `product-${index}`;
                   return (
                     <div
                       key={productKey}
-                      onClick={() => addToCart(product, 'Pick')}
-                      className="bg-white rounded-lg border border-gray-200 p-3 cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => {
+                        addToCart(product, 'Pick');
+                        // On mobile, show cart after adding item
+                        if (window.innerWidth < 768) {
+                          setShowCartOnMobile(true);
+                        }
+                      }}
+                      className="bg-white rounded-lg border border-gray-200 p-2 sm:p-3 cursor-pointer hover:shadow-md active:scale-95 transition-all font-cairo"
                     >
                       <div className="aspect-square bg-gray-100 rounded-lg mb-2 flex items-center justify-center overflow-hidden">
                         {imageUrl ? (
@@ -1106,19 +1129,29 @@ export default function POSPage() {
                             src={imageUrl}
                             alt={product.Name || product.name}
                             className="w-full h-full object-contain"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (placeholder) placeholder.style.display = 'flex';
+                            }}
                           />
+                        ) : null}
+                        {imageUrl ? (
+                          <div className="w-full h-full bg-gray-100 flex items-center justify-center hidden">
+                            <ShoppingCart size={24} className="text-gray-400" />
+                          </div>
                         ) : (
-                          <ShoppingCart size={32} className="text-gray-400" />
+                          <ShoppingCart size={24} className="text-gray-400" />
                         )}
                       </div>
-                      <h3 className="font-semibold text-sm text-gray-900 mb-1 line-clamp-2">
+                      <h3 className="font-semibold text-xs sm:text-sm text-gray-900 mb-1 line-clamp-2 font-cairo">
                         {product.Name || product.name || 'غير معروف'}
                       </h3>
-                      <p className="text-xs text-gray-600 mb-1">
+                      <p className="text-xs text-gray-600 mb-1 font-cairo hidden sm:block">
                         {product.Barcode || product.barcode || '—'}
                       </p>
                       {/* Stock Information */}
-                      <div className="flex items-center gap-2 mb-1 text-xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1 text-xs font-cairo">
                         {(product.CS_Shop !== undefined && product.CS_Shop !== null) && (
                           <span className="text-gray-600">
                             المحل: <span className={`font-medium ${
@@ -1134,7 +1167,7 @@ export default function POSPage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm font-bold text-blue-600">
+                      <p className="text-xs sm:text-sm font-bold text-blue-600 font-cairo">
                         ₪{parseFloat(product.SalePrice || product.salePrice || 0).toFixed(2)}
                       </p>
                     </div>
@@ -1146,13 +1179,22 @@ export default function POSPage() {
           </div>
 
           {/* Left Side - Invoice/Cart */}
-          <div className="w-1/2 flex flex-col bg-white">
+          <div className={`${showCartOnMobile ? 'flex' : 'hidden'} md:flex w-full md:w-1/2 flex-col bg-white min-h-0`}>
             {/* Header */}
-            <div className="p-4 border-b border-gray-200">
+            <div className="p-3 sm:p-4 border-b border-gray-200 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">فاتورة جديدة</h2>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowCartOnMobile(false)}
+                    className="md:hidden p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="إغلاق السلة"
+                  >
+                    <X size={20} />
+                  </button>
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900 font-cairo">فاتورة جديدة</h2>
+                </div>
                 {currentInvoiceID && (
-                  <div className="text-sm text-gray-600">
+                  <div className="text-xs sm:text-sm text-gray-600 font-cairo">
                     <span className="font-medium">رقم الفاتورة:</span>
                     <span className="mr-2 font-semibold text-gray-900">{currentInvoiceID}</span>
                   </div>
@@ -1161,14 +1203,14 @@ export default function POSPage() {
             </div>
 
             {/* Cart Items */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
               {cart.length === 0 ? (
-                <div className="text-center py-12">
+                <div className="text-center py-8 sm:py-12">
                   <ShoppingCart size={48} className="text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600">السلة فارغة</p>
+                  <p className="text-gray-600 font-cairo">السلة فارغة</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {cart.map((item) => {
                     // Get product image from products array
                     const product = products.find(p => (p.ProductID || p.id || p.product_id) === item.productID);
@@ -1176,9 +1218,10 @@ export default function POSPage() {
                     return (
                     <div
                       key={item.productID}
-                      className="bg-gray-50 rounded-lg p-2 border border-gray-200"
+                      className="bg-gray-50 rounded-lg p-2 sm:p-3 border border-gray-200"
                     >
-                      <div className="flex items-center justify-between gap-2">
+                      {/* Desktop View */}
+                      <div className="hidden md:flex items-center justify-between gap-2">
                         {/* Product Image & Name */}
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           {imageUrl ? (
@@ -1192,18 +1235,13 @@ export default function POSPage() {
                                 if (placeholder) placeholder.style.display = 'flex';
                               }}
                             />
-                          ) : null}
-                          {imageUrl ? (
-                            <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
-                              <span className="text-gray-400 text-xs">—</span>
-                            </div>
                           ) : (
                             <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
                               <span className="text-gray-400 text-xs">—</span>
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
+                            <p className="text-sm font-medium text-gray-900 truncate font-cairo">
                               {item.name} <span className="text-xs text-gray-500">({item.productID})</span>
                             </p>
                           </div>
@@ -1213,7 +1251,7 @@ export default function POSPage() {
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => updateQuantity(item.productID, item.quantity - 1)}
-                            className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200"
+                            className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200 transition-colors"
                           >
                             <Minus size={12} />
                           </button>
@@ -1221,11 +1259,11 @@ export default function POSPage() {
                             type="number"
                             value={item.quantity}
                             onChange={(e) => updateQuantity(item.productID, parseFloat(e.target.value) || 0)}
-                            className="w-12 text-center border border-gray-300 rounded py-1 text-xs text-gray-900"
+                            className="w-12 text-center border border-gray-300 rounded py-1 text-xs text-gray-900 font-bold"
                           />
                           <button
                             onClick={() => updateQuantity(item.productID, item.quantity + 1)}
-                            className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200"
+                            className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200 transition-colors"
                           >
                             <Plus size={12} />
                           </button>
@@ -1239,23 +1277,97 @@ export default function POSPage() {
                             onChange={(e) => updatePrice(item.productID, parseFloat(e.target.value) || 0)}
                             step="0.01"
                             min="0"
-                            className="w-20 text-center border border-gray-300 rounded py-1 text-xs text-gray-900"
+                            className="w-20 text-center border border-gray-300 rounded py-1 text-xs text-gray-900 font-bold"
                             placeholder="السعر"
                           />
                         </div>
                         
                         {/* Total */}
                         <div className="text-left min-w-[60px]">
-                          <p className="text-sm font-bold text-gray-900">₪{item.total.toFixed(2)}</p>
+                          <p className="text-sm font-bold text-gray-900 font-cairo">₪{item.total.toFixed(2)}</p>
                         </div>
                         
                         {/* Delete Button */}
                         <button
                           onClick={() => removeFromCart(item.productID)}
-                          className="text-red-500 hover:text-red-700 transition-colors flex-shrink-0"
+                          className="text-red-500 hover:text-red-700 transition-colors flex-shrink-0 p-1"
                         >
                           <Trash2 size={16} />
                         </button>
+                      </div>
+
+                      {/* Mobile View */}
+                      <div className="md:hidden space-y-2">
+                        <div className="flex items-start gap-3">
+                          {imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt={item.name}
+                              className="w-16 h-16 object-contain rounded border border-gray-200 flex-shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (placeholder) placeholder.style.display = 'flex';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                              <span className="text-gray-400 text-xs">—</span>
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-gray-900 font-cairo mb-1 line-clamp-2">{item.name}</h3>
+                            <p className="text-xs text-gray-500 font-cairo mb-2">#{item.productID}</p>
+                            <div className="text-lg font-bold text-gray-900 font-cairo mb-2">
+                              ₪{item.total.toFixed(2)}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeFromCart(item.productID)}
+                            className="text-red-500 hover:text-red-700 transition-colors flex-shrink-0 p-1"
+                            title="حذف"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1 font-cairo">الكمية</label>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => updateQuantity(item.productID, item.quantity - 1)}
+                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+                              >
+                                <Minus size={14} />
+                              </button>
+                              <input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => updateQuantity(item.productID, parseFloat(e.target.value) || 0)}
+                                className="flex-1 text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold"
+                              />
+                              <button
+                                onClick={() => updateQuantity(item.productID, item.quantity + 1)}
+                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+                              >
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1 font-cairo">سعر الوحدة</label>
+                            <input
+                              type="number"
+                              value={item.unitPrice}
+                              onChange={(e) => updatePrice(item.productID, parseFloat(e.target.value) || 0)}
+                              step="0.01"
+                              min="0"
+                              className="w-full text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold"
+                              placeholder="السعر"
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                     );
@@ -1265,22 +1377,22 @@ export default function POSPage() {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-200 p-4 space-y-3">
+            <div className="border-t border-gray-200 p-3 sm:p-4 space-y-2 sm:space-y-3 flex-shrink-0 bg-white">
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ملاحظات</label>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">ملاحظات</label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="ملاحظات اختيارية..."
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm font-cairo"
                 />
               </div>
 
               {/* Discount */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">خصم</label>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">خصم</label>
                 <input
                   type="number"
                   value={discount}
@@ -1288,23 +1400,23 @@ export default function POSPage() {
                   placeholder="0.00"
                   min="0"
                   step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm font-bold"
                 />
               </div>
 
               {/* Totals */}
               <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm font-cairo">
                   <span className="text-gray-600">المجموع:</span>
                   <span className="font-semibold">₪{subtotal.toFixed(2)}</span>
                 </div>
                 {discount > 0 && (
-                  <div className="flex justify-between text-red-600">
+                  <div className="flex justify-between text-sm text-red-600 font-cairo">
                     <span>الخصم:</span>
                     <span>₪{discount.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-lg font-bold border-t border-gray-300 pt-2">
+                <div className="flex justify-between text-base sm:text-lg font-bold border-t border-gray-300 pt-2 font-cairo">
                   <span>الصافي:</span>
                   <span className="text-green-600">₪{netTotal.toFixed(2)}</span>
                 </div>
@@ -1314,17 +1426,17 @@ export default function POSPage() {
               <button
                 onClick={handlePayAndPrint}
                 disabled={cart.length === 0 || isProcessing}
-                className="w-full py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3 sm:py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold text-base sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-cairo"
               >
                 {isProcessing ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    جاري المعالجة...
+                    <span>جاري المعالجة...</span>
                   </>
                 ) : (
                   <>
                     <Printer size={20} />
-                    دفع وطباعة
+                    <span>دفع وطباعة</span>
                   </>
                 )}
               </button>
@@ -1332,6 +1444,22 @@ export default function POSPage() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Floating Cart Button */}
+      {!showCartOnMobile && cart.length > 0 && (
+        <button
+          onClick={() => setShowCartOnMobile(true)}
+          className="md:hidden fixed bottom-4 left-4 z-50 flex items-center justify-center w-16 h-16 bg-green-600 text-white rounded-full shadow-lg hover:bg-green-700 transition-colors"
+          title="عرض السلة"
+        >
+          <ShoppingCart size={24} />
+          {cart.length > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+              {cart.length}
+            </span>
+          )}
+        </button>
+      )}
 
       {/* Print Component */}
       {invoiceData && (

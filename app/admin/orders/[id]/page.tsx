@@ -118,13 +118,14 @@ export default function EditOrderPage() {
 
       // Load order details
       const orderDetails = await getOnlineOrderDetailsFromSupabase(orderId);
-      // Map details to match our interface
+      // Map details to match our interface (costPrice will be updated when products are loaded)
       const mappedDetails: OrderDetail[] = orderDetails.map((detail: any) => ({
         detailID: detail.detail_id || detail.DetailID || '',
         productID: detail.product_id || detail.ProductID || '',
         productName: detail.product_name || detail.ProductName || '',
         quantity: parseFloat(String(detail.quantity || detail.Quantity || 0)) || 0,
         unitPrice: parseFloat(String(detail.unit_price || detail.UnitPrice || 0)) || 0,
+        costPrice: 0, // Will be updated when products are loaded
       }));
       setDetails(mappedDetails);
     } catch (err: any) {
@@ -139,6 +140,26 @@ export default function EditOrderPage() {
     try {
       const productsData = await getProducts();
       setProducts(productsData);
+      
+      // Update costPrice for existing order items after products are loaded
+      setDetails((prevDetails) => {
+        return prevDetails.map((detail) => {
+          // Skip if costPrice already exists (user might have added new items)
+          if (detail.costPrice && detail.costPrice > 0) return detail;
+          
+          // Find product and get costPrice
+          const product = productsData.find(
+            (p) => (p.ProductID || p.id || p.product_id) === detail.productID
+          );
+          if (product) {
+            return {
+              ...detail,
+              costPrice: parseFloat(String(product.CostPrice || product.cost_price || product.costPrice || 0)) || 0,
+            };
+          }
+          return detail;
+        });
+      });
     } catch (err: any) {
       console.error('[EditOrderPage] Failed to load products:', err);
     }
@@ -181,25 +202,91 @@ export default function EditOrderPage() {
       return;
     }
 
-    const product = products.find((p) => p.ProductID === selectedProductId || p.id === selectedProductId || p.product_id === selectedProductId);
+    // Find product - try multiple ID fields
+    const selectedId = String(selectedProductId || '').trim();
+    const product = products.find((p) => {
+      const possibleIds = [
+        p.ProductID,
+        p.id,
+        p.product_id,
+        p['ProductID'],
+        p['id'],
+        p['product_id']
+      ].filter(id => id != null).map(id => String(id).trim());
+      
+      return possibleIds.includes(selectedId);
+    });
+
     if (!product) {
       alert('المنتج غير موجود');
       return;
     }
 
+    // Extract product ID
+    const productIdForSearch = String(
+      product.ProductID || 
+      product.id || 
+      product.product_id || 
+      ''
+    ).trim();
+
+    // Use provided price, manually entered price, or default sale price
+    let unitPrice = product.SalePrice || product.sale_price || product.price || 0;
+    if (newProductPrice != null && newProductPrice > 0) {
+      unitPrice = newProductPrice;
+    }
+
+    // Extract product name - check multiple possible fields
+    let productName = '';
+    if (product.Name && String(product.Name).trim()) {
+      productName = String(product.Name).trim();
+    } else if (product.name && String(product.name).trim()) {
+      productName = String(product.name).trim();
+    } else if (product.product_name && String(product.product_name).trim()) {
+      productName = String(product.product_name).trim();
+    }
+    
+    // Last resort
+    if (!productName) {
+      productName = 'غير معروف';
+    }
+
+    // Extract costPrice - check multiple possible fields with fallback to products array
+    let costPrice = 0;
+    
+    // Try all possible costPrice fields from product
+    if (product.CostPrice != null && product.CostPrice !== 0) {
+      costPrice = parseFloat(String(product.CostPrice)) || 0;
+    } else if (product.cost_price != null && product.cost_price !== 0) {
+      costPrice = parseFloat(String(product.cost_price)) || 0;
+    } else if (product.costPrice != null && product.costPrice !== 0) {
+      costPrice = parseFloat(String(product.costPrice)) || 0;
+    }
+    
+    // Final fallback - search in products array (in case product object is incomplete)
+    if (costPrice === 0 && productIdForSearch) {
+      const originalProduct = products.find(p => {
+        const pId = String(p.ProductID || p.id || p.product_id || '').trim();
+        return pId === productIdForSearch;
+      });
+      if (originalProduct) {
+        costPrice = parseFloat(String(originalProduct.CostPrice || originalProduct.cost_price || originalProduct.costPrice || 0)) || 0;
+      }
+    }
+
     const newDetail: OrderDetail = {
       detailID: `temp-${Date.now()}`,
-      productID: product.ProductID || product.id || product.product_id,
-      productName: product.Name || product.name || '',
+      productID: productIdForSearch,
+      productName: productName,
       quantity: newProductQuantity,
-      unitPrice: (newProductPrice != null && newProductPrice > 0) ? newProductPrice : (product.SalePrice || product.sale_price || product.price || 0),
-      costPrice: product.CostPrice || product.cost_price || product.costPrice || 0,
+      unitPrice: unitPrice,
+      costPrice: costPrice,
     };
 
     setDetails((prev) => [...prev, newDetail]);
     setSelectedProductId('');
     setNewProductQuantity(1);
-    setNewProductPrice(product.SalePrice || product.price || 0);
+    setNewProductPrice(product.SalePrice || product.sale_price || product.price || 0);
     setShowAddProduct(false);
     setProductSearchQuery('');
   };
@@ -452,49 +539,50 @@ export default function EditOrderPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 font-cairo" dir="rtl">
+      <div className="space-y-4 sm:space-y-6 font-cairo" dir="rtl">
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">تعديل الطلبية</h1>
-            <p className="text-gray-600 mt-1">رقم الطلبية: {orderId}</p>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cairo">تعديل الطلبية</h1>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base font-cairo">رقم الطلبية: {orderId}</p>
             {order && (
-              <div className="mt-2 text-sm text-gray-500">
+              <div className="mt-2 text-xs sm:text-sm text-gray-500 font-cairo">
                 <p>العميل: {order.CustomerName}</p>
                 <p>الهاتف: {order.CustomerPhone}</p>
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setShowCosts((prev) => !prev)}
               disabled={!canViewCost}
-              className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {showCosts ? <EyeOff size={18} /> : <Eye size={18} />}
+              <span className="sm:hidden">{showCosts ? 'إخفاء' : 'إظهار'} التكلفة</span>
             </button>
             <button
               onClick={() => handleConvertToInvoice('shop')}
               disabled={converting !== null}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {converting === 'shop' ? <Loader2 size={18} className="animate-spin" /> : null}
-              تحويل لفاتورة المحل
+              <span>تحويل لفاتورة المحل</span>
             </button>
             <button
               onClick={() => handleConvertToInvoice('warehouse')}
               disabled={converting !== null}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {converting === 'warehouse' ? <Loader2 size={18} className="animate-spin" /> : null}
-              تحويل لفاتورة المخزن
+              <span>تحويل لفاتورة المخزن</span>
             </button>
             <button
               onClick={() => router.push('/admin/orders')}
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo"
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-sm sm:text-base"
             >
               <ArrowRight size={18} />
-              العودة
+              <span>العودة</span>
             </button>
           </div>
         </div>
@@ -511,9 +599,9 @@ export default function EditOrderPage() {
         )}
 
         {/* Form */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Basic Info */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الملاحظات</label>
               <textarea
@@ -552,19 +640,19 @@ export default function EditOrderPage() {
 
           {/* Products */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 font-cairo">الأصناف</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 font-cairo">الأصناف</h2>
               <button
                 onClick={() => setShowAddProduct(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo w-full sm:w-auto text-sm sm:text-base"
               >
                 <Plus size={20} />
-                إضافة منتج
+                <span>إضافة منتج</span>
               </button>
             </div>
 
             {showAddProduct && (
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="relative mb-4" ref={productDropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
                   <div className="relative">
@@ -577,7 +665,7 @@ export default function EditOrderPage() {
                       }}
                       onFocus={() => setIsProductDropdownOpen(true)}
                       placeholder="ابحث عن منتج..."
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold text-sm sm:text-base"
                     />
                     {isProductDropdownOpen && filteredProducts.length > 0 && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -608,7 +696,7 @@ export default function EditOrderPage() {
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الكمية</label>
                     <input
@@ -617,7 +705,7 @@ export default function EditOrderPage() {
                       value={newProductQuantity}
                       onChange={(e) => setNewProductQuantity(parseFloat(e.target.value) || 1)}
                       onWheel={(e) => e.currentTarget.blur()}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold text-sm sm:text-base"
                     />
                   </div>
                   <div>
@@ -628,14 +716,14 @@ export default function EditOrderPage() {
                       value={newProductPrice}
                       onChange={(e) => setNewProductPrice(parseFloat(e.target.value) || 0)}
                       onWheel={(e) => e.currentTarget.blur()}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold text-sm sm:text-base"
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <button
                     onClick={handleAddProduct}
-                    className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
+                    className="flex-1 sm:flex-none px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo text-sm sm:text-base"
                   >
                     إضافة
                   </button>
@@ -645,7 +733,7 @@ export default function EditOrderPage() {
                       setSelectedProductId('');
                       setProductSearchQuery('');
                     }}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold"
+                    className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold text-sm sm:text-base"
                   >
                     إلغاء
                   </button>
@@ -656,72 +744,126 @@ export default function EditOrderPage() {
             {details.length === 0 ? (
               <div className="text-center py-8 text-gray-500 font-cairo">لا توجد أصناف</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">المنتج</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الكمية</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">سعر الوحدة</th>
-                      {showCosts && canViewCost && (
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
-                      )}
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الإجمالي</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">إجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {details.map((item, index) => (
-                      <tr key={item.detailID || index}>
-                        <td className="px-4 py-3 text-sm text-gray-900 font-cairo">{item.productName || '—'}</td>
-                        <td className="px-4 py-3">
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">المنتج</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الكمية</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">سعر الوحدة</th>
+                        {showCosts && canViewCost && (
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
+                        )}
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الإجمالي</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">إجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {details.map((item, index) => (
+                        <tr key={item.detailID || index}>
+                          <td className="px-4 py-3 text-sm text-gray-900 font-cairo">{item.productName || '—'}</td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="number"
+                              step="1"
+                              value={item.quantity}
+                              onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
+                              onWheel={(e) => e.currentTarget.blur()}
+                              className="w-20 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="number"
+                              step="1"
+                              value={item.unitPrice}
+                              onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
+                              onWheel={(e) => e.currentTarget.blur()}
+                              className="w-24 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
+                            />
+                          </td>
+                          {showCosts && canViewCost && (
+                            <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo">
+                              ₪{(item.costPrice || 0).toFixed(2)}
+                            </td>
+                          )}
+                          <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo">
+                            ₪{(item.quantity * item.unitPrice).toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => handleRemoveItem(item.detailID)}
+                              className="text-red-600 hover:text-red-900 font-cairo"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                  {details.map((item, index) => (
+                    <div key={item.detailID || index} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-semibold text-gray-900 font-cairo mb-1">{item.productName || '—'}</h3>
+                          <div className="text-base font-bold text-gray-900 font-cairo">
+                            ₪{(item.quantity * item.unitPrice).toFixed(2)}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveItem(item.detailID)}
+                          className="text-red-600 hover:text-red-900 p-1 flex-shrink-0"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1 font-cairo">الكمية</label>
                           <input
                             type="number"
                             step="1"
                             value={item.quantity}
                             onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
                             onWheel={(e) => e.currentTarget.blur()}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
                           />
-                        </td>
-                        <td className="px-4 py-3">
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1 font-cairo">سعر الوحدة</label>
                           <input
                             type="number"
                             step="1"
                             value={item.unitPrice}
                             onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
                             onWheel={(e) => e.currentTarget.blur()}
-                            className="w-24 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
                           />
-                        </td>
-                        {showCosts && canViewCost && (
-                          <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo">
-                            ₪{(item.costPrice || 0).toFixed(2)}
-                          </td>
-                        )}
-                        <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo">
-                          ₪{(item.quantity * item.unitPrice).toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={() => handleRemoveItem(item.detailID)}
-                            className="text-red-600 hover:text-red-900 font-cairo"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        </div>
+                      </div>
+                      {showCosts && canViewCost && (
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <div className="text-xs text-gray-600 font-cairo">تكلفة الوحدة: <span className="font-semibold text-gray-900">₪{(item.costPrice || 0).toFixed(2)}</span></div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
           {/* Summary */}
-          <div className="border-t border-gray-200 pt-4">
+          <div className="border-t border-gray-200 pt-3 sm:pt-4">
             <div className="flex justify-end">
-              <div className="w-full md:w-1/3 space-y-2">
+              <div className="w-full sm:w-full md:w-1/3 space-y-2">
                 <div className="flex justify-between text-sm text-gray-600 font-cairo">
                   <span>المجموع الفرعي:</span>
                   <span className="font-semibold">₪{calculateSubtotal().toFixed(2)}</span>
@@ -759,27 +901,27 @@ export default function EditOrderPage() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4 pt-4 border-t border-gray-200">
             <button
               onClick={() => router.push('/admin/orders')}
-              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold"
+              className="w-full sm:w-auto px-4 sm:px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold text-sm sm:text-base"
             >
               إلغاء
             </button>
             <button
               onClick={handleSave}
               disabled={saving || details.length === 0}
-              className="flex items-center gap-2 px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {saving ? (
                 <>
                   <Loader2 size={20} className="animate-spin" />
-                  جاري الحفظ...
+                  <span>جاري الحفظ...</span>
                 </>
               ) : (
                 <>
                   <Save size={20} />
-                  حفظ التعديلات
+                  <span>حفظ التعديلات</span>
                 </>
               )}
             </button>
@@ -788,10 +930,10 @@ export default function EditOrderPage() {
 
         {/* Customer Selection Modal */}
         {showCustomerSelectModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" dir="rtl">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4" dir="rtl">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col">
               {/* Header */}
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 z-10 flex-shrink-0">
                 <div>
                   <h2 className="text-xl font-bold text-gray-900 font-cairo">
                     اختر الزبون للتحويل
@@ -815,7 +957,7 @@ export default function EditOrderPage() {
               </div>
 
               {/* Search */}
-              <div className="p-4 border-b border-gray-200">
+              <div className="p-3 sm:p-4 border-b border-gray-200 flex-shrink-0">
                 <div className="relative">
                   <Search
                     size={18}
@@ -826,14 +968,14 @@ export default function EditOrderPage() {
                     placeholder="ابحث عن زبون..."
                     value={customerSearchQuery}
                     onChange={(e) => setCustomerSearchQuery(e.target.value)}
-                    className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo"
+                    className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo text-sm sm:text-base"
                     dir="rtl"
                   />
                 </div>
               </div>
 
               {/* Customer List */}
-              <div className="overflow-y-auto max-h-96 p-4">
+              <div className="overflow-y-auto flex-1 p-3 sm:p-4 min-h-0">
                 {filteredCustomersForSelect.length === 0 ? (
                   <div className="text-center py-8 text-gray-500 font-cairo">
                     {customerSearchQuery ? 'لا توجد نتائج' : 'لا يوجد زبائن'}
@@ -870,41 +1012,43 @@ export default function EditOrderPage() {
               </div>
 
               {/* Actions */}
-              <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex items-center gap-3">
+              <div className="sticky bottom-0 bg-white border-t border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 flex-shrink-0">
                 <button
                   onClick={handleAddNewCustomer}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900"
+                  className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 text-sm sm:text-base"
                 >
                   <Plus size={18} />
-                  إضافة زبون جديد
+                  <span>إضافة زبون جديد</span>
                 </button>
-                <div className="flex-1" />
-                <button
-                  onClick={() => {
-                    setShowCustomerSelectModal(false);
-                    setPendingConvertTarget(null);
-                    setSelectedCustomerId('');
-                    setCustomerSearchQuery('');
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900"
-                  disabled={converting !== null}
-                >
-                  إلغاء
-                </button>
-                <button
-                  onClick={handleCustomerSelected}
-                  disabled={!selectedCustomerId || converting !== null}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {converting !== null ? (
-                    <>
-                      <Loader2 size={18} className="animate-spin" />
-                      جاري التحويل...
-                    </>
-                  ) : (
-                    'تحويل'
-                  )}
-                </button>
+                <div className="flex-1 hidden sm:block" />
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+                  <button
+                    onClick={() => {
+                      setShowCustomerSelectModal(false);
+                      setPendingConvertTarget(null);
+                      setSelectedCustomerId('');
+                      setCustomerSearchQuery('');
+                    }}
+                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 text-sm sm:text-base"
+                    disabled={converting !== null}
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    onClick={handleCustomerSelected}
+                    disabled={!selectedCustomerId || converting !== null}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                  >
+                    {converting !== null ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        <span>جاري التحويل...</span>
+                      </>
+                    ) : (
+                      'تحويل'
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

@@ -162,7 +162,7 @@ export default function OrdersPage() {
     };
     const statusInfo = statusMap[status] || { label: status, className: 'bg-gray-100 text-gray-800' };
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.className}`}>
+      <span className={`px-2 py-1 rounded-full text-xs font-medium font-cairo ${statusInfo.className}`}>
         {statusInfo.label}
       </span>
     );
@@ -217,95 +217,104 @@ export default function OrdersPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6" dir="rtl">
+      <div className="space-y-4 sm:space-y-6 font-cairo" dir="rtl">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">طلبيات اون لاين</h1>
-          <p className="text-gray-600 mt-1">إدارة طلبيات العملاء الأون لاين</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cairo">طلبيات اون لاين</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base font-cairo">إدارة طلبيات العملاء الأون لاين</p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-cairo">
             {error}
           </div>
         )}
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
           <button
             onClick={() => setStatusFilter('all')}
-            className={`p-4 rounded-lg border-2 transition-all ${
+            className={`p-3 sm:p-4 rounded-lg border-2 transition-all font-cairo ${
               statusFilter === 'all'
                 ? 'border-gray-900 bg-gray-50'
                 : 'border-gray-200 bg-white hover:border-gray-300'
             }`}
           >
-            <div className="text-2xl font-bold text-gray-900">{orderStats.all}</div>
-            <div className="text-sm text-gray-600 mt-1">الكل</div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900 font-cairo">{orderStats.all}</div>
+            <div className="text-xs sm:text-sm text-gray-600 mt-1 font-cairo">الكل</div>
           </button>
           <button
             onClick={() => setStatusFilter('Pending')}
-            className={`p-4 rounded-lg border-2 transition-all ${
+            className={`p-3 sm:p-4 rounded-lg border-2 transition-all font-cairo ${
               statusFilter === 'Pending'
                 ? 'border-yellow-500 bg-yellow-50'
                 : 'border-gray-200 bg-white hover:border-yellow-200'
             }`}
           >
-            <div className="text-2xl font-bold text-yellow-700">{orderStats.pending}</div>
-            <div className="text-sm text-gray-600 mt-1">قيد الانتظار</div>
+            <div className="text-xl sm:text-2xl font-bold text-yellow-700 font-cairo">{orderStats.pending}</div>
+            <div className="text-xs sm:text-sm text-gray-600 mt-1 font-cairo">قيد الانتظار</div>
           </button>
           <button
             onClick={() => setStatusFilter('Processing')}
-            className={`p-4 rounded-lg border-2 transition-all ${
+            className={`p-3 sm:p-4 rounded-lg border-2 transition-all font-cairo ${
               statusFilter === 'Processing'
                 ? 'border-blue-500 bg-blue-50'
                 : 'border-gray-200 bg-white hover:border-blue-200'
             }`}
           >
-            <div className="text-2xl font-bold text-blue-700">{orderStats.processing}</div>
-            <div className="text-sm text-gray-600 mt-1">قيد المعالجة</div>
+            <div className="text-xl sm:text-2xl font-bold text-blue-700 font-cairo">{orderStats.processing}</div>
+            <div className="text-xs sm:text-sm text-gray-600 mt-1 font-cairo">قيد المعالجة</div>
           </button>
           <button
             onClick={() => setStatusFilter('Completed')}
-            className={`p-4 rounded-lg border-2 transition-all ${
+            className={`p-3 sm:p-4 rounded-lg border-2 transition-all font-cairo ${
               statusFilter === 'Completed'
                 ? 'border-green-500 bg-green-50'
                 : 'border-gray-200 bg-white hover:border-green-200'
             }`}
           >
-            <div className="text-2xl font-bold text-green-700">{orderStats.completed}</div>
-            <div className="text-sm text-gray-600 mt-1">مكتملة</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-700 font-cairo">{orderStats.completed}</div>
+            <div className="text-xs sm:text-sm text-gray-600 mt-1 font-cairo">مكتملة</div>
           </button>
           <button
             onClick={() => setStatusFilter('Cancelled')}
-            className={`p-4 rounded-lg border-2 transition-all ${
+            className={`p-3 sm:p-4 rounded-lg border-2 transition-all font-cairo ${
               statusFilter === 'Cancelled'
                 ? 'border-red-500 bg-red-50'
                 : 'border-gray-200 bg-white hover:border-red-200'
             }`}
           >
-            <div className="text-2xl font-bold text-red-700">{orderStats.cancelled}</div>
-            <div className="text-sm text-gray-600 mt-1">ملغاة</div>
+            <div className="text-xl sm:text-2xl font-bold text-red-700 font-cairo">{orderStats.cancelled}</div>
+            <div className="text-xs sm:text-sm text-gray-600 mt-1 font-cairo">ملغاة</div>
           </button>
         </div>
 
         {/* Search and Status Filter */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="relative">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="relative flex-1">
               <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
                 placeholder="ابحث برقم الطلبية، اسم الزبون، أو رقم الهاتف..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 font-cairo text-sm sm:text-base"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  title="مسح البحث"
+                >
+                  <X size={18} />
+                </button>
+              )}
             </div>
-            <div>
+            <div className="w-full sm:w-auto sm:min-w-[180px]">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-gray-900"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-gray-900 font-cairo text-sm sm:text-base"
               >
                 <option value="all">جميع الحالات</option>
                 <option value="Pending">قيد الانتظار</option>
@@ -317,52 +326,191 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        {/* Orders Table */}
+        {/* Orders List */}
         {filteredOrders.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+          <div className="bg-white rounded-lg border border-gray-200 p-8 sm:p-12 text-center">
             <ShoppingBag size={48} className="text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg">لا توجد طلبيات</p>
+            <p className="text-gray-600 text-base sm:text-lg font-cairo">لا توجد طلبيات</p>
           </div>
         ) : (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      رقم الطلبية
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      اسم الزبون
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      رقم الهاتف
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      الحالة
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      المبلغ الإجمالي
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      التاريخ والوقت
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      إجراءات
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredOrders.map((order) => (
-                    <tr key={order.OrderID} className="hover:bg-gray-200 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {order.OrderID}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                        رقم الطلبية
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                        اسم الزبون
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                        رقم الهاتف
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                        الحالة
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                        المبلغ الإجمالي
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                        التاريخ والوقت
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                        إجراءات
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredOrders.map((order) => (
+                      <tr key={order.OrderID} className="hover:bg-gray-200 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 font-cairo">
+                          {order.OrderID}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {order.CustomerEmail ? (
+                            <button
+                              onClick={async (e) => {
+                                // Try to find customer by email
+                                try {
+                                  const { getCustomerFromSupabase } = await import('@/lib/api');
+                                  const customer = await getCustomerFromSupabase(order.CustomerEmail);
+                                  if (customer && customer.customer_id) {
+                                    if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                                      window.open(`/admin/customers/${customer.customer_id}`, '_blank', 'noopener,noreferrer');
+                                      return;
+                                    }
+                                    router.push(`/admin/customers/${customer.customer_id}`);
+                                  } else {
+                                    // Customer not found, show name only
+                                    return;
+                                  }
+                                } catch (err) {
+                                  console.error('Failed to find customer:', err);
+                                }
+                              }}
+                              onMouseDown={async (e) => {
+                                if (e.button === 1) {
+                                  e.preventDefault();
+                                  try {
+                                    const { getCustomerFromSupabase } = await import('@/lib/api');
+                                    const customer = await getCustomerFromSupabase(order.CustomerEmail);
+                                    if (customer && customer.customer_id) {
+                                      window.open(`/admin/customers/${customer.customer_id}`, '_blank', 'noopener,noreferrer');
+                                    }
+                                  } catch (err) {
+                                    console.error('Failed to find customer:', err);
+                                  }
+                                }
+                              }}
+                              className="text-blue-600 hover:text-blue-800 hover:underline font-cairo"
+                              title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
+                            >
+                              {order.CustomerName}
+                            </button>
+                          ) : (
+                            <span className="font-cairo">{order.CustomerName}</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-cairo">
+                          {order.CustomerPhone}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <div className="flex items-center gap-2">
+                            {getStatusBadge(order.Status)}
+                            <div className="relative">
+                              <select
+                                value={order.Status}
+                                onChange={(e) => {
+                                  const newStatus = e.target.value as 'Pending' | 'Processing' | 'Completed' | 'Cancelled';
+                                  handleStatusChange(order.OrderID, newStatus);
+                                }}
+                                disabled={updatingStatus === order.OrderID}
+                                className="text-xs px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed max-h-32 overflow-y-auto font-cairo"
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ maxHeight: '128px' }}
+                              >
+                                <option value="Pending">قيد الانتظار</option>
+                                <option value="Processing">قيد المعالجة</option>
+                                <option value="Completed">مكتملة</option>
+                                <option value="Cancelled">ملغاة</option>
+                              </select>
+                              {updatingStatus === order.OrderID && (
+                                <Loader2 size={12} className="absolute left-1 top-1/2 transform -translate-y-1/2 animate-spin text-gray-400" />
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 font-cairo">
+                          {formatCurrency(order.TotalAmount)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-cairo">
+                          <div>
+                            <div>{formatDate(order.CreatedAt)}</div>
+                            <div className="text-xs text-gray-400 mt-0.5">{formatTime(order.CreatedAt)}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditOrder(order)}
+                              className="text-purple-600 hover:text-purple-900 flex items-center gap-1 font-cairo"
+                            >
+                              <Edit size={16} />
+                              تعديل
+                            </button>
+                            <button
+                              onClick={() => handlePrintOrder(order)}
+                              className="text-blue-600 hover:text-blue-900 flex items-center gap-1 font-cairo"
+                            >
+                              <Printer size={16} />
+                              طباعة
+                            </button>
+                            <button
+                              onClick={() => handleViewOrder(order)}
+                              className="text-green-600 hover:text-green-900 flex items-center gap-1 font-cairo"
+                            >
+                              <Eye size={16} />
+                              عرض
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+              {filteredOrders.map((order) => (
+                <div key={order.OrderID} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  {/* Header Row */}
+                  <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="text-base font-bold text-gray-900 font-cairo">#{order.OrderID}</h3>
+                        {getStatusBadge(order.Status)}
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-lg font-bold text-gray-900 font-cairo mb-1">
+                        {formatCurrency(order.TotalAmount)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Customer Info */}
+                  <div className="mb-3 space-y-2">
+                    <div>
+                      <div className="text-xs text-gray-500 font-cairo mb-1">اسم الزبون</div>
+                      <div className="text-sm text-gray-900 font-cairo">
                         {order.CustomerEmail ? (
                           <button
                             onClick={async (e) => {
-                              // Try to find customer by email
                               try {
                                 const { getCustomerFromSupabase } = await import('@/lib/api');
                                 const customer = await getCustomerFromSupabase(order.CustomerEmail);
@@ -372,112 +520,93 @@ export default function OrdersPage() {
                                     return;
                                   }
                                   router.push(`/admin/customers/${customer.customer_id}`);
-                                } else {
-                                  // Customer not found, show name only
-                                  return;
                                 }
                               } catch (err) {
                                 console.error('Failed to find customer:', err);
                               }
                             }}
-                            onMouseDown={async (e) => {
-                              if (e.button === 1) {
-                                e.preventDefault();
-                                try {
-                                  const { getCustomerFromSupabase } = await import('@/lib/api');
-                                  const customer = await getCustomerFromSupabase(order.CustomerEmail);
-                                  if (customer && customer.customer_id) {
-                                    window.open(`/admin/customers/${customer.customer_id}`, '_blank', 'noopener,noreferrer');
-                                  }
-                                } catch (err) {
-                                  console.error('Failed to find customer:', err);
-                                }
-                              }
-                            }}
-                            className="text-blue-600 hover:text-blue-800 hover:underline"
-                            title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
+                            className="text-blue-600 hover:text-blue-800 hover:underline font-cairo"
                           >
                             {order.CustomerName}
                           </button>
                         ) : (
                           order.CustomerName
                         )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {order.CustomerPhone}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex items-center gap-2">
-                          {getStatusBadge(order.Status)}
-                          <div className="relative">
-                            <select
-                              value={order.Status}
-                              onChange={(e) => {
-                                const newStatus = e.target.value as 'Pending' | 'Processing' | 'Completed' | 'Cancelled';
-                                handleStatusChange(order.OrderID, newStatus);
-                              }}
-                              disabled={updatingStatus === order.OrderID}
-                              className="text-xs px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed max-h-32 overflow-y-auto"
-                              onClick={(e) => e.stopPropagation()}
-                              style={{ maxHeight: '128px' }}
-                            >
-                              <option value="Pending">قيد الانتظار</option>
-                              <option value="Processing">قيد المعالجة</option>
-                              <option value="Completed">مكتملة</option>
-                              <option value="Cancelled">ملغاة</option>
-                            </select>
-                            {updatingStatus === order.OrderID && (
-                              <Loader2 size={12} className="absolute left-1 top-1/2 transform -translate-y-1/2 animate-spin text-gray-400" />
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                        {formatCurrency(order.TotalAmount)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <div>
-                          <div>{formatDate(order.CreatedAt)}</div>
-                          <div className="text-xs text-gray-400 mt-0.5">{formatTime(order.CreatedAt)}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleEditOrder(order)}
-                            className="text-purple-600 hover:text-purple-900 flex items-center gap-1 font-cairo"
-                          >
-                            <Edit size={16} />
-                            تعديل
-                          </button>
-                          <button
-                            onClick={() => handlePrintOrder(order)}
-                            className="text-blue-600 hover:text-blue-900 flex items-center gap-1 font-cairo"
-                          >
-                            <Printer size={16} />
-                            طباعة
-                          </button>
-                          <button
-                            onClick={() => handleViewOrder(order)}
-                            className="text-green-600 hover:text-green-900 flex items-center gap-1 font-cairo"
-                          >
-                            <Eye size={16} />
-                            عرض
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 font-cairo mb-1">رقم الهاتف</div>
+                      <div className="text-sm text-gray-900 font-cairo">{order.CustomerPhone}</div>
+                    </div>
+                  </div>
+
+                  {/* Date */}
+                  <div className="mb-3">
+                    <div className="text-xs text-gray-500 font-cairo mb-1">التاريخ والوقت</div>
+                    <div className="text-sm text-gray-900 font-cairo">
+                      {formatDate(order.CreatedAt)}
+                      <div className="text-xs text-gray-500 mt-0.5">{formatTime(order.CreatedAt)}</div>
+                    </div>
+                  </div>
+
+                  {/* Status Dropdown */}
+                  <div className="mb-3">
+                    <div className="text-xs text-gray-500 font-cairo mb-1">تغيير الحالة</div>
+                    <div className="relative">
+                      <select
+                        value={order.Status}
+                        onChange={(e) => {
+                          const newStatus = e.target.value as 'Pending' | 'Processing' | 'Completed' | 'Cancelled';
+                          handleStatusChange(order.OrderID, newStatus);
+                        }}
+                        disabled={updatingStatus === order.OrderID}
+                        className="w-full text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed font-cairo"
+                      >
+                        <option value="Pending">قيد الانتظار</option>
+                        <option value="Processing">قيد المعالجة</option>
+                        <option value="Completed">مكتملة</option>
+                        <option value="Cancelled">ملغاة</option>
+                      </select>
+                      {updatingStatus === order.OrderID && (
+                        <Loader2 size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 animate-spin text-gray-400" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+                    <button
+                      onClick={() => handleViewOrder(order)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-cairo"
+                    >
+                      <Eye size={16} />
+                      <span>عرض</span>
+                    </button>
+                    <button
+                      onClick={() => handlePrintOrder(order)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-cairo"
+                    >
+                      <Printer size={16} />
+                      <span>طباعة</span>
+                    </button>
+                    <button
+                      onClick={() => handleEditOrder(order)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-cairo"
+                    >
+                      <Edit size={16} />
+                      <span>تعديل</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          </>
         )}
 
         {/* Summary */}
         {filteredOrders.length > 0 && (
-          <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
-            <p className="text-sm text-gray-600 font-cairo">
+          <div className="bg-gray-50 rounded-lg border border-gray-200 p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-600 font-cairo text-center sm:text-right">
               إجمالي الطلبيات: <span className="font-semibold">{filteredOrders.length}</span>
             </p>
           </div>
@@ -485,11 +614,11 @@ export default function OrdersPage() {
 
         {/* Order Details Modal */}
         {selectedOrder && (
-          <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center p-4" dir="rtl">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-900">تفاصيل الطلبية</h3>
-                <div className="flex items-center gap-2">
+          <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center p-2 sm:p-4" dir="rtl">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+              <div className="sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-shrink-0">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 font-cairo">تفاصيل الطلبية</h3>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => handlePrintOrder(selectedOrder)}
                     className="text-blue-600 hover:text-blue-900 flex items-center gap-1 px-3 py-1 rounded-lg hover:bg-blue-50 transition-colors font-cairo"
@@ -509,19 +638,19 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              <div className="p-6 space-y-6">
+              <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1">
                 {/* Order Info */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">رقم الطلبية</p>
-                    <p className="font-semibold text-gray-900">{selectedOrder.OrderID}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 mb-1 font-cairo">رقم الطلبية</p>
+                    <p className="font-semibold text-gray-900 font-cairo">{selectedOrder.OrderID}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">الحالة</p>
+                    <p className="text-xs sm:text-sm text-gray-500 mb-1 font-cairo">الحالة</p>
                     <div>{getStatusBadge(selectedOrder.Status)}</div>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">اسم الزبون</p>
+                    <p className="text-xs sm:text-sm text-gray-500 mb-1 font-cairo">اسم الزبون</p>
                     {selectedOrder.CustomerEmail ? (
                       <button
                         onClick={async (e) => {
@@ -563,45 +692,45 @@ export default function OrdersPage() {
                     )}
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">رقم الهاتف</p>
-                    <p className="font-semibold text-gray-900">{selectedOrder.CustomerPhone}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 mb-1 font-cairo">رقم الهاتف</p>
+                    <p className="font-semibold text-gray-900 font-cairo">{selectedOrder.CustomerPhone}</p>
                   </div>
                   {selectedOrder.CustomerEmail && (
                     <div>
-                      <p className="text-sm text-gray-500 mb-1">البريد الإلكتروني</p>
-                      <p className="font-semibold text-gray-900">{selectedOrder.CustomerEmail}</p>
+                      <p className="text-xs sm:text-sm text-gray-500 mb-1 font-cairo">البريد الإلكتروني</p>
+                      <p className="font-semibold text-gray-900 font-cairo break-all">{selectedOrder.CustomerEmail}</p>
                     </div>
                   )}
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">التاريخ والوقت</p>
-                    <p className="font-semibold text-gray-900">{formatDate(selectedOrder.CreatedAt)}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 mb-1 font-cairo">التاريخ والوقت</p>
+                    <p className="font-semibold text-gray-900 font-cairo">{formatDate(selectedOrder.CreatedAt)}</p>
                   </div>
                 </div>
 
                 {/* Order Items */}
                 <div>
-                  <h4 className="text-lg font-bold text-gray-900 mb-4">الأصناف</h4>
+                  <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 font-cairo">الأصناف</h4>
                   {loadingDetails ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 size={24} className="animate-spin text-gray-400" />
                     </div>
                   ) : orderDetails.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">لا توجد أصناف</p>
+                    <p className="text-gray-500 text-center py-8 font-cairo">لا توجد أصناف</p>
                   ) : (
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
-                      <table className="w-full">
+                    <div className="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
+                      <table className="w-full text-xs sm:text-sm min-w-[500px]">
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase font-cairo">
                               اسم الصنف
                             </th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase font-cairo">
                               الكمية
                             </th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase font-cairo">
                               سعر الوحدة
                             </th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase font-cairo">
                               الإجمالي
                             </th>
                           </tr>
@@ -609,7 +738,7 @@ export default function OrdersPage() {
                         <tbody className="divide-y divide-gray-200">
                           {orderDetails.map((detail) => (
                             <tr key={detail.DetailID}>
-                              <td className="px-4 py-3 text-sm text-gray-900">
+                              <td className="px-4 py-3 text-sm text-gray-900 font-cairo">
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -627,11 +756,11 @@ export default function OrdersPage() {
                                   {detail.ProductName || '—'}
                                 </button>
                               </td>
-                              <td className="px-4 py-3 text-sm text-center text-gray-900">{detail.Quantity}</td>
-                              <td className="px-4 py-3 text-sm text-right text-gray-900">
+                              <td className="px-4 py-3 text-sm text-center text-gray-900 font-cairo">{detail.Quantity}</td>
+                              <td className="px-4 py-3 text-sm text-right text-gray-900 font-cairo">
                                 {formatCurrency(detail.UnitPrice)}
                               </td>
-                              <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">
+                              <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900 font-cairo">
                                 {formatCurrency(detail.TotalPrice)}
                               </td>
                             </tr>
@@ -639,10 +768,10 @@ export default function OrdersPage() {
                         </tbody>
                         <tfoot className="bg-gray-50 border-t border-gray-200">
                           <tr>
-                            <td colSpan={3} className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
+                            <td colSpan={3} className="px-4 py-3 text-sm font-semibold text-gray-900 text-right font-cairo">
                               الإجمالي:
                             </td>
-                            <td className="px-4 py-3 text-sm font-bold text-gray-900 text-right">
+                            <td className="px-4 py-3 text-sm font-bold text-gray-900 text-right font-cairo">
                               {formatCurrency(selectedOrder.TotalAmount)}
                             </td>
                           </tr>
@@ -655,8 +784,8 @@ export default function OrdersPage() {
                 {/* Notes */}
                 {selectedOrder.Notes && (
                   <div>
-                    <h4 className="text-lg font-bold text-gray-900 mb-2">ملاحظات</h4>
-                    <p className="text-gray-700 bg-gray-50 p-4 rounded-lg whitespace-pre-wrap">
+                    <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-2 font-cairo">ملاحظات</h4>
+                    <p className="text-sm sm:text-base text-gray-700 bg-gray-50 p-3 sm:p-4 rounded-lg whitespace-pre-wrap font-cairo">
                       {selectedOrder.Notes}
                     </p>
                   </div>

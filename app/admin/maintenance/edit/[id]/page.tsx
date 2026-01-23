@@ -177,8 +177,8 @@ export default function EditMaintenancePage() {
         serialNo: formData.serialNo.trim() || undefined,
         underWarranty: formData.underWarranty,
         status: formData.status,
-        costAmount: formData.costAmount && formData.costAmount.trim() !== '' ? parseFloat(formData.costAmount) : null,
-        costReason: formData.costReason.trim() || null,
+        costAmount: formData.costAmount && formData.costAmount.trim() !== '' ? parseFloat(formData.costAmount) : undefined,
+        costReason: formData.costReason.trim() || undefined,
         isPaid: formData.isPaid,
       };
 
@@ -217,7 +217,7 @@ export default function EditMaintenancePage() {
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
             <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">جاري تحميل السجل...</p>
+            <p className="text-gray-600 font-cairo">جاري تحميل السجل...</p>
           </div>
         </div>
       </AdminLayout>
@@ -226,32 +226,32 @@ export default function EditMaintenancePage() {
 
   return (
     <AdminLayout>
-      <div className="max-w-4xl mx-auto space-y-6" dir="rtl">
+      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 font-cairo" dir="rtl">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 flex-wrap">
           <button
             onClick={() => router.push('/admin/maintenance')}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
           >
             <ArrowLeft size={20} className="text-gray-600" />
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">تعديل سجل الصيانة</h1>
-          <span className="text-gray-500">#{maintNo}</span>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cairo">تعديل سجل الصيانة</h1>
+          <span className="text-sm sm:text-base text-gray-500 font-cairo">#{maintNo}</span>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-700">{error}</p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
+            <p className="text-red-700 text-sm sm:text-base font-cairo">{error}</p>
           </div>
         )}
 
         {/* Form */}
-        <form onSubmit={handleSave} className="bg-white rounded-lg border border-gray-200 p-6 space-y-8">
+        <form onSubmit={handleSave} className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-8">
           {/* Customer Selection */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
             <div className="flex items-center justify-between mb-3">
-              <label className="block text-base font-semibold text-gray-900">
+              <label className="block text-sm sm:text-base font-semibold text-gray-900 font-cairo">
                 معلومات العميل <span className="text-red-500">*</span>
               </label>
             </div>
@@ -262,16 +262,16 @@ export default function EditMaintenancePage() {
               required
             />
             {!formData.customerID && (
-              <p className="mt-2 text-xs text-gray-500">يرجى اختيار العميل من القائمة</p>
+              <p className="mt-2 text-xs text-gray-500 font-cairo">يرجى اختيار العميل من القائمة</p>
             )}
           </div>
 
           {/* Item Information */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 space-y-4">
-            <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-300 pb-2 mb-4">معلومات القطعة</h2>
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200 space-y-3 sm:space-y-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 border-b border-gray-300 pb-2 mb-3 sm:mb-4 font-cairo">معلومات القطعة</h2>
             
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-2 font-cairo">
                 اسم القطعة <span className="text-red-500">*</span>
               </label>
               <input
@@ -279,20 +279,20 @@ export default function EditMaintenancePage() {
                 value={formData.itemName}
                 onChange={(e) => setFormData({ ...formData, itemName: e.target.value })}
                 placeholder="مثال: تلفزيون سامسونج 55 بوصة"
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white font-cairo text-sm sm:text-base"
                 required
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-2 font-cairo">
                   الموقع <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value as 'المحل' | 'المخزن' })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white font-cairo text-sm sm:text-base"
                   required
                 >
                   <option value="المحل">المحل</option>
@@ -301,13 +301,13 @@ export default function EditMaintenancePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-2 font-cairo">
                   الشركة الكفيلة
                 </label>
                 <select
                   value={formData.company}
                   onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white font-cairo text-sm sm:text-base"
                 >
                   <option value="">اختر الشركة (اختياري)</option>
                   {companyOptions.map((company) => (
@@ -319,38 +319,38 @@ export default function EditMaintenancePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-2 font-cairo">
                   تاريخ الشراء
                 </label>
                 <input
                   type="date"
                   value={formData.dateOfPurchase}
                   onChange={(e) => setFormData({ ...formData, dateOfPurchase: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white font-cairo text-sm sm:text-base"
                 />
-                <p className="mt-1 text-xs text-gray-500">اختياري - تاريخ شراء القطعة</p>
+                <p className="mt-1 text-xs text-gray-500 font-cairo">اختياري - تاريخ شراء القطعة</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-2 font-cairo">
                   تاريخ الاستقبال <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
                   value={formData.dateOfReceive}
                   onChange={(e) => setFormData({ ...formData, dateOfReceive: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white font-cairo text-sm sm:text-base"
                   required
                 />
-                <p className="mt-1 text-xs text-gray-500">تاريخ استلام القطعة للصيانة</p>
+                <p className="mt-1 text-xs text-gray-500 font-cairo">تاريخ استلام القطعة للصيانة</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-2 font-cairo">
                   رقم السيريال
                 </label>
                 <input
@@ -358,46 +358,46 @@ export default function EditMaintenancePage() {
                   value={formData.serialNo}
                   onChange={(e) => setFormData({ ...formData, serialNo: e.target.value })}
                   placeholder="رقم السيريال للقطعة"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white font-cairo text-sm sm:text-base"
                 />
-                <p className="mt-1 text-xs text-gray-500">اختياري - الرقم التسلسلي للقطعة</p>
+                <p className="mt-1 text-xs text-gray-500 font-cairo">اختياري - الرقم التسلسلي للقطعة</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-2 font-cairo">
                   تحت الكفالة
                 </label>
                 <select
                   value={formData.underWarranty}
                   onChange={(e) => setFormData({ ...formData, underWarranty: e.target.value as 'YES' | 'NO' })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white font-cairo text-sm sm:text-base"
                 >
                   <option value="NO">لا</option>
                   <option value="YES">نعم</option>
                 </select>
-                <p className="mt-1 text-xs text-gray-500">هل القطعة تحت الكفالة؟</p>
+                <p className="mt-1 text-xs text-gray-500 font-cairo">هل القطعة تحت الكفالة؟</p>
               </div>
             </div>
           </div>
 
           {/* Problem Description */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-300 pb-2 mb-4">وصف المشكلة</h2>
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 border-b border-gray-300 pb-2 mb-3 sm:mb-4 font-cairo">وصف المشكلة</h2>
             <textarea
               value={formData.problem}
               onChange={(e) => setFormData({ ...formData, problem: e.target.value })}
               placeholder="وصف تفصيلي للمشكلة أو العطل في القطعة..."
               rows={5}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white resize-y"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white resize-y font-cairo text-sm sm:text-base"
             />
-            <p className="mt-2 text-xs text-gray-500">اختياري - وصف المشكلة أو العطل في القطعة</p>
+            <p className="mt-2 text-xs text-gray-500 font-cairo">اختياري - وصف المشكلة أو العطل في القطعة</p>
           </div>
 
           {/* Images */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-300 pb-2 mb-4">الصور</h2>
-            <p className="text-sm text-gray-600 mb-4">يمكنك رفع صور للقطعة والمشكلة والكفالة (اختياري)</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 border-b border-gray-300 pb-2 mb-3 sm:mb-4 font-cairo">الصور</h2>
+            <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 font-cairo">يمكنك رفع صور للقطعة والمشكلة والكفالة (اختياري)</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               <ImageUploadField
                 label="صورة القطعة"
                 currentValue={formData.imageOfItem}
@@ -420,12 +420,12 @@ export default function EditMaintenancePage() {
           </div>
 
           {/* Status */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-300 pb-2 mb-4">الحالة</h2>
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 border-b border-gray-300 pb-2 mb-3 sm:mb-4 font-cairo">الحالة</h2>
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white font-cairo text-sm sm:text-base"
             >
               <option value="موجودة في المحل وجاهزة للتسليم">موجودة في المحل وجاهزة للتسليم</option>
               <option value="موجودة في المخزن وجاهزة للتسليم">موجودة في المخزن وجاهزة للتسليم</option>
@@ -435,15 +435,15 @@ export default function EditMaintenancePage() {
               <option value="سلمت للزبون">سلمت للزبون</option>
               <option value="تم ارجاعها للشركة وخصمها للزبون">تم ارجاعها للشركة وخصمها للزبون</option>
             </select>
-            <p className="mt-2 text-xs text-gray-500">يمكن تغيير الحالة أيضاً من صفحة القائمة مباشرة</p>
+            <p className="mt-2 text-xs text-gray-500 font-cairo">يمكن تغيير الحالة أيضاً من صفحة القائمة مباشرة</p>
           </div>
 
           {/* Financial Information */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-300 pb-2 mb-4">المعلومات المالية</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 border-b border-gray-300 pb-2 mb-3 sm:mb-4 font-cairo">المعلومات المالية</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-2 font-cairo">
                   مبلغ التكلفة (₪)
                 </label>
                 <input
@@ -453,27 +453,27 @@ export default function EditMaintenancePage() {
                   value={formData.costAmount}
                   onChange={(e) => setFormData({ ...formData, costAmount: e.target.value })}
                   placeholder="0.00"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white font-cairo text-sm sm:text-base"
                 />
-                <p className="mt-1 text-xs text-gray-500">مبلغ التكلفة المدفوع للشركة (اختياري)</p>
+                <p className="mt-1 text-xs text-gray-500 font-cairo">مبلغ التكلفة المدفوع للشركة (اختياري)</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-2 font-cairo">
                   تم الدفع
                 </label>
                 <select
                   value={formData.isPaid ? 'YES' : 'NO'}
                   onChange={(e) => setFormData({ ...formData, isPaid: e.target.value === 'YES' })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white font-cairo text-sm sm:text-base"
                 >
                   <option value="NO">لا</option>
                   <option value="YES">نعم</option>
                 </select>
-                <p className="mt-1 text-xs text-gray-500">هل تم دفع التكلفة للشركة؟</p>
+                <p className="mt-1 text-xs text-gray-500 font-cairo">هل تم دفع التكلفة للشركة؟</p>
               </div>
             </div>
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-900 mb-2">
+            <div className="mt-3 sm:mt-4">
+              <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-2 font-cairo">
                 سبب التكلفة
               </label>
               <textarea
@@ -481,30 +481,30 @@ export default function EditMaintenancePage() {
                 onChange={(e) => setFormData({ ...formData, costReason: e.target.value })}
                 placeholder="وصف سبب التكلفة (مثال: إصلاح خارج الكفالة، قطع غيار إضافية، إلخ)"
                 rows={3}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white resize-y"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white resize-y font-cairo text-sm sm:text-base"
               />
-              <p className="mt-1 text-xs text-gray-500">وصف سبب التكلفة (اختياري)</p>
+              <p className="mt-1 text-xs text-gray-500 font-cairo">وصف سبب التكلفة (اختياري)</p>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t border-gray-200">
             {canAccountant && (
               <button
                 type="button"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed font-cairo text-sm sm:text-base"
               >
                 {deleting ? (
                   <>
                     <Loader2 size={20} className="animate-spin" />
-                    جاري الحذف...
+                    <span>جاري الحذف...</span>
                   </>
                 ) : (
                   <>
                     <Trash2 size={20} />
-                    حذف السجل
+                    <span>حذف السجل</span>
                   </>
                 )}
               </button>
@@ -512,7 +512,7 @@ export default function EditMaintenancePage() {
             <button
               type="button"
               onClick={() => router.push('/admin/maintenance')}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium font-cairo text-sm sm:text-base"
               disabled={saving}
             >
               إلغاء
@@ -520,17 +520,17 @@ export default function EditMaintenancePage() {
             <button
               type="submit"
               disabled={saving || !formData.customerID || !formData.itemName.trim() || !formData.dateOfReceive}
-              className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed font-cairo text-sm sm:text-base"
             >
               {saving ? (
                 <>
                   <Loader2 size={20} className="animate-spin" />
-                  جاري الحفظ...
+                  <span>جاري الحفظ...</span>
                 </>
               ) : (
                 <>
                   <Save size={20} />
-                  حفظ التغييرات
+                  <span>حفظ التغييرات</span>
                 </>
               )}
             </button>

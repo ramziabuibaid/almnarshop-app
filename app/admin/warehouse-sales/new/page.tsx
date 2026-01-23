@@ -399,13 +399,43 @@ function WarehouseSalesFormContent() {
     
     console.log('[WarehouseSales] Final product image:', productImage ? `${productImage.substring(0, 50)}...` : 'No image');
     
+    // Extract costPrice - check multiple possible fields with fallback to products array
+    let costPrice = 0;
+    
+    // Try all possible costPrice fields from productToAdd
+    if (productToAdd.CostPrice != null && productToAdd.CostPrice !== 0) {
+      costPrice = parseFloat(String(productToAdd.CostPrice)) || 0;
+    } else if (productToAdd.cost_price != null && productToAdd.cost_price !== 0) {
+      costPrice = parseFloat(String(productToAdd.cost_price)) || 0;
+    } else if (productToAdd.costPrice != null && productToAdd.costPrice !== 0) {
+      costPrice = parseFloat(String(productToAdd.costPrice)) || 0;
+    }
+    
+    // If still no costPrice, try to get it from selectedProduct (for manual selection)
+    if (costPrice === 0 && selectedProduct) {
+      costPrice = parseFloat(String(selectedProduct.CostPrice || selectedProduct.cost_price || selectedProduct.costPrice || 0)) || 0;
+    }
+    
+    // Final fallback - search in products array
+    if (costPrice === 0) {
+      const originalProduct = products.find(p => {
+        const pId = String(p.ProductID || p.id || p.product_id || '').trim();
+        return pId === productIdForSearch;
+      });
+      if (originalProduct) {
+        costPrice = parseFloat(String(originalProduct.CostPrice || originalProduct.cost_price || originalProduct.costPrice || 0)) || 0;
+      }
+    }
+    
+    console.log('[WarehouseSales] Final costPrice:', costPrice);
+    
     const newDetail: InvoiceDetail = {
       detailID: detailId,
       productID: productIdForSearch,
       productName: productName,
       quantity: quantity,
       unitPrice: unitPrice,
-      costPrice: productToAdd.CostPrice || productToAdd.cost_price || productToAdd.costPrice || 0,
+      costPrice: costPrice,
       productImage: productImage,
     };
     
@@ -556,25 +586,26 @@ function WarehouseSalesFormContent() {
     <AdminLayout>
       <div className="space-y-6 font-cairo" dir="rtl">
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">فاتورة مبيعات مخزن جديدة</h1>
-            <p className="text-gray-600 mt-1">إنشاء فاتورة مبيعات مخزن جديدة</p>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cairo">فاتورة مبيعات مخزن جديدة</h1>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base font-cairo">إنشاء فاتورة مبيعات مخزن جديدة</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setShowCosts((prev) => !prev)}
               disabled={!canViewCost}
-              className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-none"
             >
               {showCosts ? <EyeOff size={18} /> : <Eye size={18} />}
+              <span className="sm:hidden text-sm">التكلفة</span>
             </button>
             <button
               onClick={() => router.push('/admin/warehouse-sales')}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold"
+              className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold flex-1 sm:flex-none"
             >
               <ArrowLeft size={20} />
-              إلغاء
+              <span>إلغاء</span>
             </button>
           </div>
         </div>
@@ -586,7 +617,7 @@ function WarehouseSalesFormContent() {
         )}
 
         {/* Form */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -714,19 +745,19 @@ function WarehouseSalesFormContent() {
 
           {/* Products */}
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4">
               <h2 className="text-lg font-semibold text-gray-900 font-cairo">المنتجات</h2>
-                  <button
+              <button
                 onClick={() => setShowAddProduct(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo text-sm sm:text-base"
               >
                 <Plus size={20} />
-                إضافة منتج
-                  </button>
-                </div>
+                <span>إضافة منتج</span>
+              </button>
+            </div>
                 
             {/* Barcode Scanner - Always visible */}
-            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
               <BarcodeScannerInput
                 onProductFound={(product) => {
@@ -739,7 +770,7 @@ function WarehouseSalesFormContent() {
             </div>
                 
             {showAddProduct && (
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
                 
                 <div className="relative mb-4" ref={productDropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
@@ -825,7 +856,7 @@ function WarehouseSalesFormContent() {
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الكمية</label>
                     <input
@@ -852,7 +883,7 @@ function WarehouseSalesFormContent() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleAddProduct}
-                    className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo text-sm sm:text-base"
                   >
                     إضافة
                   </button>
@@ -862,7 +893,7 @@ function WarehouseSalesFormContent() {
                       setSelectedProductId('');
                       setProductSearchQuery('');
                     }}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold"
+                    className="flex-1 sm:flex-none px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold text-sm sm:text-base"
                   >
                     إلغاء
                   </button>
@@ -873,94 +904,173 @@ function WarehouseSalesFormContent() {
             {details.length === 0 ? (
               <div className="text-center py-8 text-gray-500 font-cairo">لا توجد منتجات</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">المنتج</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الكمية</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">سعر الوحدة</th>
-                      {showCosts && canViewCost && (
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
-                      )}
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الإجمالي</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">إجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {details.map((item, index) => {
-                      const imageUrl = item.productImage && item.productImage.trim() !== '' ? item.productImage.trim() : '';
-                      return (
-                      <tr key={item.detailID || index}>
-                        <td className="px-4 py-3 text-sm text-gray-900 font-cairo">
-                          <div className="flex items-center gap-2">
-                            {imageUrl ? (
-                              <>
-                                <img
-                                  src={imageUrl}
-                                  alt={item.productName}
-                                  className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                    const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
-                                    if (placeholder) placeholder.style.display = 'flex';
-                                  }}
-                                />
-                                <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">المنتج</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الكمية</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">سعر الوحدة</th>
+                        {showCosts && canViewCost && (
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
+                        )}
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الإجمالي</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">إجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {details.map((item, index) => {
+                        const imageUrl = item.productImage && item.productImage.trim() !== '' ? item.productImage.trim() : '';
+                        return (
+                        <tr key={item.detailID || index}>
+                          <td className="px-4 py-3 text-sm text-gray-900 font-cairo">
+                            <div className="flex items-center gap-2">
+                              {imageUrl ? (
+                                <>
+                                  <img
+                                    src={imageUrl}
+                                    alt={item.productName}
+                                    className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                      const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                      if (placeholder) placeholder.style.display = 'flex';
+                                    }}
+                                  />
+                                  <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
+                                    <span className="text-gray-400 text-xs">—</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
                                   <span className="text-gray-400 text-xs">—</span>
                                 </div>
-                              </>
-                            ) : (
-                              <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                <span className="text-gray-400 text-xs">—</span>
-                              </div>
-                            )}
-                            <span>{item.productName}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <input
-                            type="number"
-                            step="1"
-                            value={item.quantity}
-                            onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
-                            onWheel={(e) => e.currentTarget.blur()}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <input
-                            type="number"
-                            step="1"
-                            value={item.unitPrice}
-                            onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
-                            onWheel={(e) => e.currentTarget.blur()}
-                            className="w-24 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
-                          />
-                        </td>
-                        {showCosts && canViewCost && (
-                          <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo">
-                            ₪{(item.costPrice || 0).toFixed(2)}
+                              )}
+                              <span>{item.productName}</span>
+                            </div>
                           </td>
-                        )}
-                        <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo">
-                          ₪{(item.quantity * item.unitPrice).toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3">
-                        <button
-                            onClick={() => handleRemoveItem(item.detailID)}
-                            className="text-red-600 hover:text-red-900 font-cairo"
-                        >
-                            حذف
-                        </button>
-                        </td>
-                      </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                          <td className="px-4 py-3">
+                            <input
+                              type="number"
+                              step="1"
+                              value={item.quantity}
+                              onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
+                              onWheel={(e) => e.currentTarget.blur()}
+                              className="w-20 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="number"
+                              step="1"
+                              value={item.unitPrice}
+                              onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
+                              onWheel={(e) => e.currentTarget.blur()}
+                              className="w-24 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
+                            />
+                          </td>
+                          {showCosts && canViewCost && (
+                            <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo">
+                              ₪{(item.costPrice || 0).toFixed(2)}
+                            </td>
+                          )}
+                          <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo">
+                            ₪{(item.quantity * item.unitPrice).toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3">
+                          <button
+                              onClick={() => handleRemoveItem(item.detailID)}
+                              className="text-red-600 hover:text-red-900 font-cairo"
+                          >
+                              حذف
+                          </button>
+                          </td>
+                        </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              )}
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                  {details.map((item, index) => {
+                    const imageUrl = item.productImage && item.productImage.trim() !== '' ? item.productImage.trim() : '';
+                    return (
+                      <div key={item.detailID || index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                        <div className="flex items-start gap-3 mb-3">
+                          {imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt={item.productName}
+                              className="w-16 h-16 object-contain rounded border border-gray-200 flex-shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (placeholder) placeholder.style.display = 'flex';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                              <span className="text-gray-400 text-xs">—</span>
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-gray-900 font-cairo mb-1 line-clamp-2">{item.productName}</h3>
+                            <div className="text-lg font-bold text-gray-900 font-cairo">
+                              ₪{(item.quantity * item.unitPrice).toFixed(2)}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveItem(item.detailID)}
+                            className="text-red-600 hover:text-red-900 p-1"
+                            title="حذف"
+                          >
+                            <X size={18} />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1 font-cairo">الكمية</label>
+                            <input
+                              type="number"
+                              step="1"
+                              value={item.quantity}
+                              onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
+                              onWheel={(e) => e.currentTarget.blur()}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1 font-cairo">سعر الوحدة</label>
+                            <input
+                              type="number"
+                              step="1"
+                              value={item.unitPrice}
+                              onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
+                              onWheel={(e) => e.currentTarget.blur()}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        {showCosts && canViewCost && (
+                          <div className="pt-2 border-t border-gray-200">
+                            <div className="flex justify-between text-xs text-gray-600 font-cairo">
+                              <span>تكلفة الوحدة:</span>
+                              <span className="font-semibold text-gray-900">₪{(item.costPrice || 0).toFixed(2)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
             </div>
 
           {/* Summary */}
@@ -1004,30 +1114,30 @@ function WarehouseSalesFormContent() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t border-gray-200">
             <button
               onClick={() => router.push('/admin/warehouse-sales')}
-              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold"
+              className="w-full sm:w-auto px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold text-sm sm:text-base"
             >
               إلغاء
             </button>
-              <button
+            <button
               onClick={handleSave}
               disabled={saving || details.length === 0 || !customerId}
-              className="flex items-center gap-2 px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto text-sm sm:text-base"
             >
               {saving ? (
                 <>
                   <Loader2 size={20} className="animate-spin" />
-                    جاري الحفظ...
-                  </>
-                ) : (
-                  <>
+                  <span>جاري الحفظ...</span>
+                </>
+              ) : (
+                <>
                   <Save size={20} />
-                  حفظ
-                  </>
-                )}
-              </button>
+                  <span>حفظ</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
