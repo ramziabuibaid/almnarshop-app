@@ -1549,7 +1549,8 @@ export const CHECK_STATUS_VALUES = [
   'مع الشركة',
   'في البنك',
   'في المحل',
-  'سلم للزبون ولد يدفع',
+  'في المخزن',
+  'سلم للزبون ولم يدفع',
   'سلم للزبون وتم تسديد القيمة',
 ] as const;
 
@@ -4020,15 +4021,17 @@ export async function getShopReceipt(receiptId: string): Promise<any> {
     // Fetch customer info
     let customerName = '';
     let shamelNo = '';
+    let customerPhone = '';
     let customerBalance = 0;
     if (receipt.customer_id) {
       const { data: customer } = await supabase
         .from('customers')
-        .select('name, shamel_no, balance')
+        .select('name, shamel_no, phone, balance')
         .eq('customer_id', receipt.customer_id)
         .single();
       customerName = customer?.name || '';
       shamelNo = customer?.shamel_no || '';
+      customerPhone = customer?.phone || '';
       customerBalance = parseFloat(String(customer?.balance || 0));
     }
 
@@ -4044,6 +4047,7 @@ export async function getShopReceipt(receiptId: string): Promise<any> {
       CustomerID: receipt.customer_id,
       CustomerName: customerName,
       ShamelNo: shamelNo,
+      CustomerPhone: customerPhone,
       Date: receipt.date,
       CashAmount: parseFloat(String(receipt.cash_amount || 0)),
       ChequeAmount: parseFloat(String(receipt.cheque_amount || 0)),
@@ -4341,14 +4345,16 @@ export async function getShopPayment(payId: string): Promise<any> {
     // Fetch customer info
     let customerName = '';
     let shamelNo = '';
+    let customerPhone = '';
     if (payment.customer_id) {
       const { data: customer } = await supabase
         .from('customers')
-        .select('name, shamel_no')
+        .select('name, shamel_no, phone')
         .eq('customer_id', payment.customer_id)
         .single();
       customerName = customer?.name || '';
       shamelNo = customer?.shamel_no || '';
+      customerPhone = customer?.phone || '';
     }
 
     return {
@@ -4356,6 +4362,7 @@ export async function getShopPayment(payId: string): Promise<any> {
       CustomerID: payment.customer_id,
       CustomerName: customerName,
       ShamelNo: shamelNo,
+      CustomerPhone: customerPhone,
       Date: payment.date,
       CashAmount: parseFloat(String(payment.cash_amount || 0)),
       ChequeAmount: parseFloat(String(payment.cheque_amount || 0)),

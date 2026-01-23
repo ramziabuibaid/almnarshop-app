@@ -265,7 +265,7 @@ export default function NotificationCenter() {
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col">
+        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col">
           {/* Header */}
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">الإشعارات</h3>

@@ -12,6 +12,7 @@ export default function PaymentPrintPage() {
     PayID: string;
     CustomerName: string;
     ShamelNo?: string;
+    CustomerPhone?: string;
     Date: string;
     CashAmount: number;
     ChequeAmount: number;
@@ -58,6 +59,7 @@ export default function PaymentPrintPage() {
         PayID: payment.PayID,
         CustomerName: payment.CustomerName,
         ShamelNo: payment.ShamelNo,
+        CustomerPhone: payment.CustomerPhone,
         Date: payment.Date,
         CashAmount: payment.CashAmount,
         ChequeAmount: payment.ChequeAmount,
@@ -73,18 +75,22 @@ export default function PaymentPrintPage() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ar-SA', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      numberingSystem: 'latn',
-    });
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+    } catch {
+      return dateString;
+    }
   };
 
   if (loading) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Tajawal' }}>
+      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Cairo' }}>
         <p>جاري تحميل السند...</p>
       </div>
     );
@@ -92,7 +98,7 @@ export default function PaymentPrintPage() {
 
   if (error || !paymentData) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Tajawal' }}>
+      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Cairo' }}>
         <p style={{ color: 'red' }}>خطأ: {error || 'فشل تحميل السند'}</p>
       </div>
     );
@@ -102,12 +108,14 @@ export default function PaymentPrintPage() {
     <div style={{ background: 'white', color: 'black', direction: 'rtl' }}>
       <style jsx global>{`
         :root {
-          --border: #222;
+          --border: #1a1a1a;
+          --border-light: #d1d5db;
           --pad: 5px;
           --gap: 6px;
           --fs: 12px;
           --fs-sm: 11px;
           --fs-lg: 14px;
+          --header-bg: #f8f9fa;
         }
 
         html, body {
@@ -118,13 +126,14 @@ export default function PaymentPrintPage() {
         }
 
         body {
-          font-family: 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-          font-weight: 700;
+          font-family: 'Cairo', 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+          font-weight: 600;
           margin: 0;
           padding: 0;
           background: white !important;
           color: black !important;
           direction: rtl;
+          line-height: 1.4;
         }
 
         @page {
@@ -135,6 +144,19 @@ export default function PaymentPrintPage() {
         @media print {
           .no-print {
             display: none;
+          }
+
+          * {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          thead {
+            display: table-header-group;
+          }
+
+          tfoot {
+            display: table-footer-group;
           }
         }
 
@@ -154,22 +176,25 @@ export default function PaymentPrintPage() {
         }
 
         .box {
-          border: 1px solid var(--border);
+          border: 2px solid var(--border);
           padding: var(--pad);
+          border-radius: 4px;
         }
 
         .headerRow {
           display: flex;
-          flex-direction: row-reverse;
+          flex-direction: row;
           align-items: flex-start;
-          justify-content: space-between;
+          justify-content: flex-start;
           gap: 8px;
         }
 
         .brand {
           text-align: right;
+          margin-left: auto;
           font-size: var(--fs-sm);
           line-height: 1.3;
+          font-weight: 600;
         }
 
         .titleRow {
@@ -183,16 +208,22 @@ export default function PaymentPrintPage() {
         .titleMain {
           flex: 1;
           text-align: center;
-          border: 1px solid var(--border);
-          padding: 4px;
+          border: 2px solid var(--border);
+          padding: 6px;
           font-weight: 700;
+          font-size: var(--fs-lg);
+          background: var(--header-bg);
+          border-radius: 4px;
         }
 
         .titleId {
-          border: 1px solid var(--border);
-          padding: 4px 8px;
+          border: 2px solid var(--border);
+          padding: 6px 10px;
           white-space: nowrap;
           font-size: var(--fs);
+          font-weight: 700;
+          background: var(--header-bg);
+          border-radius: 4px;
         }
 
         .meta {
@@ -203,9 +234,12 @@ export default function PaymentPrintPage() {
         }
 
         .chip {
-          border: 1px solid var(--border);
-          padding: 4px 6px;
+          border: 1px solid var(--border-light);
+          padding: 5px 8px;
           font-size: var(--fs-sm);
+          background: #ffffff;
+          border-radius: 4px;
+          font-weight: 600;
         }
 
         table.summary {
@@ -214,10 +248,13 @@ export default function PaymentPrintPage() {
           border-collapse: collapse;
           table-layout: fixed;
           direction: rtl;
+          border: 2px solid var(--border);
+          border-radius: 4px;
+          overflow: hidden;
         }
 
         table.summary td {
-          border: 1px solid var(--border);
+          border: 1px solid var(--border-light);
           padding: 6px;
           font-size: var(--fs);
         }
@@ -225,25 +262,32 @@ export default function PaymentPrintPage() {
         table.summary .label {
           width: 60%;
           text-align: right;
+          font-weight: 600;
+          background: var(--header-bg);
         }
 
         table.summary .value {
           width: 40%;
           text-align: left;
           white-space: nowrap;
+          font-weight: 700;
         }
 
         .notesBox {
-          border: 1px solid var(--border);
+          border: 2px solid var(--border);
           padding: 6px;
           margin-top: 6px;
           font-size: var(--fs);
           page-break-inside: auto;
+          border-radius: 4px;
+          background: #f9fafb;
         }
 
         .notesHeader {
           font-weight: 700;
           margin-bottom: 4px;
+          font-size: var(--fs-sm);
+          color: #374151;
         }
 
         .notesContent {
@@ -251,18 +295,13 @@ export default function PaymentPrintPage() {
           word-break: break-word;
           overflow-wrap: anywhere;
           line-height: 1.4;
-          font-weight: 700;
+          font-weight: 600;
           color: #000;
         }
       `}</style>
-      <link
-        rel="preconnect"
-        href="https://fonts.googleapis.com"
-      />
-      <link
-        href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700&display=swap"
-        rel="stylesheet"
-      />
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;900&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
       <div className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
         <button onClick={() => window.print()}>إعادة الطباعة</button>
       </div>
@@ -272,9 +311,15 @@ export default function PaymentPrintPage() {
             <td>
               <div className="box headerRow">
                 <div className="brand">
-                  <div>شركة المنار للأجهزة الكهربائية</div>
-                  <div>جنين - شارع الناصرة</div>
-                  <div>0599-048348 | 04-2438815</div>
+                  <div style={{ fontSize: 'var(--fs)', fontWeight: 700, marginBottom: '2px' }}>
+                    شركة المنار للأجهزة الكهربائية
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-sm)' }}>
+                    جنين - شارع الناصرة
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-sm)' }}>
+                    0599-048348 | 04-2438815
+                  </div>
                 </div>
               </div>
 
@@ -285,14 +330,17 @@ export default function PaymentPrintPage() {
 
               <div className="meta">
                 <div className="chip">
-                  التاريخ: <span>{formatDate(paymentData.Date)}</span>
+                  التاريخ: <span style={{ fontWeight: 700 }}>{formatDate(paymentData.Date)}</span>
                 </div>
                 <div className="chip">
-                  العميل: <span>{paymentData.CustomerName}</span>
+                  الزبون: <span style={{ fontWeight: 700 }}>{paymentData.CustomerName}</span>
+                  {paymentData.ShamelNo && (
+                    <span style={{ marginRight: '6px', color: '#666', fontSize: '10px' }}>({paymentData.ShamelNo})</span>
+                  )}
                 </div>
-                {paymentData.ShamelNo && (
-                  <div className="chip">
-                    رقم الشامل: <span>{paymentData.ShamelNo}</span>
+                {paymentData.CustomerPhone && (
+                  <div className="chip" style={{ gridColumn: '1 / span 1' }}>
+                    الهاتف: <span>{paymentData.CustomerPhone}</span>
                   </div>
                 )}
               </div>
@@ -353,4 +401,3 @@ export default function PaymentPrintPage() {
     </div>
   );
 }
-

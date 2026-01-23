@@ -552,10 +552,10 @@ export default function CustomersPage() {
     <AdminLayout>
       <div className="space-y-6" dir="rtl">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">الزبائن</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">الزبائن</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">
               إدارة علاقات العملاء ومتابعة المستحقات والمديونيات
             </p>
           </div>
@@ -564,17 +564,17 @@ export default function CustomersPage() {
               setEditingCustomer(null);
               setIsCustomerModalOpen(true);
             }}
-            className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium flex items-center gap-2"
+            className="w-full sm:w-auto px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium flex items-center justify-center gap-2"
           >
             <Users size={20} />
-            إضافة عميل جديد
+            <span>إضافة عميل جديد</span>
           </button>
         </div>
 
         {/* Follow-up Dashboard */}
         {(dashboardData.overdue?.length > 0 || dashboardData.today?.length > 0) && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-900">مهام المتابعة</h2>
+          <div className="space-y-3 sm:space-y-4">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">مهام المتابعة</h2>
             
             {/* Overdue Follow-ups */}
             {dashboardData.overdue?.length > 0 && (
@@ -732,7 +732,7 @@ export default function CustomersPage() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           {/* Total Receivables */}
           {canViewBalances && (
             <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -787,10 +787,34 @@ export default function CustomersPage() {
         </div>
 
         {/* Filters and Search */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 space-y-3 sm:space-y-4">
+          {/* Search */}
+          <div className="relative">
+            <Search
+              size={18}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="البحث بالاسم أو الهاتف..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 text-sm sm:text-base"
+              dir="rtl"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
+
           {/* Type Filter Tabs */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-gray-700 mr-2">فلترة حسب النوع:</span>
+            <span className="text-xs sm:text-sm font-semibold text-gray-700 mr-2">فلترة حسب النوع:</span>
             {([
               { value: 'All', label: 'الكل' },
               { value: 'Customer', label: 'زبون' },
@@ -802,7 +826,7 @@ export default function CustomersPage() {
                 <button
                   key={value}
                   onClick={() => setFilterType(value)}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors ${
                     filterType === value
                       ? 'bg-gray-900 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -816,40 +840,42 @@ export default function CustomersPage() {
 
           {/* Balance Filters */}
           {canViewBalances && (
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-sm font-semibold text-gray-700">فلاتر الرصيد:</span>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <span className="text-xs sm:text-sm font-semibold text-gray-700">فلاتر الرصيد:</span>
               <button
                 onClick={() => setShowNegativeBalance(!showNegativeBalance)}
-                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 ${
                   showNegativeBalance
                     ? 'bg-green-100 text-green-700 border border-green-300'
                     : 'bg-gray-100 text-gray-500 border border-gray-300'
                 }`}
               >
                 <div className={`w-2 h-2 rounded-full ${showNegativeBalance ? 'bg-green-600' : 'bg-gray-400'}`} />
-                إظهار الرصيد السالب
+                <span className="hidden sm:inline">إظهار الرصيد السالب</span>
+                <span className="sm:hidden">رصيد سالب</span>
               </button>
               <button
                 onClick={() => setShowZeroBalance(!showZeroBalance)}
-                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 ${
                   showZeroBalance
                     ? 'bg-blue-100 text-blue-700 border border-blue-300'
                     : 'bg-gray-100 text-gray-500 border border-gray-300'
                 }`}
               >
                 <div className={`w-2 h-2 rounded-full ${showZeroBalance ? 'bg-blue-600' : 'bg-gray-400'}`} />
-                إظهار الرصيد الصفر
+                <span className="hidden sm:inline">إظهار الرصيد الصفر</span>
+                <span className="sm:hidden">رصيد صفر</span>
               </button>
             </div>
           )}
 
           {/* Date Filters */}
-          <div className="flex flex-wrap items-center gap-4">
-            <span className="text-sm font-semibold text-gray-700">فلاتر التاريخ:</span>
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-4">
+            <span className="text-xs sm:text-sm font-semibold text-gray-700">فلاتر التاريخ:</span>
             
             {/* Last Invoice Year Filter */}
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600">آخر فاتورة:</label>
+            <div className="flex items-center gap-2 flex-1 sm:flex-none">
+              <label className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">آخر فاتورة:</label>
               <select
                 value={lastInvoiceYear}
                 onChange={(e) => {
@@ -858,7 +884,7 @@ export default function CustomersPage() {
                     setLastPaymentYear(''); // Clear payment year when invoice year is selected
                   }
                 }}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 text-sm"
+                className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 text-xs sm:text-sm"
               >
                 <option value="">جميع السنوات</option>
                 {Array.from({ length: 11 }, (_, i) => 2025 - i).map((year) => (
@@ -870,8 +896,8 @@ export default function CustomersPage() {
             </div>
 
             {/* Last Payment Year Filter */}
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600">آخر دفعة:</label>
+            <div className="flex items-center gap-2 flex-1 sm:flex-none">
+              <label className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">آخر دفعة:</label>
               <select
                 value={lastPaymentYear}
                 onChange={(e) => {
@@ -880,7 +906,7 @@ export default function CustomersPage() {
                     setLastInvoiceYear(''); // Clear invoice year when payment year is selected
                   }
                 }}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 text-sm"
+                className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 text-xs sm:text-sm"
               >
                 <option value="">جميع السنوات</option>
                 {Array.from({ length: 11 }, (_, i) => 2025 - i).map((year) => (
@@ -896,11 +922,11 @@ export default function CustomersPage() {
           {/* Filtered Balance Total */}
           {canViewBalances && filteredCustomers.length > 0 && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-700">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <span className="text-xs sm:text-sm font-semibold text-gray-700">
                   مجموع أرصدة العملاء المفلترين ({filteredCustomers.length}):
                 </span>
-                <span className={`text-lg font-bold ${
+                <span className={`text-base sm:text-lg font-bold ${
                   filteredBalanceTotal > 0 
                     ? 'text-red-600' 
                     : filteredBalanceTotal < 0 
@@ -913,21 +939,6 @@ export default function CustomersPage() {
             </div>
           )}
 
-          {/* Search */}
-          <div className="relative">
-            <Search
-              size={20}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="البحث بالاسم أو الهاتف..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500"
-              dir="rtl"
-            />
-          </div>
         </div>
 
         {/* Error Message */}
@@ -959,209 +970,137 @@ export default function CustomersPage() {
           </div>
         )}
 
-        {/* Customers Table */}
-        {loading ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">جاري تحميل العملاء...</p>
-          </div>
-        ) : error ? null : filteredCustomers.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-            <Users size={48} className="text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg">لم يتم العثور على عملاء</p>
-            {searchQuery && (
-              <p className="text-gray-500 text-sm mt-2">
-                حاول تعديل استعلام البحث
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th 
-                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                      onClick={() => handleSort('customerId')}
-                    >
-                      <div className="flex items-center justify-end">
-                        رقم الزبون
-                        {getSortIcon('customerId')}
-                      </div>
-                    </th>
-                    <th 
-                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                      onClick={() => handleSort('name')}
-                    >
-                      <div className="flex items-center justify-end">
-                        الاسم
-                        {getSortIcon('name')}
-                      </div>
-                    </th>
-                    <th 
-                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                      onClick={() => handleSort('type')}
-                    >
-                      <div className="flex items-center justify-end">
-                        النوع
-                        {getSortIcon('type')}
-                      </div>
-                    </th>
-                    <th 
-                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                      onClick={() => handleSort('phone')}
-                    >
-                      <div className="flex items-center justify-end">
-                        الهاتف
-                        {getSortIcon('phone')}
-                      </div>
-                    </th>
-                    {canViewBalances && (
+        {/* Desktop Table View */}
+        <div className="hidden md:block">
+          {loading ? (
+            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+              <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">جاري تحميل العملاء...</p>
+            </div>
+          ) : error ? null : filteredCustomers.length === 0 ? (
+            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+              <Users size={48} className="text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-600 text-lg">لم يتم العثور على عملاء</p>
+              {searchQuery && (
+                <p className="text-gray-500 text-sm mt-2">
+                  حاول تعديل استعلام البحث
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
                       <th 
                         className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                        onClick={() => handleSort('balance')}
+                        onClick={() => handleSort('customerId')}
                       >
                         <div className="flex items-center justify-end">
-                          الرصيد
-                          {getSortIcon('balance')}
+                          رقم الزبون
+                          {getSortIcon('customerId')}
                         </div>
                       </th>
-                    )}
-                    <th 
-                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                      onClick={() => handleSort('lastInvoice')}
-                    >
-                      <div className="flex items-center justify-end">
-                        تاريخ آخر فاتورة
-                        {getSortIcon('lastInvoice')}
-                      </div>
-                    </th>
-                    <th 
-                      className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                      onClick={() => handleSort('lastPayment')}
-                    >
-                      <div className="flex items-center justify-end">
-                        تاريخ آخر دفعة
-                        {getSortIcon('lastPayment')}
-                      </div>
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      الإجراءات
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredCustomers.map((customer, index) => {
-                      const customerId = customer.CustomerID || customer.id || customer.customerID || `fallback-${index}`;
-                      const name = customer.Name || customer.name || 'N/A';
-                      const phone = customer.Phone || customer.phone || '';
-                      const type = customer.Type || customer.type || 'Customer';
-                      const balance = customer.Balance || customer.balance || 0;
-                      const lastInvoiceDate = customer.LastInvoiceDate || customer.lastInvoiceDate || customer['Last Invoice Date'] || '';
-                      const lastPaymentDate = customer.LastPaymentDate || customer.lastPaymentDate || customer['Last Payment Date'] || '';
-
-                      return (
-                      <tr
-                        key={customerId}
-                        className="hover:bg-gray-50 transition-colors"
+                      <th 
+                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                        onClick={() => handleSort('name')}
                       >
-                        {/* Customer Number */}
-                        <td className="px-4 py-3 text-right">
-                          <div className="font-semibold text-gray-900">
-                            {customerId}
+                        <div className="flex items-center justify-end">
+                          الاسم
+                          {getSortIcon('name')}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                        onClick={() => handleSort('type')}
+                      >
+                        <div className="flex items-center justify-end">
+                          النوع
+                          {getSortIcon('type')}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                        onClick={() => handleSort('phone')}
+                      >
+                        <div className="flex items-center justify-end">
+                          الهاتف
+                          {getSortIcon('phone')}
+                        </div>
+                      </th>
+                      {canViewBalances && (
+                        <th 
+                          className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                          onClick={() => handleSort('balance')}
+                        >
+                          <div className="flex items-center justify-end">
+                            الرصيد
+                            {getSortIcon('balance')}
                           </div>
-                          {(customer['Shamel No'] || customer.ShamelNo || customer.shamel_no) && (
-                            <div className="text-xs text-gray-500 mt-0.5">
-                              {customer['Shamel No'] || customer.ShamelNo || customer.shamel_no}
-                            </div>
-                          )}
-                        </td>
-                        {/* Name */}
-                        <td className="px-4 py-3 text-right">
-                          <div className="font-semibold text-gray-900">{name}</div>
-                        </td>
+                        </th>
+                      )}
+                      <th 
+                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                        onClick={() => handleSort('lastInvoice')}
+                      >
+                        <div className="flex items-center justify-end">
+                          تاريخ آخر فاتورة
+                          {getSortIcon('lastInvoice')}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                        onClick={() => handleSort('lastPayment')}
+                      >
+                        <div className="flex items-center justify-end">
+                          تاريخ آخر دفعة
+                          {getSortIcon('lastPayment')}
+                        </div>
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        الإجراءات
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filteredCustomers.map((customer, index) => {
+                        const customerId = customer.CustomerID || customer.id || customer.customerID || `fallback-${index}`;
+                        const name = customer.Name || customer.name || 'N/A';
+                        const phone = customer.Phone || customer.phone || '';
+                        const type = customer.Type || customer.type || 'Customer';
+                        const balance = customer.Balance || customer.balance || 0;
+                        const lastInvoiceDate = customer.LastInvoiceDate || customer.lastInvoiceDate || customer['Last Invoice Date'] || '';
+                        const lastPaymentDate = customer.LastPaymentDate || customer.lastPaymentDate || customer['Last Payment Date'] || '';
 
-                        {/* Type */}
-                        <td className="px-4 py-3 text-right">
-                          <span
-                            className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getTypeBadgeColor(
-                              type
-                            )}`}
-                          >
-                            {type}
-                          </span>
-                        </td>
-
-                        {/* Phone */}
-                        <td className="px-4 py-3 text-right">
-                          {phone ? (
-                            <PhoneActions phone={phone} />
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
-                        </td>
-
-                        {/* Balance */}
-                        {canViewBalances && (
+                        return (
+                        <tr
+                          key={customerId}
+                          className="hover:bg-gray-50 transition-colors"
+                        >
+                          {/* Customer Number */}
                           <td className="px-4 py-3 text-right">
-                            <span className={getBalanceColor(balance)}>
-                              {formatBalance(balance)}
-                            </span>
-                          </td>
-                        )}
-
-                        {/* Last Invoice Date */}
-                        <td className="px-4 py-3 text-right">
-                          {formatDate(lastInvoiceDate) ? (
-                            <span className="text-sm text-gray-900">
-                              {formatDate(lastInvoiceDate)}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-gray-400">—</span>
-                          )}
-                        </td>
-
-                        {/* Last Payment Date */}
-                        <td className="px-4 py-3 text-right">
-                          {formatDate(lastPaymentDate) ? (
-                            <span className="text-sm text-gray-900">
-                              {formatDate(lastPaymentDate)}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-gray-400">—</span>
-                          )}
-                        </td>
-
-                        {/* Actions */}
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center gap-2">
-                            {canViewBalances && (
-                              <button
-                                onClick={() => handleEditCustomer(customer)}
-                                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                title="تعديل العميل"
-                              >
-                                <Edit size={18} />
-                              </button>
+                            <div className="font-semibold text-gray-900">
+                              {customerId}
+                            </div>
+                            {(customer['Shamel No'] || customer.ShamelNo || customer.shamel_no) && (
+                              <div className="text-xs text-gray-500 mt-0.5">
+                                {customer['Shamel No'] || customer.ShamelNo || customer.shamel_no}
+                              </div>
                             )}
+                          </td>
+                          {/* Name */}
+                          <td className="px-4 py-3 text-right">
                             <button
-                              onClick={() => handleOpenInteractionModal(customer)}
-                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                              title="إضافة تفاعل"
-                            >
-                              <Phone size={18} />
-                            </button>
-                            <a
-                              href={`/admin/customers/${customerId}`}
                               onClick={(e) => {
-                                // If Ctrl/Cmd or Shift is pressed, let default behavior (open in new tab)
-                                if (e.ctrlKey || e.metaKey || e.shiftKey) {
-                                  return; // Let browser handle it
+                                // If Ctrl/Cmd is pressed, open in new tab
+                                if (e.ctrlKey || e.metaKey) {
+                                  e.preventDefault();
+                                  window.open(`/admin/customers/${customerId}`, '_blank', 'noopener,noreferrer');
+                                } else {
+                                  // Otherwise, use router
+                                  handleViewProfile(customer);
                                 }
-                                // Otherwise, prevent default and use router
-                                e.preventDefault();
-                                handleViewProfile(customer);
                               }}
                               onMouseDown={(e) => {
                                 // Handle middle mouse button - open in new tab
@@ -1170,25 +1109,216 @@ export default function CustomersPage() {
                                   window.open(`/admin/customers/${customerId}`, '_blank', 'noopener,noreferrer');
                                 }
                               }}
-                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors inline-flex items-center justify-center"
-                              title="عرض الملف الشخصي (Ctrl+Click، Shift+Click، أو النقر بالزر الأوسط لفتح في علامة تبويب جديدة)"
+                              className="font-semibold text-gray-900 hover:text-blue-600 hover:underline text-right transition-colors cursor-pointer"
+                              title="عرض الملف الشخصي (Ctrl+Click أو Cmd+Click لفتح في تاب جديد)"
                             >
-                              <User size={18} />
-                            </a>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                              {name}
+                            </button>
+                          </td>
+
+                          {/* Type */}
+                          <td className="px-4 py-3 text-right">
+                            <span
+                              className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getTypeBadgeColor(
+                                type
+                              )}`}
+                            >
+                              {type}
+                            </span>
+                          </td>
+
+                          {/* Phone */}
+                          <td className="px-4 py-3 text-right">
+                            {phone ? (
+                              <PhoneActions phone={phone} />
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+
+                          {/* Balance */}
+                          {canViewBalances && (
+                            <td className="px-4 py-3 text-right">
+                              <span className={getBalanceColor(balance)}>
+                                {formatBalance(balance)}
+                              </span>
+                            </td>
+                          )}
+
+                          {/* Last Invoice Date */}
+                          <td className="px-4 py-3 text-right">
+                            {formatDate(lastInvoiceDate) ? (
+                              <span className="text-sm text-gray-900">
+                                {formatDate(lastInvoiceDate)}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-gray-400">—</span>
+                            )}
+                          </td>
+
+                          {/* Last Payment Date */}
+                          <td className="px-4 py-3 text-right">
+                            {formatDate(lastPaymentDate) ? (
+                              <span className="text-sm text-gray-900">
+                                {formatDate(lastPaymentDate)}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-gray-400">—</span>
+                            )}
+                          </td>
+
+                          {/* Actions */}
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center gap-2">
+                              {canViewBalances && (
+                                <button
+                                  onClick={() => handleEditCustomer(customer)}
+                                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                  title="تعديل العميل"
+                                >
+                                  <Edit size={18} />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleOpenInteractionModal(customer)}
+                                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                title="إضافة تفاعل"
+                              >
+                                <Phone size={18} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-3">
+          {loading ? (
+            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+              <div className="flex items-center justify-center gap-2 text-gray-500">
+                <Loader2 className="animate-spin" size={20} />
+                <span>جاري التحميل...</span>
+              </div>
+            </div>
+          ) : error ? null : filteredCustomers.length === 0 ? (
+            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center text-gray-500">
+              <Users size={48} className="text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-600 text-lg">لم يتم العثور على عملاء</p>
+              {searchQuery && (
+                <p className="text-gray-500 text-sm mt-2">
+                  حاول تعديل استعلام البحث
+                </p>
+              )}
+            </div>
+          ) : (
+            filteredCustomers.map((customer, index) => {
+              const customerId = customer.CustomerID || customer.id || customer.customerID || `fallback-${index}`;
+              const name = customer.Name || customer.name || 'N/A';
+              const phone = customer.Phone || customer.phone || '';
+              const type = customer.Type || customer.type || 'Customer';
+              const balance = customer.Balance || customer.balance || 0;
+              const lastInvoiceDate = customer.LastInvoiceDate || customer.lastInvoiceDate || customer['Last Invoice Date'] || '';
+              const lastPaymentDate = customer.LastPaymentDate || customer.lastPaymentDate || customer['Last Payment Date'] || '';
+              const shamelNo = customer['Shamel No'] || customer.ShamelNo || customer.shamel_no;
+
+              return (
+                <div key={customerId} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <User size={18} className="text-gray-400 flex-shrink-0" />
+                        <button
+                          onClick={() => handleViewProfile(customer)}
+                          className="text-base font-bold text-gray-900 hover:text-blue-600 hover:underline text-right truncate transition-colors"
+                        >
+                          {name}
+                        </button>
+                      </div>
+                      <div className="text-xs text-gray-500 mb-1">
+                        {customerId}
+                        {shamelNo && ` • شامل: ${shamelNo}`}
+                      </div>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${getTypeBadgeColor(
+                          type
+                        )}`}
+                      >
+                        {type}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Phone */}
+                  {phone && (
+                    <div className="mb-3">
+                      <div className="text-xs text-gray-500 mb-1">الهاتف</div>
+                      <PhoneActions phone={phone} />
+                    </div>
+                  )}
+
+                  {/* Balance */}
+                  {canViewBalances && (
+                    <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+                      <div className="text-xs text-gray-600 mb-1">الرصيد</div>
+                      <div className={`text-lg font-bold ${getBalanceColor(balance)}`}>
+                        {formatBalance(balance)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Dates */}
+                  <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                    {formatDate(lastInvoiceDate) && (
+                      <div>
+                        <div className="text-gray-500 mb-0.5">آخر فاتورة</div>
+                        <div className="text-gray-900 font-medium">{formatDate(lastInvoiceDate)}</div>
+                      </div>
+                    )}
+                    {formatDate(lastPaymentDate) && (
+                      <div>
+                        <div className="text-gray-500 mb-0.5">آخر دفعة</div>
+                        <div className="text-gray-900 font-medium">{formatDate(lastPaymentDate)}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+                    <button
+                      onClick={() => handleOpenInteractionModal(customer)}
+                      className="flex-1 px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2 transition-colors text-sm"
+                    >
+                      <Phone size={16} />
+                      <span>تفاعل</span>
+                    </button>
+                    {canViewBalances && (
+                      <button
+                        onClick={() => handleEditCustomer(customer)}
+                        className="flex-1 px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 flex items-center justify-center gap-2 transition-colors text-sm"
+                        title="تعديل العميل"
+                      >
+                        <Edit size={16} />
+                        <span>تعديل</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
 
         {/* Results Count */}
         {!loading && filteredCustomers.length > 0 && (
-          <div className="text-sm text-gray-600 text-center">
+          <div className="text-xs sm:text-sm text-gray-600 text-center">
             عرض {filteredCustomers.length} من {sortedCustomers.length} عميل
           </div>
         )}

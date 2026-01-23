@@ -1416,13 +1416,10 @@ export default function EditQuotationPage() {
                                 </div>
                               )}
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="flex-1 text-right truncate">{product.Name || product.name}</span>
-                                  <span className="flex items-center gap-2 text-left flex-shrink-0" dir="ltr">
-                                    <span className="text-gray-600 text-xs">
-                                      (محل: {product.CS_Shop || product.cs_shop || 0} | مخزن: {product.CS_War || product.cs_war || 0})
-                                    </span>
-                                    <span className="font-semibold">₪{product.SalePrice || product.sale_price || product.price || 0}</span>
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-right text-sm font-medium">{product.Name || product.name}</span>
+                                  <span className="text-right text-xs text-gray-600 font-light" dir="rtl">
+                                    ₪{product.SalePrice || product.sale_price || product.price || 0} • محل: {product.CS_Shop || product.cs_shop || 0} • مخزن: {product.CS_War || product.cs_war || 0}
                                   </span>
                                 </div>
                               </div>

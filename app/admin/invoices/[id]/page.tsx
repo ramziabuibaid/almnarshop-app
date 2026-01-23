@@ -21,6 +21,7 @@ import {
   Search,
   ChevronDown,
 } from 'lucide-react';
+import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
 
 interface InvoiceDetail {
   detailID: string;
@@ -63,6 +64,7 @@ export default function EditInvoicePage() {
   const [discount, setDiscount] = useState(0);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<any>(null); // Store the full product object
   const [newProductQuantity, setNewProductQuantity] = useState(1);
   const [newProductPrice, setNewProductPrice] = useState(0);
   const [productSearchQuery, setProductSearchQuery] = useState('');
@@ -139,33 +141,203 @@ export default function EditInvoicePage() {
     }
   };
 
-  const handleAddProduct = () => {
-    if (!selectedProductId) {
-      alert('يرجى اختيار منتج');
-      return;
+  const handleAddProduct = (productParam?: any, quantityParam?: number, priceParam?: number) => {
+    // If product is provided directly (from barcode scanner), use it
+    let productToAdd = productParam;
+    
+    // Otherwise, use selectedProduct (from manual selection) - this preserves all product data
+    if (!productToAdd) {
+      // Priority 1: Use the selected product object directly if available (preserves all data including Name)
+      if (selectedProduct) {
+        productToAdd = { ...selectedProduct }; // Make a copy to avoid mutations
+      } else if (selectedProductId) {
+        // Priority 2: Fallback - find product by selectedProductId
+        const selectedId = String(selectedProductId || '').trim();
+        
+        productToAdd = products.find((p) => {
+          const possibleIds = [
+            p.ProductID,
+            p.id,
+            p.product_id,
+            p['ProductID'],
+            p['id'],
+            p['product_id']
+          ].filter(id => id != null).map(id => String(id).trim());
+          
+          return possibleIds.includes(selectedId);
+        });
+        
+        if (!productToAdd) {
+          alert('المنتج غير موجود');
+          return;
+        }
+      } else {
+        alert('يرجى اختيار منتج');
+        return;
+      }
     }
 
-    const product = products.find((p) => p.ProductID === selectedProductId || p.id === selectedProductId);
-    if (!product) {
-      alert('المنتج غير موجود');
+    const quantity = quantityParam != null ? quantityParam : newProductQuantity;
+
+    // Extract product ID first
+    const productIdForSearch = String(
+      productToAdd.ProductID || 
+      productToAdd.id || 
+      productToAdd.product_id || 
+      (productParam ? (productParam.ProductID || productParam.id || productParam.product_id) : null) ||
+      selectedProductId || 
+      ''
+    ).trim();
+    
+    if (!productIdForSearch) {
+      alert('خطأ فني: المنتج لا يحتوي على معرف صالح. يرجى المحاولة مرة أخرى أو اختيار منتج آخر.');
+      return;
+    }
+    
+    // Use provided price, manually entered price, or default sale price
+    // Priority: priceParam > newProductPrice (if > 0) > productToAdd.SalePrice > selectedProduct > products array
+    let unitPrice = productToAdd.SalePrice || productToAdd.sale_price || productToAdd.price || 0;
+    if (priceParam != null && priceParam > 0) {
+      unitPrice = priceParam;
+    } else if (newProductPrice != null && newProductPrice > 0) {
+      unitPrice = newProductPrice;
+    } else if (!unitPrice || unitPrice === 0) {
+      // If still no price, try to get it from selectedProduct
+      if (selectedProduct) {
+        unitPrice = selectedProduct.SalePrice || selectedProduct.sale_price || selectedProduct.price || 0;
+      }
+      // Final fallback - search in products array
+      if ((!unitPrice || unitPrice === 0) && productIdForSearch) {
+        const originalProduct = products.find(p => {
+          const pId = String(p.ProductID || p.id || p.product_id || '').trim();
+          return pId === productIdForSearch;
+        });
+        if (originalProduct) {
+          unitPrice = originalProduct.SalePrice || originalProduct.sale_price || originalProduct.price || 0;
+        }
+      }
+    }
+
+    // Extract product name - check multiple possible fields
+    let productName = '';
+    
+    // Try all possible name fields
+    if (productToAdd.Name && String(productToAdd.Name).trim()) {
+      productName = String(productToAdd.Name).trim();
+    } else if (productToAdd.name && String(productToAdd.name).trim()) {
+      productName = String(productToAdd.name).trim();
+    } else if (productToAdd.product_name && String(productToAdd.product_name).trim()) {
+      productName = String(productToAdd.product_name).trim();
+    }
+    
+    // If still no name, try to get it from selectedProduct (for manual selection)
+    if (!productName && selectedProduct) {
+      productName = selectedProduct.Name || selectedProduct.name || '';
+      if (productName) {
+        productName = String(productName).trim();
+      }
+    }
+    
+    // Final fallback - search in products array
+    if (!productName) {
+      const originalProduct = products.find(p => {
+        const pId = String(p.ProductID || p.id || p.product_id || '').trim();
+        return pId === productIdForSearch;
+      });
+      if (originalProduct) {
+        productName = originalProduct.Name || originalProduct.name || '';
+        if (productName) {
+          productName = String(productName).trim();
+        }
+      }
+    }
+    
+    // Last resort
+    if (!productName) {
+      productName = 'غير معروف';
+    }
+    
+    // Extract product image - check multiple possible fields
+    let productImage = '';
+    
+    // Try all possible image fields from productToAdd
+    if (productToAdd.Image && String(productToAdd.Image).trim()) {
+      productImage = String(productToAdd.Image).trim();
+    } else if (productToAdd.image && String(productToAdd.image).trim()) {
+      productImage = String(productToAdd.image).trim();
+    } else if (productToAdd['Image'] && String(productToAdd['Image']).trim()) {
+      productImage = String(productToAdd['Image']).trim();
+    } else if (productToAdd['image'] && String(productToAdd['image']).trim()) {
+      productImage = String(productToAdd['image']).trim();
+    }
+    
+    // If still no image, try to get it from selectedProduct (for manual selection)
+    if (!productImage && selectedProduct) {
+      productImage = selectedProduct.Image || selectedProduct.image || selectedProduct['Image'] || selectedProduct['image'] || '';
+      if (productImage) {
+        productImage = String(productImage).trim();
+      }
+    }
+    
+    // Final fallback - search in products array
+    if (!productImage) {
+      const originalProduct = products.find(p => {
+        const pId = String(p.ProductID || p.id || p.product_id || '').trim();
+        return pId === productIdForSearch;
+      });
+      if (originalProduct) {
+        productImage = originalProduct.Image || originalProduct.image || originalProduct['Image'] || originalProduct['image'] || '';
+        if (productImage) {
+          productImage = String(productImage).trim();
+        }
+      }
+    }
+
+    // Check if product already exists in details
+    const existingDetailIndex = details.findIndex((item) => {
+      const itemProductId = String(item.productID || '').trim();
+      return itemProductId === productIdForSearch;
+    });
+
+    if (existingDetailIndex !== -1) {
+      // Product already exists, increase quantity
+      setDetails((prev) =>
+        prev.map((item, index) =>
+          index === existingDetailIndex
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        )
+      );
+      
+      // Clear form and close
+      setSelectedProductId('');
+      setSelectedProduct(null);
+      setNewProductQuantity(1);
+      setNewProductPrice(0);
+      setShowAddProduct(false);
+      setProductSearchQuery('');
+      
       return;
     }
 
     const newDetail: InvoiceDetail = {
       detailID: `temp-${Date.now()}`,
-      productID: product.ProductID || product.id,
-      productName: product.Name || product.name || '',
-      quantity: newProductQuantity,
-      unitPrice: (newProductPrice != null) ? newProductPrice : (product.SalePrice || product.price || 0),
-      barcode: product.Barcode || product.barcode,
+      productID: productIdForSearch,
+      productName: productName,
+      quantity: quantity,
+      unitPrice: unitPrice,
+      barcode: productToAdd.Barcode || productToAdd.barcode || '',
       mode: 'Pick', // New items default to 'Pick'
+      productImage: productImage,
     };
 
     setDetails((prev) => [...prev, newDetail]);
     setSelectedProductId('');
+    setSelectedProduct(null);
     setNewProductQuantity(1);
-    setNewProductPrice(product.SalePrice || product.price || 0);
+    setNewProductPrice(0);
     setShowAddProduct(false);
+    setProductSearchQuery('');
   };
 
   const handleSave = async () => {
@@ -246,7 +418,7 @@ export default function EditInvoicePage() {
 
   // Smart search for products - words don't need to be consecutive
   const filteredProducts = useMemo(() => {
-    if (!productSearchQuery.trim()) return products;
+    if (!productSearchQuery.trim()) return products.slice(0, 50);
     
     // Split search query into individual words
     const searchWords = productSearchQuery
@@ -255,19 +427,22 @@ export default function EditInvoicePage() {
       .split(/\s+/)
       .filter(word => word.length > 0);
     
+    if (searchWords.length === 0) return products.slice(0, 50);
+    
     return products.filter((p) => {
       // Safely convert all values to strings and create searchable text
       const name = String(p.Name || p.name || '').toLowerCase();
       const brand = String(p.Brand || p.brand || '').toLowerCase();
       const type = String(p.Type || p.type || '').toLowerCase();
       const barcode = String(p.Barcode || p.barcode || '').toLowerCase();
+      const productId = String(p.ProductID || p.id || p.product_id || '').toLowerCase();
       
       // Combine all searchable fields into one text
-      const searchableText = `${name} ${brand} ${type} ${barcode}`;
+      const searchableText = `${name} ${brand} ${type} ${barcode} ${productId}`;
       
       // Check if ALL search words are found in the searchable text
       return searchWords.every(word => searchableText.includes(word));
-    });
+    }).slice(0, 50);
   }, [products, productSearchQuery]);
 
   // Close dropdown when clicking outside
@@ -282,8 +457,6 @@ export default function EditInvoicePage() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const selectedProduct = products.find((p) => (p.ProductID || p.id) === selectedProductId);
 
   if (loading) {
     return (
@@ -413,142 +586,136 @@ export default function EditInvoicePage() {
             </button>
           </div>
 
+          {/* Barcode Scanner - Always visible */}
+          <div className="p-4 bg-gray-50 border-b border-gray-200">
+            <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
+            <BarcodeScannerInput
+              onProductFound={(product) => {
+                handleAddProduct(product, 1);
+              }}
+              products={products}
+              placeholder="امسح الباركود أو رقم الشامل..."
+              className="w-full"
+            />
+          </div>
+
           {/* Add Product Form */}
           {showAddProduct && (
             <div className="p-4 bg-gray-50 border-b border-gray-200">
-              <div className="grid grid-cols-4 gap-4">
-                <div className="relative" ref={productDropdownRef}>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">
-                    المنتج
-                  </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setIsProductDropdownOpen(!isProductDropdownOpen)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-right flex items-center justify-between font-cairo"
-                    >
-                      <span className={selectedProduct ? 'text-gray-900 font-medium' : 'text-gray-500'}>
-                        {selectedProduct 
-                          ? `${selectedProduct.Name || selectedProduct.name} - ₪${selectedProduct.SalePrice || selectedProduct.price || 0}`
-                          : 'اختر منتج...'}
-                      </span>
-                      <ChevronDown size={16} className={`text-gray-600 transition-transform ${isProductDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    
-                    {isProductDropdownOpen && (
-                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden">
-                        <div className="p-2 border-b border-gray-200">
-                          <div className="relative">
-                            <Search size={16} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                            <input
-                              type="text"
-                              placeholder="ابحث عن منتج..."
-                              value={productSearchQuery}
-                              onChange={(e) => setProductSearchQuery(e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-full pr-8 pl-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900 placeholder:text-gray-500 font-cairo"
-                              autoFocus
-                              dir="rtl"
-                            />
+              <div className="relative mb-4" ref={productDropdownRef}>
+                <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={productSearchQuery}
+                    onChange={(e) => {
+                      setProductSearchQuery(e.target.value);
+                      setIsProductDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsProductDropdownOpen(true)}
+                    placeholder="ابحث عن منتج..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                  />
+                  {isProductDropdownOpen && filteredProducts.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredProducts.map((product) => {
+                        const imageUrl = product.Image || product.image || '';
+                        return (
+                        <button
+                          key={product.ProductID || product.id || product.product_id}
+                          type="button"
+                          onClick={() => {
+                            const productId = String(product.ProductID || product.id || product.product_id || '').trim();
+                            const productName = product.Name || product.name || '';
+                            
+                            if (productId) {
+                              // Store the full product object to preserve all data including Name and Image
+                              setSelectedProduct(product);
+                              setSelectedProductId(productId);
+                              // Set default price from product
+                              const defaultPrice = product.SalePrice || product.sale_price || product.price || 0;
+                              setNewProductPrice(defaultPrice);
+                              setIsProductDropdownOpen(false);
+                              setProductSearchQuery(productName || product.Name || product.name || '');
+                            } else {
+                              alert('خطأ: المنتج لا يحتوي على معرف صالح');
+                            }
+                          }}
+                          className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
+                        >
+                          <div className="flex items-center gap-3">
+                            {imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt={product.Name || product.name}
+                                className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                                <span className="text-gray-400 text-xs">—</span>
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col gap-1">
+                                <span className="text-right text-sm font-medium">{product.Name || product.name}</span>
+                                <span className="text-right text-xs text-gray-600 font-light" dir="rtl">
+                                  ₪{product.SalePrice || product.sale_price || product.price || 0} • محل: {product.CS_Shop || product.cs_shop || 0} • مخزن: {product.CS_War || product.cs_war || 0}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="overflow-y-auto max-h-48">
-                          {filteredProducts.length === 0 ? (
-                            <div className="px-3 py-2 text-sm text-gray-600 text-center font-cairo">لا توجد نتائج</div>
-                          ) : (
-                            filteredProducts.map((product) => {
-                              const productId = product.ProductID || product.id;
-                              const productName = product.Name || product.name || '';
-                              const productPrice = product.SalePrice || product.price || 0;
-                              const imageUrl = product.Image || product.image || '';
-                              return (
-                                <button
-                                  key={productId}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedProductId(productId);
-                                    setNewProductPrice(productPrice);
-                                    setIsProductDropdownOpen(false);
-                                    setProductSearchQuery('');
-                                  }}
-                                  className={`w-full text-right px-3 py-2 hover:bg-gray-100 transition-colors text-gray-900 font-cairo ${
-                                    selectedProductId === productId ? 'bg-gray-100 font-medium' : ''
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    {imageUrl ? (
-                                      <img
-                                        src={imageUrl}
-                                        alt={productName}
-                                        className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
-                                        onError={(e) => {
-                                          e.currentTarget.style.display = 'none';
-                                        }}
-                                      />
-                                    ) : (
-                                      <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                        <span className="text-gray-400 text-xs">—</span>
-                                      </div>
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between">
-                                        <span className="truncate">{productName}</span>
-                                        <span className="text-sm text-gray-600 mr-2 flex-shrink-0">₪{productPrice.toFixed(2)}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </button>
-                              );
-                            })
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                        </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">
-                    الكمية
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الكمية</label>
                   <input
                     type="number"
+                    step="1"
                     value={newProductQuantity}
                     onChange={(e) => setNewProductQuantity(parseFloat(e.target.value) || 1)}
-                    step="1"
                     onWheel={(e) => e.currentTarget.blur()}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">
-                    السعر
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">سعر الوحدة</label>
                   <input
                     type="number"
+                    step="1"
                     value={newProductPrice}
                     onChange={(e) => setNewProductPrice(parseFloat(e.target.value) || 0)}
-                    step="1"
                     onWheel={(e) => e.currentTarget.blur()}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
                   />
                 </div>
-                <div className="flex items-end gap-2">
-                  <button
-                    onClick={handleAddProduct}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-cairo"
-                  >
-                    إضافة
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowAddProduct(false);
-                      setSelectedProductId('');
-                    }}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-cairo"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleAddProduct}
+                  className="flex-1 sm:flex-none px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo text-sm sm:text-base"
+                >
+                  إضافة
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddProduct(false);
+                    setSelectedProductId('');
+                    setSelectedProduct(null);
+                    setProductSearchQuery('');
+                  }}
+                  className="flex-1 sm:flex-none px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold text-sm sm:text-base"
+                >
+                  إلغاء
+                </button>
               </div>
             </div>
           )}
@@ -597,21 +764,14 @@ export default function EditInvoicePage() {
                       <td className="px-4 py-3 text-sm text-gray-900 font-cairo">
                         <div className="flex items-center gap-2">
                           {imageUrl ? (
-                            <>
-                              <img
-                                src={imageUrl}
-                                alt={item.productName}
-                                className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                  const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
-                                  if (placeholder) placeholder.style.display = 'flex';
-                                }}
-                              />
-                              <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
-                                <span className="text-gray-400 text-xs">—</span>
-                              </div>
-                            </>
+                            <img
+                              src={imageUrl}
+                              alt={item.productName}
+                              className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
                           ) : (
                             <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
                               <span className="text-gray-400 text-xs">—</span>

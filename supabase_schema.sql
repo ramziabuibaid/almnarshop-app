@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS checks (
   image_front TEXT,
   image_back TEXT,
   return_date DATE,
-  status TEXT CHECK (status IN ('مع الشركة','في البنك','في المحل','سلم للزبون ولد يدفع','سلم للزبون وتم تسديد القيمة')),
+  status TEXT CHECK (status IN ('مع الشركة','في البنك','في المحل','في المخزن','سلم للزبون ولم يدفع','سلم للزبون وتم تسديد القيمة')),
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

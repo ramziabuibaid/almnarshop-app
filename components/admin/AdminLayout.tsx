@@ -330,15 +330,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         {/* Top Bar */}
         <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm" dir="rtl">
           <div className="px-4 py-3 flex items-center justify-between">
-            {/* Right side (visually left in RTL): Menu button and Notifications */}
-            <div className="flex items-center gap-2 md:hidden">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <Menu size={24} className="text-gray-700" />
-              </button>
-              <NotificationCenter />
+            {/* Right side (visually left in RTL): Notifications and Menu button on Mobile, Notifications on Desktop */}
+            <div className="flex items-center gap-2">
+              {/* Mobile: Notifications and Menu */}
+              <div className="flex items-center gap-2 md:hidden">
+                <NotificationCenter />
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <Menu size={24} className="text-gray-700" />
+                </button>
+              </div>
+              
+              {/* Desktop: Notifications */}
+              <div className="hidden md:flex items-center gap-2">
+                <NotificationCenter />
+              </div>
             </div>
             
             {/* Desktop: Admin name in center */}
@@ -361,11 +369,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
                 {admin.is_super_admin ? 'Super Admin' : 'Admin'}
               </span>
-            </div>
-            
-            {/* Desktop: Notifications */}
-            <div className="hidden md:flex items-center gap-2">
-              <NotificationCenter />
             </div>
           </div>
         </header>

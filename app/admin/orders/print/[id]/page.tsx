@@ -117,22 +117,22 @@ export default function OrderPrintPage() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      timeZone: 'Asia/Jerusalem',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    });
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+    } catch {
+      return dateString;
+    }
   };
 
   if (loading) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Tajawal' }}>
+      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Cairo' }}>
         <p>جاري تحميل الطلبية...</p>
       </div>
     );
@@ -140,7 +140,7 @@ export default function OrderPrintPage() {
 
   if (error || !orderData) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Tajawal' }}>
+      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Cairo' }}>
         <p style={{ color: 'red' }}>خطأ: {error || 'فشل تحميل الطلبية'}</p>
       </div>
     );
@@ -150,18 +150,19 @@ export default function OrderPrintPage() {
     <div style={{ background: 'white', color: 'black', direction: 'rtl' }}>
       <style jsx global>{`
         :root {
-          --border: #222;
-          --pad: 5px;
-          --gap: 6px;
-          --fs: 12px;      /* نص أساسي مقروء لـ A6 */
-          --fs-sm: 11px;   /* ميتا */
-          --fs-lg: 14px;   /* الإجماليات */
-          /* أعمدة A6 محسّنة */
-          --w-no: 14mm;    /* Item No - مضيق */
-          --w-qty: 8mm;   /* QTY - مضيق */
-          --w-price: 15mm; /* Price */
-          --w-amt: 17mm;   /* AMOUNT */
-          /* ITEM NAME يأخذ الباقي (أعرض) */
+          --border: #1a1a1a;
+          --border-light: #d1d5db;
+          --pad: 10px;
+          --gap: 10px;
+          --fs: 16px;      /* نص أساسي كبير وواضح لـ A4 */
+          --fs-sm: 14px;   /* ميتا */
+          --fs-lg: 20px;   /* الإجماليات */
+          --fs-xl: 24px;   /* العنوان الرئيسي */
+          --w-no: 10mm;
+          --w-qty: 15mm;
+          --w-price: 30mm;
+          --w-amt: 35mm;
+          --header-bg: #f8f9fa;
         }
 
         html, body {
@@ -172,28 +173,89 @@ export default function OrderPrintPage() {
         }
 
         body {
-          font-family: 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-          font-weight: 700;
+          font-family: 'Cairo', 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+          font-weight: 600;
           margin: 0;
           padding: 0;
           background: white !important;
           color: black !important;
           direction: rtl;
+          line-height: 1.6;
         }
 
-        /* ورقة A6 وحدود مريحة للطابعات */
         @page {
-          size: A6 portrait;
-          margin: 8mm 7mm 8mm 7mm;
+          size: A4 portrait;
+          margin: 15mm 20mm 15mm 20mm;
         }
 
         @media print {
           .no-print {
             display: none;
           }
+
+          * {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          thead {
+            display: table-header-group;
+          }
+
+          tfoot {
+            display: table-footer-group;
+          }
+
+          /* Prevent page breaks inside rows */
+          tr {
+            page-break-inside: avoid;
+          }
+
+          /* Allow page breaks between rows in tbody */
+          tbody tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+          }
+
+          /* Ensure header appears on every page */
+          table.sheet thead {
+            display: table-header-group;
+          }
+
+          table.sheet thead tr {
+            page-break-after: auto;
+            page-break-inside: avoid;
+          }
+
+          /* Customer info should stay with first items - no page break after */
+          tbody tr:first-child {
+            page-break-after: auto;
+            page-break-inside: avoid;
+          }
+
+          /* Items should flow naturally */
+          table.items {
+            page-break-inside: auto;
+          }
+
+          table.items tbody tr {
+            page-break-inside: avoid;
+          }
+
+          /* Reduce header spacing to fit more content on first page */
+          table.sheet thead td {
+            padding-bottom: 10px;
+          }
+
+          .box.headerRow {
+            margin-bottom: 15px !important;
+          }
+
+          .titleRow {
+            margin: 10px 0 !important;
+          }
         }
 
-        /* الحاوية التي تكرّر الترويسة بكل صفحة عبر thead */
         table.sheet {
           width: 100%;
           border-collapse: collapse;
@@ -210,125 +272,110 @@ export default function OrderPrintPage() {
         }
 
         .box {
-          border: 1px solid var(--border);
+          border: 2px solid var(--border);
           padding: var(--pad);
+          border-radius: 4px;
         }
 
         .headerRow {
           display: flex;
-          flex-direction: row-reverse;
+          flex-direction: row;
           align-items: flex-start;
-          justify-content: space-between;
-          gap: 8px;
+          justify-content: flex-start;
+          gap: 12px;
         }
 
         .brand {
           text-align: right;
+          margin-left: auto;
           font-size: var(--fs-sm);
-          line-height: 1.3;
-        }
-
-        .logo {
-          width: 34px;
-          height: auto;
-          object-fit: contain;
+          line-height: 1.5;
+          font-weight: 600;
         }
 
         .titleRow {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 8px;
-          margin: 8px 0 6px;
+          gap: 12px;
+          margin: 12px 0;
         }
 
         .titleMain {
           flex: 1;
           text-align: center;
-          border: 1px solid var(--border);
-          padding: 4px;
+          border: 2px solid var(--border);
+          padding: 12px;
           font-weight: 700;
+          font-size: var(--fs-xl);
+          background: var(--header-bg);
+          border-radius: 4px;
         }
 
         .titleId {
-          border: 1px solid var(--border);
-          padding: 4px 8px;
+          border: 2px solid var(--border);
+          padding: 12px 16px;
           white-space: nowrap;
-          font-size: var(--fs);
+          font-size: var(--fs-lg);
+          font-weight: 700;
+          background: var(--header-bg);
+          border-radius: 4px;
         }
 
         .meta {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: var(--gap);
-          margin-bottom: 6px;
+          margin-bottom: 12px;
         }
 
         .chip {
-          border: 1px solid var(--border);
-          padding: 4px 6px;
+          border: 1px solid var(--border-light);
+          padding: 8px 12px;
           font-size: var(--fs-sm);
+          background: #ffffff;
+          border-radius: 4px;
+          font-weight: 600;
         }
 
-        /* جدول العناصر */
         table.items {
           width: 100%;
           border-collapse: collapse;
           table-layout: fixed;
           font-size: var(--fs);
           direction: rtl;
+          margin-bottom: 20px;
         }
 
-        table.items col.col-no {
-          width: var(--w-no);
-        }
-
-        table.items col.col-name {
-          width: auto; /* يأخذ الباقي */
-        }
-
-        table.items col.col-qty {
-          width: var(--w-qty);
-        }
-
-        table.items col.col-price {
-          width: var(--w-price);
-        }
-
-        table.items col.col-amt {
-          width: var(--w-amt);
-        }
+        table.items col.col-no { width: var(--w-no); }
+        table.items col.col-name { width: auto; }
+        table.items col.col-qty { width: var(--w-qty); }
+        table.items col.col-price { width: var(--w-price); }
+        table.items col.col-amt { width: var(--w-amt); }
 
         table.items th,
         table.items td {
-          border: 1px solid var(--border);
-          padding: 4px;
+          border: 1px solid var(--border-light);
+          padding: 10px 8px;
         }
 
         table.items th {
-          background: #f5f5f5;
+          background: var(--header-bg);
           text-align: center;
           font-weight: 700;
-          font-size: 11px;
+          font-size: var(--fs-sm);
           white-space: nowrap;
+          border-bottom: 2px solid var(--border);
         }
 
         table.items td {
           vertical-align: top;
-          font-weight: 700;
+          font-weight: 600;
         }
 
-        .ta-c {
-          text-align: center;
-        }
-
-        .ta-r {
-          text-align: right;
-        }
-
-        .nowrap {
-          white-space: nowrap;
-        }
+        .ta-c { text-align: center; }
+        .ta-r { text-align: right; }
+        .nowrap { white-space: nowrap; }
 
         .nameCell {
           word-break: break-word;
@@ -336,100 +383,122 @@ export default function OrderPrintPage() {
           text-align: right;
         }
 
-        /* ملخصات */
         table.summary {
           width: 100%;
-          margin-top: 6px;
+          margin-top: 20px;
           border-collapse: collapse;
           table-layout: fixed;
           direction: rtl;
+          border: 2px solid var(--border);
+          border-radius: 4px;
+          overflow: hidden;
         }
 
         table.summary td {
-          border: 1px solid var(--border);
-          padding: 6px;
+          border: 1px solid var(--border-light);
+          padding: 12px;
           font-size: var(--fs);
         }
 
-        table.summary .label {
-          width: 60%;
-          text-align: right;
+        table.summary .label { 
+          width: 60%; 
+          text-align: right; 
+          font-weight: 600;
+          background: var(--header-bg);
+        }
+        table.summary .value { 
+          width: 40%; 
+          text-align: left; 
+          white-space: nowrap; 
+          font-weight: 700;
         }
 
-        table.summary .value {
-          width: 40%;
-          text-align: left;
-          white-space: nowrap;
-        }
-
-        /* ملاحظات */
         .notesBox {
-          border: 1px solid var(--border);
-          padding: 6px;
-          margin-top: 6px;
+          border: 2px solid var(--border);
+          padding: 12px;
+          margin-top: 20px;
           font-size: var(--fs);
           page-break-inside: auto;
+          border-radius: 4px;
+          background: #f9fafb;
         }
 
-        .notesHeader {
-          font-weight: 700;
-          margin-bottom: 4px;
+        .notesHeader { 
+          font-weight: 700; 
+          margin-bottom: 8px; 
+          font-size: var(--fs-sm);
+          color: #374151;
         }
 
         .notesContent {
           white-space: pre-wrap;
           word-break: break-word;
           overflow-wrap: anywhere;
-          line-height: 1.4;
+          line-height: 1.6;
+          font-weight: 600;
+          color: #000;
         }
       `}</style>
-      <link
-        rel="preconnect"
-        href="https://fonts.googleapis.com"
-      />
-      <link
-        href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700&display=swap"
-        rel="stylesheet"
-      />
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;900&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
+
       <div className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
         <button onClick={() => window.print()}>إعادة الطباعة</button>
       </div>
+
       <table className="sheet">
         <thead>
           <tr>
             <td>
-              {/* الترويسة (تتكرر بكل صفحة) */}
-              <div className="box headerRow">
+              {/* Header box */}
+              <div className="box headerRow" style={{ marginBottom: '20px' }}>
                 <div className="brand">
-                  <div>شركة المنار للأجهزة الكهربائية</div>
-                  <div>جنين - شارع الناصرة</div>
-                  <div>0599-048348 | 04-2438815</div>
+                  <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, marginBottom: '4px' }}>
+                    شركة المنار للأجهزة الكهربائية
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-sm)', marginBottom: '2px' }}>
+                    جنين - شارع الناصرة
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-sm)' }}>
+                    0599-048348 | 04-2438815
+                  </div>
                 </div>
               </div>
 
-              {/* العنوان + رقم الطلبية */}
+              {/* Title */}
               <div className="titleRow">
                 <div className="titleMain">طلبية اون لاين</div>
                 <div className="titleId">{orderData.orderID}</div>
               </div>
+            </td>
+          </tr>
+        </thead>
 
-              {/* بيانات أساسية */}
-              <div className="meta">
-                <div className="chip">
-                  التاريخ والوقت: <span>{formatDate(orderData.dateTime)}</span>
+        <tbody>
+          {/* Customer Info and Items - first page content */}
+          <tr>
+            <td>
+              {/* Meta */}
+              <div className="meta" style={{ marginBottom: '20px' }}>
+                {/* Row 1: Customer Name | Date */}
+                <div className="chip" style={{ gridColumn: '1 / span 1' }}>
+                  الزبون: <span style={{ fontWeight: 700 }}>{orderData.customerName}</span>
                 </div>
-                <div className="chip">
-                  الزبون: <span>{orderData.customerName}</span>
+                <div className="chip" style={{ gridColumn: '2 / span 1' }}>
+                  التاريخ: <span style={{ fontWeight: 700 }}>{formatDate(orderData.dateTime)}</span>
                 </div>
-              </div>
-              <div className="meta">
-                <div className="chip">
-                  رقم الهاتف: <span>{orderData.customerPhone}</span>
-                </div>
+                
+                {/* Row 2: Phone */}
+                {orderData.customerPhone && (
+                  <div className="chip" style={{ gridColumn: '1 / span 1' }}>
+                    الهاتف: <span>{orderData.customerPhone}</span>
+                  </div>
+                )}
               </div>
 
-              {/* رأس جدول العناصر */}
-              <table className="items" style={{ marginTop: '2px' }}>
+              {/* Items Table */}
+              <table className="items">
                 <colgroup>
                   <col className="col-no" />
                   <col className="col-name" />
@@ -439,62 +508,37 @@ export default function OrderPrintPage() {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th>Item No</th>
-                    <th>ITEM NAME</th>
-                    <th>QTY</th>
-                    <th>Price</th>
-                    <th>AMOUNT</th>
+                    <th>#</th>
+                    <th>الصنف</th>
+                    <th>الكمية</th>
+                    <th>السعر</th>
+                    <th>المبلغ</th>
                   </tr>
                 </thead>
-              </table>
-            </td>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr>
-            <td>
-              {/* جسم جدول العناصر */}
-              <table className="items">
-                <colgroup>
-                  <col className="col-no" />
-                  <col className="col-name" />
-                  <col className="col-qty" />
-                  <col className="col-price" />
-                  <col className="col-amt" />
-                </colgroup>
                 <tbody>
                   {orderData.items.map((item, index) => (
                     <tr key={index}>
-                      <td className="ta-c nowrap">
-                        {item.productID.substring(0, 8)}...
-                      </td>
+                      <td className="ta-c nowrap">{index + 1}</td>
                       <td className="ta-r nameCell">{item.name}</td>
                       <td className="ta-c nowrap">{item.quantity}</td>
-                      <td className="ta-c nowrap">
-                        {item.unitPrice.toFixed(2)} ₪
-                      </td>
-                      <td className="ta-c nowrap">
-                        {item.total.toFixed(2)} ₪
-                      </td>
+                      <td className="ta-c nowrap">{item.unitPrice.toFixed(2)} ₪</td>
+                      <td className="ta-c nowrap">{item.total.toFixed(2)} ₪</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
-              {/* الملخصات */}
+              {/* Summary */}
               <table className="summary">
                 <tbody>
                   <tr>
-                    <td className="label">المجموع</td>
-                    <td className="value">
-                      {orderData.subtotal.toFixed(2)} ₪
-                    </td>
+                    <td className="label" style={{ fontWeight: 700 }}>المجموع</td>
+                    <td className="value" style={{ fontWeight: 700 }}>{orderData.subtotal.toFixed(2)} ₪</td>
                   </tr>
                   {orderData.discount > 0 && (
                     <tr>
-                      <td className="label">خصم خاص</td>
-                      <td className="value">
+                      <td className="label" style={{ fontWeight: 700 }}>الخصم</td>
+                      <td className="value" style={{ fontWeight: 700, color: '#b91c1c' }}>
                         - {orderData.discount.toFixed(2)} ₪
                       </td>
                     </tr>
@@ -516,13 +560,14 @@ export default function OrderPrintPage() {
                 </tbody>
               </table>
 
-              {/* ملاحظات (تظهر فقط عند وجودها) */}
+              {/* Notes */}
               {orderData.notes && orderData.notes.trim().length > 0 && (
                 <div className="notesBox">
                   <div className="notesHeader">ملاحظات:</div>
                   <div className="notesContent">{orderData.notes}</div>
                 </div>
               )}
+
             </td>
           </tr>
         </tbody>
@@ -536,4 +581,3 @@ export default function OrderPrintPage() {
     </div>
   );
 }
-

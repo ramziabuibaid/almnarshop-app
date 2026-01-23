@@ -94,18 +94,22 @@ export default function ShopSalesInvoicePrintPage() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ar-SA', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      numberingSystem: 'latn',
-    });
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+    } catch {
+      return dateString;
+    }
   };
 
   if (loading) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Tajawal' }}>
+      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Cairo' }}>
         <p>جاري تحميل الفاتورة...</p>
       </div>
     );
@@ -113,7 +117,7 @@ export default function ShopSalesInvoicePrintPage() {
 
   if (error || !invoiceData) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Tajawal' }}>
+      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Cairo' }}>
         <p style={{ color: 'red' }}>خطأ: {error || 'فشل تحميل الفاتورة'}</p>
       </div>
     );
@@ -123,17 +127,20 @@ export default function ShopSalesInvoicePrintPage() {
     <div style={{ background: 'white', color: 'black', direction: 'rtl' }}>
       <style jsx global>{`
         :root {
-          --border: #222;
-          --pad: 5px;
-          --gap: 6px;
-          --fs: 12px;
-          --fs-sm: 11px;
-          --fs-lg: 14px;
-          --w-no: 12mm;
-          --w-shamel: 18mm;
-          --w-qty: 8mm;
-          --w-price: 15mm;
-          --w-amt: 17mm;
+          --border: #1a1a1a;
+          --border-light: #d1d5db;
+          --pad: 10px;
+          --gap: 10px;
+          --fs: 16px;      /* نص أساسي كبير وواضح لـ A4 */
+          --fs-sm: 14px;   /* ميتا */
+          --fs-lg: 20px;   /* الإجماليات */
+          --fs-xl: 24px;   /* العنوان الرئيسي */
+          --w-no: 10mm;
+          --w-shamel: 25mm;
+          --w-qty: 15mm;
+          --w-price: 30mm;
+          --w-amt: 35mm;
+          --header-bg: #f8f9fa;
         }
 
         html, body {
@@ -144,23 +151,86 @@ export default function ShopSalesInvoicePrintPage() {
         }
 
         body {
-          font-family: 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-          font-weight: 700;
+          font-family: 'Cairo', 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+          font-weight: 600;
           margin: 0;
           padding: 0;
           background: white !important;
           color: black !important;
           direction: rtl;
+          line-height: 1.6;
         }
 
         @page {
-          size: A6 portrait;
-          margin: 8mm 7mm 8mm 7mm;
+          size: A4 portrait;
+          margin: 15mm 20mm 15mm 20mm;
         }
 
         @media print {
           .no-print {
             display: none;
+          }
+
+          * {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          thead {
+            display: table-header-group;
+          }
+
+          tfoot {
+            display: table-footer-group;
+          }
+
+          /* Prevent page breaks inside rows */
+          tr {
+            page-break-inside: avoid;
+          }
+
+          /* Allow page breaks between rows in tbody */
+          tbody tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+          }
+
+          /* Ensure header appears on every page */
+          table.sheet thead {
+            display: table-header-group;
+          }
+
+          table.sheet thead tr {
+            page-break-after: auto;
+            page-break-inside: avoid;
+          }
+
+          /* Customer info should stay with first items - no page break after */
+          tbody tr:first-child {
+            page-break-after: auto;
+            page-break-inside: avoid;
+          }
+
+          /* Items should flow naturally */
+          table.items {
+            page-break-inside: auto;
+          }
+
+          table.items tbody tr {
+            page-break-inside: avoid;
+          }
+
+          /* Reduce header spacing to fit more content on first page */
+          table.sheet thead td {
+            padding-bottom: 10px;
+          }
+
+          .box.headerRow {
+            margin-bottom: 15px !important;
+          }
+
+          .titleRow {
+            margin: 10px 0 !important;
           }
         }
 
@@ -180,9 +250,9 @@ export default function ShopSalesInvoicePrintPage() {
         }
 
         .box {
-          border: 1px solid var(--border);
+          border: 2px solid var(--border);
           padding: var(--pad);
-          direction: rtl;
+          border-radius: 4px;
         }
 
         .headerRow {
@@ -190,50 +260,60 @@ export default function ShopSalesInvoicePrintPage() {
           flex-direction: row;
           align-items: flex-start;
           justify-content: flex-start;
-          gap: 8px;
-          width: 100%;
+          gap: 12px;
         }
 
         .brand {
           text-align: right;
+          margin-left: auto;
           font-size: var(--fs-sm);
-          line-height: 1.3;
+          line-height: 1.5;
+          font-weight: 600;
         }
 
         .titleRow {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 8px;
-          margin: 8px 0 6px;
+          gap: 12px;
+          margin: 12px 0;
         }
 
         .titleMain {
           flex: 1;
           text-align: center;
-          border: 1px solid var(--border);
-          padding: 4px;
+          border: 2px solid var(--border);
+          padding: 12px;
           font-weight: 700;
+          font-size: var(--fs-xl);
+          background: var(--header-bg);
+          border-radius: 4px;
         }
 
         .titleId {
-          border: 1px solid var(--border);
-          padding: 4px 8px;
+          border: 2px solid var(--border);
+          padding: 12px 16px;
           white-space: nowrap;
-          font-size: var(--fs);
+          font-size: var(--fs-lg);
+          font-weight: 700;
+          background: var(--header-bg);
+          border-radius: 4px;
         }
 
         .meta {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: var(--gap);
-          margin-bottom: 6px;
+          margin-bottom: 12px;
         }
 
         .chip {
-          border: 1px solid var(--border);
-          padding: 4px 6px;
+          border: 1px solid var(--border-light);
+          padding: 8px 12px;
           font-size: var(--fs-sm);
+          background: #ffffff;
+          border-radius: 4px;
+          font-weight: 600;
         }
 
         table.items {
@@ -242,58 +322,39 @@ export default function ShopSalesInvoicePrintPage() {
           table-layout: fixed;
           font-size: var(--fs);
           direction: rtl;
+          margin-bottom: 20px;
         }
 
-        table.items col.col-no {
-          width: var(--w-no);
-        }
-
-        table.items col.col-shamel {
-          width: var(--w-shamel);
-        }
-
-        table.items col.col-name {
-          width: auto;
-        }
-
-        table.items col.col-qty {
-          width: var(--w-qty);
-        }
-
-        table.items col.col-price {
-          width: var(--w-price);
-        }
-
-        table.items col.col-amt {
-          width: var(--w-amt);
-        }
+        table.items col.col-no { width: var(--w-no); }
+        table.items col.col-shamel { width: var(--w-shamel); }
+        table.items col.col-name { width: auto; }
+        table.items col.col-qty { width: var(--w-qty); }
+        table.items col.col-price { width: var(--w-price); }
+        table.items col.col-amt { width: var(--w-amt); }
 
         table.items th,
         table.items td {
-          border: 1px solid var(--border);
-          padding: 4px;
+          border: 1px solid var(--border-light);
+          padding: 10px 8px;
         }
 
         table.items th {
-          background: #f5f5f5;
+          background: var(--header-bg);
           text-align: center;
           font-weight: 700;
-          font-size: 11px;
+          font-size: var(--fs-sm);
           white-space: nowrap;
+          border-bottom: 2px solid var(--border);
         }
 
         table.items td {
           vertical-align: top;
-          font-weight: 700;
+          font-weight: 600;
         }
 
-        .ta-c {
-          text-align: center;
-        }
-
-        .ta-r {
-          text-align: right;
-        }
+        .ta-c { text-align: center; }
+        .ta-r { text-align: right; }
+        .nowrap { white-space: nowrap; }
 
         .nameCell {
           word-break: break-word;
@@ -303,112 +364,150 @@ export default function ShopSalesInvoicePrintPage() {
 
         table.summary {
           width: 100%;
-          margin-top: 6px;
+          margin-top: 20px;
           border-collapse: collapse;
           table-layout: fixed;
           direction: rtl;
+          border: 2px solid var(--border);
+          border-radius: 4px;
+          overflow: hidden;
         }
 
         table.summary td {
-          border: 1px solid var(--border);
-          padding: 6px;
+          border: 1px solid var(--border-light);
+          padding: 12px;
           font-size: var(--fs);
         }
 
-        table.summary .label {
-          width: 60%;
-          text-align: right;
+        table.summary .label { 
+          width: 60%; 
+          text-align: right; 
+          font-weight: 600;
+          background: var(--header-bg);
         }
-
-        table.summary .value {
-          width: 40%;
-          text-align: left;
-          white-space: nowrap;
+        table.summary .value { 
+          width: 40%; 
+          text-align: left; 
+          white-space: nowrap; 
+          font-weight: 700;
         }
 
         .notesBox {
-          border: 1px solid var(--border);
-          padding: 6px;
-          margin-top: 6px;
+          border: 2px solid var(--border);
+          padding: 12px;
+          margin-top: 20px;
           font-size: var(--fs);
           page-break-inside: auto;
+          border-radius: 4px;
+          background: #f9fafb;
         }
 
-        .notesHeader {
-          font-weight: 700;
-          margin-bottom: 4px;
+        .notesHeader { 
+          font-weight: 700; 
+          margin-bottom: 8px; 
+          font-size: var(--fs-sm);
+          color: #374151;
         }
 
         .notesContent {
           white-space: pre-wrap;
           word-break: break-word;
           overflow-wrap: anywhere;
-          line-height: 1.4;
+          line-height: 1.6;
+          font-weight: 600;
+          color: #000;
+        }
+
+        .accountantSign {
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 2px solid var(--border);
+          text-align: right;
+          font-size: var(--fs);
+          font-weight: 600;
+        }
+
+        .accountantSignLabel {
+          font-weight: 700;
+          margin-bottom: 8px;
+          color: #374151;
+        }
+
+        .accountantSignValue {
           font-weight: 700;
           color: #000;
         }
       `}</style>
-      <link
-        rel="preconnect"
-        href="https://fonts.googleapis.com"
-      />
-      <link
-        href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700&display=swap"
-        rel="stylesheet"
-      />
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;900&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
+
       <div className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
         <button onClick={() => window.print()}>إعادة الطباعة</button>
       </div>
+
       <table className="sheet">
         <thead>
           <tr>
             <td>
-              <div className="box headerRow">
+              {/* Header box */}
+              <div className="box headerRow" style={{ marginBottom: '20px' }}>
                 <div className="brand">
-                  <div>شركة المنار للأجهزة الكهربائية</div>
-                  <div>جنين - شارع الناصرة</div>
-                  <div>0599-048348 | 04-2438815</div>
+                  <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, marginBottom: '4px' }}>
+                    شركة المنار للأجهزة الكهربائية
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-sm)', marginBottom: '2px' }}>
+                    جنين - شارع الناصرة
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-sm)' }}>
+                    0599-048348 | 04-2438815
+                  </div>
                 </div>
               </div>
 
+              {/* Title */}
               <div className="titleRow">
                 <div className="titleMain">فاتورة مبيعات المحل</div>
                 <div className="titleId">{invoiceData.InvoiceID}</div>
-              </div>
-
-              <div className="meta">
-                <div className="chip">
-                  التاريخ: <span>{formatDate(invoiceData.Date)}</span>
-                </div>
-                <div className="chip">
-                  العميل: <span>{invoiceData.CustomerName}</span>
-                </div>
-                {invoiceData.CustomerShamelNo && invoiceData.CustomerShamelNo.trim() ? (
-                  <div className="chip">
-                    رقم الشامل: <span>{invoiceData.CustomerShamelNo}</span>
-                  </div>
-                ) : null}
-                {invoiceData.CustomerPhone && invoiceData.CustomerPhone.trim() ? (
-                  <div className="chip">
-                    الهاتف: <span>{invoiceData.CustomerPhone}</span>
-                  </div>
-                ) : null}
-                {invoiceData.CustomerAddress && invoiceData.CustomerAddress.trim() ? (
-                  <div className="chip">
-                    العنوان: <span>{invoiceData.CustomerAddress}</span>
-                  </div>
-                ) : null}
-                <div className="chip">
-                  الحالة: <span>{invoiceData.Status}</span>
-                </div>
               </div>
             </td>
           </tr>
         </thead>
 
         <tbody>
+          {/* Customer Info and Items - first page content */}
           <tr>
             <td>
+              {/* Meta */}
+              <div className="meta" style={{ marginBottom: '20px' }}>
+                {/* Row 1: Customer Name + Shamel No | Date */}
+                <div className="chip" style={{ gridColumn: '1 / span 1' }}>
+                  الزبون: <span style={{ fontWeight: 700 }}>{invoiceData.CustomerName}</span>
+                  {invoiceData.CustomerShamelNo && (
+                    <span style={{ marginRight: '8px', color: '#666' }}>({invoiceData.CustomerShamelNo})</span>
+                  )}
+                </div>
+                <div className="chip" style={{ gridColumn: '2 / span 1' }}>
+                  التاريخ: <span style={{ fontWeight: 700 }}>{formatDate(invoiceData.Date)}</span>
+                </div>
+                
+                {/* Row 2: Phone */}
+                {invoiceData.CustomerPhone && (
+                  <div className="chip" style={{ gridColumn: '1 / span 1' }}>
+                    الهاتف: <span>{invoiceData.CustomerPhone}</span>
+                  </div>
+                )}
+                
+                {/* Row 3: Address */}
+                {invoiceData.CustomerAddress && (
+                  <div className="chip" style={{ gridColumn: invoiceData.CustomerPhone ? '2 / span 1' : '1 / span 2' }}>
+                    العنوان: <span>{invoiceData.CustomerAddress}</span>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Items Table */}
               <table className="items">
                 <colgroup>
                   <col className="col-no" />
@@ -420,28 +519,31 @@ export default function ShopSalesInvoicePrintPage() {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th className="ta-c">#</th>
-                    <th className="ta-c">رقم المنتج</th>
-                    <th className="ta-r">الصنف</th>
-                    <th className="ta-c">الكمية</th>
-                    <th className="ta-c">السعر</th>
-                    <th className="ta-c">المبلغ</th>
+                    <th>#</th>
+                    <th>رقم المنتج</th>
+                    <th>الصنف</th>
+                    <th>الكمية</th>
+                    <th>السعر</th>
+                    <th>المبلغ</th>
                   </tr>
                 </thead>
                 <tbody>
                   {invoiceData.Items.map((item, index) => (
                     <tr key={index}>
-                      <td className="ta-c">{index + 1}</td>
-                      <td className="ta-c">{item.ShamelNo || '—'}</td>
-                      <td className="nameCell">{item.ProductName} ({item.ProductID})</td>
-                      <td className="ta-c">{item.Quantity}</td>
-                      <td className="ta-c">{item.UnitPrice.toFixed(2)}</td>
-                      <td className="ta-c">{item.TotalPrice.toFixed(2)}</td>
+                      <td className="ta-c nowrap">{index + 1}</td>
+                      <td className="ta-c nowrap">{item.ShamelNo || item.ProductID || '—'}</td>
+                      <td className="ta-r nameCell">
+                        {item.ProductName}
+                      </td>
+                      <td className="ta-c nowrap">{item.Quantity}</td>
+                      <td className="ta-c nowrap">{item.UnitPrice.toFixed(2)} ₪</td>
+                      <td className="ta-c nowrap">{item.TotalPrice.toFixed(2)} ₪</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
+              {/* Summary */}
               <table className="summary">
                 <tbody>
                   <tr>
@@ -451,11 +553,13 @@ export default function ShopSalesInvoicePrintPage() {
                   {invoiceData.Discount > 0 && (
                     <tr>
                       <td className="label" style={{ fontWeight: 700 }}>الخصم</td>
-                      <td className="value" style={{ fontWeight: 700 }}>{invoiceData.Discount.toFixed(2)} ₪</td>
+                      <td className="value" style={{ fontWeight: 700, color: '#b91c1c' }}>
+                        - {invoiceData.Discount.toFixed(2)} ₪
+                      </td>
                     </tr>
                   )}
                   <tr>
-                    <td className="label" style={{ fontWeight: 700, fontSize: 'var(--fs-lg)' }}>
+                    <td className="label" style={{ fontWeight: 700 }}>
                       الإجمالي
                     </td>
                     <td
@@ -471,12 +575,14 @@ export default function ShopSalesInvoicePrintPage() {
                 </tbody>
               </table>
 
+              {/* Notes */}
               {invoiceData.Notes && invoiceData.Notes.trim().length > 0 && (
                 <div className="notesBox">
                   <div className="notesHeader">ملاحظات:</div>
                   <div className="notesContent">{invoiceData.Notes}</div>
                 </div>
               )}
+
             </td>
           </tr>
         </tbody>
@@ -490,4 +596,3 @@ export default function ShopSalesInvoicePrintPage() {
     </div>
   );
 }
-

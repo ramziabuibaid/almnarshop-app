@@ -6,7 +6,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import ProductFormModal from '@/components/admin/ProductFormModal';
 import MarketingCardGenerator from '@/components/admin/MarketingCardGenerator';
 import { DataTable } from '@/components/ui/data-table';
-import { Plus, Edit, Image as ImageIcon, Loader2, Package, Sparkles, CheckCircle2, Trash, Eye, X, Check } from 'lucide-react';
+import { Plus, Edit, Image as ImageIcon, Loader2, Package, Sparkles, CheckCircle2, Trash, Eye, X, Check, Search, Filter, DollarSign, Warehouse, Store } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
@@ -746,35 +746,52 @@ export default function ProductsManagerPage() {
           }}
         >
           <div className="space-y-4">
-          <div className="flex items-center justify-between">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">المنتجات</h1>
+                <p className="text-sm sm:text-base text-gray-600 mt-1">
+                  إدارة مخزون المنتجات ({filteredProducts.length} منتج)
+                </p>
+              </div>
               <button
-              onClick={handleAddNew}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+                onClick={handleAddNew}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
               >
-              <span>إضافة منتج جديد</span>
-              <Plus size={20} />
+                <Plus size={20} />
+                <span>إضافة منتج جديد</span>
               </button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">المنتجات</h1>
-              <p className="text-gray-600 mt-1">إدارة مخزون المنتجات ({filteredProducts.length} منتج)</p>
-            </div>
             </div>
           
           {/* Global Search and Column Visibility */}
           {enableGlobalSearch && (
-            <div className="flex items-center gap-3">
-              <input
-                type="text"
-                placeholder="البحث بالاسم، الرمز، الباركود، أو العلامة التجارية..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500"
-                dir="rtl"
-              />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="flex-1 relative">
+                <Search
+                  size={18}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
+                <input
+                  type="text"
+                  placeholder="البحث بالاسم، الرمز، الباركود، أو العلامة التجارية..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 text-sm sm:text-base"
+                  dir="rtl"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
+              </div>
               
-              {/* Column Visibility Toggle */}
+              {/* Column Visibility Toggle - Desktop Only */}
               {!loading && filteredProducts.length > 0 && (
-                <div className="relative">
+                <div className="relative hidden md:block">
                     <button
                     ref={columnVisibilityButtonRef}
                     type="button"
@@ -784,7 +801,7 @@ export default function ProductsManagerPage() {
                     className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors text-sm font-medium text-gray-700 whitespace-nowrap cursor-pointer"
                   >
                     <Eye size={16} />
-                    <span>الأعمدة / Columns</span>
+                    <span>الأعمدة</span>
                     {Object.values(columnVisibility).some((v) => !v) && (
                       <span className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full text-xs">
                         {Object.values(columnVisibility).filter((v) => !v).length}
@@ -868,34 +885,215 @@ export default function ProductsManagerPage() {
           </div>
         </div>
 
-        {/* Data Table */}
-        {loading ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Loading products...</p>
+        {/* Desktop Table View */}
+        <div className="hidden md:block">
+          {loading ? (
+            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+              <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">جاري التحميل...</p>
             </div>
-        ) : filteredProducts.length === 0 && !searchQuery ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-            <Package size={48} className="text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg">No products found</p>
+          ) : filteredProducts.length === 0 && !searchQuery ? (
+            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+              <Package size={48} className="text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-600 text-lg">لا توجد منتجات</p>
             </div>
-        ) : (
-          <DataTable
-            columns={columns}
-            data={filteredProducts}
-            enableColumnFilters={true}
-            enableGlobalSearch={false}
-            pageSize={20}
-            enableColumnVisibility={false}
-            defaultColumnVisibility={columnVisibility}
-            columnVisibility={columnVisibility}
-            onColumnVisibilityChange={setColumnVisibility}
-            tableRef={tableRef}
-            hideToolbar={true}
-            showStickyPagination={isNearBottom}
-            stickyHeaderOffset={0}
-          />
-        )}
+          ) : (
+            <DataTable
+              columns={columns}
+              data={filteredProducts}
+              enableColumnFilters={true}
+              enableGlobalSearch={false}
+              pageSize={20}
+              enableColumnVisibility={false}
+              defaultColumnVisibility={columnVisibility}
+              columnVisibility={columnVisibility}
+              onColumnVisibilityChange={setColumnVisibility}
+              tableRef={tableRef}
+              hideToolbar={true}
+              showStickyPagination={isNearBottom}
+              stickyHeaderOffset={0}
+            />
+          )}
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-3">
+          {loading ? (
+            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+              <div className="flex items-center justify-center gap-2 text-gray-500">
+                <Loader2 className="animate-spin" size={20} />
+                <span>جاري التحميل...</span>
+              </div>
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center text-gray-500">
+              {searchQuery ? 'لا توجد نتائج للبحث' : 'لا توجد منتجات'}
+            </div>
+          ) : (
+            filteredProducts.map((product) => {
+              const productId = product.ProductID || product.id || '';
+              const rawImageUrl = product.image || product.Image || product.ImageUrl || '';
+              const imageUrl = getDirectImageUrl(rawImageUrl);
+              const hasImageError = imageErrors[productId] || !imageUrl;
+              const warehouseStock = product.CS_War !== undefined && product.CS_War !== null ? (product.CS_War || 0) : null;
+              const shopStock = product.CS_Shop !== undefined && product.CS_Shop !== null ? (product.CS_Shop || 0) : null;
+              const totalStock = (warehouseStock || 0) + (shopStock || 0);
+              const price = product.price || product.SalePrice || 0;
+              const costPrice = canViewCost ? (product.CostPrice || null) : null;
+              
+              return (
+                <div key={productId} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  {/* Header with Image and Basic Info */}
+                  <div className="flex items-start gap-3 mb-3">
+                    {/* Product Image */}
+                    <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+                      {hasImageError || !imageUrl ? (
+                        <ImageIcon size={24} className="text-gray-300" />
+                      ) : (
+                        <img
+                          src={imageUrl}
+                          alt={product.name || product.Name || ''}
+                          className="object-contain w-full h-full"
+                          onError={() => handleImageError(productId)}
+                        />
+                      )}
+                    </div>
+                    
+                    {/* Product Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="flex-1 min-w-0">
+                          {productId ? (
+                            <button
+                              onClick={() => router.push(`/admin/products/${productId}`)}
+                              className="text-base font-bold text-gray-900 hover:text-blue-600 hover:underline text-right block truncate"
+                            >
+                              {product.name || product.Name || 'N/A'}
+                            </button>
+                          ) : (
+                            <div className="text-base font-bold text-gray-900 text-right truncate">
+                              {product.name || product.Name || 'N/A'}
+                            </div>
+                          )}
+                          {product.brand || product.Brand ? (
+                            <div className="text-xs text-gray-500 mt-0.5 text-right">
+                              {product.brand || product.Brand}
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="flex-shrink-0">
+                          <span className="text-lg font-bold text-gray-900">
+                            ₪{parseFloat(String(price)).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Product ID and Barcode */}
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        {productId && (
+                          <span className="text-xs font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded">
+                            {productId}
+                          </span>
+                        )}
+                        {product['Shamel No'] && (
+                          <span className="text-xs text-gray-600 bg-gray-50 px-2 py-0.5 rounded">
+                            شامل: {product['Shamel No']}
+                          </span>
+                        )}
+                        {(product.barcode || product.Barcode) && (
+                          <span className="text-xs font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded">
+                            {product.barcode || product.Barcode}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stock Information */}
+                  {(warehouseStock !== null || shopStock !== null) && (
+                    <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+                      <div className="text-xs text-gray-600 mb-1">المخزون</div>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {warehouseStock !== null && (
+                          <div className="flex items-center gap-1">
+                            <Warehouse size={14} className="text-gray-400" />
+                            <span className="text-xs text-gray-700">
+                              مخزن: <span className={`font-semibold ${warehouseStock > 0 ? 'text-green-700' : 'text-red-700'}`}>{warehouseStock}</span>
+                            </span>
+                          </div>
+                        )}
+                        {shopStock !== null && (
+                          <div className="flex items-center gap-1">
+                            <Store size={14} className="text-gray-400" />
+                            <span className="text-xs text-gray-700">
+                              محل: <span className={`font-semibold ${shopStock > 0 ? 'text-green-700' : 'text-red-700'}`}>{shopStock}</span>
+                            </span>
+                          </div>
+                        )}
+                        {totalStock > 0 && (
+                          <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded">
+                            المجموع: {totalStock}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Additional Info */}
+                  <div className="grid grid-cols-2 gap-2 mb-3 text-xs text-gray-600">
+                    {product.type || product.Type ? (
+                      <div>
+                        <span className="text-gray-500">النوع:</span> {product.type || product.Type}
+                      </div>
+                    ) : null}
+                    {product.Origin ? (
+                      <div>
+                        <span className="text-gray-500">المنشأ:</span> {product.Origin}
+                      </div>
+                    ) : null}
+                    {product.Warranty ? (
+                      <div>
+                        <span className="text-gray-500">الضمان:</span> {product.Warranty}
+                      </div>
+                    ) : null}
+                    {costPrice !== null && (
+                      <div>
+                        <span className="text-gray-500">التكلفة:</span> <span className="font-semibold">₪{parseFloat(String(costPrice)).toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+                    <button
+                      onClick={() => handleEdit(product)}
+                      className="flex-1 px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2 transition-colors text-sm"
+                    >
+                      <Edit size={16} />
+                      <span>تعديل</span>
+                    </button>
+                    <button
+                      onClick={() => handleGenerateAd(product)}
+                      className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2 transition-colors text-sm"
+                      title="إنشاء إعلان تسويقي"
+                    >
+                      <Sparkles size={16} />
+                    </button>
+                    {canAccountant && (
+                      <button
+                        onClick={() => handleDeleteClick(product)}
+                        className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2 transition-colors text-sm"
+                        title="حذف المنتج"
+                      >
+                        <Trash size={16} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
 
         {/* Delete confirmation modal */}
         {deleteTarget && (
