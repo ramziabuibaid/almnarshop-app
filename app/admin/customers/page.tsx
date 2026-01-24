@@ -27,6 +27,7 @@ import {
   ArrowDown,
   ChevronDown,
   ChevronUp,
+  X,
 } from 'lucide-react';
 
 interface Customer {
