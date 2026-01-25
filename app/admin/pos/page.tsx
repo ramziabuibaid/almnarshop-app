@@ -71,11 +71,16 @@ export default function POSPage() {
   const [isScanning, setIsScanning] = useState(false);
   const [showCartOnMobile, setShowCartOnMobile] = useState(false);
   const [cameraSupported, setCameraSupported] = useState<boolean | null>(null);
+  const [scanSuccess, setScanSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isScanProcessing, setIsScanProcessing] = useState(false);
   
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const scannerRef = useRef<BrowserMultiFormatReader | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scanAreaRef = useRef<HTMLDivElement>(null);
+  const lastScannedRef = useRef<string>('');
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // SearchableSelect Component
   interface SearchableSelectProps {
@@ -300,9 +305,61 @@ export default function POSPage() {
     }
   }, [barcodeInput, products, addToCart, extractProductIdFromUrl]);
 
+  // Play success sound
+  const playSuccessSound = useCallback(() => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (e) {
+      console.debug('Could not play sound:', e);
+    }
+  }, []);
+
+  // Play error sound
+  const playErrorSound = useCallback(() => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 400;
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.2);
+    } catch (e) {
+      console.debug('Could not play sound:', e);
+    }
+  }, []);
+
   // Stop camera scanning
   const stopScanning = useCallback(async () => {
     try {
+      // Clear error timeout
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
+
       if (scannerRef.current) {
         try {
           scannerRef.current.reset();
@@ -323,15 +380,29 @@ export default function POSPage() {
       }
 
       setIsScanning(false);
+      setScanSuccess(false);
+      setErrorMessage(null);
+      setIsScanProcessing(false);
       console.log('[POS] Camera stopped successfully');
     } catch (error) {
       console.error('[POS] Error stopping camera:', error);
       setIsScanning(false);
+      setScanSuccess(false);
+      setErrorMessage(null);
+      setIsScanProcessing(false);
     }
   }, []);
 
   // Handle barcode scan result
   const handleBarcodeScanned = useCallback((barcode: string) => {
+    // Prevent duplicate scans and processing
+    if (barcode === lastScannedRef.current || isScanProcessing) {
+      return;
+    }
+
+    setIsScanProcessing(true);
+    setErrorMessage(null);
+
     // Check if scanned value is a URL and extract product ID
     const productIdFromUrl = extractProductIdFromUrl(barcode);
     const searchValue = productIdFromUrl || barcode;
@@ -359,14 +430,43 @@ export default function POSPage() {
     }
 
     if (product) {
+      lastScannedRef.current = barcode;
+      
+      // Show success feedback
+      setScanSuccess(true);
+      playSuccessSound();
+      
+      // Add to cart
       addToCart(product, 'Scan', barcode);
-      // Stop scanning after successful scan
-      stopScanning();
+      
+      // Close camera after short delay to show success feedback
+      setTimeout(() => {
+        stopScanning();
+        setScanSuccess(false);
+        setIsScanProcessing(false);
+        
+        // Reset last scanned after a delay
+        setTimeout(() => {
+          lastScannedRef.current = '';
+        }, 2000);
+      }, 1500);
     } else {
-      // Product not found - show alert and continue scanning
-      alert(`المنتج غير موجود للباركود أو رقم الشامل: ${barcode}`);
+      // Show error feedback (only once, not repeatedly)
+      if (!errorMessage) {
+        setErrorMessage(`المنتج غير موجود: ${barcode}`);
+        playErrorSound();
+        
+        // Clear error message after 3 seconds
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+        }
+        errorTimeoutRef.current = setTimeout(() => {
+          setErrorMessage(null);
+          setIsScanProcessing(false);
+        }, 3000);
+      }
     }
-  }, [products, addToCart, stopScanning, extractProductIdFromUrl]);
+  }, [products, addToCart, stopScanning, extractProductIdFromUrl, isScanProcessing, errorMessage, playSuccessSound, playErrorSound]);
 
   // Check if browser supports camera
   const isCameraSupported = useCallback(() => {
@@ -616,6 +716,11 @@ export default function POSPage() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Clear error timeout
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+
       // Stop scanner
       if (scannerRef.current) {
         try {
@@ -1086,40 +1191,103 @@ export default function POSPage() {
               </div>
             </div>
 
-            {/* Barcode Scanner Camera View */}
+            {/* Fullscreen Barcode Scanner Camera View */}
             {isScanning && (
-              <div className="p-3 sm:p-4 bg-black border-b border-gray-200 flex-shrink-0">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-white text-sm font-medium mb-1 font-cairo">امسح الباركود بالكاميرا</p>
-                    <p className="text-gray-400 text-xs font-cairo">وجه الكاميرا نحو الباركود</p>
+              <div className="fixed inset-0 z-50 bg-black flex flex-col">
+                {/* Header */}
+                <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-white text-lg font-bold mb-1 font-cairo">امسح الباركود</p>
+                      <p className="text-gray-300 text-sm font-cairo">وجه الكاميرا نحو الباركود</p>
+                    </div>
+                    <button
+                      onClick={stopScanning}
+                      className="p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+                      aria-label="إغلاق"
+                    >
+                      <X size={24} />
+                    </button>
                   </div>
-                  <button
-                    onClick={stopScanning}
-                    className="px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm flex items-center gap-1 font-cairo"
-                  >
-                    <X size={16} />
-                    <span className="hidden sm:inline">إغلاق</span>
-                  </button>
                 </div>
-                <div className="w-full flex items-center justify-center">
+
+                {/* Video Container */}
+                <div className="flex-1 relative overflow-hidden">
                   <video
                     id="barcode-scanner"
                     ref={scanAreaRef}
-                    className="w-full max-w-md mx-auto bg-gray-900 rounded-lg overflow-hidden"
-                    style={{ 
-                      minHeight: '250px',
-                      maxHeight: '500px',
-                      width: '100%',
-                      objectFit: 'cover'
-                    }}
+                    className="absolute inset-0 w-full h-full object-cover"
                     playsInline
                     muted
+                    autoPlay
                   />
+
+                  {/* Viewfinder Overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    {/* Scanning Frame */}
+                    <div className="relative w-80 h-80 max-w-[85vw] max-h-[85vw]">
+                      {/* Corner indicators */}
+                      <div className="absolute inset-0 border-4 border-white/80 rounded-lg">
+                        {/* Top-left corner */}
+                        <div className="absolute -top-1 -left-1 w-12 h-12 border-t-4 border-l-4 border-green-400 rounded-tl-lg"></div>
+                        {/* Top-right corner */}
+                        <div className="absolute -top-1 -right-1 w-12 h-12 border-t-4 border-r-4 border-green-400 rounded-tr-lg"></div>
+                        {/* Bottom-left corner */}
+                        <div className="absolute -bottom-1 -left-1 w-12 h-12 border-b-4 border-l-4 border-green-400 rounded-bl-lg"></div>
+                        {/* Bottom-right corner */}
+                        <div className="absolute -bottom-1 -right-1 w-12 h-12 border-b-4 border-r-4 border-green-400 rounded-br-lg"></div>
+                      </div>
+
+                      {/* Scanning line animation */}
+                      {!scanSuccess && !isScanProcessing && (
+                        <div className="absolute inset-0 overflow-hidden rounded-lg">
+                          <div className="absolute top-0 left-0 right-0 h-1 bg-green-400 shadow-lg shadow-green-400/50 animate-scan-line"></div>
+                        </div>
+                      )}
+
+                      {/* Success Indicator */}
+                      {scanSuccess && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-green-500/20 rounded-lg animate-fade-in">
+                          <div className="bg-green-500 rounded-full p-4 shadow-2xl shadow-green-500/50">
+                            <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Error Message */}
+                      {errorMessage && (
+                        <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in whitespace-nowrap font-cairo">
+                          {errorMessage}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Overlay mask (darken areas outside scanning frame) */}
+                    <div className="absolute inset-0 bg-black/60" style={{
+                      clipPath: `polygon(
+                        0% 0%,
+                        0% 100%,
+                        calc(50% - 40vw) 100%,
+                        calc(50% - 40vw) calc(50% - 40vw),
+                        calc(50% + 40vw) calc(50% - 40vw),
+                        calc(50% + 40vw) calc(50% + 40vw),
+                        calc(50% - 40vw) calc(50% + 40vw),
+                        calc(50% - 40vw) 100%,
+                        100% 100%,
+                        100% 0%
+                      )`
+                    }}></div>
+                  </div>
                 </div>
-                <p className="text-gray-400 text-xs text-center mt-2 font-cairo">
-                  يمكنك أيضاً استخدام الماسح الضوئي المتصل بالحاسوب
-                </p>
+
+                {/* Footer Instructions */}
+                <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/80 to-transparent p-4">
+                  <p className="text-white text-center text-sm font-cairo">
+                    {isScanProcessing ? 'جاري المعالجة...' : 'ضع الباركود داخل الإطار'}
+                  </p>
+                </div>
               </div>
             )}
 
