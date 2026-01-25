@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true); // Default to true for convenience
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { setUser } = useShop();
@@ -47,7 +48,13 @@ export default function LoginPage() {
       
       if (userData && hasId) {
         console.log('[Login Page] User data is valid, setting user and redirecting...');
-        setUser(userData);
+        // Add rememberMe flag to user data
+        const userDataWithRememberMe = {
+          ...userData,
+          rememberMe,
+          loginTimestamp: Date.now(),
+        };
+        setUser(userDataWithRememberMe);
         // Small delay to ensure state is set
         setTimeout(() => {
           router.push('/');
@@ -143,6 +150,19 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
+              />
+              <label htmlFor="rememberMe" className="text-sm text-gray-700 cursor-pointer">
+                تذكرني (البقاء مسجل الدخول)
+              </label>
             </div>
 
             {error && (

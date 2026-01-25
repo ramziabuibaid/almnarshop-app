@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Filter, ShoppingCart, User, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useShop } from '@/context/ShopContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import ProductCard from '@/components/store/ProductCard';
 import FilterSidebar from '@/components/store/FilterSidebar';
@@ -20,11 +20,14 @@ const PRODUCTS_PER_PAGE = 20;
 
 export default function Home() {
   const { products, loadProducts, cart, user, loading } = useShop();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false); // For mobile search expansion
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<FilterState>({
@@ -35,7 +38,6 @@ export default function Home() {
     priceRange: { min: 0, max: 10000 },
   });
   const [sortOption, setSortOption] = useState<SortOption>('date-desc');
-  const router = useRouter();
 
   useEffect(() => {
     setIsMounted(true);
@@ -47,6 +49,28 @@ export default function Home() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Read URL parameters and apply filters
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const typeParam = searchParams.get('type');
+    const searchParam = searchParams.get('search');
+
+    // Apply type filter from URL
+    if (typeParam) {
+      const decodedType = decodeURIComponent(typeParam);
+      setFilters((prev) => ({
+        ...prev,
+        selectedTypes: [decodedType],
+      }));
+    }
+
+    // Apply search query from URL
+    if (searchParam) {
+      setSearchQuery(decodeURIComponent(searchParam));
+    }
+  }, [isMounted, searchParams]);
 
   useEffect(() => {
     document.title = 'المتجر - My Shop';
@@ -171,11 +195,10 @@ export default function Home() {
   const endIndex = startIndex + PRODUCTS_PER_PAGE;
   const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
 
-  // Calculate cart item count - use useMemo to prevent hydration mismatch
+  // Calculate cart item count
   const cartItemCount = useMemo(() => {
-    if (!isMounted) return 0;
     return cart.reduce((sum, item) => sum + item.quantity, 0);
-  }, [isMounted, cart]);
+  }, [cart]);
 
   // Build active filters for ActiveFiltersBar
   const activeFilters = useMemo(() => {
@@ -261,22 +284,29 @@ export default function Home() {
       ...prev,
       selectedTypes: [category],
     }));
-    setTimeout(() => {
-      const productsSection = document.getElementById('products-section');
-      if (productsSection) {
-        productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 100);
+    // Only scroll on desktop, on mobile let user scroll naturally
+    // Check isMounted to avoid hydration issues
+    if (isMounted && !isMobile) {
+      setTimeout(() => {
+        const productsSection = document.getElementById('products-section');
+        if (productsSection) {
+          // Use 'nearest' to avoid jumping issues
+          productsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 100);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3">
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Company Logo (Just Name) */}
-            <div className="flex-shrink-0">
+    <div className="min-h-screen bg-gray-50" dir="rtl" suppressHydrationWarning>
+      {/* Header - Fixed at top on mobile, sticky on desktop */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm" suppressHydrationWarning>
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3" suppressHydrationWarning>
+          <div className="flex items-center gap-2 sm:gap-3" suppressHydrationWarning>
+            {/* Company Logo (Just Name) - Hidden when search is expanded on mobile */}
+            <div className={`flex-shrink-0 transition-all duration-300 md:block ${
+              isSearchExpanded ? 'hidden md:block' : 'block'
+            }`}>
               <button
                 onClick={() => router.push('/')}
                 className="cursor-pointer"
@@ -292,8 +322,9 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Search Bar - Always visible, optimized for all screen sizes */}
-            <div className="flex-1 relative min-w-0">
+            {/* Search Bar - Desktop: Always visible, Mobile: Expandable */}
+            {/* Desktop Search Bar */}
+            <div className="hidden md:flex flex-1 relative min-w-0" suppressHydrationWarning>
               <Search
                 size={18}
                 className="absolute right-2.5 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 sm:w-5 sm:h-5 pointer-events-none"
@@ -305,30 +336,73 @@ export default function Home() {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  // Auto-scroll to products when user starts typing (all devices)
-                  if (e.target.value.trim() && isMounted) {
+                  // Only scroll to products when user types (not on focus)
+                  // And only on desktop to avoid mobile keyboard issues
+                  if (e.target.value.trim() && isMounted && typeof window !== 'undefined' && window.innerWidth >= 768) {
                     setTimeout(() => {
                       const productsSection = document.getElementById('products-section');
                       if (productsSection) {
-                        productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        // Use 'nearest' to avoid jumping issues
+                        productsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                       }
                     }, 300);
                   }
                 }}
-                onFocus={() => {
-                  // Auto-scroll to products when search is focused (all devices)
-                  if (isMounted) {
-                    setTimeout(() => {
-                      const productsSection = document.getElementById('products-section');
-                      if (productsSection) {
-                        productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }
-                    }, 100);
-                  }
-                }}
                 className="w-full pr-8 sm:pr-10 pl-3 sm:pl-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-gray-900 placeholder:text-gray-500 text-right text-sm sm:text-base"
                 dir="rtl"
+                suppressHydrationWarning
               />
+            </div>
+
+            {/* Mobile Search - Icon when collapsed, Full bar when expanded */}
+            <div className="md:hidden flex items-center gap-2 flex-1" suppressHydrationWarning>
+              {!isSearchExpanded ? (
+                // Search Icon Button (Collapsed state)
+                <button
+                  onClick={() => {
+                    setIsSearchExpanded(true);
+                    // Focus input after state update
+                    setTimeout(() => {
+                      if (searchInputRef.current) {
+                        searchInputRef.current.focus();
+                      }
+                    }, 100);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+                  aria-label="Search"
+                >
+                  <Search size={20} className="text-gray-700" />
+                </button>
+              ) : (
+                // Expanded Search Bar (Mobile)
+                <div className="flex-1 relative min-w-0 flex items-center gap-2">
+                  <Search
+                    size={18}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                  />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="بحث عن منتجات..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="flex-1 pr-8 pl-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-gray-900 placeholder:text-gray-500 text-right text-base"
+                    dir="rtl"
+                    autoFocus
+                    suppressHydrationWarning
+                  />
+                  <button
+                    onClick={() => {
+                      setIsSearchExpanded(false);
+                      setSearchQuery('');
+                    }}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+                    aria-label="Close search"
+                  >
+                    <X size={20} className="text-gray-700" />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Filter Button - Mobile only */}
@@ -336,6 +410,7 @@ export default function Home() {
               onClick={() => setIsFilterDrawerOpen(true)}
               className="md:hidden p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors relative flex-shrink-0"
               aria-label="Filter"
+              suppressHydrationWarning
             >
               <Filter size={20} className="text-gray-700 sm:w-6 sm:h-6" />
               {(filters.selectedTypes.length > 0 ||
@@ -343,7 +418,7 @@ export default function Home() {
                 filters.selectedSizes.length > 0 ||
                 filters.selectedColors.length > 0 ||
                 (filters.priceRange.min > priceRange.min || filters.priceRange.max < priceRange.max)) && (
-                <span className="absolute -top-0.5 -right-0.5 bg-gray-900 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none">
+                <span className="absolute -top-0.5 -right-0.5 bg-gray-900 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none" suppressHydrationWarning>
                   {activeFilters.length > 9 ? '9+' : activeFilters.length}
                 </span>
               )}
@@ -354,20 +429,22 @@ export default function Home() {
               onClick={() => setIsCartOpen(true)}
               className="relative p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
               aria-label="Cart"
+              suppressHydrationWarning
             >
               <ShoppingCart size={20} className="text-gray-700 sm:w-6 sm:h-6" />
               {cartItemCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-gray-900 text-white text-[10px] sm:text-xs font-bold rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-gray-900 text-white text-[10px] sm:text-xs font-bold rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center" suppressHydrationWarning>
                   {cartItemCount > 99 ? '99+' : cartItemCount}
                 </span>
               )}
             </button>
 
             {/* Admin Panel Button - Only for Admin users */}
-            {isMounted && user && (user.Role === 'Admin' || user.role === 'Admin') && (
+            {(user?.Role === 'Admin' || user?.role === 'Admin') && (
               <button
                 onClick={() => router.push('/admin')}
                 className="hidden sm:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium text-xs sm:text-sm"
+                suppressHydrationWarning
               >
                 <span>Admin Panel</span>
               </button>
@@ -379,6 +456,7 @@ export default function Home() {
               className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
               aria-label="Profile"
               title={user ? 'الملف الشخصي' : 'تسجيل الدخول'}
+              suppressHydrationWarning
             >
               <User size={20} className="text-gray-700 sm:w-6 sm:h-6" />
             </button>
@@ -398,7 +476,7 @@ export default function Home() {
       </div>
 
       {/* Main Content - 2 Column Layout (Desktop) */}
-      <main id="products-section" className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
+      <main id="products-section" className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8" suppressHydrationWarning>
         {/* Section Title */}
         <div className="mb-4 sm:mb-6">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 text-right mb-2">
@@ -427,11 +505,13 @@ export default function Home() {
             {/* Products Grid */}
             <div className="flex-1 min-w-0">
               {/* Active Filters Bar */}
-              <ActiveFiltersBar
-                filters={activeFilters}
-                onRemove={handleRemoveFilter}
-                onClearAll={handleClearAllFilters}
-              />
+              <div suppressHydrationWarning>
+                <ActiveFiltersBar
+                  filters={activeFilters}
+                  onRemove={handleRemoveFilter}
+                  onClearAll={handleClearAllFilters}
+                />
+              </div>
 
               {/* Grid Header */}
               <ProductGridHeader

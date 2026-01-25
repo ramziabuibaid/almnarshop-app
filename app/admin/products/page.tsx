@@ -1,17 +1,218 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useMemo, useRef, useTransition } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useTransition, useCallback } from 'react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ProductFormModal from '@/components/admin/ProductFormModal';
 import MarketingCardGenerator from '@/components/admin/MarketingCardGenerator';
 import { DataTable } from '@/components/ui/data-table';
-import { Plus, Edit, Image as ImageIcon, Loader2, Package, Sparkles, CheckCircle2, Trash, Eye, X, Check, Search, Filter, DollarSign, Warehouse, Store } from 'lucide-react';
+import { Plus, Edit, Image as ImageIcon, Loader2, Package, Sparkles, CheckCircle2, Trash, Eye, X, Check, Search, Filter, DollarSign, Warehouse, Store, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
 import { deleteProduct, getProducts } from '@/lib/api';
 import { ColumnDef } from '@tanstack/react-table';
+import React from 'react';
+
+// Optimized Mobile Product Card Component
+const MobileProductCard = React.memo(({ 
+  product, 
+  imageErrors, 
+  canViewCost, 
+  canAccountant, 
+  router, 
+  handleEdit, 
+  handleGenerateAd, 
+  handleDeleteClick, 
+  handleImageError 
+}: {
+  product: Product;
+  imageErrors: Record<string, boolean>;
+  canViewCost: boolean;
+  canAccountant: boolean;
+  router: any;
+  handleEdit: (product: Product) => void;
+  handleGenerateAd: (product: Product) => void;
+  handleDeleteClick: (product: Product) => void;
+  handleImageError: (productId: string) => void;
+}) => {
+  const productId = product.ProductID || product.id || '';
+  const rawImageUrl = product.image || product.Image || product.ImageUrl || '';
+  const imageUrl = getDirectImageUrl(rawImageUrl);
+  const hasImageError = imageErrors[productId] || !imageUrl;
+  const warehouseStock = product.CS_War !== undefined && product.CS_War !== null ? (product.CS_War || 0) : null;
+  const shopStock = product.CS_Shop !== undefined && product.CS_Shop !== null ? (product.CS_Shop || 0) : null;
+  const totalStock = (warehouseStock || 0) + (shopStock || 0);
+  const price = product.price || product.SalePrice || 0;
+  const costPrice = canViewCost ? (product.CostPrice || null) : null;
+  
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+      {/* Header with Image and Basic Info */}
+      <div className="flex items-start gap-3 mb-3">
+        {/* Product Image */}
+        <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+          {hasImageError || !imageUrl ? (
+            <ImageIcon size={24} className="text-gray-300" />
+          ) : (
+            <img
+              src={imageUrl}
+              alt={product.name || product.Name || ''}
+              className="object-contain w-full h-full"
+              onError={() => handleImageError(productId)}
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+        </div>
+        
+        {/* Product Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col gap-1 mb-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                {productId ? (
+                  <button
+                    onClick={() => router.push(`/admin/products/${productId}`)}
+                    className="text-base font-bold text-gray-900 hover:text-blue-600 hover:underline text-right break-words"
+                  >
+                    {product.name || product.Name || 'N/A'}
+                  </button>
+                ) : (
+                  <div className="text-base font-bold text-gray-900 text-right break-words">
+                    {product.name || product.Name || 'N/A'}
+                  </div>
+                )}
+              </div>
+              <div className="flex-shrink-0 mr-2">
+                <span className="text-lg font-bold text-gray-900 whitespace-nowrap">
+                  ₪{parseFloat(String(price)).toFixed(2)}
+                </span>
+              </div>
+            </div>
+            {product.brand || product.Brand ? (
+              <div className="text-xs text-gray-500 text-right">
+                {product.brand || product.Brand}
+              </div>
+            ) : null}
+          </div>
+          
+          {/* Product ID and Barcode */}
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            {productId && (
+              <span className="text-xs font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded">
+                {productId}
+              </span>
+            )}
+            {product['Shamel No'] && (
+              <span className="text-xs text-gray-600 bg-gray-50 px-2 py-0.5 rounded">
+                شامل: {product['Shamel No']}
+              </span>
+            )}
+            {(product.barcode || product.Barcode) && (
+              <span className="text-xs font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded">
+                {product.barcode || product.Barcode}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Stock Information */}
+      {(warehouseStock !== null || shopStock !== null) && (
+        <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+          <div className="text-xs text-gray-600 mb-1">المخزون</div>
+          <div className="flex items-center gap-3 flex-wrap">
+            {warehouseStock !== null && (
+              <div className="flex items-center gap-1">
+                <Warehouse size={14} className="text-gray-400" />
+                <span className="text-xs text-gray-700">
+                  مخزن: <span className={`font-semibold ${warehouseStock > 0 ? 'text-green-700' : 'text-red-700'}`}>{warehouseStock}</span>
+                </span>
+              </div>
+            )}
+            {shopStock !== null && (
+              <div className="flex items-center gap-1">
+                <Store size={14} className="text-gray-400" />
+                <span className="text-xs text-gray-700">
+                  محل: <span className={`font-semibold ${shopStock > 0 ? 'text-green-700' : 'text-red-700'}`}>{shopStock}</span>
+                </span>
+              </div>
+            )}
+            {totalStock > 0 && (
+              <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded">
+                المجموع: {totalStock}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Additional Info */}
+      <div className="grid grid-cols-2 gap-2 mb-3 text-xs text-gray-600">
+        {product.type || product.Type ? (
+          <div>
+            <span className="text-gray-500">النوع:</span> {product.type || product.Type}
+          </div>
+        ) : null}
+        {product.Origin ? (
+          <div>
+            <span className="text-gray-500">المنشأ:</span> {product.Origin}
+          </div>
+        ) : null}
+        {product.Warranty ? (
+          <div>
+            <span className="text-gray-500">الضمان:</span> {product.Warranty}
+          </div>
+        ) : null}
+        {costPrice !== null && (
+          <div>
+            <span className="text-gray-500">التكلفة:</span> <span className="font-semibold">₪{parseFloat(String(costPrice)).toFixed(2)}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+        <button
+          onClick={() => handleEdit(product)}
+          className="flex-1 px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2 transition-colors text-sm"
+        >
+          <Edit size={16} />
+          <span>تعديل</span>
+        </button>
+        <button
+          onClick={() => handleGenerateAd(product)}
+          className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2 transition-colors text-sm"
+          title="إنشاء إعلان تسويقي"
+        >
+          <Sparkles size={16} />
+        </button>
+        {canAccountant && (
+          <button
+            onClick={() => handleDeleteClick(product)}
+            className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2 transition-colors text-sm"
+            title="حذف المنتج"
+          >
+            <Trash size={16} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison function for React.memo
+  return (
+    prevProps.product.ProductID === nextProps.product.ProductID &&
+    prevProps.product.id === nextProps.product.id &&
+    prevProps.imageErrors[prevProps.product.ProductID || prevProps.product.id || ''] === 
+    nextProps.imageErrors[nextProps.product.ProductID || nextProps.product.id || ''] &&
+    prevProps.canViewCost === nextProps.canViewCost &&
+    prevProps.canAccountant === nextProps.canAccountant
+  );
+});
+
+MobileProductCard.displayName = 'MobileProductCard';
 
 export default function ProductsManagerPage() {
   const { admin } = useAdminAuth();
@@ -72,6 +273,40 @@ export default function ProductsManagerPage() {
   const [isColumnVisibilityOpen, setIsColumnVisibilityOpen] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(false);
   const columnVisibilityButtonRef = useRef<HTMLButtonElement>(null);
+  
+  // Mobile pagination state
+  const [mobilePage, setMobilePage] = useState(1);
+  const MOBILE_PAGE_SIZE = 20;
+  
+  // Debounce hook for search
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Debounced search handler
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchInput(value); // Update input immediately
+    
+    // Clear previous timeout
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+    
+    // Set new timeout for debounced search
+    searchDebounceRef.current = setTimeout(() => {
+      startTransition(() => {
+        setSearchQuery(value);
+        setMobilePage(1); // Reset to first page on search
+      });
+    }, 300); // 300ms debounce delay
+  }, [startTransition]);
+  
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, []);
   
   // Save column visibility to localStorage
   useEffect(() => {
@@ -334,7 +569,8 @@ export default function ProductsManagerPage() {
                   alt={product.name || product.Name || ''}
                                 className="object-contain w-full h-full"
                   onError={() => handleImageError(productId)}
-                                loading="eager"
+                                loading="lazy"
+                                decoding="async"
                               />
                             )}
                           </div>
@@ -433,6 +669,31 @@ export default function ProductsManagerPage() {
             <div className="text-sm text-gray-900">{shamelNo}</div>
           ) : (
             <span className="text-gray-400 text-sm">—</span>
+          );
+        },
+      },
+      {
+        id: 'IsSerialized',
+        accessorKey: 'is_serialized',
+        header: 'رقم تسلسلي',
+        enableSorting: true,
+        enableColumnFilter: true,
+        minSize: 100,
+        cell: ({ row }) => {
+          const product = row.original;
+          const isSerialized = product.is_serialized || product.IsSerialized || false;
+          return (
+            <div className="flex items-center justify-center">
+              {isSerialized ? (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  نعم
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                  لا
+                </span>
+              )}
+            </div>
           );
         },
       },
@@ -708,6 +969,7 @@ export default function ProductsManagerPage() {
   );
 
   // Filter products based on search query (additional to column filters)
+  // Optimized with early returns and cached lowercase strings
   const filteredProducts = useMemo(() => {
     if (!searchQuery.trim()) {
       return products;
@@ -719,6 +981,11 @@ export default function ProductsManagerPage() {
       .split(/\s+/)
       .filter((word) => word.length > 0);
 
+    if (searchWords.length === 0) {
+      return products;
+    }
+
+    // Pre-compute searchable text for better performance
     return products.filter((p) => {
       const name = String(p.name || p.Name || '').toLowerCase();
       const id = String(p.id || p.ProductID || '').toLowerCase();
@@ -729,6 +996,22 @@ export default function ProductsManagerPage() {
       return searchWords.every((word) => searchableText.includes(word));
     });
   }, [products, searchQuery]);
+  
+  // Paginated products for mobile view
+  const paginatedMobileProducts = useMemo(() => {
+    const startIndex = (mobilePage - 1) * MOBILE_PAGE_SIZE;
+    const endIndex = startIndex + MOBILE_PAGE_SIZE;
+    return filteredProducts.slice(startIndex, endIndex);
+  }, [filteredProducts, mobilePage]);
+  
+  const totalMobilePages = Math.ceil(filteredProducts.length / MOBILE_PAGE_SIZE);
+  
+  // Reset mobile page when filtered products change significantly
+  useEffect(() => {
+    if (mobilePage > totalMobilePages && totalMobilePages > 0) {
+      setMobilePage(1);
+    }
+  }, [totalMobilePages, mobilePage]);
                   
                   return (
     <AdminLayout>
@@ -777,25 +1060,13 @@ export default function ProductsManagerPage() {
                   type="text"
                   placeholder="البحث بالاسم، الرمز، الباركود، أو العلامة التجارية..."
                   value={searchInput}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSearchInput(value); // Update input immediately
-                    // Update search query in background using transition
-                    startTransition(() => {
-                      setSearchQuery(value);
-                    });
-                  }}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 text-sm sm:text-base"
                   dir="rtl"
                 />
                 {searchInput && (
                   <button
-                    onClick={() => {
-                      setSearchInput('');
-                      startTransition(() => {
-                        setSearchQuery('');
-                      });
-                    }}
+                    onClick={() => handleSearchChange('')}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
                     <X size={18} />
@@ -951,170 +1222,57 @@ export default function ProductsManagerPage() {
               </div>
             </div>
           ) : (
-            filteredProducts.map((product) => {
-              const productId = product.ProductID || product.id || '';
-              const rawImageUrl = product.image || product.Image || product.ImageUrl || '';
-              const imageUrl = getDirectImageUrl(rawImageUrl);
-              const hasImageError = imageErrors[productId] || !imageUrl;
-              const warehouseStock = product.CS_War !== undefined && product.CS_War !== null ? (product.CS_War || 0) : null;
-              const shopStock = product.CS_Shop !== undefined && product.CS_Shop !== null ? (product.CS_Shop || 0) : null;
-              const totalStock = (warehouseStock || 0) + (shopStock || 0);
-              const price = product.price || product.SalePrice || 0;
-              const costPrice = canViewCost ? (product.CostPrice || null) : null;
+            <>
+              {paginatedMobileProducts.map((product) => {
+                const productId = product.ProductID || product.id || '';
+                return (
+                  <MobileProductCard
+                    key={productId}
+                    product={product}
+                    imageErrors={imageErrors}
+                    canViewCost={canViewCost}
+                    canAccountant={canAccountant}
+                    router={router}
+                    handleEdit={handleEdit}
+                    handleGenerateAd={handleGenerateAd}
+                    handleDeleteClick={handleDeleteClick}
+                    handleImageError={handleImageError}
+                  />
+                );
+              })}
               
-              return (
-                <div key={productId} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                  {/* Header with Image and Basic Info */}
-                  <div className="flex items-start gap-3 mb-3">
-                    {/* Product Image */}
-                    <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
-                      {hasImageError || !imageUrl ? (
-                        <ImageIcon size={24} className="text-gray-300" />
-                      ) : (
-                        <img
-                          src={imageUrl}
-                          alt={product.name || product.Name || ''}
-                          className="object-contain w-full h-full"
-                          onError={() => handleImageError(productId)}
-                        />
-                      )}
-                    </div>
-                    
-                    {/* Product Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col gap-1 mb-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            {productId ? (
-                              <button
-                                onClick={() => router.push(`/admin/products/${productId}`)}
-                                className="text-base font-bold text-gray-900 hover:text-blue-600 hover:underline text-right break-words"
-                              >
-                                {product.name || product.Name || 'N/A'}
-                              </button>
-                            ) : (
-                              <div className="text-base font-bold text-gray-900 text-right break-words">
-                                {product.name || product.Name || 'N/A'}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-shrink-0 mr-2">
-                            <span className="text-lg font-bold text-gray-900 whitespace-nowrap">
-                              ₪{parseFloat(String(price)).toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                        {product.brand || product.Brand ? (
-                          <div className="text-xs text-gray-500 text-right">
-                            {product.brand || product.Brand}
-                          </div>
-                        ) : null}
-                      </div>
-                      
-                      {/* Product ID and Barcode */}
-                      <div className="flex flex-wrap items-center gap-2 mt-2">
-                        {productId && (
-                          <span className="text-xs font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded">
-                            {productId}
-                          </span>
-                        )}
-                        {product['Shamel No'] && (
-                          <span className="text-xs text-gray-600 bg-gray-50 px-2 py-0.5 rounded">
-                            شامل: {product['Shamel No']}
-                          </span>
-                        )}
-                        {(product.barcode || product.Barcode) && (
-                          <span className="text-xs font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded">
-                            {product.barcode || product.Barcode}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+              {/* Mobile Pagination */}
+              {totalMobilePages > 1 && (
+                <div className="flex items-center justify-between gap-4 pt-4 pb-2 border-t border-gray-200 bg-white sticky bottom-0 z-10">
+                  <button
+                    onClick={() => setMobilePage((prev) => Math.max(1, prev - 1))}
+                    disabled={mobilePage === 1}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-gray-900"
+                  >
+                    <ChevronRight size={16} />
+                    السابق
+                  </button>
+                  
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <span className="font-medium">
+                      صفحة {mobilePage} من {totalMobilePages}
+                    </span>
+                    <span className="text-gray-500">
+                      ({filteredProducts.length} منتج)
+                    </span>
                   </div>
-
-                  {/* Stock Information */}
-                  {(warehouseStock !== null || shopStock !== null) && (
-                    <div className="mb-3 p-2 bg-gray-50 rounded-lg">
-                      <div className="text-xs text-gray-600 mb-1">المخزون</div>
-                      <div className="flex items-center gap-3 flex-wrap">
-                        {warehouseStock !== null && (
-                          <div className="flex items-center gap-1">
-                            <Warehouse size={14} className="text-gray-400" />
-                            <span className="text-xs text-gray-700">
-                              مخزن: <span className={`font-semibold ${warehouseStock > 0 ? 'text-green-700' : 'text-red-700'}`}>{warehouseStock}</span>
-                            </span>
-                          </div>
-                        )}
-                        {shopStock !== null && (
-                          <div className="flex items-center gap-1">
-                            <Store size={14} className="text-gray-400" />
-                            <span className="text-xs text-gray-700">
-                              محل: <span className={`font-semibold ${shopStock > 0 ? 'text-green-700' : 'text-red-700'}`}>{shopStock}</span>
-                            </span>
-                          </div>
-                        )}
-                        {totalStock > 0 && (
-                          <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded">
-                            المجموع: {totalStock}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Additional Info */}
-                  <div className="grid grid-cols-2 gap-2 mb-3 text-xs text-gray-600">
-                    {product.type || product.Type ? (
-                      <div>
-                        <span className="text-gray-500">النوع:</span> {product.type || product.Type}
-                      </div>
-                    ) : null}
-                    {product.Origin ? (
-                      <div>
-                        <span className="text-gray-500">المنشأ:</span> {product.Origin}
-                      </div>
-                    ) : null}
-                    {product.Warranty ? (
-                      <div>
-                        <span className="text-gray-500">الضمان:</span> {product.Warranty}
-                      </div>
-                    ) : null}
-                    {costPrice !== null && (
-                      <div>
-                        <span className="text-gray-500">التكلفة:</span> <span className="font-semibold">₪{parseFloat(String(costPrice)).toFixed(2)}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
-                    <button
-                      onClick={() => handleEdit(product)}
-                      className="flex-1 px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2 transition-colors text-sm"
-                    >
-                      <Edit size={16} />
-                      <span>تعديل</span>
-                    </button>
-                    <button
-                      onClick={() => handleGenerateAd(product)}
-                      className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2 transition-colors text-sm"
-                      title="إنشاء إعلان تسويقي"
-                    >
-                      <Sparkles size={16} />
-                    </button>
-                    {canAccountant && (
-                      <button
-                        onClick={() => handleDeleteClick(product)}
-                        className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2 transition-colors text-sm"
-                        title="حذف المنتج"
-                      >
-                        <Trash size={16} />
-                      </button>
-                    )}
-                  </div>
+                  
+                  <button
+                    onClick={() => setMobilePage((prev) => Math.min(totalMobilePages, prev + 1))}
+                    disabled={mobilePage === totalMobilePages}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-gray-900"
+                  >
+                    التالي
+                    <ChevronLeft size={16} />
+                  </button>
                 </div>
-              );
-            })
+              )}
+            </>
           )}
         </div>
 

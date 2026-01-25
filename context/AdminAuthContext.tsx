@@ -36,7 +36,7 @@ interface AdminAuthContextType {
   admin: AdminUser | null;
   loading: boolean;
   error: string | null;
-  loginAdmin: (username: string, password: string) => Promise<void>;
+  loginAdmin: (username: string, password: string, rememberMe?: boolean) => Promise<void>;
   logoutAdmin: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -68,14 +68,14 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     fetchMe();
   }, []);
 
-  const loginAdmin = async (username: string, password: string) => {
+  const loginAdmin = async (username: string, password: string, rememberMe: boolean = false) => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, rememberMe }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));

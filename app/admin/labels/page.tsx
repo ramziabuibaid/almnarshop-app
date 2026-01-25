@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useTransition, memo } from 'react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Search, Printer, Loader2, CheckSquare, Square, ArrowUp, ArrowDown } from 'lucide-react';
 import { Product } from '@/types';
-import { getProducts } from '@/lib/api';
-import { getDirectImageUrl } from '@/lib/utils';
+import { getProducts, saveProduct } from '@/lib/api';
+import LabelsTableRow from '@/components/admin/LabelsTableRow';
 import { useRouter } from 'next/navigation';
 
 type LabelType = 'A' | 'B' | 'C';
@@ -19,6 +19,7 @@ export default function LabelsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [labelType, setLabelType] = useState<LabelType>('A');
   const [useQuantity, setUseQuantity] = useState<boolean>(true); // true = حسب الكمية, false = ليبل واحد لكل منتج
@@ -26,6 +27,12 @@ export default function LabelsPage() {
   const [useQrProductUrl, setUseQrProductUrl] = useState<boolean>(true); // true = QR يفتح صفحة المنتج، false = QR = الباركود/الشامل
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [editingBarcode, setEditingBarcode] = useState<string | null>(null); // productId being edited
+  const [editingBarcodeValue, setEditingBarcodeValue] = useState<string>(''); // temporary value while editing
+  const [savingBarcode, setSavingBarcode] = useState<string | null>(null); // productId being saved
+  const [customQuantities, setCustomQuantities] = useState<Record<string, number>>({}); // productId -> custom quantity for printing
+  const [editingQuantity, setEditingQuantity] = useState<string | null>(null); // productId being edited
+  const [editingQuantityValue, setEditingQuantityValue] = useState<string>(''); // temporary value while editing
 
   useLayoutEffect(() => {
     document.title = 'طباعة الملصقات';
@@ -34,6 +41,14 @@ export default function LabelsPage() {
   useEffect(() => {
     loadProducts();
   }, []);
+
+  // Debounce search query for better performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const loadProducts = async () => {
     setLoading(true);
@@ -51,9 +66,9 @@ export default function LabelsPage() {
     let filtered = products;
 
     // Apply search - supports multiple words (e.g., "ثلاجة سامسونج" will find products with both words)
-    if (searchQuery.trim()) {
+    if (debouncedSearchQuery.trim()) {
       // Split search query into individual words
-      const searchWords = searchQuery
+      const searchWords = debouncedSearchQuery
         .toLowerCase()
         .split(/\s+/)
         .map(word => word.trim())
@@ -101,59 +116,209 @@ export default function LabelsPage() {
     }
 
     return filtered;
-  }, [products, searchQuery, sortField, sortDirection]);
+  }, [products, debouncedSearchQuery, sortField, sortDirection]);
 
-  const toggleProduct = (productId: string) => {
-    console.log('[LabelsPage] Toggle product:', productId);
+  const [isPending, startTransition] = useTransition();
+
+  const toggleProduct = useCallback((productId: string) => {
     setSelectedProducts((prev) => {
       const next = new Set(prev);
       if (next.has(productId)) {
         next.delete(productId);
-        console.log('[LabelsPage] Removed product, new set size:', next.size);
       } else {
         next.add(productId);
-        console.log('[LabelsPage] Added product, new set size:', next.size);
       }
       return next;
     });
-  };
+  }, []);
 
-  const toggleAll = () => {
-    if (selectedProducts.size === filteredProducts.length) {
-      setSelectedProducts(new Set());
-    } else {
-      setSelectedProducts(new Set(filteredProducts.map((p) => p.ProductID || p.id || '')));
-    }
-  };
+  const toggleAll = useCallback(() => {
+    startTransition(() => {
+      if (selectedProducts.size === filteredProducts.length) {
+        setSelectedProducts(new Set());
+      } else {
+        setSelectedProducts(new Set(filteredProducts.map((p) => p.ProductID || p.id || '')));
+      }
+    });
+  }, [selectedProducts.size, filteredProducts]);
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      // Toggle direction if clicking the same field
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      // Set new field and default to ascending
-      setSortField(field);
-      setSortDirection('asc');
+  const handleSort = useCallback((field: SortField) => {
+    startTransition(() => {
+      if (sortField === field) {
+        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      } else {
+        setSortField(field);
+        setSortDirection('asc');
+      }
+    });
+  }, [sortField, sortDirection]);
+
+  const handleStartEditBarcode = useCallback((product: Product, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const productId = product.ProductID || product.id || '';
+    if (!productId) return;
+    setEditingBarcode(productId);
+    setEditingBarcodeValue(product.Barcode || product.barcode || '');
+  }, []);
+
+  const handleCancelEditBarcode = useCallback((e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditingBarcode(null);
+    setEditingBarcodeValue('');
+  }, []);
+
+  const handleSaveBarcode = useCallback(async (product: Product, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const productId = product.ProductID || product.id || '';
+    if (!productId || !editingBarcode || editingBarcode !== productId) return;
+
+    setSavingBarcode(productId);
+    const barcodeValue = editingBarcodeValue.trim() || null;
+    
+    // Update local state immediately for instant feedback
+    setProducts((prevProducts) =>
+      prevProducts.map((p) => {
+        const pid = p.ProductID || p.id || '';
+        if (pid === productId) {
+          return {
+            ...p,
+            Barcode: barcodeValue || undefined,
+            barcode: barcodeValue || undefined,
+          };
+        }
+        return p;
+      })
+    );
+    setEditingBarcode(null);
+    setEditingBarcodeValue('');
+
+    // Save to database in background (non-blocking)
+    saveProduct({
+      ProductID: productId,
+      Barcode: barcodeValue,
+      Name: product.Name || product.name,
+      Type: product.Type || product.type,
+      Brand: product.Brand || product.brand,
+      Origin: product.Origin || product.origin,
+      Warranty: product.Warranty || product.warranty,
+      Size: product.Size || product.size,
+      Color: product.Color || product.color,
+      Dimention: product.Dimention || product.dimention,
+      CS_War: product.CS_War,
+      CS_Shop: product.CS_Shop,
+      CostPrice: product.CostPrice,
+      SalePrice: product.SalePrice || product.price,
+      T1Price: product.T1Price,
+      T2Price: product.T2Price,
+      'Shamel No': product['Shamel No'],
+      Image: product.Image || product.image,
+      'Image 2': product['Image 2'] || product.image2,
+      'image 3': product['image 3'] || product.image3,
+      is_serialized: product.is_serialized || product.IsSerialized || false,
+    }).catch((error: any) => {
+      console.error('[LabelsPage] Failed to save barcode:', error);
+      // Revert on error
+      setProducts((prevProducts) =>
+        prevProducts.map((p) => {
+          const pid = p.ProductID || p.id || '';
+          if (pid === productId) {
+            return {
+              ...p,
+              Barcode: product.Barcode || product.barcode || undefined,
+              barcode: product.Barcode || product.barcode || undefined,
+            };
+          }
+          return p;
+        })
+      );
+      alert(`فشل حفظ الباركود: ${error.message || 'خطأ غير معروف'}`);
+    }).finally(() => {
+      setSavingBarcode(null);
+    });
+  }, [editingBarcode, editingBarcodeValue]);
+
+  const handleBarcodeKeyDown = useCallback((product: Product, e: React.KeyboardEvent<HTMLInputElement>, onSave: () => void, onCancel: () => void) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
     }
-  };
+  }, []);
+
+  const handleStartEditQuantity = useCallback((product: Product, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const productId = product.ProductID || product.id || '';
+    if (!productId) return;
+    const currentQuantity = customQuantities[productId] ?? (product.CS_Shop || product.cs_shop || 0);
+    setEditingQuantity(productId);
+    setEditingQuantityValue(String(currentQuantity));
+  }, [customQuantities]);
+
+  const handleCancelEditQuantity = useCallback((e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditingQuantity(null);
+    setEditingQuantityValue('');
+  }, []);
+
+  const handleSaveQuantity = useCallback((product: Product, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const productId = product.ProductID || product.id || '';
+    if (!productId || !editingQuantity || editingQuantity !== productId) return;
+
+    const quantityValue = parseInt(editingQuantityValue.trim(), 10);
+    if (isNaN(quantityValue) || quantityValue < 0) {
+      alert('يرجى إدخال رقم صحيح أكبر من أو يساوي صفر');
+      return;
+    }
+
+    setCustomQuantities((prev) => ({
+      ...prev,
+      [productId]: quantityValue,
+    }));
+
+    setEditingQuantity(null);
+    setEditingQuantityValue('');
+  }, [editingQuantity, editingQuantityValue]);
+
+  const handleQuantityKeyDown = useCallback((product: Product, e: React.KeyboardEvent<HTMLInputElement>, onSave: () => void, onCancel: () => void) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
+    }
+  }, []);
+
+  const getPrintQuantity = useCallback((product: Product): number => {
+    const productId = product.ProductID || product.id || '';
+    if (customQuantities[productId] !== undefined) {
+      return customQuantities[productId];
+    }
+    return product.CS_Shop || product.cs_shop || 0;
+  }, [customQuantities]);
 
   const selectedProductsList = useMemo(() => {
-    const filtered = products.filter((p) => {
+    const selectedIds = Array.from(selectedProducts);
+    if (selectedIds.length === 0) return [];
+    
+    const filtered = [];
+    for (const p of products) {
       const productId = p.ProductID || p.id || '';
-      return selectedProducts.has(productId);
-    });
-    console.log('[LabelsPage] Selected products list:', {
-      totalProducts: products.length,
-      selectedIds: Array.from(selectedProducts),
-      filteredCount: filtered.length,
-      firstProduct: filtered[0] ? {
-        ProductID: filtered[0].ProductID,
-        id: filtered[0].id,
-        Name: filtered[0].Name || filtered[0].name,
-      } : null,
-    });
+      if (selectedProducts.has(productId)) {
+        const printQuantity = customQuantities[productId] !== undefined 
+          ? customQuantities[productId] 
+          : (p.CS_Shop || p.cs_shop || 0);
+        filtered.push({
+          ...p,
+          printQuantity,
+        });
+      }
+    }
     return filtered;
-  }, [products, selectedProducts]);
+  }, [products, selectedProducts, customQuantities]);
 
   const handlePrint = () => {
     if (selectedProductsList.length === 0) {
@@ -261,12 +426,16 @@ export default function LabelsPage() {
                   </div>
 
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full" style={{ willChange: 'auto' }}>
                       <thead>
                         <tr className="border-b border-gray-200">
                           <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">تحديد</th>
                           <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">الصورة</th>
                           <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">الاسم</th>
+                          <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">الباركود</th>
+                          {labelType === 'C' && useQuantity && (
+                            <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">الكمية للطباعة</th>
+                          )}
                           <th 
                             className="text-right py-2 px-3 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 select-none"
                             onClick={(e) => {
@@ -308,114 +477,39 @@ export default function LabelsPage() {
                       <tbody>
                         {filteredProducts.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="text-center py-8 text-gray-500">
+                            <td colSpan={labelType === 'C' && useQuantity ? 7 : 6} className="text-center py-8 text-gray-500">
                               لا توجد منتجات
                             </td>
                           </tr>
                         ) : (
                           filteredProducts.map((product) => {
                             const productId = product.ProductID || product.id || '';
-                            const isSelected = selectedProducts.has(productId);
-                            const imageUrl = getDirectImageUrl(product.Image || product.image || '');
-                            const price = product.SalePrice || product.price || 0;
-                            const shopQty = product.CS_Shop !== undefined && product.CS_Shop !== null ? (product.CS_Shop || 0) : null;
-                            const warehouseQty = product.CS_War !== undefined && product.CS_War !== null ? (product.CS_War || 0) : null;
-                            const totalQty = (shopQty || 0) + (warehouseQty || 0);
-
                             return (
-                              <tr
+                              <LabelsTableRow
                                 key={productId}
-                                className={`border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
-                                  isSelected ? 'bg-blue-50' : ''
-                                }`}
-                                onClick={() => toggleProduct(productId)}
-                              >
-                                <td className="py-3 px-3">
-                                  {isSelected ? (
-                                    <CheckSquare size={18} className="text-blue-600" />
-                                  ) : (
-                                    <Square size={18} className="text-gray-400" />
-                                  )}
-                                </td>
-                                <td className="py-3 px-3">
-                                  {imageUrl ? (
-                                    <img
-                                      src={imageUrl}
-                                      alt={product.Name || product.name || ''}
-                                      className="w-12 h-12 object-cover rounded"
-                                      onError={(e) => {
-                                        (e.target as HTMLImageElement).src = '/logo.png';
-                                      }}
-                                    />
-                                  ) : (
-                                    <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
-                                      <span className="text-xs text-gray-400">لا صورة</span>
-                                    </div>
-                                  )}
-                                </td>
-                                <td className="py-3 px-3">
-                                  <div className="flex flex-col gap-1">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation(); // Prevent row click
-                                        const productId = product.ProductID || product.id || '';
-                                        if (productId) {
-                                          if (e.metaKey || e.ctrlKey) {
-                                            // Open in new tab when Command/Ctrl is pressed
-                                            window.open(`/admin/products/${productId}`, '_blank');
-                                          } else {
-                                            // Navigate in same tab
-                                            router.push(`/admin/products/${productId}`);
-                                          }
-                                        }
-                                      }}
-                                      className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline text-right cursor-pointer transition-colors"
-                                      title="عرض بروفايل المنتج (اضغط Command/Ctrl لفتح في نافذة جديدة)"
-                                    >
-                                      {product.Name || product.name || '—'}
-                                    </button>
-                                    {(product['Shamel No'] || product.ShamelNo || product.shamel_no) && (
-                                      <div className="text-xs text-gray-500">
-                                        رقم الشامل: {product['Shamel No'] || product.ShamelNo || product.shamel_no}
-                                      </div>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="py-3 px-3">
-                                  <div className="text-sm font-semibold text-gray-900">
-                                    {price.toLocaleString('en-US')} ₪
-                                  </div>
-                                </td>
-                                <td className="py-3 px-3">
-                                  <div className="text-sm text-gray-600 flex flex-col gap-1">
-                                    {shopQty !== null && (
-                                      <span className="text-xs text-gray-500">
-                                        مح: <span className={`font-medium ${
-                                          shopQty > 0 ? 'text-green-700' : 'text-red-700'
-                                        }`}>{shopQty}</span>
-                                      </span>
-                                    )}
-                                    {warehouseQty !== null && (
-                                      <span className="text-xs text-gray-500">
-                                        م: <span className={`font-medium ${
-                                          warehouseQty > 0 ? 'text-green-700' : 'text-red-700'
-                                        }`}>{warehouseQty}</span>
-                                      </span>
-                                    )}
-                                    {totalQty > 0 && (
-                                      <span
-                                        className={`px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                                          totalQty > 0
-                                            ? 'bg-green-100 text-green-800'
-                                            : 'bg-red-100 text-red-800'
-                                        }`}
-                                      >
-                                        المجموع: {totalQty}
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
+                                product={product}
+                                isSelected={selectedProducts.has(productId)}
+                                labelType={labelType}
+                                useQuantity={useQuantity}
+                                editingBarcode={editingBarcode}
+                                editingBarcodeValue={editingBarcodeValue}
+                                savingBarcode={savingBarcode}
+                                editingQuantity={editingQuantity}
+                                editingQuantityValue={editingQuantityValue}
+                                customQuantities={customQuantities}
+                                onToggle={toggleProduct}
+                                onStartEditBarcode={handleStartEditBarcode}
+                                onCancelEditBarcode={handleCancelEditBarcode}
+                                onSaveBarcode={handleSaveBarcode}
+                                onBarcodeKeyDown={handleBarcodeKeyDown}
+                                onStartEditQuantity={handleStartEditQuantity}
+                                onCancelEditQuantity={handleCancelEditQuantity}
+                                onSaveQuantity={handleSaveQuantity}
+                                onQuantityKeyDown={handleQuantityKeyDown}
+                                onBarcodeValueChange={setEditingBarcodeValue}
+                                onQuantityValueChange={setEditingQuantityValue}
+                                getPrintQuantity={getPrintQuantity}
+                              />
                             );
                           })
                         )}

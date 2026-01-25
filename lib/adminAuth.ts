@@ -17,9 +17,11 @@ export function requireAdminSecret() {
   }
 }
 
-export function signAdminToken(payload: AdminTokenPayload) {
+export function signAdminToken(payload: AdminTokenPayload, rememberMe: boolean = false) {
   requireAdminSecret();
-  return jwt.sign(payload, ADMIN_JWT_SECRET, { expiresIn: '12h' });
+  // Default: 30 days, Remember Me: 90 days
+  const expiresIn = rememberMe ? '90d' : '30d';
+  return jwt.sign(payload, ADMIN_JWT_SECRET, { expiresIn });
 }
 
 export function verifyAdminToken(token: string): AdminTokenPayload | null {
@@ -43,21 +45,25 @@ export function getTokenFromRequest(req: NextRequest): string | null {
   return null;
 }
 
-export async function setAdminCookie(token: string) {
+export async function setAdminCookie(token: string, rememberMe: boolean = false) {
   const cookieStore = await cookies();
+  // Default: 30 days (2592000 seconds), Remember Me: 90 days (7776000 seconds)
+  const maxAge = rememberMe ? 60 * 60 * 24 * 90 : 60 * 60 * 24 * 30;
   cookieStore.set(ADMIN_TOKEN_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 60 * 60 * 12, // 12 hours
+    maxAge,
   });
 }
 
-export function setAdminCookieInResponse(response: Response, token: string) {
+export function setAdminCookieInResponse(response: Response, token: string, rememberMe: boolean = false) {
+  // Default: 30 days (2592000 seconds), Remember Me: 90 days (7776000 seconds)
+  const maxAge = rememberMe ? 60 * 60 * 24 * 90 : 60 * 60 * 24 * 30;
   response.headers.set(
     'Set-Cookie',
-    `${ADMIN_TOKEN_COOKIE}=${encodeURIComponent(token)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${60 * 60 * 12}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`
+    `${ADMIN_TOKEN_COOKIE}=${encodeURIComponent(token)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAge}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`
   );
 }
 

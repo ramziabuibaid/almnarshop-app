@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import React from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AddInteractionModal from '@/components/admin/AddInteractionModal';
@@ -28,6 +29,8 @@ import {
   ChevronDown,
   ChevronUp,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface Customer {
@@ -54,6 +57,135 @@ type FilterType = 'All' | 'Customer' | 'Merchant' | 'Supplier' | 'Accounting';
 type SortField = 'customerId' | 'name' | 'type' | 'phone' | 'balance' | 'lastInvoice' | 'lastPayment' | null;
 type SortDirection = 'asc' | 'desc';
 
+// Optimized Mobile Customer Card Component
+const MobileCustomerCard = React.memo(({ 
+  customer, 
+  canViewBalances, 
+  router, 
+  handleViewProfile, 
+  handleEditCustomer, 
+  handleOpenInteractionModal,
+  getTypeBadgeColor,
+  getBalanceColor,
+  formatBalance,
+  formatDate
+}: {
+  customer: Customer;
+  canViewBalances: boolean;
+  router: any;
+  handleViewProfile: (customer: Customer, event?: React.MouseEvent) => void;
+  handleEditCustomer: (customer: Customer) => void;
+  handleOpenInteractionModal: (customer: Customer) => void;
+  getTypeBadgeColor: (type: string | undefined) => string;
+  getBalanceColor: (balance: number | undefined | null) => string;
+  formatBalance: (balance: number | undefined | null) => string;
+  formatDate: (dateString: string | undefined | null) => string | null;
+}) => {
+  const customerId = customer.CustomerID || customer.id || customer.customerID || '';
+  const name = customer.Name || customer.name || 'N/A';
+  const phone = customer.Phone || customer.phone || '';
+  const type = customer.Type || customer.type || 'Customer';
+  const balance = customer.Balance || customer.balance || 0;
+  const lastInvoiceDate = customer.LastInvoiceDate || customer.lastInvoiceDate || customer['Last Invoice Date'] || '';
+  const lastPaymentDate = customer.LastPaymentDate || customer.lastPaymentDate || customer['Last Payment Date'] || '';
+  const shamelNo = customer['Shamel No'] || customer.ShamelNo || customer.shamel_no;
+  
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <User size={18} className="text-gray-400 flex-shrink-0" />
+            <button
+              onClick={() => handleViewProfile(customer)}
+              className="text-base font-bold text-gray-900 hover:text-blue-600 hover:underline text-right truncate transition-colors"
+            >
+              {name}
+            </button>
+          </div>
+          <div className="text-xs text-gray-500 mb-1">
+            {customerId}
+            {shamelNo && ` • شامل: ${shamelNo}`}
+          </div>
+          <span
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${getTypeBadgeColor(
+              type
+            )}`}
+          >
+            {type}
+          </span>
+        </div>
+      </div>
+
+      {/* Phone */}
+      {phone && (
+        <div className="mb-3">
+          <div className="text-xs text-gray-500 mb-1">الهاتف</div>
+          <PhoneActions phone={phone} />
+        </div>
+      )}
+
+      {/* Balance */}
+      {canViewBalances && (
+        <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+          <div className="text-xs text-gray-600 mb-1">الرصيد</div>
+          <div className={`text-lg font-bold ${getBalanceColor(balance)}`}>
+            {formatBalance(balance)}
+          </div>
+        </div>
+      )}
+
+      {/* Dates */}
+      <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+        {formatDate(lastInvoiceDate) && (
+          <div>
+            <div className="text-gray-500 mb-0.5">آخر فاتورة</div>
+            <div className="text-gray-900 font-medium">{formatDate(lastInvoiceDate)}</div>
+          </div>
+        )}
+        {formatDate(lastPaymentDate) && (
+          <div>
+            <div className="text-gray-500 mb-0.5">آخر دفعة</div>
+            <div className="text-gray-900 font-medium">{formatDate(lastPaymentDate)}</div>
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+        <button
+          onClick={() => handleOpenInteractionModal(customer)}
+          className="flex-1 px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2 transition-colors text-sm"
+        >
+          <Phone size={16} />
+          <span>تفاعل</span>
+        </button>
+        {canViewBalances && (
+          <button
+            onClick={() => handleEditCustomer(customer)}
+            className="flex-1 px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 flex items-center justify-center gap-2 transition-colors text-sm"
+            title="تعديل العميل"
+          >
+            <Edit size={16} />
+            <span>تعديل</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison function for React.memo
+  const prevId = prevProps.customer.CustomerID || prevProps.customer.id || prevProps.customer.customerID || '';
+  const nextId = nextProps.customer.CustomerID || nextProps.customer.id || nextProps.customer.customerID || '';
+  return (
+    prevId === nextId &&
+    prevProps.canViewBalances === nextProps.canViewBalances
+  );
+});
+
+MobileCustomerCard.displayName = 'MobileCustomerCard';
+
 export default function CustomersPage() {
   const { admin } = useAdminAuth();
   const router = useRouter();
@@ -67,7 +199,46 @@ export default function CustomersPage() {
 
   // Check if user has permission to view balances
   const canViewBalances = admin?.is_super_admin || admin?.permissions?.viewBalances === true;
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // For input field - updates immediately
+  const [searchQuery, setSearchQuery] = useState(''); // For actual filtering - updates in background
+  const [isPending, startTransition] = useTransition();
+  
+  // Mobile pagination state
+  const [mobilePage, setMobilePage] = useState(1);
+  const MOBILE_PAGE_SIZE = 20;
+  
+  // Desktop pagination state
+  const [desktopPage, setDesktopPage] = useState(1);
+  const DESKTOP_PAGE_SIZE = 50;
+  
+  // Debounce hook for search
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Debounced search handler
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchInput(value); // Update input immediately
+    
+    // Clear previous timeout
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+    
+    // Set new timeout for debounced search
+    searchDebounceRef.current = setTimeout(() => {
+      startTransition(() => {
+        setSearchQuery(value);
+      });
+    }, 300); // 300ms debounce delay
+  }, [startTransition]);
+  
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, []);
   const [filterType, setFilterType] = useState<FilterType>('All');
   const [showNegativeBalance, setShowNegativeBalance] = useState(true);
   const [showZeroBalance, setShowZeroBalance] = useState(true);
@@ -372,7 +543,41 @@ export default function CustomersPage() {
     }
 
     return filtered;
-  }, [sortedCustomers, filterType, searchQuery, showNegativeBalance, showZeroBalance, lastInvoiceYear, lastPaymentYear, sortField, sortDirection]);
+  }, [sortedCustomers, filterType, searchQuery, showNegativeBalance, showZeroBalance, lastInvoiceYear, lastPaymentYear, sortField, sortDirection, canViewBalances]);
+  
+  // Paginated customers for mobile view
+  const paginatedMobileCustomers = useMemo(() => {
+    const startIndex = (mobilePage - 1) * MOBILE_PAGE_SIZE;
+    const endIndex = startIndex + MOBILE_PAGE_SIZE;
+    return filteredCustomers.slice(startIndex, endIndex);
+  }, [filteredCustomers, mobilePage]);
+  
+  const totalMobilePages = Math.ceil(filteredCustomers.length / MOBILE_PAGE_SIZE);
+  
+  // Paginated customers for desktop view
+  const paginatedDesktopCustomers = useMemo(() => {
+    const startIndex = (desktopPage - 1) * DESKTOP_PAGE_SIZE;
+    const endIndex = startIndex + DESKTOP_PAGE_SIZE;
+    return filteredCustomers.slice(startIndex, endIndex);
+  }, [filteredCustomers, desktopPage]);
+  
+  const totalDesktopPages = Math.ceil(filteredCustomers.length / DESKTOP_PAGE_SIZE);
+  
+  // Reset pages when filtered customers change significantly
+  useEffect(() => {
+    if (mobilePage > totalMobilePages && totalMobilePages > 0) {
+      setMobilePage(1);
+    }
+    if (desktopPage > totalDesktopPages && totalDesktopPages > 0) {
+      setDesktopPage(1);
+    }
+  }, [totalMobilePages, totalDesktopPages, mobilePage, desktopPage]);
+  
+  // Reset pages when search changes
+  useEffect(() => {
+    setMobilePage(1);
+    setDesktopPage(1);
+  }, [searchQuery]);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -798,14 +1003,14 @@ export default function CustomersPage() {
             <input
               type="text"
               placeholder="البحث بالاسم أو الهاتف..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchInput}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 text-sm sm:text-base"
               dir="rtl"
             />
-            {searchQuery && (
+            {searchInput && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => handleSearchChange('')}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 <X size={18} />
@@ -1065,7 +1270,7 @@ export default function CustomersPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {filteredCustomers.map((customer, index) => {
+                    {paginatedDesktopCustomers.map((customer, index) => {
                         const customerId = customer.CustomerID || customer.id || customer.customerID || `fallback-${index}`;
                         const name = customer.Name || customer.name || 'N/A';
                         const phone = customer.Phone || customer.phone || '';
@@ -1195,6 +1400,87 @@ export default function CustomersPage() {
                   </tbody>
                 </table>
               </div>
+              
+              {/* Desktop Pagination */}
+              {totalDesktopPages > 1 && (
+                <div className="border-t border-gray-200 px-4 py-3 bg-gray-50 flex items-center justify-between flex-wrap gap-4" dir="rtl">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setDesktopPage((prev) => Math.max(1, prev - 1))}
+                      disabled={desktopPage === 1}
+                      className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm text-gray-900 font-medium"
+                    >
+                      <ChevronRight size={16} className="text-gray-900" />
+                      السابق
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {Array.from(
+                        { length: Math.min(5, totalDesktopPages) },
+                        (_, i) => {
+                          let pageNum;
+                          const currentPage = desktopPage;
+
+                          if (totalDesktopPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalDesktopPages - 2) {
+                            pageNum = totalDesktopPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setDesktopPage(pageNum)}
+                              className={`px-3 py-1.5 rounded-lg transition-colors text-sm font-medium ${
+                                currentPage === pageNum
+                                  ? 'bg-gray-900 text-white'
+                                  : 'border border-gray-300 hover:bg-gray-100 text-gray-900'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        }
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => setDesktopPage((prev) => Math.min(totalDesktopPages, prev + 1))}
+                      disabled={desktopPage === totalDesktopPages}
+                      className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm text-gray-900 font-medium"
+                    >
+                      التالي
+                      <ChevronLeft size={16} className="text-gray-900" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-sm text-gray-900 font-medium">
+                    <span>
+                      صفحة {desktopPage} من {totalDesktopPages || 1}
+                    </span>
+                    <select
+                      value={DESKTOP_PAGE_SIZE}
+                      onChange={(e) => {
+                        // Page size is fixed for now, but we can make it dynamic later
+                        const newSize = Number(e.target.value);
+                        setDesktopPage(1); // Reset to first page when changing page size
+                      }}
+                      className="px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-900 text-sm text-gray-900 font-medium bg-white"
+                      dir="rtl"
+                      disabled
+                    >
+                      <option value={DESKTOP_PAGE_SIZE}>{DESKTOP_PAGE_SIZE} لكل صفحة</option>
+                    </select>
+                    <span>
+                      إجمالي: {filteredCustomers.length} عميل
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1218,102 +1504,66 @@ export default function CustomersPage() {
                 </p>
               )}
             </div>
+          ) : isPending ? (
+            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+              <div className="flex items-center justify-center gap-2 text-gray-500">
+                <Loader2 className="animate-spin" size={20} />
+                <span>جاري البحث...</span>
+              </div>
+            </div>
           ) : (
-            filteredCustomers.map((customer, index) => {
-              const customerId = customer.CustomerID || customer.id || customer.customerID || `fallback-${index}`;
-              const name = customer.Name || customer.name || 'N/A';
-              const phone = customer.Phone || customer.phone || '';
-              const type = customer.Type || customer.type || 'Customer';
-              const balance = customer.Balance || customer.balance || 0;
-              const lastInvoiceDate = customer.LastInvoiceDate || customer.lastInvoiceDate || customer['Last Invoice Date'] || '';
-              const lastPaymentDate = customer.LastPaymentDate || customer.lastPaymentDate || customer['Last Payment Date'] || '';
-              const shamelNo = customer['Shamel No'] || customer.ShamelNo || customer.shamel_no;
-
-              return (
-                <div key={customerId} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <User size={18} className="text-gray-400 flex-shrink-0" />
-                        <button
-                          onClick={() => handleViewProfile(customer)}
-                          className="text-base font-bold text-gray-900 hover:text-blue-600 hover:underline text-right truncate transition-colors"
-                        >
-                          {name}
-                        </button>
-                      </div>
-                      <div className="text-xs text-gray-500 mb-1">
-                        {customerId}
-                        {shamelNo && ` • شامل: ${shamelNo}`}
-                      </div>
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${getTypeBadgeColor(
-                          type
-                        )}`}
-                      >
-                        {type}
-                      </span>
-                    </div>
+            <>
+              {paginatedMobileCustomers.map((customer) => {
+                const customerId = customer.CustomerID || customer.id || customer.customerID || '';
+                return (
+                  <MobileCustomerCard
+                    key={customerId}
+                    customer={customer}
+                    canViewBalances={canViewBalances}
+                    router={router}
+                    handleViewProfile={handleViewProfile}
+                    handleEditCustomer={handleEditCustomer}
+                    handleOpenInteractionModal={handleOpenInteractionModal}
+                    getTypeBadgeColor={getTypeBadgeColor}
+                    getBalanceColor={getBalanceColor}
+                    formatBalance={formatBalance}
+                    formatDate={formatDate}
+                  />
+                );
+              })}
+              
+              {/* Mobile Pagination */}
+              {totalMobilePages > 1 && (
+                <div className="flex items-center justify-between gap-4 pt-4 pb-2 border-t border-gray-200 bg-white sticky bottom-0 z-10">
+                  <button
+                    onClick={() => setMobilePage((prev) => Math.max(1, prev - 1))}
+                    disabled={mobilePage === 1}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-gray-900"
+                  >
+                    <ChevronRight size={16} />
+                    السابق
+                  </button>
+                  
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <span className="font-medium">
+                      صفحة {mobilePage} من {totalMobilePages}
+                    </span>
+                    <span className="text-gray-500">
+                      ({filteredCustomers.length} عميل)
+                    </span>
                   </div>
-
-                  {/* Phone */}
-                  {phone && (
-                    <div className="mb-3">
-                      <div className="text-xs text-gray-500 mb-1">الهاتف</div>
-                      <PhoneActions phone={phone} />
-                    </div>
-                  )}
-
-                  {/* Balance */}
-                  {canViewBalances && (
-                    <div className="mb-3 p-2 bg-gray-50 rounded-lg">
-                      <div className="text-xs text-gray-600 mb-1">الرصيد</div>
-                      <div className={`text-lg font-bold ${getBalanceColor(balance)}`}>
-                        {formatBalance(balance)}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Dates */}
-                  <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
-                    {formatDate(lastInvoiceDate) && (
-                      <div>
-                        <div className="text-gray-500 mb-0.5">آخر فاتورة</div>
-                        <div className="text-gray-900 font-medium">{formatDate(lastInvoiceDate)}</div>
-                      </div>
-                    )}
-                    {formatDate(lastPaymentDate) && (
-                      <div>
-                        <div className="text-gray-500 mb-0.5">آخر دفعة</div>
-                        <div className="text-gray-900 font-medium">{formatDate(lastPaymentDate)}</div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
-                    <button
-                      onClick={() => handleOpenInteractionModal(customer)}
-                      className="flex-1 px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2 transition-colors text-sm"
-                    >
-                      <Phone size={16} />
-                      <span>تفاعل</span>
-                    </button>
-                    {canViewBalances && (
-                      <button
-                        onClick={() => handleEditCustomer(customer)}
-                        className="flex-1 px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 flex items-center justify-center gap-2 transition-colors text-sm"
-                        title="تعديل العميل"
-                      >
-                        <Edit size={16} />
-                        <span>تعديل</span>
-                      </button>
-                    )}
-                  </div>
+                  
+                  <button
+                    onClick={() => setMobilePage((prev) => Math.min(totalMobilePages, prev + 1))}
+                    disabled={mobilePage === totalMobilePages}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-gray-900"
+                  >
+                    التالي
+                    <ChevronLeft size={16} />
+                  </button>
                 </div>
-              );
-            })
+              )}
+            </>
           )}
         </div>
 

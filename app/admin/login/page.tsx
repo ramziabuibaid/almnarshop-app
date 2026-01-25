@@ -11,6 +11,7 @@ export default function AdminLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true); // Default to true for convenience
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +24,7 @@ export default function AdminLoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await loginAdmin(username, password);
+      await loginAdmin(username, password, rememberMe);
       router.push('/admin');
     } catch (err: any) {
       setError(err?.message || 'Login failed');
@@ -82,6 +83,19 @@ export default function AdminLoginPage() {
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="rememberMe"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
+            />
+            <label htmlFor="rememberMe" className="text-sm text-gray-700 cursor-pointer">
+              تذكرني (البقاء مسجل الدخول)
+            </label>
           </div>
 
           {error && <div className="text-sm text-red-600">{error}</div>}

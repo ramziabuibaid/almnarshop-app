@@ -29,6 +29,34 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Prevent zoom on input focus for mobile devices */
+/* iOS Safari zooms if font-size is less than 16px */
+/* Only apply on mobile devices to avoid hydration issues */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="search"],
+  input[type="url"],
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* Prevent double-tap zoom on interactive elements */
+button,
+a,
+[role="button"],
+input,
+textarea,
+select {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .font-cairo {
   font-family: var(--font-cairo), Cairo, Arial, sans-serif;
 }

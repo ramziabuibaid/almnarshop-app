@@ -147,7 +147,12 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
         <ChevronLeft size={16} className="text-gray-400" />
         {productType && (
           <>
-            <span className="text-gray-900">{productType}</span>
+            <button
+              onClick={() => router.push(`/?type=${encodeURIComponent(productType)}`)}
+              className="hover:text-gray-900 transition-colors hover:underline"
+            >
+              {productType}
+            </button>
             <ChevronLeft size={16} className="text-gray-400" />
           </>
         )}

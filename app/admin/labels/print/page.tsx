@@ -180,23 +180,29 @@ function LabelsPrintContent() {
 
   // For Type C, flatten products based on cs_shop quantity or use one per product
   // Also filter out zero quantity products if showZeroQuantity is false
+  // Use printQuantity if available (custom quantity set by user), otherwise use cs_shop
   const flattenedProducts = labelType === 'C'
     ? (() => {
         // First, filter products based on showZeroQuantity option
         const filteredProducts = showZeroQuantity
           ? products
           : products.filter((product) => {
-              const quantity = product.cs_shop || product.CS_Shop || 0;
+              // Use printQuantity if available, otherwise fallback to cs_shop
+              const quantity = (product as any).printQuantity !== undefined
+                ? (product as any).printQuantity
+                : (product.cs_shop || product.CS_Shop || 0);
               return quantity > 0;
             });
         
         // Then flatten based on useQuantity option
         return useQuantity
           ? filteredProducts.flatMap((product) => {
-              const rawCount =
-                typeof (product as any)?.count === 'number'
+              // Use printQuantity if available (custom quantity), otherwise use cs_shop
+              const rawCount = (product as any).printQuantity !== undefined
+                ? (product as any).printQuantity
+                : (typeof (product as any)?.count === 'number'
                   ? (product as any).count
-                  : (product.cs_shop || product.CS_Shop || 0);
+                  : (product.cs_shop || product.CS_Shop || 0));
               const count = Math.max(1, Math.floor(Number(rawCount) || 0));
               return Array(count).fill(product);
             })

@@ -84,9 +84,17 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         if (!parsedUser.Role && !parsedUser.role) {
           parsedUser.Role = 'Customer';
         }
-        setUser(parsedUser);
+        
+        // Check if user data should be kept (if rememberMe was true)
+        // localStorage persists indefinitely, so we just restore the user
+        // Remove metadata fields before setting user
+        const { savedAt, ...userData } = parsedUser;
+        setUser(userData);
+        console.log('[ShopContext] User restored from localStorage');
       } catch (e) {
         console.error('Failed to parse saved user:', e);
+        // Clear corrupted data
+        localStorage.removeItem('shop_user');
       }
     }
 
@@ -111,9 +119,18 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined' || !isMounted) return;
     if (user) {
-      localStorage.setItem('shop_user', JSON.stringify(user));
+      // Save user data with metadata
+      const userDataToSave = {
+        ...user,
+        savedAt: Date.now(),
+        // If rememberMe is true, the data will persist indefinitely
+        // If false, we could add expiration logic here if needed
+      };
+      localStorage.setItem('shop_user', JSON.stringify(userDataToSave));
+      console.log('[ShopContext] User saved to localStorage with rememberMe:', user.rememberMe);
     } else {
       localStorage.removeItem('shop_user');
+      console.log('[ShopContext] User removed from localStorage');
     }
   }, [user, isMounted]);
 

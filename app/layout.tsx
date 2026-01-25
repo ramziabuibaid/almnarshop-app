@@ -44,15 +44,23 @@ export const metadata: Metadata = {
   description: "Modern mobile-first retail web app",
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${cairo.variable} ${nunito.variable} ${montserrat.variable} ${raleway.variable} antialiased`}
+        suppressHydrationWarning
       >
         <AdminAuthProvider>
           <ShopProvider>

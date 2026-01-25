@@ -350,6 +350,8 @@ export default function ProductFormModal({
         Image: formData.Image !== undefined ? (formData.Image || '') : undefined,
         'Image 2': formData['Image 2'] !== undefined ? (formData['Image 2'] || '') : undefined,
         'image 3': formData['image 3'] !== undefined ? (formData['image 3'] || '') : undefined,
+        // Serial number support
+        is_serialized: formData.is_serialized || false,
       };
 
       // Remove undefined values, but keep empty strings for image fields and Shamel No to allow deletion
@@ -590,18 +592,25 @@ export default function ProductFormModal({
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
                     />
                   </div>
+                </div>
+                
+                {/* Serial Number Checkbox - More prominent */}
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-center">
                     <input
                       type="checkbox"
                       id="is_serialized"
                       checked={formData.is_serialized || false}
                       onChange={(e) => handleChange('is_serialized', e.target.checked)}
-                      className="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
+                      className="w-5 h-5 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
                     />
-                    <label htmlFor="is_serialized" className="ml-2 text-sm font-medium text-gray-700">
+                    <label htmlFor="is_serialized" className="mr-3 text-sm font-semibold text-gray-900 cursor-pointer">
                       المنتج له رقم تسلسلي (Serial Number)
                     </label>
                   </div>
+                  <p className="mt-2 text-xs text-gray-600 mr-8">
+                    عند تفعيل هذا الخيار، سيتم طلب إدخال رقم تسلسلي لكل قطعة عند إضافة المنتج إلى الفواتير
+                  </p>
                 </div>
               </div>
 

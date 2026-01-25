@@ -9,8 +9,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const username = String(body?.username || '').trim().toLowerCase();
     const password = String(body?.password || '');
+    const rememberMe = Boolean(body?.rememberMe || false);
 
-    console.log('[admin/login] Attempting login for username:', username);
+    console.log('[admin/login] Attempting login for username:', username, 'rememberMe:', rememberMe);
 
     if (!username || !password) {
       return NextResponse.json({ message: 'Username and password are required' }, { status: 400 });
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
       id: data.id,
       username: data.username,
       is_super_admin: !!data.is_super_admin,
-    });
+    }, rememberMe);
 
     const admin = sanitizeAdminRow({
       ...data,
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
     });
 
     const response = NextResponse.json({ admin });
-    setAdminCookieInResponse(response, token);
+    setAdminCookieInResponse(response, token, rememberMe);
     return response;
   } catch (err: any) {
     console.error('[admin login] error', err);
