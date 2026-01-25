@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { Search, Filter, ShoppingCart, User, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useShop } from '@/context/ShopContext';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -18,7 +18,7 @@ import { FilterState, SortOption } from '@/components/store/types';
 
 const PRODUCTS_PER_PAGE = 20;
 
-export default function Home() {
+function HomeContent() {
   const { products, loadProducts, cart, user, loading } = useShop();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -606,5 +606,17 @@ export default function Home() {
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
 
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-600">جاري التحميل...</div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }
