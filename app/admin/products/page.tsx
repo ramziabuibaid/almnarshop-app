@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useTransition } from 'react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ProductFormModal from '@/components/admin/ProductFormModal';
@@ -18,7 +18,9 @@ export default function ProductsManagerPage() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // For input field - updates immediately
+  const [searchQuery, setSearchQuery] = useState(''); // For actual filtering - updates in background
+  const [isPending, startTransition] = useTransition();
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -751,7 +753,7 @@ export default function ProductsManagerPage() {
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">المنتجات</h1>
                 <p className="text-sm sm:text-base text-gray-600 mt-1">
-                  إدارة مخزون المنتجات ({filteredProducts.length} منتج)
+                  إدارة مخزون المنتجات ({products.length} منتج)
                 </p>
               </div>
               <button
@@ -774,14 +776,26 @@ export default function ProductsManagerPage() {
                 <input
                   type="text"
                   placeholder="البحث بالاسم، الرمز، الباركود، أو العلامة التجارية..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchInput(value); // Update input immediately
+                    // Update search query in background using transition
+                    startTransition(() => {
+                      setSearchQuery(value);
+                    });
+                  }}
                   className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 text-sm sm:text-base"
                   dir="rtl"
                 />
-                {searchQuery && (
+                {searchInput && (
                   <button
-                    onClick={() => setSearchQuery('')}
+                    onClick={() => {
+                      setSearchInput('');
+                      startTransition(() => {
+                        setSearchQuery('');
+                      });
+                    }}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
                     <X size={18} />
@@ -929,6 +943,13 @@ export default function ProductsManagerPage() {
             <div className="bg-white border border-gray-200 rounded-lg p-8 text-center text-gray-500">
               {searchQuery ? 'لا توجد نتائج للبحث' : 'لا توجد منتجات'}
             </div>
+          ) : isPending ? (
+            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+              <div className="flex items-center justify-center gap-2 text-gray-500">
+                <Loader2 className="animate-spin" size={20} />
+                <span>جاري البحث...</span>
+              </div>
+            </div>
           ) : (
             filteredProducts.map((product) => {
               const productId = product.ProductID || product.id || '';
@@ -961,31 +982,33 @@ export default function ProductsManagerPage() {
                     
                     {/* Product Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="flex-1 min-w-0">
-                          {productId ? (
-                            <button
-                              onClick={() => router.push(`/admin/products/${productId}`)}
-                              className="text-base font-bold text-gray-900 hover:text-blue-600 hover:underline text-right block truncate"
-                            >
-                              {product.name || product.Name || 'N/A'}
-                            </button>
-                          ) : (
-                            <div className="text-base font-bold text-gray-900 text-right truncate">
-                              {product.name || product.Name || 'N/A'}
-                            </div>
-                          )}
-                          {product.brand || product.Brand ? (
-                            <div className="text-xs text-gray-500 mt-0.5 text-right">
-                              {product.brand || product.Brand}
-                            </div>
-                          ) : null}
+                      <div className="flex flex-col gap-1 mb-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            {productId ? (
+                              <button
+                                onClick={() => router.push(`/admin/products/${productId}`)}
+                                className="text-base font-bold text-gray-900 hover:text-blue-600 hover:underline text-right break-words"
+                              >
+                                {product.name || product.Name || 'N/A'}
+                              </button>
+                            ) : (
+                              <div className="text-base font-bold text-gray-900 text-right break-words">
+                                {product.name || product.Name || 'N/A'}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-shrink-0 mr-2">
+                            <span className="text-lg font-bold text-gray-900 whitespace-nowrap">
+                              ₪{parseFloat(String(price)).toFixed(2)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex-shrink-0">
-                          <span className="text-lg font-bold text-gray-900">
-                            ₪{parseFloat(String(price)).toFixed(2)}
-                          </span>
-                        </div>
+                        {product.brand || product.Brand ? (
+                          <div className="text-xs text-gray-500 text-right">
+                            {product.brand || product.Brand}
+                          </div>
+                        ) : null}
                       </div>
                       
                       {/* Product ID and Barcode */}
