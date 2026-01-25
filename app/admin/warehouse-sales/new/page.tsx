@@ -201,22 +201,28 @@ function WarehouseSalesFormContent() {
   }, [customers, customerSearchQuery]);
 
   const handleUpdateQuantity = (detailID: string | undefined, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      handleRemoveItem(detailID);
-      return;
-    }
+    // Allow negative quantities (for returns) and zero (no serials needed)
+    // Never auto-delete items - user must explicitly click delete button
     setDetails((prev) =>
       prev.map((item) => {
         if (item.detailID === detailID) {
           const currentSerialNos = item.serialNos || [];
           let newSerialNos: string[];
           
-          if (newQuantity > item.quantity) {
+          // Use absolute value for serial numbers count (same number whether positive or negative)
+          // Zero quantity = no serials needed (empty array)
+          const absNewQuantity = Math.abs(newQuantity);
+          const absCurrentQuantity = Math.abs(item.quantity);
+          
+          if (absNewQuantity === 0) {
+            // Zero quantity - no serials needed
+            newSerialNos = [];
+          } else if (absNewQuantity > absCurrentQuantity) {
             // Increase quantity - add empty strings
-            newSerialNos = [...currentSerialNos, ...Array(newQuantity - item.quantity).fill('')];
+            newSerialNos = [...currentSerialNos, ...Array(absNewQuantity - absCurrentQuantity).fill('')];
           } else {
             // Decrease quantity - keep first N serials
-            newSerialNos = currentSerialNos.slice(0, newQuantity);
+            newSerialNos = currentSerialNos.slice(0, absNewQuantity);
           }
           
           return { ...item, quantity: newQuantity, serialNos: newSerialNos };
@@ -455,8 +461,9 @@ function WarehouseSalesFormContent() {
     // Check if product is serialized
     const isSerialized = productToAdd.is_serialized || productToAdd.IsSerialized || false;
     
-    // Initialize serial numbers array with empty strings for each quantity
-    const serialNos: string[] = Array(quantity).fill('');
+    // Initialize serial numbers array with empty strings for each quantity (use absolute value)
+    // Same number of serials whether quantity is positive or negative
+    const serialNos: string[] = Array(Math.abs(quantity)).fill('');
     
     const newDetail: InvoiceDetail = {
       detailID: detailId,
@@ -1028,9 +1035,9 @@ function WarehouseSalesFormContent() {
                           )}
                           <td className="px-4 py-3">
                             <div className="space-y-1 max-h-32 overflow-y-auto">
-                              {Array.from({ length: item.quantity }, (_, index) => {
+                              {Array.from({ length: Math.abs(item.quantity) }, (_, index) => {
                                 const serialNos = item.serialNos || [];
-                                while (serialNos.length < item.quantity) {
+                                while (serialNos.length < Math.abs(item.quantity)) {
                                   serialNos.push('');
                                 }
                                 const serialNo = serialNos[index] || '';
@@ -1044,7 +1051,7 @@ function WarehouseSalesFormContent() {
                                       value={serialNo}
                                       onChange={(e) => {
                                         const newSerialNos = [...(item.serialNos || [])];
-                                        while (newSerialNos.length < item.quantity) {
+                                        while (newSerialNos.length < Math.abs(item.quantity)) {
                                           newSerialNos.push('');
                                         }
                                         newSerialNos[index] = e.target.value;
@@ -1066,7 +1073,7 @@ function WarehouseSalesFormContent() {
                                     <SerialNumberScanner
                                       onScan={(serialNumber) => {
                                         const newSerialNos = [...(item.serialNos || [])];
-                                        while (newSerialNos.length < item.quantity) {
+                                        while (newSerialNos.length < Math.abs(item.quantity)) {
                                           newSerialNos.push('');
                                         }
                                         newSerialNos[index] = serialNumber;
@@ -1178,9 +1185,9 @@ function WarehouseSalesFormContent() {
                             الأرقام التسلسلية {item.isSerialized && <span className="text-red-500">*</span>}
                           </label>
                           <div className="space-y-2">
-                            {Array.from({ length: item.quantity }, (_, index) => {
+                            {Array.from({ length: Math.abs(item.quantity) }, (_, index) => {
                               const serialNos = item.serialNos || [];
-                              while (serialNos.length < item.quantity) {
+                              while (serialNos.length < Math.abs(item.quantity)) {
                                 serialNos.push('');
                               }
                               const serialNo = serialNos[index] || '';

@@ -149,11 +149,11 @@ export default function EditInvoicePage() {
             }
           }
           
-          // Ensure serialNos array matches quantity
-          while (serialNos.length < (item.quantity || 0)) {
+          // Ensure serialNos array matches quantity (use absolute value)
+          while (serialNos.length < Math.abs(item.quantity || 0)) {
             serialNos.push('');
           }
-          serialNos = serialNos.slice(0, item.quantity || 0);
+          serialNos = serialNos.slice(0, Math.abs(item.quantity || 0));
           
           return {
             ...item,
@@ -214,22 +214,28 @@ export default function EditInvoicePage() {
   };
 
   const handleUpdateQuantity = (detailID: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      handleRemoveItem(detailID);
-      return;
-    }
+    // Allow negative quantities (for returns) and zero (no serials needed)
+    // Never auto-delete items - user must explicitly click delete button
     setDetails((prev) =>
       prev.map((item) => {
         if (item.detailID === detailID) {
           const currentSerialNos = item.serialNos || [];
           let newSerialNos: string[];
           
-          if (newQuantity > item.quantity) {
+          // Use absolute value for serial numbers count (same number whether positive or negative)
+          // Zero quantity = no serials needed (empty array)
+          const absNewQuantity = Math.abs(newQuantity);
+          const absCurrentQuantity = Math.abs(item.quantity);
+          
+          if (absNewQuantity === 0) {
+            // Zero quantity - no serials needed
+            newSerialNos = [];
+          } else if (absNewQuantity > absCurrentQuantity) {
             // Increase quantity - add empty strings
-            newSerialNos = [...currentSerialNos, ...Array(newQuantity - item.quantity).fill('')];
+            newSerialNos = [...currentSerialNos, ...Array(absNewQuantity - absCurrentQuantity).fill('')];
           } else {
             // Decrease quantity - keep first N serials
-            newSerialNos = currentSerialNos.slice(0, newQuantity);
+            newSerialNos = currentSerialNos.slice(0, absNewQuantity);
           }
           
           return { ...item, quantity: newQuantity, serialNos: newSerialNos };
@@ -448,8 +454,9 @@ export default function EditInvoicePage() {
     // Check if product is serialized
     const isSerialized = productToAdd.is_serialized || productToAdd.IsSerialized || false;
     
-    // Initialize serial numbers array with empty strings for each quantity
-    const serialNos: string[] = Array(quantity).fill('');
+    // Initialize serial numbers array with empty strings for each quantity (use absolute value)
+    // Same number of serials whether quantity is positive or negative
+    const serialNos: string[] = Array(Math.abs(quantity)).fill('');
 
     const newDetail: InvoiceDetail = {
       detailID: `temp-${Date.now()}`,
@@ -957,7 +964,7 @@ export default function EditInvoicePage() {
                       <td className="px-4 py-3">
                         {(item.isSerialized || (item.serialNos && item.serialNos.length > 0)) ? (
                           <div className="space-y-1 max-h-32 overflow-y-auto">
-                            {Array.from({ length: item.quantity }, (_, index) => {
+                            {Array.from({ length: Math.abs(item.quantity) }, (_, index) => {
                               const serialValue = item.serialNos?.[index] || '';
                               return (
                                 <div key={index} className="flex items-center gap-1 mb-1">

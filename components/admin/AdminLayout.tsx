@@ -142,8 +142,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-            <h1 className="text-xl font-bold">Admin Panel</h1>
+          <div className="px-3 py-2 border-b border-gray-800 flex items-center justify-between">
+            <h1 className="text-lg font-bold">Admin Panel</h1>
             <button
               onClick={() => setSidebarOpen(false)}
               className="md:hidden p-1 hover:bg-gray-800 rounded"
@@ -153,102 +153,127 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
 
           {/* Navigation Links */}
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto overflow-x-hidden" dir="rtl">
-            {sidebarLinks.map((link) => {
-              const Icon = link.icon;
-              const isActive = pathname === link.href || pathname?.startsWith(link.href + '/');
-              
-              // Check permissions for specific links
-              if (link.href === '/admin/notifications') {
-                const canViewNotifications = admin.is_super_admin || 
-                  admin.permissions?.viewNotifications === true || 
-                  admin.permissions?.dashboardAndNotifications === true;
-                if (!canViewNotifications) {
-                  return null; // Hide the link if user doesn't have permission
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto overflow-x-hidden flex flex-col" dir="rtl">
+            <div className="flex-1">
+              {sidebarLinks.map((link) => {
+                const Icon = link.icon;
+                const isActive = pathname === link.href || pathname?.startsWith(link.href + '/');
+                
+                // Check permissions for specific links
+                if (link.href === '/admin/notifications') {
+                  const canViewNotifications = admin.is_super_admin || 
+                    admin.permissions?.viewNotifications === true || 
+                    admin.permissions?.dashboardAndNotifications === true;
+                  if (!canViewNotifications) {
+                    return null; // Hide the link if user doesn't have permission
+                  }
                 }
-              }
-              
-              if (link.href === '/admin/tasks') {
-                const canViewTasks = admin.is_super_admin || admin.permissions?.viewTasks === true;
-                if (!canViewTasks) {
-                  return null; // Hide the link if user doesn't have permission
+                
+                if (link.href === '/admin/tasks') {
+                  const canViewTasks = admin.is_super_admin || admin.permissions?.viewTasks === true;
+                  if (!canViewTasks) {
+                    return null; // Hide the link if user doesn't have permission
+                  }
                 }
-              }
-              
-              if (link.href === '/admin/invoices') {
-                const canViewCashInvoices = admin.is_super_admin || admin.permissions?.viewCashInvoices === true;
-                if (!canViewCashInvoices) {
-                  return null;
+                
+                if (link.href === '/admin/invoices') {
+                  const canViewCashInvoices = admin.is_super_admin || admin.permissions?.viewCashInvoices === true;
+                  if (!canViewCashInvoices) {
+                    return null;
+                  }
                 }
-              }
-              
-              if (link.href === '/admin/pos') {
-                const canCreatePOS = admin.is_super_admin || admin.permissions?.createPOS === true;
-                if (!canCreatePOS) {
-                  return null;
+                
+                if (link.href === '/admin/pos') {
+                  const canCreatePOS = admin.is_super_admin || admin.permissions?.createPOS === true;
+                  if (!canCreatePOS) {
+                    return null;
+                  }
                 }
-              }
-              
-              if (link.href === '/admin/receipts') {
-                const canAccessReceipts = admin.is_super_admin || admin.permissions?.accessReceipts === true;
-                if (!canAccessReceipts) {
-                  return null;
+                
+                if (link.href === '/admin/receipts') {
+                  const canAccessReceipts = admin.is_super_admin || admin.permissions?.accessReceipts === true;
+                  if (!canAccessReceipts) {
+                    return null;
+                  }
                 }
-              }
-              
-              if (link.href === '/admin/payments') {
-                const canAccessPayPage = admin.is_super_admin || admin.permissions?.accessPayPage === true;
-                if (!canAccessPayPage) {
-                  return null;
+                
+                if (link.href === '/admin/payments') {
+                  const canAccessPayPage = admin.is_super_admin || admin.permissions?.accessPayPage === true;
+                  if (!canAccessPayPage) {
+                    return null;
+                  }
                 }
-              }
-              
-              if (link.href === '/admin/shop-sales') {
-                const canAccessShopInvoices = admin.is_super_admin || admin.permissions?.accessShopInvoices === true;
-                if (!canAccessShopInvoices) {
-                  return null;
+                
+                if (link.href === '/admin/shop-sales') {
+                  const canAccessShopInvoices = admin.is_super_admin || admin.permissions?.accessShopInvoices === true;
+                  if (!canAccessShopInvoices) {
+                    return null;
+                  }
                 }
-              }
-              
-              if (link.href === '/admin/warehouse-sales') {
-                const canAccessWarehouseInvoices = admin.is_super_admin || admin.permissions?.accessWarehouseInvoices === true;
-                if (!canAccessWarehouseInvoices) {
-                  return null;
+                
+                if (link.href === '/admin/warehouse-sales') {
+                  const canAccessWarehouseInvoices = admin.is_super_admin || admin.permissions?.accessWarehouseInvoices === true;
+                  if (!canAccessWarehouseInvoices) {
+                    return null;
+                  }
                 }
-              }
-              
-              if (link.href === '/admin/checks') {
-                const canAccessChecks = admin.is_super_admin || admin.permissions?.accessChecks === true;
-                if (!canAccessChecks) {
-                  return null;
+                
+                if (link.href === '/admin/checks') {
+                  const canAccessChecks = admin.is_super_admin || admin.permissions?.accessChecks === true;
+                  if (!canAccessChecks) {
+                    return null;
+                  }
                 }
-              }
-              
-              if (link.href === '/admin/quotations') {
-                const canAccessQuotations = admin.is_super_admin || admin.permissions?.accessQuotations === true;
-                if (!canAccessQuotations) {
-                  return null;
+                
+                if (link.href === '/admin/quotations') {
+                  const canAccessQuotations = admin.is_super_admin || admin.permissions?.accessQuotations === true;
+                  if (!canAccessQuotations) {
+                    return null;
+                  }
                 }
-              }
-              
-              if (link.href === '/admin/shop-finance/cash-box') {
-                const canAccessShopCashBox = admin.is_super_admin || admin.permissions?.accessShopCashBox === true;
-                if (!canAccessShopCashBox) {
-                  return null;
+                
+                if (link.href === '/admin/shop-finance/cash-box') {
+                  const canAccessShopCashBox = admin.is_super_admin || admin.permissions?.accessShopCashBox === true;
+                  if (!canAccessShopCashBox) {
+                    return null;
+                  }
                 }
-              }
-              
-              if (link.href === '/admin/warehouse-finance/cash-box') {
-                const canAccessWarehouseCashBox = admin.is_super_admin || admin.permissions?.accessWarehouseCashBox === true;
-                if (!canAccessWarehouseCashBox) {
-                  return null;
+                
+                if (link.href === '/admin/warehouse-finance/cash-box') {
+                  const canAccessWarehouseCashBox = admin.is_super_admin || admin.permissions?.accessWarehouseCashBox === true;
+                  if (!canAccessWarehouseCashBox) {
+                    return null;
+                  }
                 }
-              }
-              
-              return (
+                
+                return (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    onClick={(e) => {
+                      // Allow default behavior (open in new tab) if Ctrl/Command is pressed
+                      if (e.ctrlKey || e.metaKey) {
+                        return; // Let browser handle it
+                      }
+                      // Otherwise, prevent default and use router for SPA navigation
+                      e.preventDefault();
+                      router.push(link.href);
+                      setSidebarOpen(false);
+                    }}
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-gray-800 text-white'
+                        : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                    }`}
+                  >
+                    <Icon size={20} />
+                    <span className="font-medium">{link.label}</span>
+                  </a>
+                );
+              })}
+              {admin.is_super_admin && (
                 <a
-                  key={link.href}
-                  href={link.href}
+                  href="/admin/admin-users"
                   onClick={(e) => {
                     // Allow default behavior (open in new tab) if Ctrl/Command is pressed
                     if (e.ctrlKey || e.metaKey) {
@@ -256,68 +281,41 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     }
                     // Otherwise, prevent default and use router for SPA navigation
                     e.preventDefault();
-                    router.push(link.href);
+                    router.push('/admin/admin-users');
                     setSidebarOpen(false);
                   }}
                   className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-                    isActive
+                    pathname === '/admin/admin-users'
                       ? 'bg-gray-800 text-white'
                       : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                   }`}
                 >
-                  <Icon size={20} />
-                  <span className="font-medium">{link.label}</span>
+                  <Shield size={20} />
+                  <span className="font-medium">Admin Users</span>
                 </a>
-              );
-            })}
-            {admin.is_super_admin && (
-              <a
-                href="/admin/admin-users"
-                onClick={(e) => {
-                  // Allow default behavior (open in new tab) if Ctrl/Command is pressed
-                  if (e.ctrlKey || e.metaKey) {
-                    return; // Let browser handle it
-                  }
-                  // Otherwise, prevent default and use router for SPA navigation
-                  e.preventDefault();
-                  router.push('/admin/admin-users');
-                  setSidebarOpen(false);
-                }}
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-                  pathname === '/admin/admin-users'
-                    ? 'bg-gray-800 text-white'
-                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                }`}
+              )}
+
+              {/* Go to Shop Link */}
+              <button
+                onClick={handleGoToShop}
+                className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
               >
-                <Shield size={20} />
-                <span className="font-medium">Admin Users</span>
-              </a>
-            )}
-
-            {/* Go to Shop Link */}
-            <button
-              onClick={handleGoToShop}
-              className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
-            >
-              <Store size={20} />
-              <span className="font-medium">الذهاب الى المتجر</span>
-            </button>
-          </nav>
-
-          {/* Footer */}
-          <div className="p-4 border-t border-gray-800">
-            <div className="mb-4 px-4 py-2 text-sm text-gray-400">
-              <p className="font-medium text-white">{admin.username}</p>
-              <p className="text-xs mt-1">{admin.is_super_admin ? 'Super Admin' : 'Admin'}</p>
+                <Store size={20} />
+                <span className="font-medium">الذهاب الى المتجر</span>
+              </button>
             </div>
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
-            >
-              <LogOut size={20} />
-              <span className="font-medium">Logout</span>
-            </button>
-          </div>
+
+            {/* Logout Button - At the bottom of the navigation */}
+            <div className="mt-auto pt-4 border-t border-gray-800">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+              >
+                <LogOut size={20} />
+                <span className="font-medium">Logout</span>
+              </button>
+            </div>
+          </nav>
         </div>
       </aside>
 
