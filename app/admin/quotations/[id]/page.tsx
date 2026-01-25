@@ -36,6 +36,9 @@ import {
   saveWarehouseSalesInvoice,
   getCustomerLastPriceForProduct,
 } from '@/lib/api';
+import { getSerialNumbersByDetailId } from '@/lib/api_serial_numbers';
+import { validateSerialNumbers } from '@/lib/validation';
+import { supabase } from '@/lib/supabase';
 import {
   Loader2,
   Save,
@@ -51,6 +54,7 @@ import {
 } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
+import SerialNumberScanner from '@/components/admin/SerialNumberScanner';
 
 interface QuotationDetail {
   QuotationDetailID: string;
@@ -60,6 +64,8 @@ interface QuotationDetail {
   UnitPrice: number;
   notes?: string;
   isGift?: boolean;
+  serialNos?: string[]; // Array of serial numbers - one per quantity
+  isSerialized?: boolean;
   product?: {
     name: string;
     barcode?: string;
@@ -101,6 +107,7 @@ function SortableTableRow({
   onUpdateNotes,
   onToggleGift,
   onRemoveItem,
+  onUpdateSerialNo,
 }: {
   item: QuotationDetail;
   index: number;
@@ -112,6 +119,7 @@ function SortableTableRow({
   onUpdateNotes: (detailID: string, newNotes: string) => void;
   onToggleGift: (detailID: string) => void;
   onRemoveItem: (detailID: string) => void;
+  onUpdateSerialNo: (detailID: string, index: number, value: string) => void;
 }) {
   const {
     attributes,
@@ -202,6 +210,31 @@ function SortableTableRow({
           ₪{(item.product?.costPrice || 0).toFixed(2)}
         </td>
       )}
+      <td className="px-3 py-3">
+        {(item.isSerialized || (item.serialNos && item.serialNos.length > 0)) ? (
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {Array.from({ length: item.Quantity }, (_, index) => {
+              const serialValue = item.serialNos?.[index] || '';
+              return (
+                <div key={index} className="flex items-center gap-1 mb-1">
+                  <input
+                    type="text"
+                    value={serialValue}
+                    onChange={(e) => onUpdateSerialNo(item.QuotationDetailID, index, e.target.value)}
+                    placeholder={`سيريال ${index + 1}${item.isSerialized ? ' *' : ''}`}
+                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo"
+                  />
+                  <SerialNumberScanner
+                    onScan={(serialNumber) => onUpdateSerialNo(item.QuotationDetailID, index, serialNumber)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <span className="text-xs text-gray-400 font-cairo">—</span>
+        )}
+      </td>
       <td className={`px-3 py-3 text-sm font-semibold font-cairo text-center ${
         item.isGift ? 'text-green-600' : 'text-gray-900'
       }`}>
@@ -248,6 +281,7 @@ function CardRow({
   onUpdateNotes,
   onToggleGift,
   onRemoveItem,
+  onUpdateSerialNo,
 }: {
   item: QuotationDetail;
   index: number;
@@ -259,6 +293,7 @@ function CardRow({
   onUpdateNotes: (detailID: string, newNotes: string) => void;
   onToggleGift: (detailID: string) => void;
   onRemoveItem: (detailID: string) => void;
+  onUpdateSerialNo: (detailID: string, index: number, value: string) => void;
 }) {
   // Get product image from products array if not in item.product
   const product = products.find(p => (p.ProductID || p.id || p.product_id) === item.ProductID);
@@ -325,6 +360,35 @@ function CardRow({
           <label className="block text-xs text-gray-600 mb-1 font-cairo">تكلفة الوحدة</label>
           <div className="text-sm font-semibold text-gray-900 font-cairo">
             ₪{(item.product?.costPrice || 0).toFixed(2)}
+          </div>
+        </div>
+      )}
+
+      {(item.isSerialized || (item.serialNos && item.serialNos.length > 0)) && (
+        <div className="mb-3">
+          <label className="block text-xs text-gray-600 mb-1 font-cairo">الأرقام التسلسلية</label>
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {Array.from({ length: item.Quantity }, (_, index) => {
+              const serialNos = item.serialNos || [];
+              while (serialNos.length < item.Quantity) {
+                serialNos.push('');
+              }
+              const serialNo = serialNos[index] || '';
+              return (
+                <div key={index} className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={serialNo}
+                    onChange={(e) => onUpdateSerialNo(item.QuotationDetailID, index, e.target.value)}
+                    placeholder={item.isSerialized ? `سيريال ${index + 1} (مطلوب)` : `سيريال ${index + 1} (اختياري)`}
+                    className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-lg text-gray-900 font-cairo"
+                  />
+                  <SerialNumberScanner
+                    onScan={(serialNumber) => onUpdateSerialNo(item.QuotationDetailID, index, serialNumber)}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -453,7 +517,63 @@ export default function EditQuotationPage() {
       setStatus(data.Status || 'مسودة');
       setSpecialDiscountAmount(data.SpecialDiscountAmount || 0);
       setGiftDiscountAmount(data.GiftDiscountAmount || 0);
-      setDetails(data.details || []);
+      
+      // First, get raw details from Supabase to access serial_no field
+      const { data: rawDetails, error: rawDetailsError } = await supabase
+        .from('quotation_details')
+        .select('quotation_detail_id, serial_no')
+        .eq('quotation_id', quotationId);
+      
+      const serialNosMap = new Map<string, string[]>();
+      if (!rawDetailsError && rawDetails) {
+        rawDetails.forEach((detail: any) => {
+          if (detail.serial_no && Array.isArray(detail.serial_no)) {
+            serialNosMap.set(detail.quotation_detail_id, detail.serial_no.filter((s: any) => s && String(s).trim()));
+          }
+        });
+      }
+      
+      // Load serial numbers for each detail
+      const detailsWithSerials: QuotationDetail[] = await Promise.all(
+        (data.details || []).map(async (item: any) => {
+          // Load existing serial numbers for this detail
+          let serialNos: string[] = [];
+          if (item.QuotationDetailID) {
+            try {
+              // First try to load from serial_numbers table
+              serialNos = await getSerialNumbersByDetailId(item.QuotationDetailID, 'quotation');
+              console.log('[EditQuotationPage] Loaded serial numbers from serial_numbers table for detail', item.QuotationDetailID, ':', serialNos);
+              
+              // If no serials found in dedicated table, try to load from details table (fallback)
+              if (serialNos.length === 0 && serialNosMap.has(item.QuotationDetailID)) {
+                serialNos = serialNosMap.get(item.QuotationDetailID) || [];
+                console.log('[EditQuotationPage] Loaded serial numbers from details table (fallback) for detail', item.QuotationDetailID, ':', serialNos);
+              }
+            } catch (err) {
+              console.error('[EditQuotationPage] Failed to load serial numbers:', err);
+              // Fallback to details table
+              if (serialNosMap.has(item.QuotationDetailID)) {
+                serialNos = serialNosMap.get(item.QuotationDetailID) || [];
+                console.log('[EditQuotationPage] Using fallback serial numbers from details table:', serialNos);
+              }
+            }
+          }
+          
+          // Ensure serialNos array matches quantity
+          while (serialNos.length < (item.Quantity || 0)) {
+            serialNos.push('');
+          }
+          serialNos = serialNos.slice(0, item.Quantity || 0);
+          
+          return {
+            ...item,
+            serialNos: serialNos,
+            isSerialized: false, // Will be updated when products are loaded
+          };
+        })
+      );
+      
+      setDetails(detailsWithSerials);
       // Note: selectedCustomer will be set by useEffect when customers are loaded
     } catch (err: any) {
       console.error('[EditQuotationPage] Failed to load quotation:', err);
@@ -467,6 +587,38 @@ export default function EditQuotationPage() {
     try {
       const productsData = await getProducts();
       setProducts(productsData);
+      
+      // Update isSerialized for existing quotation items after products are loaded
+      setDetails((prevDetails) => {
+        return prevDetails.map((detail) => {
+          // Find product
+          const product = productsData.find(
+            (p) => (p.ProductID || p.id || p.product_id) === detail.ProductID
+          );
+          
+          if (product) {
+            const isSerialized = product.is_serialized || product.IsSerialized || false;
+            
+            // Ensure serialNos array matches quantity, but preserve existing serial numbers
+            let serialNos = detail.serialNos || [];
+            // Only pad if we need more slots, don't truncate existing serials
+            while (serialNos.length < detail.Quantity) {
+              serialNos.push('');
+            }
+            // Only slice if quantity decreased
+            if (serialNos.length > detail.Quantity) {
+              serialNos = serialNos.slice(0, detail.Quantity);
+            }
+            
+            return {
+              ...detail,
+              isSerialized: isSerialized,
+              serialNos: serialNos, // Preserve existing serial numbers
+            };
+          }
+          return detail;
+        });
+      });
     } catch (err: any) {
       console.error('[EditQuotationPage] Failed to load products:', err);
     }
@@ -554,6 +706,23 @@ export default function EditQuotationPage() {
       prev.map((item) =>
         item.QuotationDetailID === detailID ? { ...item, notes: newNotes } : item
       )
+    );
+  };
+
+  const handleUpdateSerialNo = (detailID: string, index: number, value: string) => {
+    setDetails((prev) =>
+      prev.map((item) => {
+        if (item.QuotationDetailID === detailID) {
+          const serialNos = [...(item.serialNos || [])];
+          // Ensure array is large enough
+          while (serialNos.length <= index) {
+            serialNos.push('');
+          }
+          serialNos[index] = value;
+          return { ...item, serialNos };
+        }
+        return item;
+      })
     );
   };
 
@@ -855,6 +1024,12 @@ export default function EditQuotationPage() {
       return;
     }
 
+    // Check if product is serialized
+    const isSerialized = productToAdd.is_serialized || productToAdd.IsSerialized || false;
+    
+    // Initialize serial numbers array with empty strings for each quantity
+    const serialNos: string[] = Array(quantity).fill('');
+
     const newDetail: QuotationDetail = {
       QuotationDetailID: detailId,
       QuotationID: quotationId,
@@ -863,6 +1038,8 @@ export default function EditQuotationPage() {
       UnitPrice: unitPrice,
       notes: '',
       isGift: false,
+      serialNos: serialNos,
+      isSerialized: isSerialized,
       product: {
         name: productName,
         barcode: productToAdd.Barcode || productToAdd.barcode,
@@ -1501,6 +1678,7 @@ export default function EditQuotationPage() {
                             {showCosts && canViewCost && (
                               <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
                             )}
+                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الرقم التسلسلي</th>
                             <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الإجمالي</th>
                             <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">هدية</th>
                             <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">إجراءات</th>
@@ -1520,6 +1698,7 @@ export default function EditQuotationPage() {
                               onUpdateNotes={handleUpdateNotes}
                               onToggleGift={handleToggleGift}
                               onRemoveItem={handleRemoveItem}
+                              onUpdateSerialNo={handleUpdateSerialNo}
                             />
                           ))}
                         </tbody>
@@ -1543,6 +1722,7 @@ export default function EditQuotationPage() {
                       onUpdateNotes={handleUpdateNotes}
                       onToggleGift={handleToggleGift}
                       onRemoveItem={handleRemoveItem}
+                      onUpdateSerialNo={handleUpdateSerialNo}
                     />
                   ))}
                 </div>

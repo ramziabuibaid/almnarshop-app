@@ -11,6 +11,9 @@ import {
   deleteCashInvoice,
   getProducts,
 } from '@/lib/api';
+import { getSerialNumbersByDetailId } from '@/lib/api_serial_numbers';
+import { validateSerialNumbers } from '@/lib/validation';
+import { supabase } from '@/lib/supabase';
 import {
   Loader2,
   Save,
@@ -22,6 +25,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
+import SerialNumberScanner from '@/components/admin/SerialNumberScanner';
 
 interface InvoiceDetail {
   detailID: string;
@@ -33,6 +37,8 @@ interface InvoiceDetail {
   mode?: 'Pick' | 'Scan';
   scannedBarcode?: string;
   productImage?: string;
+  serialNos?: string[]; // Array of serial numbers - one per quantity
+  isSerialized?: boolean;
 }
 
 interface CashInvoice {
@@ -100,7 +106,63 @@ export default function EditInvoicePage() {
       setDiscount(foundInvoice.Discount || 0);
 
       // Load invoice details
-      const invoiceDetails = await getCashInvoiceDetailsFromSupabase(invoiceId);
+      const invoiceDetailsRaw = await getCashInvoiceDetailsFromSupabase(invoiceId);
+      
+      // First, get raw details from Supabase to access serial_no field
+      const { data: rawDetails, error: rawDetailsError } = await supabase
+        .from('cash_invoice_details')
+        .select('detail_id, serial_no')
+        .eq('invoice_id', invoiceId);
+      
+      const serialNosMap = new Map<string, string[]>();
+      if (!rawDetailsError && rawDetails) {
+        rawDetails.forEach((detail: any) => {
+          if (detail.serial_no && Array.isArray(detail.serial_no)) {
+            serialNosMap.set(detail.detail_id, detail.serial_no.filter((s: any) => s && String(s).trim()));
+          }
+        });
+      }
+      
+      // Load serial numbers for each detail
+      const invoiceDetails: InvoiceDetail[] = await Promise.all(
+        invoiceDetailsRaw.map(async (item: any) => {
+          // Load existing serial numbers for this detail
+          let serialNos: string[] = [];
+          if (item.detailID) {
+            try {
+              // First try to load from serial_numbers table
+              serialNos = await getSerialNumbersByDetailId(item.detailID, 'cash');
+              console.log('[EditInvoicePage] Loaded serial numbers from serial_numbers table for detail', item.detailID, ':', serialNos);
+              
+              // If no serials found in dedicated table, try to load from details table (fallback)
+              if (serialNos.length === 0 && serialNosMap.has(item.detailID)) {
+                serialNos = serialNosMap.get(item.detailID) || [];
+                console.log('[EditInvoicePage] Loaded serial numbers from details table (fallback) for detail', item.detailID, ':', serialNos);
+              }
+            } catch (err) {
+              console.error('[EditInvoicePage] Failed to load serial numbers:', err);
+              // Fallback to details table
+              if (serialNosMap.has(item.detailID)) {
+                serialNos = serialNosMap.get(item.detailID) || [];
+                console.log('[EditInvoicePage] Using fallback serial numbers from details table:', serialNos);
+              }
+            }
+          }
+          
+          // Ensure serialNos array matches quantity
+          while (serialNos.length < (item.quantity || 0)) {
+            serialNos.push('');
+          }
+          serialNos = serialNos.slice(0, item.quantity || 0);
+          
+          return {
+            ...item,
+            serialNos: serialNos,
+            isSerialized: false, // Will be updated when products are loaded
+          };
+        })
+      );
+      
       setDetails(invoiceDetails);
     } catch (err: any) {
       console.error('[EditInvoicePage] Failed to load invoice:', err);
@@ -114,16 +176,79 @@ export default function EditInvoicePage() {
     try {
       const productsData = await getProducts();
       setProducts(productsData);
+      
+      // Update isSerialized for existing invoice items after products are loaded
+      setDetails((prevDetails) => {
+        return prevDetails.map((detail) => {
+          // Find product
+          const product = productsData.find(
+            (p) => (p.ProductID || p.id || p.product_id) === detail.productID
+          );
+          
+          if (product) {
+            const isSerialized = product.is_serialized || product.IsSerialized || false;
+            
+            // Ensure serialNos array matches quantity, but preserve existing serial numbers
+            let serialNos = detail.serialNos || [];
+            // Only pad if we need more slots, don't truncate existing serials
+            while (serialNos.length < detail.quantity) {
+              serialNos.push('');
+            }
+            // Only slice if quantity decreased
+            if (serialNos.length > detail.quantity) {
+              serialNos = serialNos.slice(0, detail.quantity);
+            }
+            
+            return {
+              ...detail,
+              isSerialized: isSerialized,
+              serialNos: serialNos, // Preserve existing serial numbers
+            };
+          }
+          return detail;
+        });
+      });
     } catch (err: any) {
       console.error('[EditInvoicePage] Failed to load products:', err);
     }
   };
 
   const handleUpdateQuantity = (detailID: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      handleRemoveItem(detailID);
+      return;
+    }
     setDetails((prev) =>
-      prev.map((item) =>
-        item.detailID === detailID ? { ...item, quantity: newQuantity } : item
-      )
+      prev.map((item) => {
+        if (item.detailID === detailID) {
+          const currentSerialNos = item.serialNos || [];
+          let newSerialNos: string[];
+          
+          if (newQuantity > item.quantity) {
+            // Increase quantity - add empty strings
+            newSerialNos = [...currentSerialNos, ...Array(newQuantity - item.quantity).fill('')];
+          } else {
+            // Decrease quantity - keep first N serials
+            newSerialNos = currentSerialNos.slice(0, newQuantity);
+          }
+          
+          return { ...item, quantity: newQuantity, serialNos: newSerialNos };
+        }
+        return item;
+      })
+    );
+  };
+  
+  const handleUpdateSerialNo = (detailID: string, index: number, value: string) => {
+    setDetails((prev) =>
+      prev.map((item) => {
+        if (item.detailID === detailID) {
+          const serialNos = [...(item.serialNos || [])];
+          serialNos[index] = value;
+          return { ...item, serialNos };
+        }
+        return item;
+      })
     );
   };
 
@@ -320,6 +445,12 @@ export default function EditInvoicePage() {
       return;
     }
 
+    // Check if product is serialized
+    const isSerialized = productToAdd.is_serialized || productToAdd.IsSerialized || false;
+    
+    // Initialize serial numbers array with empty strings for each quantity
+    const serialNos: string[] = Array(quantity).fill('');
+
     const newDetail: InvoiceDetail = {
       detailID: `temp-${Date.now()}`,
       productID: productIdForSearch,
@@ -329,6 +460,8 @@ export default function EditInvoicePage() {
       barcode: productToAdd.Barcode || productToAdd.barcode || '',
       mode: 'Pick', // New items default to 'Pick'
       productImage: productImage,
+      serialNos: serialNos,
+      isSerialized: isSerialized,
     };
 
     setDetails((prev) => [...prev, newDetail]);
@@ -351,18 +484,36 @@ export default function EditInvoicePage() {
       return;
     }
 
+    // Validate serial numbers
+    const validationError = validateSerialNumbers(details.map(item => ({
+      productID: item.productID,
+      quantity: item.quantity,
+      serialNos: item.serialNos || [],
+      isSerialized: item.isSerialized || false,
+    })));
+    
+    if (validationError) {
+      alert(validationError);
+      setSaving(false);
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
     try {
       const payload = {
-        items: details.map((item) => ({
-          detailID: item.detailID.startsWith('temp-') ? undefined : item.detailID,
-          productID: item.productID,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          mode: (item.mode || 'Pick') as 'Pick' | 'Scan', // Preserve original mode or default to 'Pick'
-        })),
+        items: details.map((item) => {
+          const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
+          return {
+            detailID: item.detailID.startsWith('temp-') ? undefined : item.detailID,
+            productID: item.productID,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            mode: (item.mode || 'Pick') as 'Pick' | 'Scan', // Preserve original mode or default to 'Pick'
+            serialNos: serialNos.length > 0 ? serialNos : undefined,
+          };
+        }),
         notes: notes || undefined,
         discount: discount || 0,
       };
@@ -737,6 +888,9 @@ export default function EditInvoicePage() {
                     السعر
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                    الرقم التسلسلي
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
                     المبلغ
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
@@ -747,7 +901,7 @@ export default function EditInvoicePage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {details.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-gray-500 font-cairo">
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500 font-cairo">
                       لا توجد أصناف
                     </td>
                   </tr>
@@ -799,6 +953,31 @@ export default function EditInvoicePage() {
                           onWheel={(e) => e.currentTarget.blur()}
                           className="w-24 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo text-sm"
                         />
+                      </td>
+                      <td className="px-4 py-3">
+                        {(item.isSerialized || (item.serialNos && item.serialNos.length > 0)) ? (
+                          <div className="space-y-1 max-h-32 overflow-y-auto">
+                            {Array.from({ length: item.quantity }, (_, index) => {
+                              const serialValue = item.serialNos?.[index] || '';
+                              return (
+                                <div key={index} className="flex items-center gap-1 mb-1">
+                                  <input
+                                    type="text"
+                                    value={serialValue}
+                                    onChange={(e) => handleUpdateSerialNo(item.detailID, index, e.target.value)}
+                                    placeholder={`سيريال ${index + 1}${item.isSerialized ? ' *' : ''}`}
+                                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo"
+                                  />
+                                  <SerialNumberScanner
+                                    onScan={(serialNumber) => handleUpdateSerialNo(item.detailID, index, serialNumber)}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400 font-cairo">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 font-cairo">
                         {formatCurrency(item.quantity * item.unitPrice)}

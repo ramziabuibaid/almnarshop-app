@@ -8,6 +8,7 @@ interface InvoiceItem {
   total: number;
   barcode?: string;
   shamelNo?: string; // رقم الشامل
+  serialNos?: string[]; // Array of serial numbers
 }
 
 interface InvoicePrintProps {
@@ -445,7 +446,25 @@ export default function InvoicePrint({
                 <td className="ta-c nowrap">
                   {item.shamelNo || item.barcode || item.productID}
                 </td>
-                <td className="ta-r nameCell">{item.name}</td>
+                <td className="ta-r nameCell">
+                  <div>{item.name}</div>
+                  {item.serialNos && item.serialNos.length > 0 && item.serialNos.some(s => s && s.trim()) && (
+                    <div style={{ 
+                      fontSize: '10px', 
+                      color: '#666', 
+                      marginTop: '4px',
+                      fontFamily: 'monospace',
+                      direction: 'ltr',
+                      textAlign: 'left'
+                    }}>
+                      {item.serialNos.filter(s => s && s.trim()).map((serial, idx) => (
+                        <span key={idx} style={{ display: 'block', marginBottom: '2px' }}>
+                          SN: {serial}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </td>
                 <td className="ta-c nowrap">{item.quantity}</td>
                 <td className="ta-c nowrap">
                   {item.unitPrice.toFixed(2)} ₪

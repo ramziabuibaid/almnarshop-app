@@ -12,6 +12,9 @@ import {
   getAllCustomers,
   getCustomerLastPriceForProduct,
 } from '@/lib/api';
+import { getSerialNumbersByDetailId } from '@/lib/api_serial_numbers';
+import { validateSerialNumbers } from '@/lib/validation';
+import { supabase } from '@/lib/supabase';
 import {
   Loader2,
   Save,
@@ -25,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
+import SerialNumberScanner from '@/components/admin/SerialNumberScanner';
 
 interface InvoiceDetail {
   detailID?: string;
@@ -35,6 +39,8 @@ interface InvoiceDetail {
   costPrice?: number;
   isNew?: boolean;
   productImage?: string;
+  serialNos?: string[]; // Array of serial numbers - one per quantity
+  isSerialized?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -125,15 +131,67 @@ export default function EditShopSalesInvoicePage() {
       setDiscount(data.Discount || 0);
       
       // Map invoice items to details (costPrice will be added after products are loaded)
-      const mappedDetails: InvoiceDetail[] = (data.Items || []).map((item: any) => ({
-        detailID: item.DetailsID,
-        productID: item.ProductID,
-        productName: item.ProductName || '',
-        quantity: item.Quantity || 0,
-        unitPrice: item.UnitPrice || 0,
-        costPrice: 0, // Will be updated when products are loaded
-        isNew: false,
-      }));
+      // First, get raw details from Supabase to access serial_no field
+      const { data: rawDetails, error: rawDetailsError } = await supabase
+        .from('shop_sales_details')
+        .select('details_id, serial_no')
+        .eq('invoice_id', invoiceId);
+      
+      const serialNosMap = new Map<string, string[]>();
+      if (!rawDetailsError && rawDetails) {
+        rawDetails.forEach((detail: any) => {
+          if (detail.serial_no && Array.isArray(detail.serial_no)) {
+            serialNosMap.set(detail.details_id, detail.serial_no.filter((s: any) => s && String(s).trim()));
+          }
+        });
+      }
+      
+      const mappedDetails: InvoiceDetail[] = await Promise.all(
+        (data.Items || []).map(async (item: any) => {
+          // Load existing serial numbers for this detail
+          let serialNos: string[] = [];
+          if (item.DetailsID) {
+            try {
+              // First try to load from serial_numbers table
+              serialNos = await getSerialNumbersByDetailId(item.DetailsID, 'shop_sales');
+              console.log('[EditShopSalesInvoicePage] Loaded serial numbers from serial_numbers table for detail', item.DetailsID, ':', serialNos);
+              
+              // If no serials found in dedicated table, try to load from details table (fallback)
+              if (serialNos.length === 0 && serialNosMap.has(item.DetailsID)) {
+                serialNos = serialNosMap.get(item.DetailsID) || [];
+                console.log('[EditShopSalesInvoicePage] Loaded serial numbers from details table (fallback) for detail', item.DetailsID, ':', serialNos);
+              }
+            } catch (err) {
+              console.error('[EditShopSalesInvoicePage] Failed to load serial numbers:', err);
+              // Fallback to details table
+              if (serialNosMap.has(item.DetailsID)) {
+                serialNos = serialNosMap.get(item.DetailsID) || [];
+                console.log('[EditShopSalesInvoicePage] Using fallback serial numbers from details table:', serialNos);
+              }
+            }
+          }
+          
+          // Ensure serialNos array matches quantity
+          while (serialNos.length < (item.Quantity || 0)) {
+            serialNos.push('');
+          }
+          serialNos = serialNos.slice(0, item.Quantity || 0);
+          
+          console.log('[EditShopSalesInvoicePage] Final serialNos for product', item.ProductID, ':', serialNos);
+          
+          return {
+            detailID: item.DetailsID,
+            productID: item.ProductID,
+            productName: item.ProductName || '',
+            quantity: item.Quantity || 0,
+            unitPrice: item.UnitPrice || 0,
+            costPrice: 0, // Will be updated when products are loaded
+            isNew: false,
+            serialNos: serialNos,
+            isSerialized: false, // Will be updated when products are loaded
+          };
+        })
+      );
       setDetails(mappedDetails);
     } catch (err: any) {
       console.error('[EditShopSalesInvoicePage] Failed to load invoice:', err);
@@ -148,20 +206,37 @@ export default function EditShopSalesInvoicePage() {
       const productsData = await getProducts();
       setProducts(productsData);
       
-      // Update costPrice for existing invoice items after products are loaded
+      // Update costPrice and isSerialized for existing invoice items after products are loaded
       setDetails((prevDetails) => {
         return prevDetails.map((detail) => {
-          // Skip if costPrice already exists (user might have added new items)
-          if (detail.costPrice && detail.costPrice > 0) return detail;
-          
-          // Find product and get costPrice
+          // Find product
           const product = productsData.find(
             (p) => (p.ProductID || p.id || p.product_id) === detail.productID
           );
+          
           if (product) {
+            const costPrice = detail.costPrice && detail.costPrice > 0 
+              ? detail.costPrice 
+              : (product.CostPrice || product.cost_price || product.costPrice || 0);
+            
+            const isSerialized = product.is_serialized || product.IsSerialized || false;
+            
+            // Ensure serialNos array matches quantity, but preserve existing serial numbers
+            let serialNos = detail.serialNos || [];
+            // Only pad if we need more slots, don't truncate existing serials
+            while (serialNos.length < detail.quantity) {
+              serialNos.push('');
+            }
+            // Only slice if quantity decreased
+            if (serialNos.length > detail.quantity) {
+              serialNos = serialNos.slice(0, detail.quantity);
+            }
+            
             return {
               ...detail,
-              costPrice: product.CostPrice || product.cost_price || product.costPrice || 0,
+              costPrice: costPrice,
+              isSerialized: isSerialized,
+              serialNos: serialNos, // Preserve existing serial numbers
             };
           }
           return detail;
@@ -234,10 +309,41 @@ export default function EditShopSalesInvoicePage() {
   }, [customers, customerSearchQuery]);
 
   const handleUpdateQuantity = (detailID: string | undefined, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      handleRemoveItem(detailID);
+      return;
+    }
     setDetails((prev) =>
-      prev.map((item) =>
-        item.detailID === detailID ? { ...item, quantity: newQuantity } : item
-      )
+      prev.map((item) => {
+        if (item.detailID === detailID) {
+          const currentSerialNos = item.serialNos || [];
+          let newSerialNos: string[];
+          
+          if (newQuantity > item.quantity) {
+            // Increase quantity - add empty strings
+            newSerialNos = [...currentSerialNos, ...Array(newQuantity - item.quantity).fill('')];
+          } else {
+            // Decrease quantity - keep first N serials
+            newSerialNos = currentSerialNos.slice(0, newQuantity);
+          }
+          
+          return { ...item, quantity: newQuantity, serialNos: newSerialNos };
+        }
+        return item;
+      })
+    );
+  };
+  
+  const handleUpdateSerialNo = (detailID: string | undefined, index: number, value: string) => {
+    setDetails((prev) =>
+      prev.map((item) => {
+        if (item.detailID === detailID) {
+          const serialNos = [...(item.serialNos || [])];
+          serialNos[index] = value;
+          return { ...item, serialNos };
+        }
+        return item;
+      })
     );
   };
 
@@ -495,6 +601,12 @@ export default function EditShopSalesInvoicePage() {
     
     console.log('[ShopSales] Final costPrice:', costPrice);
 
+    // Check if product is serialized
+    const isSerialized = productToAdd.is_serialized || productToAdd.IsSerialized || false;
+    
+    // Initialize serial numbers array with empty strings for each quantity
+    const serialNos: string[] = Array(quantity).fill('');
+
     const newDetail: InvoiceDetail = {
       detailID: detailId,
       productID: productIdForSearch,
@@ -504,6 +616,8 @@ export default function EditShopSalesInvoicePage() {
       costPrice: costPrice,
       isNew: true,
       productImage: productImage,
+      serialNos: serialNos,
+      isSerialized: isSerialized,
     };
 
     setDetails((prev) => [...prev, newDetail]);
@@ -582,9 +696,23 @@ export default function EditShopSalesInvoicePage() {
     setSaving(true);
     setError(null);
     try {
+      // Validate serial numbers
+      const validationError = validateSerialNumbers(details.map(item => ({
+        productID: item.productID,
+        quantity: item.quantity,
+        serialNos: item.serialNos || [],
+        isSerialized: item.isSerialized || false,
+      })));
+      
+      if (validationError) {
+        alert(validationError);
+        setSaving(false);
+        return;
+      }
+
       // Separate items into: existing (to update), new (to add), and deleted (to remove)
-      const itemsToUpdate: Array<{ detailID: string; productID: string; quantity: number; unitPrice: number }> = [];
-      const itemsToAdd: Array<{ productID: string; quantity: number; unitPrice: number }> = [];
+      const itemsToUpdate: Array<{ detailID: string; productID: string; quantity: number; unitPrice: number; serialNos?: string[] }> = [];
+      const itemsToAdd: Array<{ productID: string; quantity: number; unitPrice: number; serialNos?: string[] }> = [];
       
       // Get original invoice to find deleted items
       const originalInvoice = await getShopSalesInvoice(invoiceId);
@@ -596,6 +724,8 @@ export default function EditShopSalesInvoicePage() {
 
       // Process current details
       details.forEach((item) => {
+        const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
+        
         if (item.detailID && !item.detailID.startsWith('temp-') && !item.isNew) {
           // Existing item - check if it changed
           const originalItem = originalInvoice.Items.find((i: any) => i.DetailsID === item.detailID);
@@ -605,12 +735,13 @@ export default function EditShopSalesInvoicePage() {
               originalItem.UnitPrice !== item.unitPrice ||
               originalItem.ProductID !== item.productID;
             
-            if (changed) {
+            if (changed || serialNos.length > 0) {
               itemsToUpdate.push({
                 detailID: item.detailID,
                 productID: item.productID,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
+                serialNos: serialNos.length > 0 ? serialNos : undefined,
               });
             }
           }
@@ -620,6 +751,7 @@ export default function EditShopSalesInvoicePage() {
             productID: item.productID,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
+            serialNos: serialNos.length > 0 ? serialNos : undefined,
           });
         }
       });
@@ -1005,6 +1137,7 @@ export default function EditShopSalesInvoicePage() {
                         {showCosts && canViewCost && (
                           <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
                         )}
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الرقم التسلسلي</th>
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الإجمالي</th>
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">إجراءات</th>
                       </tr>
@@ -1067,6 +1200,31 @@ export default function EditShopSalesInvoicePage() {
                               ₪{(item.costPrice || 0).toFixed(2)}
                             </td>
                           )}
+                          <td className="px-4 py-3">
+                            {(item.isSerialized || (item.serialNos && item.serialNos.length > 0)) ? (
+                              <div className="space-y-1 max-h-32 overflow-y-auto">
+                                {Array.from({ length: item.quantity }, (_, index) => {
+                                  const serialValue = item.serialNos?.[index] || '';
+                                  return (
+                                    <div key={index} className="flex items-center gap-1 mb-1">
+                                      <input
+                                        type="text"
+                                        value={serialValue}
+                                        onChange={(e) => handleUpdateSerialNo(item.detailID, index, e.target.value)}
+                                        placeholder={`سيريال ${index + 1}${item.isSerialized ? ' *' : ''}`}
+                                        className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo"
+                                      />
+                                      <SerialNumberScanner
+                                        onScan={(serialNumber) => handleUpdateSerialNo(item.detailID, index, serialNumber)}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400 font-cairo">—</span>
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo">
                             ₪{(item.quantity * item.unitPrice).toFixed(2)}
                           </td>
@@ -1149,6 +1307,35 @@ export default function EditShopSalesInvoicePage() {
                             />
                           </div>
                         </div>
+
+                        {(item.isSerialized || (item.serialNos && item.serialNos.length > 0)) && (
+                          <div className="mb-3">
+                            <label className="block text-xs text-gray-600 mb-1 font-cairo">الأرقام التسلسلية</label>
+                            <div className="space-y-1 max-h-32 overflow-y-auto">
+                              {Array.from({ length: item.quantity }, (_, index) => {
+                                const serialNos = item.serialNos || [];
+                                while (serialNos.length < item.quantity) {
+                                  serialNos.push('');
+                                }
+                                const serialNo = serialNos[index] || '';
+                                return (
+                                  <div key={index} className="flex items-center gap-1">
+                                    <input
+                                      type="text"
+                                      value={serialNo}
+                                      onChange={(e) => handleUpdateSerialNo(item.detailID, index, e.target.value)}
+                                      placeholder={item.isSerialized ? `سيريال ${index + 1} (مطلوب)` : `سيريال ${index + 1} (اختياري)`}
+                                      className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-lg text-gray-900 font-cairo"
+                                    />
+                                    <SerialNumberScanner
+                                      onScan={(serialNumber) => handleUpdateSerialNo(item.detailID, index, serialNumber)}
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
 
                         {showCosts && canViewCost && (
                           <div className="pt-2 border-t border-gray-200">

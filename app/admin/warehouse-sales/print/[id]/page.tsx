@@ -11,6 +11,8 @@ interface InvoiceItem {
   Quantity: number;
   UnitPrice: number;
   TotalPrice: number;
+  DetailsID?: string;
+  serialNos?: string[];
 }
 
 export default function WarehouseSalesInvoicePrintPage() {
@@ -513,7 +515,24 @@ export default function WarehouseSalesInvoicePrintPage() {
                       <td className="ta-c nowrap">{index + 1}</td>
                       <td className="ta-c nowrap">{item.ShamelNo || item.ProductID || '—'}</td>
                       <td className="ta-r nameCell">
-                        {item.ProductName}
+                        <div>{item.ProductName}</div>
+                        {item.serialNos && item.serialNos.length > 0 && (
+                          <div style={{ 
+                            fontSize: '12px', 
+                            color: '#666', 
+                            marginTop: '4px',
+                            fontFamily: 'monospace',
+                            direction: 'ltr',
+                            textAlign: 'left',
+                            lineHeight: '1.4'
+                          }}>
+                            {item.serialNos.map((serial, idx) => (
+                              <span key={idx} style={{ display: 'block', marginBottom: '2px' }}>
+                                SN: {serial}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="ta-c nowrap">{item.Quantity}</td>
                       <td className="ta-c nowrap">{item.UnitPrice.toFixed(2)} ₪</td>

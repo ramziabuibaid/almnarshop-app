@@ -13,6 +13,7 @@ interface InvoiceItem {
   total: number;
   barcode?: string;
   shamelNo?: string;
+  serialNos?: string[];
 }
 
 export default function InvoicePrintPage() {
@@ -77,6 +78,31 @@ export default function InvoicePrintPage() {
         throw new Error('Invoice has no items');
       }
 
+      // Load serial numbers for each detail
+      const { getSerialNumbersByDetailId } = await import('@/lib/api_serial_numbers');
+      const itemsWithSerials = await Promise.all(
+        details.map(async (item) => {
+          let serialNos: string[] = [];
+          if (item.detailID) {
+            try {
+              serialNos = await getSerialNumbersByDetailId(item.detailID, 'cash');
+            } catch (err) {
+              console.error('[InvoicePrint] Failed to load serial numbers:', err);
+            }
+          }
+          return {
+            productID: item.productID,
+            name: item.productName || '',
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.quantity * item.unitPrice,
+            barcode: item.barcode,
+            shamelNo: item.shamelNo,
+            serialNos: serialNos.filter(s => s && s.trim()),
+          };
+        })
+      );
+
       // Calculate totals
       const subtotal = details.reduce((sum, item) => {
         return sum + (item.quantity * item.unitPrice);
@@ -86,15 +112,7 @@ export default function InvoicePrintPage() {
       const netTotal = subtotal - discount;
 
       // Map items
-      const items: InvoiceItem[] = details.map((item) => ({
-        productID: item.productID,
-        name: item.productName || '',
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        total: item.quantity * item.unitPrice,
-        barcode: item.barcode,
-        shamelNo: item.shamelNo,
-      }));
+      const items: InvoiceItem[] = itemsWithSerials;
 
       setInvoiceData({
         invoiceID: invoiceId,
@@ -460,7 +478,26 @@ export default function InvoicePrintPage() {
                 <td className="col-no">
                   {item.shamelNo || item.barcode || item.productID}
                 </td>
-                <td className="col-name">{item.name}</td>
+                <td className="col-name">
+                  <div>{item.name}</div>
+                  {item.serialNos && item.serialNos.length > 0 && (
+                    <div style={{ 
+                      fontSize: '7px', 
+                      color: '#666', 
+                      marginTop: '2px',
+                      fontFamily: 'monospace',
+                      direction: 'ltr',
+                      textAlign: 'left',
+                      lineHeight: '1.2'
+                    }}>
+                      {item.serialNos.map((serial, idx) => (
+                        <span key={idx} style={{ display: 'block' }}>
+                          {serial}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </td>
                 <td className="col-qty">{item.quantity}</td>
                 <td className="col-price">{item.unitPrice.toFixed(2)} ₪</td>
                 <td className="col-amount">{item.total.toFixed(2)} ₪</td>

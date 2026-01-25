@@ -47,6 +47,7 @@ const sidebarLinks = [
   { href: '/admin/maintenance', label: 'الصيانة', icon: Wrench },
   { href: '/admin/checks', label: 'الشيكات الراجعة', icon: FileText },
   { href: '/admin/customers', label: 'الزبائن', icon: Users },
+  { href: '/admin/serial-numbers', label: 'الأرقام التسلسلية', icon: Package },
   { href: '/admin/tasks', label: 'المهام والمتابعات', icon: ClipboardList },
 ];
 

@@ -5,6 +5,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import InvoicePrint from '@/components/admin/InvoicePrint';
 import { saveCashInvoice, getProducts } from '@/lib/api';
+import { validateSerialNumbers } from '@/lib/validation';
 import { Lock } from 'lucide-react';
 import {
   Search,
@@ -20,6 +21,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
+import SerialNumberScanner from '@/components/admin/SerialNumberScanner';
 
 interface CartItem {
   productID: string;
@@ -34,6 +36,8 @@ interface CartItem {
   total: number;
   mode: 'Pick' | 'Scan';
   scannedBarcode?: string;
+  serialNos?: string[]; // Array of serial numbers - one per quantity
+  isSerialized?: boolean;
 }
 
 export default function POSPage() {
@@ -239,6 +243,8 @@ export default function POSPage() {
           total: product.SalePrice || product.salePrice || product.price || 0,
           mode,
           scannedBarcode,
+          serialNos: [''], // Initialize with one empty string
+          isSerialized: product.is_serialized || product.IsSerialized || false,
         };
         return [...prev, newItem];
       }
@@ -797,17 +803,33 @@ export default function POSPage() {
   };
 
   const updateQuantity = (productID: string, newQuantity: number) => {
-    // Allow negative quantities and zero (for returns)
+    if (newQuantity <= 0) {
+      removeFromCart(productID);
+      return;
+    }
     setCart((prev) =>
-      prev.map((item) =>
-        item.productID === productID
-          ? {
-              ...item,
-              quantity: newQuantity,
-              total: newQuantity * item.unitPrice,
-            }
-          : item
-      )
+      prev.map((item) => {
+        if (item.productID === productID) {
+          const currentSerialNos = item.serialNos || [];
+          let newSerialNos: string[];
+          
+          if (newQuantity > item.quantity) {
+            // Increase quantity - add empty strings
+            newSerialNos = [...currentSerialNos, ...Array(newQuantity - item.quantity).fill('')];
+          } else {
+            // Decrease quantity - keep first N serials
+            newSerialNos = currentSerialNos.slice(0, newQuantity);
+          }
+          
+          return {
+            ...item,
+            quantity: newQuantity,
+            total: newQuantity * item.unitPrice,
+            serialNos: newSerialNos,
+          };
+        }
+        return item;
+      })
     );
   };
 
@@ -1009,6 +1031,13 @@ export default function POSPage() {
       return;
     }
 
+    // Validate serial numbers (currently disabled)
+    const validationError = validateSerialNumbers(cart);
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const payload = {
@@ -1022,6 +1051,7 @@ export default function POSPage() {
           filterColor: item.color,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
+          serialNos: item.serialNos || [],
         })),
         notes: notes.trim() || undefined,
         discount: discount || 0,
@@ -1046,6 +1076,7 @@ export default function POSPage() {
           unitPrice: item.unitPrice,
           total: item.total,
           barcode: item.barcode || item.scannedBarcode || '',
+          serialNos: item.serialNos?.filter(s => s && s.trim()) || [],
         })),
         subtotal,
         discount: discount || 0,
@@ -1542,6 +1573,66 @@ export default function POSPage() {
                           />
                         </div>
                         
+                        {/* Serial Numbers */}
+                        <div className="min-w-[120px] max-w-[150px]">
+                          <div className="space-y-1 max-h-32 overflow-y-auto">
+                            {Array.from({ length: item.quantity }, (_, index) => {
+                              const serialNos = item.serialNos || [];
+                              while (serialNos.length < item.quantity) {
+                                serialNos.push('');
+                              }
+                              const serialNo = serialNos[index] || '';
+                              const isEmpty = !serialNo.trim();
+                              const isRequired = item.isSerialized && isEmpty;
+                              
+                              return (
+                                <div key={index} className="flex items-center gap-1">
+                                  <input
+                                    type="text"
+                                    value={serialNo}
+                                    onChange={(e) => {
+                                      const newSerialNos = [...(item.serialNos || [])];
+                                      while (newSerialNos.length < item.quantity) {
+                                        newSerialNos.push('');
+                                      }
+                                      newSerialNos[index] = e.target.value;
+                                      setCart((prev) =>
+                                        prev.map((cartItem) =>
+                                          cartItem.productID === item.productID
+                                            ? { ...cartItem, serialNos: newSerialNos }
+                                            : cartItem
+                                        )
+                                      );
+                                    }}
+                                    placeholder={item.isSerialized ? `${index + 1} (مطلوب)` : `${index + 1} (اختياري)`}
+                                    className={`flex-1 px-1.5 py-0.5 border rounded text-xs text-gray-900 font-bold ${
+                                      isRequired
+                                        ? 'border-yellow-400 bg-yellow-50'
+                                        : 'border-gray-300'
+                                    }`}
+                                  />
+                                  <SerialNumberScanner
+                                    onScan={(serialNumber) => {
+                                      const newSerialNos = [...(item.serialNos || [])];
+                                      while (newSerialNos.length < item.quantity) {
+                                        newSerialNos.push('');
+                                      }
+                                      newSerialNos[index] = serialNumber;
+                                      setCart((prev) =>
+                                        prev.map((cartItem) =>
+                                          cartItem.productID === item.productID
+                                            ? { ...cartItem, serialNos: newSerialNos }
+                                            : cartItem
+                                        )
+                                      );
+                                    }}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        
                         {/* Total */}
                         <div className="text-left min-w-[60px]">
                           <p className="text-sm font-bold text-gray-900 font-cairo">₪{item.total.toFixed(2)}</p>
@@ -1591,7 +1682,7 @@ export default function POSPage() {
                           </button>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-2 mb-2">
                           <div>
                             <label className="block text-xs text-gray-600 mb-1 font-cairo">الكمية</label>
                             <div className="flex items-center gap-1">
@@ -1626,6 +1717,67 @@ export default function POSPage() {
                               className="w-full text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold"
                               placeholder="السعر"
                             />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1 font-cairo">
+                            الأرقام التسلسلية {item.isSerialized && <span className="text-red-500">*</span>}
+                          </label>
+                          <div className="space-y-2">
+                            {Array.from({ length: item.quantity }, (_, index) => {
+                              const serialNos = item.serialNos || [];
+                              while (serialNos.length < item.quantity) {
+                                serialNos.push('');
+                              }
+                              const serialNo = serialNos[index] || '';
+                              const isEmpty = !serialNo.trim();
+                              const isRequired = item.isSerialized && isEmpty;
+                              
+                              return (
+                                <div key={index} className="flex items-center gap-1">
+                                  <input
+                                    type="text"
+                                    value={serialNo}
+                                    onChange={(e) => {
+                                      const newSerialNos = [...(item.serialNos || [])];
+                                      while (newSerialNos.length < item.quantity) {
+                                        newSerialNos.push('');
+                                      }
+                                      newSerialNos[index] = e.target.value;
+                                      setCart((prev) =>
+                                        prev.map((cartItem) =>
+                                          cartItem.productID === item.productID
+                                            ? { ...cartItem, serialNos: newSerialNos }
+                                            : cartItem
+                                        )
+                                      );
+                                    }}
+                                    placeholder={item.isSerialized ? `سيريال ${index + 1} (مطلوب)` : `سيريال ${index + 1} (اختياري)`}
+                                    className={`flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 font-bold ${
+                                      isRequired
+                                        ? 'border-yellow-400 bg-yellow-50'
+                                        : 'border-gray-300'
+                                    }`}
+                                  />
+                                  <SerialNumberScanner
+                                    onScan={(serialNumber) => {
+                                      const newSerialNos = [...(item.serialNos || [])];
+                                      while (newSerialNos.length < item.quantity) {
+                                        newSerialNos.push('');
+                                      }
+                                      newSerialNos[index] = serialNumber;
+                                      setCart((prev) =>
+                                        prev.map((cartItem) =>
+                                          cartItem.productID === item.productID
+                                            ? { ...cartItem, serialNos: newSerialNos }
+                                            : cartItem
+                                        )
+                                      );
+                                    }}
+                                  />
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>

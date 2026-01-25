@@ -12,6 +12,7 @@ interface QuotationItem {
   UnitPrice: number;
   notes?: string;
   isGift?: boolean;
+  serialNos?: string[];
 }
 
 export default function QuotationPrintPage() {
@@ -66,7 +67,26 @@ export default function QuotationPrintPage() {
       const quotation = await getQuotationFromSupabase(quotationId);
       const items = quotation.details || [];
 
-      const subtotal = items.reduce(
+      // Load serial numbers for each item
+      const { getSerialNumbersByDetailId } = await import('@/lib/api_serial_numbers');
+      const itemsWithSerials = await Promise.all(
+        items.map(async (item: QuotationItem) => {
+          let serialNos: string[] = [];
+          if (item.QuotationDetailID) {
+            try {
+              serialNos = await getSerialNumbersByDetailId(item.QuotationDetailID, 'quotation');
+            } catch (err) {
+              console.error('[QuotationPrint] Failed to load serial numbers:', err);
+            }
+          }
+          return {
+            ...item,
+            serialNos: serialNos.filter(s => s && s.trim()),
+          };
+        })
+      );
+
+      const subtotal = itemsWithSerials.reduce(
         (sum: number, item: QuotationItem) => sum + item.Quantity * item.UnitPrice,
         0
       );
@@ -81,7 +101,7 @@ export default function QuotationPrintPage() {
         customer: quotation.customer,
         status: quotation.Status,
         notes: quotation.Notes,
-        items,
+        items: itemsWithSerials,
         subtotal,
         specialDiscount,
         giftDiscount,
@@ -573,6 +593,23 @@ export default function QuotationPrintPage() {
                         <td className="ta-r nameCell">
                           <div>
                             <div>{item.product?.name || `Product ${item.ProductID}`}</div>
+                            {item.serialNos && item.serialNos.length > 0 && (
+                              <div style={{ 
+                                fontSize: '12px', 
+                                color: '#666', 
+                                marginTop: '4px',
+                                fontFamily: 'monospace',
+                                direction: 'ltr',
+                                textAlign: 'left',
+                                lineHeight: '1.4'
+                              }}>
+                                {item.serialNos.map((serial, idx) => (
+                                  <span key={idx} style={{ display: 'block', marginBottom: '2px' }}>
+                                    SN: {serial}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                             {item.notes && item.notes.trim() && (
                               <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
                                 {item.notes}
@@ -611,6 +648,23 @@ export default function QuotationPrintPage() {
                             <td className="ta-r nameCell">
                               <div>
                                 <div>{item.product?.name || `Product ${item.ProductID}`}</div>
+                                {item.serialNos && item.serialNos.length > 0 && (
+                                  <div style={{ 
+                                    fontSize: '12px', 
+                                    color: '#666', 
+                                    marginTop: '4px',
+                                    fontFamily: 'monospace',
+                                    direction: 'ltr',
+                                    textAlign: 'left',
+                                    lineHeight: '1.4'
+                                  }}>
+                                    {item.serialNos.map((serial, idx) => (
+                                      <span key={idx} style={{ display: 'block', marginBottom: '2px' }}>
+                                        SN: {serial}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                                 {item.notes && item.notes.trim() && (
                                   <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
                                     {item.notes}

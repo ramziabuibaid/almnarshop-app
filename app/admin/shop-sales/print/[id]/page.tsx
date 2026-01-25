@@ -11,6 +11,8 @@ interface InvoiceItem {
   Quantity: number;
   UnitPrice: number;
   TotalPrice: number;
+  DetailsID?: string;
+  serialNos?: string[];
 }
 
 export default function ShopSalesInvoicePrintPage() {
@@ -69,6 +71,25 @@ export default function ShopSalesInvoicePrintPage() {
 
       const invoice = await getShopSalesInvoice(invoiceId);
 
+      // Load serial numbers for each item
+      const { getSerialNumbersByDetailId } = await import('@/lib/api_serial_numbers');
+      const itemsWithSerials = await Promise.all(
+        (invoice.Items || []).map(async (item: any) => {
+          let serialNos: string[] = [];
+          if (item.DetailsID) {
+            try {
+              serialNos = await getSerialNumbersByDetailId(item.DetailsID, 'shop_sales');
+            } catch (err) {
+              console.error('[ShopSalesInvoicePrint] Failed to load serial numbers:', err);
+            }
+          }
+          return {
+            ...item,
+            serialNos: serialNos.filter(s => s && s.trim()),
+          };
+        })
+      );
+
       setInvoiceData({
         InvoiceID: invoice.InvoiceID,
         CustomerID: invoice.CustomerID,
@@ -83,7 +104,7 @@ export default function ShopSalesInvoicePrintPage() {
         Status: invoice.Status,
         Subtotal: invoice.Subtotal,
         TotalAmount: invoice.TotalAmount,
-        Items: invoice.Items || [],
+        Items: itemsWithSerials,
       });
     } catch (err: any) {
       console.error('[ShopSalesInvoicePrint] Error loading invoice:', err);
@@ -533,7 +554,24 @@ export default function ShopSalesInvoicePrintPage() {
                       <td className="ta-c nowrap">{index + 1}</td>
                       <td className="ta-c nowrap">{item.ShamelNo || item.ProductID || '—'}</td>
                       <td className="ta-r nameCell">
-                        {item.ProductName}
+                        <div>{item.ProductName}</div>
+                        {item.serialNos && item.serialNos.length > 0 && (
+                          <div style={{ 
+                            fontSize: '12px', 
+                            color: '#666', 
+                            marginTop: '4px',
+                            fontFamily: 'monospace',
+                            direction: 'ltr',
+                            textAlign: 'left',
+                            lineHeight: '1.4'
+                          }}>
+                            {item.serialNos.map((serial, idx) => (
+                              <span key={idx} style={{ display: 'block', marginBottom: '2px' }}>
+                                SN: {serial}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="ta-c nowrap">{item.Quantity}</td>
                       <td className="ta-c nowrap">{item.UnitPrice.toFixed(2)} ₪</td>

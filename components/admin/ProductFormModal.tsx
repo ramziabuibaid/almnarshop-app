@@ -64,6 +64,7 @@ export default function ProductFormModal({
           Image: product.Image || product.image || '',
           'Image 2': product['Image 2'] || product.image2 || '',
           'image 3': product['image 3'] || product.image3 || '',
+          is_serialized: product.is_serialized || product.IsSerialized || false,
         });
       } else {
         // Add mode - empty form
@@ -88,6 +89,7 @@ export default function ProductFormModal({
           Image: '',
           'Image 2': '',
           'image 3': '',
+          is_serialized: false,
         });
       }
       setError('');
@@ -276,7 +278,7 @@ export default function ProductFormModal({
     }
   }, [stopBarcodeScanning]);
 
-  const handleChange = (field: keyof Product, value: string | number) => {
+  const handleChange = (field: keyof Product, value: string | number | boolean) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -587,6 +589,18 @@ export default function ProductFormModal({
                       onChange={(e) => handleChange('Warranty', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
                     />
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="is_serialized"
+                      checked={formData.is_serialized || false}
+                      onChange={(e) => handleChange('is_serialized', e.target.checked)}
+                      className="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
+                    />
+                    <label htmlFor="is_serialized" className="ml-2 text-sm font-medium text-gray-700">
+                      المنتج له رقم تسلسلي (Serial Number)
+                    </label>
                   </div>
                 </div>
               </div>

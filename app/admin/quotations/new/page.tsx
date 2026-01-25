@@ -28,6 +28,7 @@ import {
   getAllCustomers,
   getCustomerLastPriceForProduct,
 } from '@/lib/api';
+import { validateSerialNumbers } from '@/lib/validation';
 import {
   Loader2,
   Save,
@@ -45,6 +46,7 @@ import {
 } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
+import SerialNumberScanner from '@/components/admin/SerialNumberScanner';
 
 interface QuotationDetail {
   detailID?: string;
@@ -57,6 +59,8 @@ interface QuotationDetail {
   productImage?: string;
   notes?: string;
   isGift?: boolean;
+  serialNos?: string[]; // Array of serial numbers - one per quantity
+  isSerialized?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -77,6 +81,7 @@ function SortableTableRow({
   onUpdateQuantity,
   onUpdatePrice,
   onUpdateNotes,
+  onUpdateSerialNo,
   onToggleGift,
   onRemoveItem,
 }: {
@@ -87,6 +92,7 @@ function SortableTableRow({
   onUpdateQuantity: (detailID: string | undefined, newQuantity: number) => void;
   onUpdatePrice: (detailID: string | undefined, newPrice: number) => void;
   onUpdateNotes: (detailID: string | undefined, newNotes: string) => void;
+  onUpdateSerialNo: (detailID: string | undefined, serialNo: string) => void;
   onToggleGift: (detailID: string | undefined) => void;
   onRemoveItem: (detailID: string | undefined) => void;
 }) {
@@ -176,6 +182,52 @@ function SortableTableRow({
           ₪{(item.costPrice || 0).toFixed(2)}
         </td>
       )}
+      <td className="px-3 py-3">
+        <div className="space-y-1 max-h-32 overflow-y-auto">
+          {Array.from({ length: item.quantity }, (_, index) => {
+            const serialNos = item.serialNos || [];
+            while (serialNos.length < item.quantity) {
+              serialNos.push('');
+            }
+            const serialNo = serialNos[index] || '';
+            const isEmpty = !serialNo.trim();
+            const isRequired = item.isSerialized && isEmpty;
+            
+            return (
+              <div key={index} className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={serialNo}
+                  onChange={(e) => {
+                    const newSerialNos = [...(item.serialNos || [])];
+                    while (newSerialNos.length < item.quantity) {
+                      newSerialNos.push('');
+                    }
+                    newSerialNos[index] = e.target.value;
+                    onUpdateSerialNo(item.detailID, newSerialNos);
+                  }}
+                  placeholder={item.isSerialized ? `سيريال ${index + 1} (مطلوب)` : `سيريال ${index + 1} (اختياري)`}
+                  className={`flex-1 px-2 py-1 border rounded text-xs text-gray-900 font-bold ${
+                    isRequired
+                      ? 'border-yellow-400 bg-yellow-50'
+                      : 'border-gray-300'
+                  }`}
+                />
+                <SerialNumberScanner
+                  onScan={(serialNumber) => {
+                    const newSerialNos = [...(item.serialNos || [])];
+                    while (newSerialNos.length < item.quantity) {
+                      newSerialNos.push('');
+                    }
+                    newSerialNos[index] = serialNumber;
+                    onUpdateSerialNo(item.detailID, newSerialNos);
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </td>
       <td className={`px-3 py-3 text-sm font-semibold font-cairo text-center ${
         item.isGift ? 'text-green-600' : 'text-gray-900'
       }`}>
@@ -219,6 +271,7 @@ function CardRow({
   onUpdateQuantity,
   onUpdatePrice,
   onUpdateNotes,
+  onUpdateSerialNo,
   onToggleGift,
   onRemoveItem,
 }: {
@@ -229,6 +282,7 @@ function CardRow({
   onUpdateQuantity: (detailID: string | undefined, newQuantity: number) => void;
   onUpdatePrice: (detailID: string | undefined, newPrice: number) => void;
   onUpdateNotes: (detailID: string | undefined, newNotes: string) => void;
+  onUpdateSerialNo: (detailID: string | undefined, serialNo: string) => void;
   onToggleGift: (detailID: string | undefined) => void;
   onRemoveItem: (detailID: string | undefined) => void;
 }) {
@@ -297,6 +351,55 @@ function CardRow({
           </div>
         </div>
       )}
+      <div className="mb-3">
+        <label className="block text-xs text-gray-600 mb-1 font-cairo">
+          الأرقام التسلسلية {item.isSerialized && <span className="text-red-500">*</span>}
+        </label>
+        <div className="space-y-2">
+          {Array.from({ length: item.quantity }, (_, index) => {
+            const serialNos = item.serialNos || [];
+            while (serialNos.length < item.quantity) {
+              serialNos.push('');
+            }
+            const serialNo = serialNos[index] || '';
+            const isEmpty = !serialNo.trim();
+            const isRequired = item.isSerialized && isEmpty;
+            
+            return (
+              <div key={index} className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={serialNo}
+                  onChange={(e) => {
+                    const newSerialNos = [...(item.serialNos || [])];
+                    while (newSerialNos.length < item.quantity) {
+                      newSerialNos.push('');
+                    }
+                    newSerialNos[index] = e.target.value;
+                    onUpdateSerialNo(item.detailID, newSerialNos);
+                  }}
+                  placeholder={item.isSerialized ? `سيريال ${index + 1} (مطلوب)` : `سيريال ${index + 1} (اختياري)`}
+                  className={`flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 font-bold ${
+                    isRequired
+                      ? 'border-yellow-400 bg-yellow-50'
+                      : 'border-gray-300'
+                  }`}
+                />
+                <SerialNumberScanner
+                  onScan={(serialNumber) => {
+                    const newSerialNos = [...(item.serialNos || [])];
+                    while (newSerialNos.length < item.quantity) {
+                      newSerialNos.push('');
+                    }
+                    newSerialNos[index] = serialNumber;
+                    onUpdateSerialNo(item.detailID, newSerialNos);
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="mb-3">
         <label className="block text-xs text-gray-600 mb-1 font-cairo">ملاحظات</label>
@@ -371,6 +474,7 @@ function QuotationsFormContent() {
   const [selectedProduct, setSelectedProduct] = useState<any>(null); // Store the full product object
   const [newProductQuantity, setNewProductQuantity] = useState(1);
   const [newProductPrice, setNewProductPrice] = useState(0);
+  const [newProductSerialNo, setNewProductSerialNo] = useState('');
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
@@ -502,10 +606,28 @@ function QuotationsFormContent() {
   }, [customers, customerSearchQuery]);
 
   const handleUpdateQuantity = (detailID: string | undefined, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      handleRemoveItem(detailID);
+      return;
+    }
     setDetails((prev) =>
-      prev.map((item) =>
-        item.detailID === detailID ? { ...item, quantity: newQuantity } : item
-      )
+      prev.map((item) => {
+        if (item.detailID === detailID) {
+          const currentSerialNos = item.serialNos || [];
+          let newSerialNos: string[];
+          
+          if (newQuantity > item.quantity) {
+            // Increase quantity - add empty strings
+            newSerialNos = [...currentSerialNos, ...Array(newQuantity - item.quantity).fill('')];
+          } else {
+            // Decrease quantity - keep first N serials
+            newSerialNos = currentSerialNos.slice(0, newQuantity);
+          }
+          
+          return { ...item, quantity: newQuantity, serialNos: newSerialNos };
+        }
+        return item;
+      })
     );
   };
 
@@ -521,6 +643,14 @@ function QuotationsFormContent() {
     setDetails((prev) =>
       prev.map((item) =>
         item.detailID === detailID ? { ...item, notes: newNotes } : item
+      )
+    );
+  };
+
+  const handleUpdateSerialNo = (detailID: string | undefined, serialNos: string[]) => {
+    setDetails((prev) =>
+      prev.map((item) =>
+        item.detailID === detailID ? { ...item, serialNos: serialNos } : item
       )
     );
   };
@@ -823,6 +953,12 @@ function QuotationsFormContent() {
       return;
     }
 
+    // Check if product is serialized
+    const isSerialized = productToAdd.is_serialized || productToAdd.IsSerialized || false;
+    
+    // Initialize serial numbers array with empty strings for each quantity
+    const serialNos: string[] = Array(quantity).fill('');
+    
     const newDetail: QuotationDetail = {
       detailID: detailId,
       productID: productIdForSearch,
@@ -834,6 +970,8 @@ function QuotationsFormContent() {
       productImage: productImage,
       notes: '',
       isGift: false,
+      serialNos: serialNos,
+      isSerialized: isSerialized,
     };
 
     // Add product immediately
@@ -842,6 +980,7 @@ function QuotationsFormContent() {
     setSelectedProduct(null); // Clear selected product
     setNewProductQuantity(1);
     setNewProductPrice(0);
+    setNewProductSerialNo('');
     setShowAddProduct(false);
     setProductSearchQuery('');
 
@@ -911,6 +1050,9 @@ function QuotationsFormContent() {
       return;
     }
 
+    // Validate serial numbers (currently disabled - optional for quotations)
+    // Note: Quotations don't require validation even when enabled
+
     setSaving(true);
     setError(null);
     try {
@@ -928,6 +1070,7 @@ function QuotationsFormContent() {
           unitPrice: item.unitPrice,
           notes: item.notes || '',
           isGift: item.isGift || false,
+          serialNos: item.serialNos || [],
         })),
       });
       router.push('/admin/quotations');
@@ -1308,6 +1451,7 @@ function QuotationsFormContent() {
                             {showCosts && canViewCost && (
                               <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
                             )}
+                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الرقم التسلسلي</th>
                             <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الإجمالي</th>
                             <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">هدية</th>
                             <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">إجراءات</th>
@@ -1324,6 +1468,7 @@ function QuotationsFormContent() {
                               onUpdateQuantity={handleUpdateQuantity}
                               onUpdatePrice={handleUpdatePrice}
                               onUpdateNotes={handleUpdateNotes}
+                              onUpdateSerialNo={handleUpdateSerialNo}
                               onToggleGift={handleToggleGift}
                               onRemoveItem={handleRemoveItem}
                             />
@@ -1346,6 +1491,7 @@ function QuotationsFormContent() {
                       onUpdateQuantity={handleUpdateQuantity}
                       onUpdatePrice={handleUpdatePrice}
                       onUpdateNotes={handleUpdateNotes}
+                      onUpdateSerialNo={handleUpdateSerialNo}
                       onToggleGift={handleToggleGift}
                       onRemoveItem={handleRemoveItem}
                     />

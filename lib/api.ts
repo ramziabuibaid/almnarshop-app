@@ -406,6 +406,10 @@ function mapProductFromSupabase(product: any): any {
     image2: image2Url, // Legacy field
     image3: image3Url, // Legacy field
     
+    // Serial Number Support
+    is_serialized: product.is_serialized || false,
+    IsSerialized: product.is_serialized || false,
+    
     // Legacy fields (for backward compatibility)
     id: product.product_id || '',
     name: product.name || '',
@@ -690,6 +694,7 @@ export async function saveProduct(productData: any): Promise<any> {
       sale_price: productData.SalePrice !== undefined ? productData.SalePrice : null,
       t1_price: productData.T1Price !== undefined ? productData.T1Price : null,
       t2_price: productData.T2Price !== undefined ? productData.T2Price : null,
+      is_serialized: productData.is_serialized !== undefined ? productData.is_serialized : (productData.IsSerialized !== undefined ? productData.IsSerialized : false),
       // Images - store full URLs from Supabase Storage using new fields
       // Use image_url, image_url_2, image_url_3 (new Supabase Storage fields)
       image_url: productData.Image !== undefined ? (productData.Image || null) : (productData.image !== undefined ? (productData.image || null) : (productData.image_url !== undefined ? (productData.image_url || null) : null)),
@@ -2718,6 +2723,7 @@ export async function saveCashInvoice(payload: {
     filterColor?: string;
     quantity: number;
     unitPrice: number;
+    serialNos?: string[]; // Array of serial numbers - one per quantity
   }>;
   notes?: string;
   discount?: number;
@@ -2774,19 +2780,34 @@ export async function saveCashInvoice(payload: {
       throw new Error('Cannot save invoice without items');
     }
 
-    const invoiceDetails = payload.items.map((item) => ({
-      detail_id: generateDetailID(), // String format: DET-XXXXX
-      invoice_id: invoiceID,
-      product_id: item.productID,
-      mode: item.mode || 'Pick',
-      scanned_barcode: item.scannedBarcode || null,
-      filter_type: item.filterType || null,
-      filter_brand: item.filterBrand || null,
-      filter_size: item.filterSize || null,
-      filter_color: item.filterColor || null,
-      quantity: item.quantity,
-      unit_price: item.unitPrice,
-    }));
+    const invoiceDetailsWithSerials = payload.items.map((item) => {
+      // Filter out empty serial numbers and convert to JSONB array
+      const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
+      // Generate detail_id (cash_invoice_details uses TEXT format: DET-XXXXX)
+      const detailId = generateDetailID();
+      
+      return {
+        detail: {
+          detail_id: detailId, // TEXT format: DET-XXXXX
+          invoice_id: invoiceID,
+          product_id: item.productID,
+          mode: item.mode || 'Pick',
+          scanned_barcode: item.scannedBarcode || null,
+          filter_type: item.filterType || null,
+          filter_brand: item.filterBrand || null,
+          filter_size: item.filterSize || null,
+          filter_color: item.filterColor || null,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
+        },
+        detailId,
+        serialNos,
+        productId: item.productID,
+      };
+    });
+
+    const invoiceDetails = invoiceDetailsWithSerials.map(item => item.detail);
 
     const { error: detailsError } = await supabase
       .from('cash_invoice_details')
@@ -2803,6 +2824,28 @@ export async function saveCashInvoice(payload: {
     }
 
     console.log('[API] Invoice details inserted successfully:', invoiceDetails.length, 'items');
+
+    // Save serial numbers to dedicated table
+    // Use the detail_id we generated
+    try {
+      const { saveSerialNumbers } = await import('./api_serial_numbers');
+      for (const itemWithSerial of invoiceDetailsWithSerials) {
+        if (itemWithSerial.serialNos && itemWithSerial.serialNos.length > 0) {
+          await saveSerialNumbers(
+            itemWithSerial.serialNos,
+            itemWithSerial.productId,
+            'cash',
+            invoiceID,
+            itemWithSerial.detailId, // Use the generated detail_id (TEXT format)
+            undefined, // Cash invoices don't have customer
+            new Date().toISOString().split('T')[0]
+          );
+        }
+      }
+    } catch (serialError) {
+      console.error('[API] Error saving serial numbers (non-critical):', serialError);
+      // Don't throw - serial numbers are saved in details table as backup
+    }
 
     // Step 5: Create notification for invoice creation
     try {
@@ -3071,6 +3114,7 @@ export async function updateCashInvoice(
       filterColor?: string;
       quantity: number;
       unitPrice: number;
+      serialNos?: string[]; // Array of serial numbers - one per quantity
     }>;
     notes?: string;
     discount?: number;
@@ -3118,6 +3162,9 @@ export async function updateCashInvoice(
     const itemsToKeep = new Set<string>();
 
     payload.items.forEach((item) => {
+      // Filter out empty serial numbers and convert to JSONB array
+      const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
+      
       if (item.detailID && existingDetailIds.has(item.detailID)) {
         // Update existing detail
         itemsToUpdate.push({
@@ -3131,6 +3178,8 @@ export async function updateCashInvoice(
           filter_color: item.filterColor || null,
           quantity: item.quantity,
           unit_price: item.unitPrice,
+          serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
+          serialNos: serialNos, // Keep for serial_numbers table update
         });
         itemsToKeep.add(item.detailID);
       } else {
@@ -3146,11 +3195,14 @@ export async function updateCashInvoice(
           filter_color: item.filterColor || null,
           quantity: item.quantity,
           unit_price: item.unitPrice,
+          serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
+          serialNos: serialNos, // Keep for serial_numbers table
+          productID: item.productID, // Keep for serial_numbers table
         });
       }
     });
 
-    // Step 4: Delete details that are no longer in the payload
+    // Step 4: Delete details that are no longer in the payload (this will also delete serial numbers via CASCADE)
     const detailsToDelete = Array.from(existingDetailIds).filter((id) => !itemsToKeep.has(id));
     if (detailsToDelete.length > 0) {
       const { error: deleteError } = await supabase
@@ -3168,15 +3220,47 @@ export async function updateCashInvoice(
     // Step 5: Update existing details
     if (itemsToUpdate.length > 0) {
       for (const item of itemsToUpdate) {
-        const { detail_id, ...updateData } = item;
+        const { detail_id, serialNos, ...updateData } = item;
         const { error: updateError } = await supabase
           .from('cash_invoice_details')
           .update(updateData)
-          .eq('detail_id', detail_id);
+          .eq('detail_id', detail_id)
+          .select('detail_id')
+          .single();
 
         if (updateError) {
           console.error('[API] Failed to update detail:', updateError);
           throw new Error(`Failed to update detail: ${updateError.message}`);
+        }
+
+        // Update serial numbers in dedicated table
+        if (serialNos && serialNos.length > 0) {
+          try {
+            const { deleteSerialNumbersByDetailId, saveSerialNumbers } = await import('./api_serial_numbers');
+            // Delete existing serial numbers for this detail
+            await deleteSerialNumbersByDetailId(detail_id, 'cash');
+            // Save new serial numbers
+            await saveSerialNumbers(
+              serialNos,
+              item.product_id,
+              'cash',
+              invoiceId,
+              detail_id,
+              undefined, // Cash invoices don't have customer
+              new Date().toISOString().split('T')[0]
+            );
+          } catch (serialError) {
+            console.error('[API] Error updating serial numbers (non-critical):', serialError);
+            // Don't throw - serial numbers are saved in details table as backup
+          }
+        } else {
+          // Delete serial numbers if empty
+          try {
+            const { deleteSerialNumbersByDetailId } = await import('./api_serial_numbers');
+            await deleteSerialNumbersByDetailId(detail_id, 'cash');
+          } catch (serialError) {
+            console.error('[API] Error deleting serial numbers (non-critical):', serialError);
+          }
         }
       }
       console.log('[API] Updated', itemsToUpdate.length, 'existing details');
@@ -3184,15 +3268,52 @@ export async function updateCashInvoice(
 
     // Step 6: Insert new details
     if (itemsToInsert.length > 0) {
-      const { error: insertError } = await supabase
+      const itemsWithSerials = itemsToInsert.map((item) => {
+        const { serialNos, productID, ...detail } = item;
+        return {
+          detail,
+          serialNos: serialNos || [],
+          productId: productID,
+        };
+      });
+
+      const newItems = itemsWithSerials.map(item => item.detail);
+
+      const { data: insertedDetails, error: insertError } = await supabase
         .from('cash_invoice_details')
-        .insert(itemsToInsert);
+        .insert(newItems)
+        .select('detail_id');
 
       if (insertError) {
         console.error('[API] Failed to insert new details:', insertError);
         throw new Error(`Failed to insert new details: ${insertError.message}`);
       }
       console.log('[API] Inserted', itemsToInsert.length, 'new details');
+
+      // Save serial numbers to dedicated table
+      if (insertedDetails && insertedDetails.length > 0) {
+        try {
+          const { saveSerialNumbers } = await import('./api_serial_numbers');
+          for (let i = 0; i < itemsWithSerials.length; i++) {
+            const itemWithSerial = itemsWithSerials[i];
+            const insertedDetail = insertedDetails[i];
+            if (itemWithSerial.serialNos && itemWithSerial.serialNos.length > 0 && insertedDetail) {
+              await saveSerialNumbers(
+                itemWithSerial.serialNos,
+                itemWithSerial.productId,
+                'cash',
+                invoiceId,
+                insertedDetail.detail_id, // Use the actual detail_id from database
+                undefined, // Cash invoices don't have customer
+                new Date().toISOString().split('T')[0]
+              );
+            }
+          }
+        } catch (serialError) {
+          console.error('[API] Error saving serial numbers (non-critical):', serialError);
+          // Don't throw - serial numbers are saved in details table as backup
+        }
+      }
     }
 
     const result = {
@@ -4535,6 +4656,7 @@ export async function saveShopSalesInvoice(payload: {
     productID: string;
     quantity: number;
     unitPrice: number;
+    serialNos?: string[]; // Array of serial numbers - one per quantity
   }>;
   notes?: string;
   discount?: number;
@@ -4586,29 +4708,88 @@ export async function saveShopSalesInvoice(payload: {
       throw new Error('Cannot save invoice without items');
     }
 
-    const invoiceDetails = payload.items.map((item) => {
-      const detail: any = {
-        invoice_id: invoiceID,
-        product_id: item.productID,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
+    const invoiceDetailsWithSerials = payload.items.map((item) => {
+      // Filter out empty serial numbers and convert to JSONB array
+      const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
+      
+      return {
+        detail: {
+          invoice_id: invoiceID,
+          product_id: item.productID,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
+        },
+        serialNos,
+        productId: item.productID,
       };
-      // Generate UUID for details_id if crypto.randomUUID is available
-      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-        detail.details_id = crypto.randomUUID();
-      }
-      return detail;
     });
 
-    const { error: detailsError } = await supabase
+    const invoiceDetails = invoiceDetailsWithSerials.map(item => item.detail);
+
+    const { data: insertedDetails, error: detailsError } = await supabase
       .from('shop_sales_details')
-      .insert(invoiceDetails);
+      .insert(invoiceDetails)
+      .select('details_id');
 
     if (detailsError) {
       console.error('[API] Failed to insert invoice details:', detailsError);
       // Try to delete the header if details insertion fails
       await supabase.from('shop_sales_invoices').delete().eq('invoice_id', invoiceID);
       throw new Error(`Failed to save invoice details: ${detailsError.message}`);
+    }
+
+    console.log('[API] Invoice details inserted successfully:', invoiceDetails.length, 'items');
+
+    // Save serial numbers to dedicated table
+    // Use the actual details_id returned from Supabase
+    if (insertedDetails && insertedDetails.length > 0) {
+      try {
+        const { saveSerialNumbers } = await import('./api_serial_numbers');
+        for (let i = 0; i < invoiceDetailsWithSerials.length; i++) {
+          const itemWithSerial = invoiceDetailsWithSerials[i];
+          const insertedDetail = insertedDetails[i];
+          if (itemWithSerial.serialNos && itemWithSerial.serialNos.length > 0 && insertedDetail) {
+            await saveSerialNumbers(
+              itemWithSerial.serialNos,
+              itemWithSerial.productId,
+              'shop_sales',
+              invoiceID,
+              insertedDetail.details_id, // Use the actual details_id from database
+              payload.customerID,
+              payload.date
+            );
+          }
+        }
+      } catch (serialError) {
+        console.error('[API] Error saving serial numbers (non-critical):', serialError);
+        // Don't throw - serial numbers are saved in details table as backup
+      }
+    }
+
+    // Save serial numbers to dedicated table
+    if (!detailsError) {
+      try {
+        const { saveSerialNumbers } = await import('./api_serial_numbers');
+        for (let i = 0; i < payload.items.length; i++) {
+          const item = payload.items[i];
+          const detail = invoiceDetails[i];
+          if (item.serialNos && item.serialNos.length > 0) {
+            await saveSerialNumbers(
+              item.serialNos,
+              item.productID,
+              'shop_sales',
+              invoiceID,
+              detail.details_id,
+              payload.customerID,
+              payload.date
+            );
+          }
+        }
+      } catch (serialError) {
+        console.error('[API] Error saving serial numbers (non-critical):', serialError);
+        // Don't throw - serial numbers are saved in details table as backup
+      }
     }
 
     console.log('[API] Shop sales invoice saved successfully');
@@ -4990,11 +5171,13 @@ export async function updateShopSalesInvoice(
       productID: string;
       quantity: number;
       unitPrice: number;
+      serialNos?: string[]; // Array of serial numbers - one per quantity
     }>;
     itemsToAdd?: Array<{
       productID: string;
       quantity: number;
       unitPrice: number;
+      serialNos?: string[]; // Array of serial numbers - one per quantity
     }>;
     itemIDsToDelete?: string[];
   },
@@ -5022,7 +5205,7 @@ export async function updateShopSalesInvoice(
       }
     }
 
-    // Delete items if specified
+    // Delete items if specified (this will also delete serial numbers via CASCADE)
     if (payload.itemIDsToDelete && payload.itemIDsToDelete.length > 0) {
       const { error: deleteError } = await supabase
         .from('shop_sales_details')
@@ -5037,36 +5220,110 @@ export async function updateShopSalesInvoice(
     // Update existing items if specified
     if (payload.itemsToUpdate && payload.itemsToUpdate.length > 0) {
       for (const item of payload.itemsToUpdate) {
+        // Filter out empty serial numbers and convert to JSONB array
+        const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
+        
         const { error: updateError } = await supabase
           .from('shop_sales_details')
           .update({
             product_id: item.productID,
             quantity: item.quantity,
             unit_price: item.unitPrice,
+            serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
           })
-          .eq('details_id', item.detailID);
+          .eq('details_id', item.detailID)
+          .select('details_id')
+          .single();
 
         if (updateError) {
           throw new Error(`Failed to update invoice item: ${updateError.message}`);
+        }
+
+        // Update serial numbers in dedicated table
+        if (serialNos.length > 0) {
+          try {
+            const { deleteSerialNumbersByDetailId, saveSerialNumbers } = await import('./api_serial_numbers');
+            // Delete existing serial numbers for this detail
+            await deleteSerialNumbersByDetailId(item.detailID, 'shop_sales');
+            // Save new serial numbers
+            await saveSerialNumbers(
+              serialNos,
+              item.productID,
+              'shop_sales',
+              invoiceId,
+              item.detailID,
+              payload.customerID,
+              payload.date
+            );
+          } catch (serialError) {
+            console.error('[API] Error updating serial numbers (non-critical):', serialError);
+            // Don't throw - serial numbers are saved in details table as backup
+          }
+        } else {
+          // Delete serial numbers if empty
+          try {
+            const { deleteSerialNumbersByDetailId } = await import('./api_serial_numbers');
+            await deleteSerialNumbersByDetailId(item.detailID, 'shop_sales');
+          } catch (serialError) {
+            console.error('[API] Error deleting serial numbers (non-critical):', serialError);
+          }
         }
       }
     }
 
     // Add new items if specified
     if (payload.itemsToAdd && payload.itemsToAdd.length > 0) {
-      const newItems = payload.itemsToAdd.map((item) => ({
-        invoice_id: invoiceId,
-        product_id: item.productID,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-      }));
+      const itemsWithSerials = payload.itemsToAdd.map((item) => {
+        // Filter out empty serial numbers and convert to JSONB array
+        const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
+        
+        return {
+          detail: {
+            invoice_id: invoiceId,
+            product_id: item.productID,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
+          },
+          serialNos,
+          productId: item.productID,
+        };
+      });
 
-      const { error: insertError } = await supabase
+      const newItems = itemsWithSerials.map(item => item.detail);
+
+      const { data: insertedDetails, error: insertError } = await supabase
         .from('shop_sales_details')
-        .insert(newItems);
+        .insert(newItems)
+        .select('details_id');
 
       if (insertError) {
         throw new Error(`Failed to add invoice items: ${insertError.message}`);
+      }
+
+      // Save serial numbers to dedicated table
+      if (insertedDetails && insertedDetails.length > 0) {
+        try {
+          const { saveSerialNumbers } = await import('./api_serial_numbers');
+          for (let i = 0; i < itemsWithSerials.length; i++) {
+            const itemWithSerial = itemsWithSerials[i];
+            const insertedDetail = insertedDetails[i];
+            if (itemWithSerial.serialNos && itemWithSerial.serialNos.length > 0 && insertedDetail) {
+              await saveSerialNumbers(
+                itemWithSerial.serialNos,
+                itemWithSerial.productId,
+                'shop_sales',
+                invoiceId,
+                insertedDetail.details_id, // Use the actual details_id from database
+                payload.customerID,
+                payload.date
+              );
+            }
+          }
+        } catch (serialError) {
+          console.error('[API] Error saving serial numbers (non-critical):', serialError);
+          // Don't throw - serial numbers are saved in details table as backup
+        }
       }
     }
 
@@ -5160,6 +5417,7 @@ export async function saveWarehouseSalesInvoice(payload: {
     productID: string;
     quantity: number;
     unitPrice: number;
+    serialNos?: string[]; // Array of serial numbers - one per quantity
   }>;
   notes?: string;
   discount?: number;
@@ -5211,29 +5469,63 @@ export async function saveWarehouseSalesInvoice(payload: {
       throw new Error('Cannot save invoice without items');
     }
 
-    const invoiceDetails = payload.items.map((item) => {
-      const detail: any = {
-        invoice_id: invoiceID,
-        product_id: item.productID,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
+    const invoiceDetailsWithSerials = payload.items.map((item) => {
+      // Filter out empty serial numbers and convert to JSONB array
+      const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
+      
+      return {
+        detail: {
+          invoice_id: invoiceID,
+          product_id: item.productID,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
+        },
+        serialNos,
+        productId: item.productID,
       };
-      // Generate UUID for details_id if crypto.randomUUID is available
-      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-        detail.details_id = crypto.randomUUID();
-      }
-      return detail;
     });
 
-    const { error: detailsError } = await supabase
+    const invoiceDetails = invoiceDetailsWithSerials.map(item => item.detail);
+
+    const { data: insertedDetails, error: detailsError } = await supabase
       .from('warehouse_sales_details')
-      .insert(invoiceDetails);
+      .insert(invoiceDetails)
+      .select('details_id');
 
     if (detailsError) {
       console.error('[API] Failed to insert invoice details:', detailsError);
       // Try to delete the header if details insertion fails
       await supabase.from('warehouse_sales_invoices').delete().eq('invoice_id', invoiceID);
       throw new Error(`Failed to save invoice details: ${detailsError.message}`);
+    }
+
+    console.log('[API] Invoice details inserted successfully:', invoiceDetails.length, 'items');
+
+    // Save serial numbers to dedicated table
+    // Use the actual details_id returned from Supabase
+    if (insertedDetails && insertedDetails.length > 0) {
+      try {
+        const { saveSerialNumbers } = await import('./api_serial_numbers');
+        for (let i = 0; i < invoiceDetailsWithSerials.length; i++) {
+          const itemWithSerial = invoiceDetailsWithSerials[i];
+          const insertedDetail = insertedDetails[i];
+          if (itemWithSerial.serialNos && itemWithSerial.serialNos.length > 0 && insertedDetail) {
+            await saveSerialNumbers(
+              itemWithSerial.serialNos,
+              itemWithSerial.productId,
+              'warehouse_sales',
+              invoiceID,
+              insertedDetail.details_id, // Use the actual details_id from database
+              payload.customerID,
+              payload.date
+            );
+          }
+        }
+      } catch (serialError) {
+        console.error('[API] Error saving serial numbers (non-critical):', serialError);
+        // Don't throw - serial numbers are saved in details table as backup
+      }
     }
 
     console.log('[API] Warehouse sales invoice saved successfully');
@@ -5614,11 +5906,13 @@ export async function updateWarehouseSalesInvoice(
       productID: string;
       quantity: number;
       unitPrice: number;
+      serialNos?: string[]; // Array of serial numbers - one per quantity
     }>;
     itemsToAdd?: Array<{
       productID: string;
       quantity: number;
       unitPrice: number;
+      serialNos?: string[]; // Array of serial numbers - one per quantity
     }>;
     itemIDsToDelete?: string[];
   },
@@ -5646,7 +5940,7 @@ export async function updateWarehouseSalesInvoice(
       }
     }
 
-    // Delete items if specified
+    // Delete items if specified (this will also delete serial numbers via CASCADE)
     if (payload.itemIDsToDelete && payload.itemIDsToDelete.length > 0) {
       const { error: deleteError } = await supabase
         .from('warehouse_sales_details')
@@ -5661,36 +5955,110 @@ export async function updateWarehouseSalesInvoice(
     // Update existing items if specified
     if (payload.itemsToUpdate && payload.itemsToUpdate.length > 0) {
       for (const item of payload.itemsToUpdate) {
+        // Filter out empty serial numbers and convert to JSONB array
+        const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
+        
         const { error: updateError } = await supabase
           .from('warehouse_sales_details')
           .update({
             product_id: item.productID,
             quantity: item.quantity,
             unit_price: item.unitPrice,
+            serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
           })
-          .eq('details_id', item.detailID);
+          .eq('details_id', item.detailID)
+          .select('details_id')
+          .single();
 
         if (updateError) {
           throw new Error(`Failed to update invoice item: ${updateError.message}`);
+        }
+
+        // Update serial numbers in dedicated table
+        if (serialNos.length > 0) {
+          try {
+            const { deleteSerialNumbersByDetailId, saveSerialNumbers } = await import('./api_serial_numbers');
+            // Delete existing serial numbers for this detail
+            await deleteSerialNumbersByDetailId(item.detailID, 'warehouse_sales');
+            // Save new serial numbers
+            await saveSerialNumbers(
+              serialNos,
+              item.productID,
+              'warehouse_sales',
+              invoiceId,
+              item.detailID,
+              payload.customerID,
+              payload.date
+            );
+          } catch (serialError) {
+            console.error('[API] Error updating serial numbers (non-critical):', serialError);
+            // Don't throw - serial numbers are saved in details table as backup
+          }
+        } else {
+          // Delete serial numbers if empty
+          try {
+            const { deleteSerialNumbersByDetailId } = await import('./api_serial_numbers');
+            await deleteSerialNumbersByDetailId(item.detailID, 'warehouse_sales');
+          } catch (serialError) {
+            console.error('[API] Error deleting serial numbers (non-critical):', serialError);
+          }
         }
       }
     }
 
     // Add new items if specified
     if (payload.itemsToAdd && payload.itemsToAdd.length > 0) {
-      const newItems = payload.itemsToAdd.map((item) => ({
-        invoice_id: invoiceId,
-        product_id: item.productID,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-      }));
+      const itemsWithSerials = payload.itemsToAdd.map((item) => {
+        // Filter out empty serial numbers and convert to JSONB array
+        const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
+        
+        return {
+          detail: {
+            invoice_id: invoiceId,
+            product_id: item.productID,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
+          },
+          serialNos,
+          productId: item.productID,
+        };
+      });
 
-      const { error: insertError } = await supabase
+      const newItems = itemsWithSerials.map(item => item.detail);
+
+      const { data: insertedDetails, error: insertError } = await supabase
         .from('warehouse_sales_details')
-        .insert(newItems);
+        .insert(newItems)
+        .select('details_id');
 
       if (insertError) {
         throw new Error(`Failed to add invoice items: ${insertError.message}`);
+      }
+
+      // Save serial numbers to dedicated table
+      if (insertedDetails && insertedDetails.length > 0) {
+        try {
+          const { saveSerialNumbers } = await import('./api_serial_numbers');
+          for (let i = 0; i < itemsWithSerials.length; i++) {
+            const itemWithSerial = itemsWithSerials[i];
+            const insertedDetail = insertedDetails[i];
+            if (itemWithSerial.serialNos && itemWithSerial.serialNos.length > 0 && insertedDetail) {
+              await saveSerialNumbers(
+                itemWithSerial.serialNos,
+                itemWithSerial.productId,
+                'warehouse_sales',
+                invoiceId,
+                insertedDetail.details_id, // Use the actual details_id from database
+                payload.customerID,
+                payload.date
+              );
+            }
+          }
+        } catch (serialError) {
+          console.error('[API] Error saving serial numbers (non-critical):', serialError);
+          // Don't throw - serial numbers are saved in details table as backup
+        }
       }
     }
 
@@ -7272,6 +7640,7 @@ export async function saveQuotation(
       unitPrice: number;
       notes?: string;
       isGift?: boolean;
+      serialNos?: string[]; // Array of serial numbers - one per quantity
     }>;
   }
 ): Promise<any> {
@@ -7321,15 +7690,21 @@ export async function saveQuotation(
     
     // Step 3: Insert new details
     if (payload.items && payload.items.length > 0) {
-      const detailsToInsert = payload.items.map((item) => ({
-        quotation_detail_id: item.detailID || `QD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        quotation_id: quotationId,
-        product_id: item.productID,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-        notes: item.notes || null,
-        is_gift: item.isGift || false,
-      }));
+      const detailsToInsert = payload.items.map((item) => {
+        // Filter out empty serial numbers and convert to JSONB array
+        const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
+        
+        return {
+          quotation_detail_id: item.detailID || `QD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          quotation_id: quotationId,
+          product_id: item.productID,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          notes: item.notes || null,
+          is_gift: item.isGift || false,
+          serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
+        };
+      });
       
       const { error: detailsError } = await supabase
         .from('quotation_details')
@@ -7338,6 +7713,29 @@ export async function saveQuotation(
       if (detailsError) {
         console.error('[API] Error saving quotation details:', detailsError);
         throw new Error(`Failed to save quotation details: ${detailsError.message}`);
+      }
+
+      // Save serial numbers to dedicated table
+      try {
+        const { saveSerialNumbers } = await import('./api_serial_numbers');
+        for (let i = 0; i < payload.items.length; i++) {
+          const item = payload.items[i];
+          const detail = detailsToInsert[i];
+          if (item.serialNos && item.serialNos.length > 0) {
+            await saveSerialNumbers(
+              item.serialNos,
+              item.productID,
+              'quotation',
+              quotationId,
+              detail.quotation_detail_id,
+              payload.customerId || undefined,
+              payload.date
+            );
+          }
+        }
+      } catch (serialError) {
+        console.error('[API] Error saving serial numbers (non-critical):', serialError);
+        // Don't throw - serial numbers are saved in details table as backup
       }
     }
     

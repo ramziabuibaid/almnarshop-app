@@ -34,6 +34,10 @@ export interface Product {
   'Image 2'?: string;
   'image 3'?: string;
   
+  // Serial Number Support
+  is_serialized?: boolean;
+  IsSerialized?: boolean;
+  
   // Legacy fields (for backward compatibility)
   id?: string;
   name?: string;
