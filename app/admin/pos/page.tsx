@@ -17,6 +17,7 @@ import {
   Minus,
   ChevronDown,
   Camera,
+  RotateCcw,
 } from 'lucide-react';
 import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
 
@@ -74,6 +75,8 @@ export default function POSPage() {
   const [scanSuccess, setScanSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isScanProcessing, setIsScanProcessing] = useState(false);
+  const [availableCameras, setAvailableCameras] = useState<{deviceId: string; label: string}[]>([]);
+  const [currentCameraId, setCurrentCameraId] = useState<string | undefined>(undefined);
   
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const scannerRef = useRef<BrowserMultiFormatReader | null>(null);
@@ -580,6 +583,12 @@ export default function POSPage() {
         if (videoInputDevices && videoInputDevices.length > 0) {
           console.log('[POS] Available cameras:', videoInputDevices.map(c => c.label));
           
+          // Save available cameras
+          setAvailableCameras(videoInputDevices.map(device => ({
+            deviceId: device.deviceId,
+            label: device.label
+          })));
+          
           // Prefer back camera
           const backCamera = videoInputDevices.find(device => {
             const label = device.label.toLowerCase();
@@ -604,6 +613,7 @@ export default function POSPage() {
             deviceId = backCamera.deviceId;
           }
           
+          setCurrentCameraId(deviceId);
           const selectedCamera = videoInputDevices.find(device => device.deviceId === deviceId);
           console.log('[POS] Using camera:', selectedCamera?.label || 'Unknown');
         }
@@ -619,9 +629,9 @@ export default function POSPage() {
       videoRef.current = videoElement;
 
       // Start decoding from video device
-      try {
+      const startDecoding = async (cameraId: string | undefined) => {
         await codeReader.decodeFromVideoDevice(
-          deviceId || undefined,
+          cameraId || undefined,
           videoElement,
           (result, error) => {
             if (result) {
@@ -637,27 +647,16 @@ export default function POSPage() {
             }
           }
         );
+      };
+
+      try {
+        await startDecoding(deviceId || currentCameraId);
         console.log('[POS] Camera started successfully');
       } catch (startError: any) {
         // If deviceId failed, try without specifying device
-        if (deviceId) {
+        if (deviceId || currentCameraId) {
           try {
-            await codeReader.decodeFromVideoDevice(
-              undefined,
-              videoElement,
-              (result, error) => {
-                if (result) {
-                  const text = result.getText();
-                  if (text) {
-                    handleBarcodeScanned(text);
-                  }
-                }
-                
-                if (error && !(error instanceof NotFoundException)) {
-                  console.debug('[POS] Scan error:', error);
-                }
-              }
-            );
+            await startDecoding(undefined);
             console.log('[POS] Camera started successfully (fallback)');
           } catch (fallbackError: any) {
             throw fallbackError;
@@ -711,7 +710,57 @@ export default function POSPage() {
         videoRef.current = null;
       }
     }
-  }, [handleBarcodeScanned, isCameraSupported]);
+  }, [handleBarcodeScanned, isCameraSupported, currentCameraId]);
+
+  // Switch camera function
+  const switchCamera = useCallback(async () => {
+    if (!scannerRef.current || !videoRef.current || availableCameras.length < 2) {
+      return;
+    }
+
+    try {
+      // Stop current scanner
+      scannerRef.current.reset();
+
+      // Stop current video stream
+      if (videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+        videoRef.current.srcObject = null;
+      }
+
+      // Find current camera index
+      const currentIndex = availableCameras.findIndex(cam => cam.deviceId === currentCameraId);
+      const nextIndex = (currentIndex + 1) % availableCameras.length;
+      const nextCamera = availableCameras[nextIndex];
+
+      setCurrentCameraId(nextCamera.deviceId);
+
+      // Get video element
+      const videoElement = document.getElementById('barcode-scanner') as HTMLVideoElement;
+      if (!videoElement) return;
+
+      // Start with new camera
+      await scannerRef.current.decodeFromVideoDevice(
+        nextCamera.deviceId,
+        videoElement,
+        (result, error) => {
+          if (result) {
+            const text = result.getText();
+            if (text) {
+              handleBarcodeScanned(text);
+            }
+          }
+          
+          if (error && !(error instanceof NotFoundException)) {
+            console.debug('[POS] Scan error:', error);
+          }
+        }
+      );
+    } catch (error) {
+      console.error('[POS] Error switching camera:', error);
+    }
+  }, [availableCameras, currentCameraId, handleBarcodeScanned]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -1201,13 +1250,26 @@ export default function POSPage() {
                       <p className="text-white text-lg font-bold mb-1 font-cairo">امسح الباركود</p>
                       <p className="text-gray-300 text-sm font-cairo">وجه الكاميرا نحو الباركود</p>
                     </div>
-                    <button
-                      onClick={stopScanning}
-                      className="p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
-                      aria-label="إغلاق"
-                    >
-                      <X size={24} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {/* Switch Camera Button */}
+                      {availableCameras.length > 1 && (
+                        <button
+                          onClick={switchCamera}
+                          className="p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+                          aria-label="تبديل الكاميرا"
+                          title="تبديل الكاميرا"
+                        >
+                          <RotateCcw size={24} />
+                        </button>
+                      )}
+                      <button
+                        onClick={stopScanning}
+                        className="p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+                        aria-label="إغلاق"
+                      >
+                        <X size={24} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
