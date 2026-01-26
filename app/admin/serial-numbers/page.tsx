@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { Search, Loader2, Eye, FileText, Calendar, User, Package, Building2, ShoppingCart, Receipt } from 'lucide-react';
+import { Search, Loader2, Eye, FileText, Calendar, User, Package, Building2, ShoppingCart, Receipt, X } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import { searchSerialNumber, getSerialNumberDetails } from '@/lib/api_serial_numbers';
 
@@ -32,6 +32,16 @@ export default function SerialNumbersPage() {
   const [selectedSerial, setSelectedSerial] = useState<SerialNumberResult | null>(null);
   const [details, setDetails] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  
+  useEffect(() => {
+    const checkDesktop = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -235,19 +245,36 @@ export default function SerialNumbersPage() {
 
         {/* Details Modal */}
         {selectedSerial && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedSerial(null)}>
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} dir="rtl">
+          <div 
+            className="fixed bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4"
+            style={{ 
+              top: 0,
+              bottom: 0,
+              left: 0,
+              right: isDesktop ? '256px' : '0' // In RTL: sidebar is on right, so start from right: 256px
+            }}
+            onClick={() => {
+              setSelectedSerial(null);
+              setDetails(null);
+            }}
+          >
+            <div 
+              className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200" 
+              onClick={(e) => e.stopPropagation()} 
+              dir="rtl"
+            >
               <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
                   <h2 className="text-xl font-bold text-gray-900 font-cairo">تفاصيل الرقم التسلسلي</h2>
                   <button
                     onClick={() => {
                       setSelectedSerial(null);
                       setDetails(null);
                     }}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+                    title="إغلاق"
                   >
-                    ✕
+                    <X size={20} />
                   </button>
                 </div>
 

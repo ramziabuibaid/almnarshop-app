@@ -129,7 +129,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-[60] md:hidden"
+          className={`fixed inset-0 bg-black/50 z-[60] ${pathname === '/admin/pos' ? 'lg:block' : 'md:hidden'}`}
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -137,8 +137,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Sidebar */}
       <aside
         className={`fixed top-0 right-0 h-full w-64 bg-gray-900 text-white z-[70] transform transition-transform duration-300 ${
-          sidebarOpen ? 'translate-x-0' : 'translate-x-full'
-        } md:translate-x-0`}
+          pathname === '/admin/pos' 
+            ? (sidebarOpen ? 'translate-x-0' : 'translate-x-full')
+            : (sidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0')
+        }`}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
@@ -146,7 +148,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <h1 className="text-lg font-bold">Admin Panel</h1>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="md:hidden p-1 hover:bg-gray-800 rounded"
+              className={`p-1 hover:bg-gray-800 rounded ${pathname === '/admin/pos' ? 'lg:block' : 'md:hidden'}`}
             >
               <X size={20} />
             </button>
@@ -321,16 +323,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Main Content */}
       <div 
-        className="md:mr-64"
+        className={pathname === '/admin/pos' ? '' : 'md:mr-64'}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm" dir="rtl">
+        <header className={`sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm ${pathname === '/admin/pos' ? '' : ''}`} dir="rtl">
           <div className="px-4 py-3 flex items-center justify-between">
             {/* Right side (visually left in RTL): Notifications and Menu button on Mobile, Notifications on Desktop */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {/* Mobile: Notifications and Menu */}
               <div className="flex items-center gap-2 md:hidden">
                 <NotificationCenter />
@@ -342,10 +344,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 </button>
               </div>
               
-              {/* Desktop: Notifications */}
-              <div className="hidden md:flex items-center gap-2">
-                <NotificationCenter />
-              </div>
+              {/* Desktop: Notifications and Menu (for POS page) */}
+              {pathname === '/admin/pos' ? (
+                <div className="hidden lg:flex items-center gap-3">
+                  <span className="text-sm font-semibold text-gray-700 font-cairo">نظام نقطة البيع POS</span>
+                  <NotificationCenter />
+                  <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <Menu size={24} className="text-gray-700" />
+                  </button>
+                </div>
+              ) : (
+                <div className="hidden md:flex items-center gap-2">
+                  <NotificationCenter />
+                </div>
+              )}
             </div>
             
             {/* Desktop: Admin name in center */}
@@ -373,7 +388,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </header>
 
         {/* Page Content */}
-        <main className="p-4 md:p-6" dir="rtl">{children}</main>
+        <main className={pathname === '/admin/pos' ? 'p-0' : 'p-4 md:p-6'} dir="rtl">{children}</main>
       </div>
     </div>
   );

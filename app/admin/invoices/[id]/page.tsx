@@ -451,8 +451,18 @@ export default function EditInvoicePage() {
       return;
     }
 
-    // Check if product is serialized
-    const isSerialized = productToAdd.is_serialized || productToAdd.IsSerialized || false;
+    // Check if product is serialized - try productToAdd first, then search in products array
+    let isSerialized = productToAdd.is_serialized || productToAdd.IsSerialized || false;
+    if (!isSerialized) {
+      // Fallback: search in products array
+      const originalProduct = products.find(p => {
+        const pId = String(p.ProductID || p.id || p.product_id || '').trim();
+        return pId === productIdForSearch;
+      });
+      if (originalProduct) {
+        isSerialized = originalProduct.is_serialized || originalProduct.IsSerialized || false;
+      }
+    }
     
     // Initialize serial numbers array with empty strings for each quantity (use absolute value)
     // Same number of serials whether quantity is positive or negative
@@ -733,15 +743,8 @@ export default function EditInvoicePage() {
 
         {/* Items Table */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="p-4 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900 font-cairo">الأصناف</h2>
-            <button
-              onClick={() => setShowAddProduct(!showAddProduct)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-cairo"
-            >
-              <Plus size={18} />
-              إضافة منتج
-            </button>
           </div>
 
           {/* Barcode Scanner - Always visible */}
@@ -755,6 +758,17 @@ export default function EditInvoicePage() {
               placeholder="امسح الباركود أو رقم الشامل..."
               className="w-full"
             />
+          </div>
+          
+          {/* Add Product Button */}
+          <div className="p-4 bg-gray-50 border-b border-gray-200">
+            <button
+              onClick={() => setShowAddProduct(!showAddProduct)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo w-full sm:w-auto"
+            >
+              <Plus size={18} />
+              إضافة منتج
+            </button>
           </div>
 
           {/* Add Product Form */}
@@ -895,9 +909,6 @@ export default function EditInvoicePage() {
                     السعر
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
-                    الرقم التسلسلي
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
                     المبلغ
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
@@ -922,8 +933,8 @@ export default function EditInvoicePage() {
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-cairo">
                         {item.barcode || item.productID || '—'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 font-cairo">
-                        <div className="flex items-center gap-2">
+                      <td className="px-4 py-3 text-sm text-gray-900 font-cairo align-top">
+                        <div className="flex items-start gap-2">
                           {imageUrl ? (
                             <img
                               src={imageUrl}
@@ -938,10 +949,103 @@ export default function EditInvoicePage() {
                               <span className="text-gray-400 text-xs">—</span>
                             </div>
                           )}
-                          <span>{item.productName || '—'}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium">{item.productName || '—'}</div>
+                            {/* Serial Numbers Display - Show if product is serialized OR if there are existing serials */}
+                            {(item.isSerialized === true || (item.serialNos && item.serialNos.length > 0)) && (
+                              <div className="mt-2 space-y-1">
+                                {Array.from({ length: Math.abs(item.quantity) }, (_, serialIndex) => {
+                                  const serialNos = item.serialNos || [];
+                                  while (serialNos.length < Math.abs(item.quantity)) {
+                                    serialNos.push('');
+                                  }
+                                  const serialNo = serialNos[serialIndex] || '';
+                                  const isEmpty = !serialNo.trim();
+                                  const isRequired = item.isSerialized && isEmpty;
+                                  
+                                  return (
+                                    <div key={serialIndex} className="flex items-center gap-1">
+                                      <input
+                                        type="text"
+                                        value={serialNo}
+                                        onChange={(e) => handleUpdateSerialNo(item.detailID, serialIndex, e.target.value)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            const nextIndex = serialIndex + 1;
+                                            if (nextIndex < Math.abs(item.quantity)) {
+                                              const nextInput = document.querySelector(
+                                                `input[data-serial-index="${nextIndex}"][data-detail-id="${item.detailID}"]`
+                                              ) as HTMLInputElement;
+                                              if (nextInput) {
+                                                nextInput.focus();
+                                                nextInput.select();
+                                              }
+                                            }
+                                          }
+                                        }}
+                                        data-serial-index={serialIndex}
+                                        data-detail-id={item.detailID}
+                                        placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
+                                        className={`w-full px-2 py-1 border rounded text-gray-900 font-mono text-xs ${
+                                          isRequired
+                                            ? 'border-yellow-400 bg-yellow-50'
+                                            : 'border-gray-300'
+                                        }`}
+                                      />
+                                      <SerialNumberScanner
+                                        onScan={(scannedData) => {
+                                          // Support multiple serials in one scan (separated by comma, newline, or multiple spaces)
+                                          const serials = scannedData
+                                            .split(/[,\n\r]+|\s{2,}/)
+                                            .map(s => s.trim())
+                                            .filter(s => s.length > 0);
+                                          
+                                          if (serials.length === 0) return;
+                                          
+                                          const newSerialNos = [...(item.serialNos || [])];
+                                          while (newSerialNos.length < Math.abs(item.quantity)) {
+                                            newSerialNos.push('');
+                                          }
+                                          
+                                          let currentIndex = serialIndex;
+                                          for (const serial of serials) {
+                                            if (currentIndex < Math.abs(item.quantity)) {
+                                              newSerialNos[currentIndex] = serial;
+                                              currentIndex++;
+                                            }
+                                          }
+                                          
+                                          setDetails((prev) =>
+                                            prev.map((d) =>
+                                              d.detailID === item.detailID
+                                                ? { ...d, serialNos: newSerialNos }
+                                                : d
+                                            )
+                                          );
+                                          
+                                          setTimeout(() => {
+                                            const nextEmptyIndex = newSerialNos.findIndex((s, idx) => idx >= serialIndex && !s.trim());
+                                            if (nextEmptyIndex !== -1) {
+                                              const nextInput = document.querySelector(
+                                                `input[data-serial-index="${nextEmptyIndex}"][data-detail-id="${item.detailID}"]`
+                                              ) as HTMLInputElement;
+                                              if (nextInput) {
+                                                nextInput.focus();
+                                              }
+                                            }
+                                          }, 100);
+                                        }}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap align-top">
                         <input
                           type="number"
                           value={item.quantity}
@@ -951,7 +1055,7 @@ export default function EditInvoicePage() {
                           className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo text-sm"
                         />
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap align-top">
                         <input
                           type="number"
                           value={item.unitPrice}
@@ -961,35 +1065,10 @@ export default function EditInvoicePage() {
                           className="w-24 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo text-sm"
                         />
                       </td>
-                      <td className="px-4 py-3">
-                        {(item.isSerialized || (item.serialNos && item.serialNos.length > 0)) ? (
-                          <div className="space-y-1 max-h-32 overflow-y-auto">
-                            {Array.from({ length: Math.abs(item.quantity) }, (_, index) => {
-                              const serialValue = item.serialNos?.[index] || '';
-                              return (
-                                <div key={index} className="flex items-center gap-1 mb-1">
-                                  <input
-                                    type="text"
-                                    value={serialValue}
-                                    onChange={(e) => handleUpdateSerialNo(item.detailID, index, e.target.value)}
-                                    placeholder={`سيريال ${index + 1}${item.isSerialized ? ' *' : ''}`}
-                                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo"
-                                  />
-                                  <SerialNumberScanner
-                                    onScan={(serialNumber) => handleUpdateSerialNo(item.detailID, index, serialNumber)}
-                                  />
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-400 font-cairo">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 font-cairo">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 font-cairo align-top">
                         {formatCurrency(item.quantity * item.unitPrice)}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap align-top">
                         <button
                           onClick={() => handleRemoveItem(item.detailID)}
                           className="text-red-600 hover:text-red-900 font-cairo"

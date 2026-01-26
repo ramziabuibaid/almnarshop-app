@@ -77,7 +77,8 @@ export async function searchSerialNumber(searchQuery: string): Promise<any[]> {
   try {
     console.log('[API] Searching for serial number:', searchQuery);
 
-    // First, get serial numbers
+    // First, get serial numbers - use distinct to avoid duplicates
+    // Group by serial_no, invoice_id, invoice_type to get unique combinations
     const { data: serials, error: serialsError } = await supabase
       .from('serial_numbers')
       .select(`
@@ -93,9 +94,8 @@ export async function searchSerialNumber(searchQuery: string): Promise<any[]> {
         created_at
       `)
       .ilike('serial_no', `%${searchQuery}%`)
-      .order('created_at', { ascending: false })
-      .limit(50);
-
+      .order('created_at', { ascending: false });
+    
     if (serialsError) {
       console.error('[API] Error searching serial numbers:', serialsError);
       throw new Error(`Failed to search serial numbers: ${serialsError.message}`);
@@ -106,9 +106,24 @@ export async function searchSerialNumber(searchQuery: string): Promise<any[]> {
       return [];
     }
 
+    // Remove duplicates: same serial_no, invoice_id, and invoice_type should appear only once
+    // Keep the most recent entry (by created_at)
+    const uniqueSerialsMap = new Map<string, any>();
+    serials.forEach((serial: any) => {
+      const key = `${serial.serial_no}_${serial.invoice_id}_${serial.invoice_type}`;
+      const existing = uniqueSerialsMap.get(key);
+      if (!existing || new Date(serial.created_at) > new Date(existing.created_at)) {
+        uniqueSerialsMap.set(key, serial);
+      }
+    });
+    
+    const uniqueSerials = Array.from(uniqueSerialsMap.values())
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 50);
+
     // Get unique product IDs and customer IDs
-    const productIds = [...new Set(serials.map(s => s.product_id).filter(Boolean))];
-    const customerIds = [...new Set(serials.map(s => s.customer_id).filter(Boolean))];
+    const productIds = [...new Set(uniqueSerials.map(s => s.product_id).filter(Boolean))];
+    const customerIds = [...new Set(uniqueSerials.map(s => s.customer_id).filter(Boolean))];
 
     // Fetch products
     let productsMap = new Map();
@@ -141,7 +156,7 @@ export async function searchSerialNumber(searchQuery: string): Promise<any[]> {
     }
 
     // Map results
-    const results = serials.map((item: any) => ({
+    const results = uniqueSerials.map((item: any) => ({
       serial_id: item.serial_id,
       serial_no: item.serial_no,
       product_id: item.product_id,

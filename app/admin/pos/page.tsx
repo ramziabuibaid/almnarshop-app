@@ -61,7 +61,9 @@ export default function POSPage() {
   });
   const [cart, setCart] = useState<CartItem[]>([]);
   const [notes, setNotes] = useState('');
+  const [showNotesInput, setShowNotesInput] = useState(false);
   const [discount, setDiscount] = useState(0);
+  const [showDiscountInput, setShowDiscountInput] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [invoiceData, setInvoiceData] = useState<{
     invoiceID: string;
@@ -81,6 +83,21 @@ export default function POSPage() {
   const [isScanProcessing, setIsScanProcessing] = useState(false);
   const [availableCameras, setAvailableCameras] = useState<{deviceId: string; label: string}[]>([]);
   const [currentCameraId, setCurrentCameraId] = useState<string | undefined>(undefined);
+  // Load catalog width from localStorage or use default
+  const [catalogWidth, setCatalogWidth] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('pos-catalog-width');
+      if (saved) {
+        const parsed = parseFloat(saved);
+        if (!isNaN(parsed) && parsed >= 20 && parsed <= 80) {
+          return parsed;
+        }
+      }
+    }
+    return 40; // Default: 40% catalog, 60% cart
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const scannerRef = useRef<BrowserMultiFormatReader | null>(null);
@@ -88,6 +105,7 @@ export default function POSPage() {
   const scanAreaRef = useRef<HTMLDivElement>(null);
   const lastScannedRef = useRef<string>('');
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resizeContainerRef = useRef<HTMLDivElement>(null);
 
   // SearchableSelect Component
   interface SearchableSelectProps {
@@ -191,6 +209,16 @@ export default function POSPage() {
       </div>
     );
   };
+
+  // Check if desktop
+  useEffect(() => {
+    const checkDesktop = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
 
   // Load products on mount
   useEffect(() => {
@@ -768,6 +796,64 @@ export default function POSPage() {
     }
   }, [availableCameras, currentCameraId, handleBarcodeScanned]);
 
+  // Handle resize
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing || !resizeContainerRef.current) return;
+      
+      const container = resizeContainerRef.current;
+      const containerRect = container.getBoundingClientRect();
+      
+      // In RTL layout:
+      // - Catalog is on the right side (visually right)
+      // - Cart is on the left side (visually left)
+      // - Resize handle is positioned at: right: catalogWidth%
+      //
+      // clientX coordinates: left edge = containerRect.left, right edge = containerRect.right
+      // 
+      // When user drags RIGHT (towards catalog): clientX increases
+      //   → We want catalogWidth to INCREASE (catalog gets bigger)
+      //   → Handle moves right (right: catalogWidth% increases)
+      //
+      // When user drags LEFT (towards cart): clientX decreases
+      //   → We want catalogWidth to DECREASE (cart gets bigger)
+      //   → Handle moves left (right: catalogWidth% decreases)
+      //
+      // The handle is at right: catalogWidth%
+      // When dragging RIGHT (clientX increases), we want catalogWidth to increase
+      // When dragging LEFT (clientX decreases), we want catalogWidth to decrease
+      // So catalogWidth should be proportional to distance from LEFT edge
+      const distanceFromLeft = e.clientX - containerRect.left;
+      const newWidth = (distanceFromLeft / containerRect.width) * 100;
+      
+      // Limit between 20% and 80%
+      const clampedWidth = Math.max(20, Math.min(80, newWidth));
+      setCatalogWidth(clampedWidth);
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('pos-catalog-width', clampedWidth.toString());
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -803,22 +889,28 @@ export default function POSPage() {
   };
 
   const updateQuantity = (productID: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      removeFromCart(productID);
-      return;
-    }
+    // Allow negative quantities (for returns) and zero (no serials needed)
+    // Never auto-delete items - user must explicitly click delete button
     setCart((prev) =>
       prev.map((item) => {
         if (item.productID === productID) {
           const currentSerialNos = item.serialNos || [];
           let newSerialNos: string[];
           
-          if (newQuantity > item.quantity) {
+          // Use absolute value for serial numbers count (same number whether positive or negative)
+          // Zero quantity = no serials needed (empty array)
+          const absNewQuantity = Math.abs(newQuantity);
+          const absCurrentQuantity = Math.abs(item.quantity);
+          
+          if (absNewQuantity === 0) {
+            // Zero quantity - no serials needed
+            newSerialNos = [];
+          } else if (absNewQuantity > absCurrentQuantity) {
             // Increase quantity - add empty strings
-            newSerialNos = [...currentSerialNos, ...Array(newQuantity - item.quantity).fill('')];
+            newSerialNos = [...currentSerialNos, ...Array(absNewQuantity - absCurrentQuantity).fill('')];
           } else {
             // Decrease quantity - keep first N serials
-            newSerialNos = currentSerialNos.slice(0, newQuantity);
+            newSerialNos = currentSerialNos.slice(0, absNewQuantity);
           }
           
           return {
@@ -1122,37 +1214,25 @@ export default function POSPage() {
 
   return (
     <AdminLayout>
-      <div className="h-screen flex flex-col no-print overflow-hidden" dir="rtl" style={{ height: '100vh', maxHeight: '100vh' }}>
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 p-3 sm:p-4 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 font-cairo">نظام نقطة البيع النقدية</h1>
-            {/* Mobile Cart Toggle Button */}
-            <button
-              onClick={() => setShowCartOnMobile(!showCartOnMobile)}
-              className="md:hidden relative flex items-center justify-center w-12 h-12 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
-              title="السلة"
-            >
-              <ShoppingCart size={20} />
-              {cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {cart.length}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
+      <div className="h-screen flex flex-col no-print overflow-hidden bg-gray-50" dir="rtl" style={{ height: '100vh', maxHeight: '100vh' }}>
 
         {/* Main Content - Responsive Layout */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+        <div ref={resizeContainerRef} className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0 relative">
           {/* Right Side - Catalog */}
-          <div className={`${showCartOnMobile ? 'hidden' : 'flex'} md:flex w-full md:w-1/2 md:border-l border-gray-200 flex-col bg-gray-50 min-h-0`}>
+          <div 
+            className={`${showCartOnMobile ? 'hidden' : 'flex'} lg:flex flex-col bg-white min-h-0`}
+            style={isDesktop ? { 
+              width: `${catalogWidth}%`,
+              minWidth: '20%',
+              maxWidth: '80%'
+            } : {}}
+          >
             {/* Search and Filters */}
-            <div className="p-3 sm:p-4 bg-white border-b border-gray-200 flex-shrink-0">
+            <div className="p-4 lg:p-6 bg-white border-b border-gray-300 flex-shrink-0 shadow-md border-l border-gray-300">
               {/* Barcode Input Row */}
-              <div className="flex flex-col sm:flex-row gap-2 mb-3">
+              <div className="flex flex-col lg:flex-row gap-3 mb-4">
                 {/* Barcode Input (Separate) */}
-                <div className="w-full sm:w-48 relative">
+                <div className="w-full lg:w-64 xl:w-72 relative">
                   <input
                     ref={barcodeInputRef}
                     type="text"
@@ -1171,7 +1251,7 @@ export default function POSPage() {
                     autoCorrect="off"
                     autoCapitalize="off"
                     spellCheck="false"
-                    className="w-full pr-10 pl-10 py-2.5 sm:py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm sm:text-base"
+                    className="w-full pr-12 pl-4 py-3 border-2 border-blue-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm lg:text-base font-mono shadow-sm"
                     autoFocus
                     disabled={isScanning}
                   />
@@ -1180,12 +1260,12 @@ export default function POSPage() {
                     type="button"
                     onClick={isScanning ? stopScanning : startScanning}
                     disabled={cameraSupported === false}
-                    className={`absolute left-2 top-1/2 transform -translate-y-1/2 p-1.5 sm:p-1 rounded-lg transition-colors ${
+                    className={`absolute left-2 top-1/2 transform -translate-y-1/2 p-2 rounded-lg transition-all shadow-sm ${
                       isScanning
-                        ? 'bg-red-500 text-white hover:bg-red-600'
+                        ? 'bg-red-500 text-white hover:bg-red-600 hover:shadow-md'
                         : cameraSupported === false
                         ? 'bg-gray-400 text-white cursor-not-allowed'
-                        : 'bg-blue-500 text-white hover:bg-blue-600'
+                        : 'bg-blue-500 text-white hover:bg-blue-600 hover:shadow-md'
                     }`}
                     title={
                       isScanning 
@@ -1195,25 +1275,25 @@ export default function POSPage() {
                         : 'فتح الكاميرا لمسح الباركود'
                     }
                   >
-                    <Camera size={16} />
+                    <Camera size={18} />
                   </button>
                 </div>
                 
                 {/* Search Input (Text only, no barcode) */}
                 <div className="flex-1 relative">
-                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                   <input
                     type="text"
                     placeholder="بحث بالاسم أو رقم الصنف..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pr-10 pl-4 py-2.5 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 text-sm sm:text-base font-cairo"
+                    className="w-full pr-12 pl-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-gray-900 text-sm lg:text-base font-cairo shadow-sm"
                   />
                 </div>
               </div>
 
               {/* Filters - Cascading & Searchable */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <SearchableSelect
                   value={filters.type}
                   options={availableTypes}
@@ -1385,9 +1465,9 @@ export default function POSPage() {
             )}
 
             {/* Products Grid */}
-            <div className="flex-1 overflow-y-auto p-2 sm:p-4 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="flex-1 overflow-y-auto p-4 lg:p-6 min-h-0 bg-gray-50" style={{ WebkitOverflowScrolling: 'touch' }}>
               {isLoadingProducts ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 gap-2 sm:gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                   {[...Array(12)].map((_, index) => (
                     <div key={index} className="bg-white rounded-lg border border-gray-200 p-2 sm:p-3 animate-pulse">
                       <div className="aspect-square bg-gray-200 rounded-lg mb-2"></div>
@@ -1398,7 +1478,7 @@ export default function POSPage() {
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 gap-2 sm:gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                   {filteredProducts.map((product, index) => {
                   const imageUrl = product.ImageUrl || product.imageUrl || product.Image || product.image || '';
                   const productKey = product.ProductID || product.id || `product-${index}`;
@@ -1412,14 +1492,14 @@ export default function POSPage() {
                           setShowCartOnMobile(true);
                         }
                       }}
-                      className="bg-white rounded-lg border border-gray-200 p-2 sm:p-3 cursor-pointer hover:shadow-md active:scale-95 transition-all font-cairo"
+                      className="group bg-white rounded-xl border border-gray-200 p-2 sm:p-3 cursor-pointer hover:shadow-xl hover:border-blue-400 hover:-translate-y-1 active:scale-[0.98] transition-all duration-200 font-cairo"
                     >
-                      <div className="aspect-square bg-gray-100 rounded-lg mb-2 flex items-center justify-center overflow-hidden">
+                      <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg mb-2 flex items-center justify-center overflow-hidden border border-gray-200 group-hover:border-blue-300 transition-colors">
                         {imageUrl ? (
                           <img
                             src={imageUrl}
                             alt={product.Name || product.name}
-                            className="w-full h-full object-contain"
+                            className="w-full h-full object-contain p-1"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                               const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
@@ -1435,32 +1515,34 @@ export default function POSPage() {
                           <ShoppingCart size={24} className="text-gray-400" />
                         )}
                       </div>
-                      <h3 className="font-semibold text-xs sm:text-sm text-gray-900 mb-1 line-clamp-2 font-cairo">
+                      <h3 className="font-medium text-xs lg:text-sm text-gray-900 mb-1.5 line-clamp-3 font-cairo min-h-[3rem] leading-tight">
                         {product.Name || product.name || 'غير معروف'}
                       </h3>
-                      <p className="text-xs text-gray-600 mb-1 font-cairo hidden sm:block">
-                        {product.Barcode || product.barcode || '—'}
-                      </p>
                       {/* Stock Information */}
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1 text-xs font-cairo">
+                      <div className="flex items-center gap-2 mb-1.5 text-xs font-cairo">
                         {(product.CS_Shop !== undefined && product.CS_Shop !== null) && (
-                          <span className="text-gray-600">
-                            المحل: <span className={`font-medium ${
-                              (product.CS_Shop || 0) > 0 ? 'text-green-700' : 'text-red-700'
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-500">المحل:</span>
+                            <span className={`font-bold px-1.5 py-0.5 rounded text-xs ${
+                              (product.CS_Shop || 0) > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
                             }`}>{product.CS_Shop || 0}</span>
-                          </span>
+                          </div>
                         )}
                         {(product.CS_War !== undefined && product.CS_War !== null) && (
-                          <span className="text-gray-600">
-                            المخزن: <span className={`font-medium ${
-                              (product.CS_War || 0) > 0 ? 'text-green-700' : 'text-red-700'
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-500">المخزن:</span>
+                            <span className={`font-bold px-1.5 py-0.5 rounded text-xs ${
+                              (product.CS_War || 0) > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
                             }`}>{product.CS_War || 0}</span>
-                          </span>
+                          </div>
                         )}
                       </div>
-                      <p className="text-xs sm:text-sm font-bold text-blue-600 font-cairo">
-                        ₪{parseFloat(product.SalePrice || product.salePrice || 0).toFixed(2)}
-                      </p>
+                      <div className="flex items-center justify-between pt-1.5 border-t border-gray-200">
+                        <p className="text-sm lg:text-base font-bold text-blue-600 font-cairo">
+                          ₪{parseFloat(product.SalePrice || product.salePrice || 0).toFixed(2)}
+                        </p>
+                        <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                      </div>
                     </div>
                   );
                 })}
@@ -1469,39 +1551,57 @@ export default function POSPage() {
             </div>
           </div>
 
+          {/* Resize Handle - Desktop Only */}
+          <div
+            className={`hidden lg:block absolute top-0 bottom-0 w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize transition-colors z-10 ${
+              isResizing ? 'bg-blue-500' : ''
+            }`}
+            style={{ 
+              right: `${catalogWidth}%`,
+              transform: 'translateX(50%)'
+            }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setIsResizing(true);
+            }}
+          >
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-12 bg-gray-300 hover:bg-blue-500 rounded flex items-center justify-center">
+              <div className="w-0.5 h-6 bg-gray-500"></div>
+            </div>
+          </div>
+
           {/* Left Side - Invoice/Cart */}
-          <div className={`${showCartOnMobile ? 'flex' : 'hidden'} md:flex w-full md:w-1/2 flex-col bg-white min-h-0`}>
-            {/* Header */}
-            <div className="p-3 sm:p-4 border-b border-gray-200 flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowCartOnMobile(false)}
-                    className="md:hidden p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                    title="إغلاق السلة"
-                  >
-                    <X size={20} />
-                  </button>
-                  <h2 className="text-lg sm:text-xl font-bold text-gray-900 font-cairo">فاتورة جديدة</h2>
-                </div>
-                {currentInvoiceID && (
-                  <div className="text-xs sm:text-sm text-gray-600 font-cairo">
-                    <span className="font-medium">رقم الفاتورة:</span>
-                    <span className="mr-2 font-semibold text-gray-900">{currentInvoiceID}</span>
-                  </div>
-                )}
-              </div>
+          <div 
+            className={`${showCartOnMobile ? 'flex' : 'hidden'} lg:flex flex-col bg-white min-h-0 border-r border-gray-300 shadow-xl`}
+            style={isDesktop ? { 
+              width: `${100 - catalogWidth}%`,
+              minWidth: '20%',
+              maxWidth: '80%'
+            } : {}}
+          >
+            {/* Mobile Header - Close Button Only */}
+            <div className="lg:hidden p-3 border-b border-gray-200 flex-shrink-0">
+              <button
+                onClick={() => setShowCartOnMobile(false)}
+                className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="إغلاق السلة"
+              >
+                <X size={20} />
+              </button>
             </div>
 
             {/* Cart Items */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-4 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="flex-1 overflow-y-auto p-4 lg:p-5 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
               {cart.length === 0 ? (
-                <div className="text-center py-8 sm:py-12">
-                  <ShoppingCart size={48} className="text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600 font-cairo">السلة فارغة</p>
+                <div className="text-center py-12 lg:py-16">
+                  <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                    <ShoppingCart size={40} className="text-gray-400" />
+                  </div>
+                  <p className="text-gray-600 font-cairo text-lg">السلة فارغة</p>
+                  <p className="text-gray-500 font-cairo text-sm mt-2">أضف منتجات من الكتالوج</p>
                 </div>
               ) : (
-                <div className="space-y-2 sm:space-y-3">
+                <div className="space-y-3 lg:space-y-4">
                   {cart.map((item) => {
                     // Get product image from products array
                     const product = products.find(p => (p.ProductID || p.id || p.product_id) === item.productID);
@@ -1509,17 +1609,16 @@ export default function POSPage() {
                     return (
                     <div
                       key={item.productID}
-                      className="bg-gray-50 rounded-lg p-2 sm:p-3 border border-gray-200"
+                      className="bg-white rounded-lg p-3 sm:p-4 border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
                     >
                       {/* Desktop View */}
-                      <div className="hidden md:flex items-center justify-between gap-2">
-                        {/* Product Image & Name */}
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="hidden lg:block">
+                        <div className="flex items-start gap-3 mb-3">
                           {imageUrl ? (
                             <img
                               src={imageUrl}
                               alt={item.name}
-                              className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
+                              className="w-16 h-16 object-contain rounded-lg border border-gray-200 flex-shrink-0"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
                                 const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
@@ -1527,124 +1626,173 @@ export default function POSPage() {
                               }}
                             />
                           ) : (
-                            <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                            <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center flex-shrink-0">
                               <span className="text-gray-400 text-xs">—</span>
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate font-cairo">
-                              {item.name} <span className="text-xs text-gray-500">({item.productID})</span>
-                            </p>
+                            <h3 className="text-sm font-semibold text-gray-900 font-cairo mb-1">{item.name}</h3>
+                            <p className="text-xs text-gray-500 font-cairo mb-2">#{item.productID}</p>
+                            {/* Serial Numbers Display - Show if product is serialized OR if there are existing serials */}
+                            {(item.isSerialized === true || (item.serialNos && item.serialNos.length > 0)) && (
+                              <div className="mt-2 space-y-1.5">
+                                {Array.from({ length: Math.abs(item.quantity) }, (_, serialIndex) => {
+                                  const serialNos = item.serialNos || [];
+                                  while (serialNos.length < Math.abs(item.quantity)) {
+                                    serialNos.push('');
+                                  }
+                                  const serialNo = serialNos[serialIndex] || '';
+                                  const isEmpty = !serialNo.trim();
+                                  const isRequired = item.isSerialized && isEmpty;
+                                  
+                                  return (
+                                    <div key={serialIndex} className="flex items-center gap-1.5">
+                                      <input
+                                        type="text"
+                                        value={serialNo}
+                                        onChange={(e) => {
+                                          const newSerialNos = [...(item.serialNos || [])];
+                                          while (newSerialNos.length < Math.abs(item.quantity)) {
+                                            newSerialNos.push('');
+                                          }
+                                          newSerialNos[serialIndex] = e.target.value;
+                                          setCart((prev) =>
+                                            prev.map((cartItem) =>
+                                              cartItem.productID === item.productID
+                                                ? { ...cartItem, serialNos: newSerialNos }
+                                                : cartItem
+                                            )
+                                          );
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            const nextIndex = serialIndex + 1;
+                                            if (nextIndex < Math.abs(item.quantity)) {
+                                              const nextInput = document.querySelector(
+                                                `input[data-serial-index="${nextIndex}"][data-product-id="${item.productID}"]`
+                                              ) as HTMLInputElement;
+                                              if (nextInput) {
+                                                nextInput.focus();
+                                                nextInput.select();
+                                              }
+                                            }
+                                          }
+                                        }}
+                                        data-serial-index={serialIndex}
+                                        data-product-id={item.productID}
+                                        placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
+                                        className={`flex-1 px-2 py-1.5 border rounded text-xs text-gray-900 font-mono ${
+                                          isRequired
+                                            ? 'border-yellow-400 bg-yellow-50'
+                                            : 'border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-400'
+                                        }`}
+                                      />
+                                      <SerialNumberScanner
+                                        onScan={(scannedData) => {
+                                          // Support multiple serials in one scan (separated by comma, newline, or multiple spaces)
+                                          const serials = scannedData
+                                            .split(/[,\n\r]+|\s{2,}/)
+                                            .map(s => s.trim())
+                                            .filter(s => s.length > 0);
+                                          
+                                          if (serials.length === 0) return;
+                                          
+                                          const newSerialNos = [...(item.serialNos || [])];
+                                          while (newSerialNos.length < Math.abs(item.quantity)) {
+                                            newSerialNos.push('');
+                                          }
+                                          
+                                          let currentIndex = serialIndex;
+                                          for (const serial of serials) {
+                                            if (currentIndex < item.quantity) {
+                                              newSerialNos[currentIndex] = serial;
+                                              currentIndex++;
+                                            }
+                                          }
+                                          
+                                          setCart((prev) =>
+                                            prev.map((cartItem) =>
+                                              cartItem.productID === item.productID
+                                                ? { ...cartItem, serialNos: newSerialNos }
+                                                : cartItem
+                                            )
+                                          );
+                                          
+                                          setTimeout(() => {
+                                            const nextEmptyIndex = newSerialNos.findIndex((s, idx) => idx >= serialIndex && !s.trim());
+                                            if (nextEmptyIndex !== -1) {
+                                              const nextInput = document.querySelector(
+                                                `input[data-serial-index="${nextEmptyIndex}"][data-product-id="${item.productID}"]`
+                                              ) as HTMLInputElement;
+                                              if (nextInput) {
+                                                nextInput.focus();
+                                              }
+                                            }
+                                          }, 100);
+                                        }}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => removeFromCart(item.productID)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition-colors flex-shrink-0"
+                            title="حذف"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                        
+                        <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-200">
+                          {/* Quantity Controls */}
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs text-gray-600 font-cairo whitespace-nowrap">الكمية:</label>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => updateQuantity(item.productID, item.quantity - 1)}
+                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                              >
+                                <Minus size={14} />
+                              </button>
+                              <input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => updateQuantity(item.productID, parseFloat(e.target.value) || 0)}
+                                className="w-16 text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
+                              />
+                              <button
+                                onClick={() => updateQuantity(item.productID, item.quantity + 1)}
+                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                              >
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                          </div>
+                          
+                          {/* Price Input */}
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs text-gray-600 font-cairo whitespace-nowrap">السعر:</label>
+                            <input
+                              type="number"
+                              value={item.unitPrice}
+                              onChange={(e) => updatePrice(item.productID, parseFloat(e.target.value) || 0)}
+                              step="0.01"
+                              min="0"
+                              className="w-24 text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
+                              placeholder="السعر"
+                            />
+                          </div>
+                          
+                          {/* Total */}
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs text-gray-600 font-cairo whitespace-nowrap">الإجمالي:</label>
+                            <p className="text-base font-bold text-gray-900 font-cairo min-w-[80px] text-left">₪{item.total.toFixed(2)}</p>
                           </div>
                         </div>
-                        
-                        {/* Quantity Controls */}
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => updateQuantity(item.productID, item.quantity - 1)}
-                            className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200 transition-colors"
-                          >
-                            <Minus size={12} />
-                          </button>
-                          <input
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => updateQuantity(item.productID, parseFloat(e.target.value) || 0)}
-                            className="w-12 text-center border border-gray-300 rounded py-1 text-xs text-gray-900 font-bold"
-                          />
-                          <button
-                            onClick={() => updateQuantity(item.productID, item.quantity + 1)}
-                            className="w-7 h-7 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200 transition-colors"
-                          >
-                            <Plus size={12} />
-                          </button>
-                        </div>
-                        
-                        {/* Price Input */}
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="number"
-                            value={item.unitPrice}
-                            onChange={(e) => updatePrice(item.productID, parseFloat(e.target.value) || 0)}
-                            step="0.01"
-                            min="0"
-                            className="w-20 text-center border border-gray-300 rounded py-1 text-xs text-gray-900 font-bold"
-                            placeholder="السعر"
-                          />
-                        </div>
-                        
-                        {/* Serial Numbers */}
-                        <div className="min-w-[120px] max-w-[150px]">
-                          <div className="space-y-1 max-h-32 overflow-y-auto">
-                            {Array.from({ length: item.quantity }, (_, index) => {
-                              const serialNos = item.serialNos || [];
-                              while (serialNos.length < item.quantity) {
-                                serialNos.push('');
-                              }
-                              const serialNo = serialNos[index] || '';
-                              const isEmpty = !serialNo.trim();
-                              const isRequired = item.isSerialized && isEmpty;
-                              
-                              return (
-                                <div key={index} className="flex items-center gap-1">
-                                  <input
-                                    type="text"
-                                    value={serialNo}
-                                    onChange={(e) => {
-                                      const newSerialNos = [...(item.serialNos || [])];
-                                      while (newSerialNos.length < item.quantity) {
-                                        newSerialNos.push('');
-                                      }
-                                      newSerialNos[index] = e.target.value;
-                                      setCart((prev) =>
-                                        prev.map((cartItem) =>
-                                          cartItem.productID === item.productID
-                                            ? { ...cartItem, serialNos: newSerialNos }
-                                            : cartItem
-                                        )
-                                      );
-                                    }}
-                                    placeholder={item.isSerialized ? `${index + 1} (مطلوب)` : `${index + 1} (اختياري)`}
-                                    className={`flex-1 px-1.5 py-0.5 border rounded text-xs text-gray-900 font-bold ${
-                                      isRequired
-                                        ? 'border-yellow-400 bg-yellow-50'
-                                        : 'border-gray-300'
-                                    }`}
-                                  />
-                                  <SerialNumberScanner
-                                    onScan={(serialNumber) => {
-                                      const newSerialNos = [...(item.serialNos || [])];
-                                      while (newSerialNos.length < item.quantity) {
-                                        newSerialNos.push('');
-                                      }
-                                      newSerialNos[index] = serialNumber;
-                                      setCart((prev) =>
-                                        prev.map((cartItem) =>
-                                          cartItem.productID === item.productID
-                                            ? { ...cartItem, serialNos: newSerialNos }
-                                            : cartItem
-                                        )
-                                      );
-                                    }}
-                                  />
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        
-                        {/* Total */}
-                        <div className="text-left min-w-[60px]">
-                          <p className="text-sm font-bold text-gray-900 font-cairo">₪{item.total.toFixed(2)}</p>
-                        </div>
-                        
-                        {/* Delete Button */}
-                        <button
-                          onClick={() => removeFromCart(item.productID)}
-                          className="text-red-500 hover:text-red-700 transition-colors flex-shrink-0 p-1"
-                        >
-                          <Trash2 size={16} />
-                        </button>
                       </div>
 
                       {/* Mobile View */}
@@ -1668,10 +1816,115 @@ export default function POSPage() {
                           )}
                           <div className="flex-1 min-w-0">
                             <h3 className="text-sm font-semibold text-gray-900 font-cairo mb-1 line-clamp-2">{item.name}</h3>
-                            <p className="text-xs text-gray-500 font-cairo mb-2">#{item.productID}</p>
+                            <p className="text-xs text-gray-500 font-cairo mb-1">#{item.productID}</p>
                             <div className="text-lg font-bold text-gray-900 font-cairo mb-2">
                               ₪{item.total.toFixed(2)}
                             </div>
+                            {/* Serial Numbers Display */}
+                            {(item.isSerialized === true || (item.serialNos && item.serialNos.length > 0)) && (
+                              <div className="mt-2 space-y-1">
+                                {Array.from({ length: Math.abs(item.quantity) }, (_, serialIndex) => {
+                                  const serialNos = item.serialNos || [];
+                                  while (serialNos.length < Math.abs(item.quantity)) {
+                                    serialNos.push('');
+                                  }
+                                  const serialNo = serialNos[serialIndex] || '';
+                                  const isEmpty = !serialNo.trim();
+                                  const isRequired = item.isSerialized && isEmpty;
+                                  
+                                  return (
+                                    <div key={serialIndex} className="flex items-center gap-1">
+                                      <input
+                                        type="text"
+                                        value={serialNo}
+                                        onChange={(e) => {
+                                          const newSerialNos = [...(item.serialNos || [])];
+                                          while (newSerialNos.length < Math.abs(item.quantity)) {
+                                            newSerialNos.push('');
+                                          }
+                                          newSerialNos[serialIndex] = e.target.value;
+                                          setCart((prev) =>
+                                            prev.map((cartItem) =>
+                                              cartItem.productID === item.productID
+                                                ? { ...cartItem, serialNos: newSerialNos }
+                                                : cartItem
+                                            )
+                                          );
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            const nextIndex = serialIndex + 1;
+                                            if (nextIndex < Math.abs(item.quantity)) {
+                                              const nextInput = document.querySelector(
+                                                `input[data-serial-index="${nextIndex}"][data-product-id="${item.productID}"][data-mobile="true"]`
+                                              ) as HTMLInputElement;
+                                              if (nextInput) {
+                                                nextInput.focus();
+                                                nextInput.select();
+                                              }
+                                            }
+                                          }
+                                        }}
+                                        data-serial-index={serialIndex}
+                                        data-product-id={item.productID}
+                                        data-mobile="true"
+                                        placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
+                                        className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm ${
+                                          isRequired
+                                            ? 'border-yellow-400 bg-yellow-50'
+                                            : 'border-gray-300'
+                                        }`}
+                                      />
+                                      <SerialNumberScanner
+                                        onScan={(scannedData) => {
+                                          // Support multiple serials in one scan
+                                          const serials = scannedData
+                                            .split(/[,\n\r]+|\s{2,}/)
+                                            .map(s => s.trim())
+                                            .filter(s => s.length > 0);
+                                          
+                                          if (serials.length === 0) return;
+                                          
+                                          const newSerialNos = [...(item.serialNos || [])];
+                                          while (newSerialNos.length < Math.abs(item.quantity)) {
+                                            newSerialNos.push('');
+                                          }
+                                          
+                                          let currentIndex = serialIndex;
+                                          for (const serial of serials) {
+                                            if (currentIndex < item.quantity) {
+                                              newSerialNos[currentIndex] = serial;
+                                              currentIndex++;
+                                            }
+                                          }
+                                          
+                                          setCart((prev) =>
+                                            prev.map((cartItem) =>
+                                              cartItem.productID === item.productID
+                                                ? { ...cartItem, serialNos: newSerialNos }
+                                                : cartItem
+                                            )
+                                          );
+                                          
+                                          setTimeout(() => {
+                                            const nextEmptyIndex = newSerialNos.findIndex((s, idx) => idx >= serialIndex && !s.trim());
+                                            if (nextEmptyIndex !== -1) {
+                                              const nextInput = document.querySelector(
+                                                `input[data-serial-index="${nextEmptyIndex}"][data-product-id="${item.productID}"][data-mobile="true"]`
+                                              ) as HTMLInputElement;
+                                              if (nextInput) {
+                                                nextInput.focus();
+                                              }
+                                            }
+                                          }, 100);
+                                        }}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                           <button
                             onClick={() => removeFromCart(item.productID)}
@@ -1719,67 +1972,6 @@ export default function POSPage() {
                             />
                           </div>
                         </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1 font-cairo">
-                            الأرقام التسلسلية {item.isSerialized && <span className="text-red-500">*</span>}
-                          </label>
-                          <div className="space-y-2">
-                            {Array.from({ length: item.quantity }, (_, index) => {
-                              const serialNos = item.serialNos || [];
-                              while (serialNos.length < item.quantity) {
-                                serialNos.push('');
-                              }
-                              const serialNo = serialNos[index] || '';
-                              const isEmpty = !serialNo.trim();
-                              const isRequired = item.isSerialized && isEmpty;
-                              
-                              return (
-                                <div key={index} className="flex items-center gap-1">
-                                  <input
-                                    type="text"
-                                    value={serialNo}
-                                    onChange={(e) => {
-                                      const newSerialNos = [...(item.serialNos || [])];
-                                      while (newSerialNos.length < item.quantity) {
-                                        newSerialNos.push('');
-                                      }
-                                      newSerialNos[index] = e.target.value;
-                                      setCart((prev) =>
-                                        prev.map((cartItem) =>
-                                          cartItem.productID === item.productID
-                                            ? { ...cartItem, serialNos: newSerialNos }
-                                            : cartItem
-                                        )
-                                      );
-                                    }}
-                                    placeholder={item.isSerialized ? `سيريال ${index + 1} (مطلوب)` : `سيريال ${index + 1} (اختياري)`}
-                                    className={`flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 font-bold ${
-                                      isRequired
-                                        ? 'border-yellow-400 bg-yellow-50'
-                                        : 'border-gray-300'
-                                    }`}
-                                  />
-                                  <SerialNumberScanner
-                                    onScan={(serialNumber) => {
-                                      const newSerialNos = [...(item.serialNos || [])];
-                                      while (newSerialNos.length < item.quantity) {
-                                        newSerialNos.push('');
-                                      }
-                                      newSerialNos[index] = serialNumber;
-                                      setCart((prev) =>
-                                        prev.map((cartItem) =>
-                                          cartItem.productID === item.productID
-                                            ? { ...cartItem, serialNos: newSerialNos }
-                                            : cartItem
-                                        )
-                                      );
-                                    }}
-                                  />
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
                       </div>
                     </div>
                     );
@@ -1789,47 +1981,139 @@ export default function POSPage() {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-200 p-3 sm:p-4 space-y-2 sm:space-y-3 flex-shrink-0 bg-white">
-              {/* Notes */}
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">ملاحظات</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="ملاحظات اختيارية..."
-                  rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm font-cairo"
-                />
-              </div>
-
-              {/* Discount */}
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">خصم</label>
-                <input
-                  type="number"
-                  value={discount}
-                  onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                  min="0"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm font-bold"
-                />
-              </div>
-
+            <div className="border-t border-gray-200 p-4 lg:p-5 space-y-3 flex-shrink-0 bg-gradient-to-t from-gray-50 to-white">
               {/* Totals */}
-              <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                <div className="flex justify-between text-sm font-cairo">
-                  <span className="text-gray-600">المجموع:</span>
-                  <span className="font-semibold">₪{subtotal.toFixed(2)}</span>
-                </div>
-                {discount > 0 && (
-                  <div className="flex justify-between text-sm text-red-600 font-cairo">
-                    <span>الخصم:</span>
-                    <span>₪{discount.toFixed(2)}</span>
+              <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-4 border border-gray-200 shadow-sm space-y-3">
+                <div className="flex justify-between items-center text-sm font-cairo">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-gray-600">المجموع الفرعي:</span>
+                    {cart.length > 0 && (
+                      <span className="text-xs text-gray-500 font-cairo">({cart.length} عنصر)</span>
+                    )}
+                    {/* Notes Button */}
+                    <div className="relative">
+                      {!notes.trim() ? (
+                        <button
+                          onClick={() => setShowNotesInput(true)}
+                          className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-cairo"
+                        >
+                          + إضافة ملاحظة
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500 font-cairo max-w-[150px] truncate" title={notes}>
+                            {notes}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setNotes('');
+                              setShowNotesInput(true);
+                            }}
+                            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                            title="تعديل الملاحظة"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      )}
+                      {/* Notes Input Popup */}
+                      {showNotesInput && (
+                        <div className="absolute bottom-full left-0 mb-2 w-64 z-10">
+                          <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-3">
+                            <textarea
+                              value={notes}
+                              onChange={(e) => setNotes(e.target.value)}
+                              onBlur={() => {
+                                setTimeout(() => setShowNotesInput(false), 200);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Escape') {
+                                  setShowNotesInput(false);
+                                }
+                              }}
+                              placeholder="ملاحظات اختيارية..."
+                              rows={3}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-sm font-cairo text-gray-900 resize-none"
+                              autoFocus
+                            />
+                            <div className="flex justify-end gap-2 mt-2">
+                              <button
+                                onClick={() => {
+                                  setNotes('');
+                                  setShowNotesInput(false);
+                                }}
+                                className="text-xs px-2 py-1 text-gray-600 hover:text-gray-800 font-cairo"
+                              >
+                                حذف
+                              </button>
+                              <button
+                                onClick={() => setShowNotesInput(false)}
+                                className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 font-cairo"
+                              >
+                                حفظ
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-                <div className="flex justify-between text-base sm:text-lg font-bold border-t border-gray-300 pt-2 font-cairo">
-                  <span>الصافي:</span>
+                  <span className="font-bold text-gray-900">₪{subtotal.toFixed(2)}</span>
+                </div>
+                
+                {/* Discount Input - Inline */}
+                <div className="flex justify-between items-center text-sm font-cairo border-t border-gray-200 pt-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600">الخصم:</span>
+                    {showDiscountInput ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={discount}
+                          onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                          onBlur={() => {
+                            setTimeout(() => setShowDiscountInput(false), 200);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                              setShowDiscountInput(false);
+                            } else if (e.key === 'Enter') {
+                              setShowDiscountInput(false);
+                            }
+                          }}
+                          placeholder="0.00"
+                          min="0"
+                          step="0.01"
+                          className="w-24 px-2 py-1 border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-bold text-gray-900"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => setShowDiscountInput(false)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowDiscountInput(true)}
+                        className={`text-xs px-2 py-0.5 rounded ${
+                          discount > 0
+                            ? 'text-red-600 bg-red-50 hover:bg-red-100'
+                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                        } transition-colors font-cairo`}
+                      >
+                        {discount > 0 ? `-₪${discount.toFixed(2)}` : '+ إضافة خصم'}
+                      </button>
+                    )}
+                  </div>
+                  {discount > 0 && (
+                    <span className="font-bold text-red-600">-₪{discount.toFixed(2)}</span>
+                  )}
+                </div>
+                
+                <div className="flex justify-between items-center text-lg lg:text-xl font-bold border-t-2 border-gray-300 pt-3 font-cairo">
+                  <span className="text-gray-900">الصافي للدفع:</span>
                   <span className="text-green-600">₪{netTotal.toFixed(2)}</span>
                 </div>
               </div>
@@ -1838,16 +2122,16 @@ export default function POSPage() {
               <button
                 onClick={handlePayAndPrint}
                 disabled={cart.length === 0 || isProcessing}
-                className="w-full py-3 sm:py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold text-base sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-cairo"
+                className="w-full py-4 lg:py-5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 active:scale-[0.98] transition-all duration-200 font-bold text-base lg:text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-green-600 disabled:hover:to-green-700 flex items-center justify-center gap-3 font-cairo shadow-lg shadow-green-600/20"
               >
                 {isProcessing ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
                     <span>جاري المعالجة...</span>
                   </>
                 ) : (
                   <>
-                    <Printer size={20} />
+                    <Printer size={22} />
                     <span>دفع وطباعة</span>
                   </>
                 )}

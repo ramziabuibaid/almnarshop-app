@@ -129,9 +129,9 @@ function SortableTableRow({
           <GripVertical size={16} />
         </div>
       </td>
-      <td className="px-3 py-3 text-sm text-gray-900 font-cairo min-w-[200px]">
+      <td className="px-3 py-3 text-sm text-gray-900 font-cairo min-w-[200px] align-top">
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-start gap-2">
             {imageUrl ? (
               <img
                 src={imageUrl}
@@ -146,7 +146,101 @@ function SortableTableRow({
                 <span className="text-gray-400 text-xs">—</span>
               </div>
             )}
-            <span className="text-sm font-medium">{item.productName}</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium">{item.productName}</div>
+              {/* Serial Numbers Display - Show if product is serialized OR if there are existing serials */}
+              {(item.isSerialized === true || (item.serialNos && item.serialNos.length > 0)) && (
+                <div className="mt-2 space-y-1">
+                  {Array.from({ length: item.quantity }, (_, serialIndex) => {
+                    const serialNos = item.serialNos || [];
+                    while (serialNos.length < item.quantity) {
+                      serialNos.push('');
+                    }
+                    const serialNo = serialNos[serialIndex] || '';
+                    const isEmpty = !serialNo.trim();
+                    const isRequired = item.isSerialized && isEmpty;
+                    
+                    return (
+                      <div key={serialIndex} className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          value={serialNo}
+                          onChange={(e) => {
+                            const newSerialNos = [...(item.serialNos || [])];
+                            while (newSerialNos.length < item.quantity) {
+                              newSerialNos.push('');
+                            }
+                            newSerialNos[serialIndex] = e.target.value;
+                            onUpdateSerialNo(item.detailID, newSerialNos);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const nextIndex = serialIndex + 1;
+                              if (nextIndex < item.quantity) {
+                                const nextInput = document.querySelector(
+                                  `input[data-serial-index="${nextIndex}"][data-detail-id="${item.detailID}"]`
+                                ) as HTMLInputElement;
+                                if (nextInput) {
+                                  nextInput.focus();
+                                  nextInput.select();
+                                }
+                              }
+                            }
+                          }}
+                          data-serial-index={serialIndex}
+                          data-detail-id={item.detailID}
+                          placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
+                          className={`w-full px-2 py-1 border rounded text-gray-900 font-mono text-xs ${
+                            isRequired
+                              ? 'border-yellow-400 bg-yellow-50'
+                              : 'border-gray-300'
+                          }`}
+                        />
+                        <SerialNumberScanner
+                          onScan={(scannedData) => {
+                            // Support multiple serials in one scan (separated by comma, newline, or multiple spaces)
+                            const serials = scannedData
+                              .split(/[,\n\r]+|\s{2,}/)
+                              .map(s => s.trim())
+                              .filter(s => s.length > 0);
+                            
+                            if (serials.length === 0) return;
+                            
+                            const newSerialNos = [...(item.serialNos || [])];
+                            while (newSerialNos.length < item.quantity) {
+                              newSerialNos.push('');
+                            }
+                            
+                            let currentIndex = serialIndex;
+                            for (const serial of serials) {
+                              if (currentIndex < item.quantity) {
+                                newSerialNos[currentIndex] = serial;
+                                currentIndex++;
+                              }
+                            }
+                            
+                            onUpdateSerialNo(item.detailID, newSerialNos);
+                            
+                            setTimeout(() => {
+                              const nextEmptyIndex = newSerialNos.findIndex((s, idx) => idx >= serialIndex && !s.trim());
+                              if (nextEmptyIndex !== -1) {
+                                const nextInput = document.querySelector(
+                                  `input[data-serial-index="${nextEmptyIndex}"][data-detail-id="${item.detailID}"]`
+                                ) as HTMLInputElement;
+                                if (nextInput) {
+                                  nextInput.focus();
+                                }
+                              }
+                            }, 100);
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
           <textarea
             value={item.notes || ''}
@@ -157,7 +251,7 @@ function SortableTableRow({
           />
         </div>
       </td>
-      <td className="px-3 py-3 text-center">
+      <td className="px-3 py-3 text-center align-top">
         <input
           type="number"
           step="1"
@@ -167,7 +261,7 @@ function SortableTableRow({
           className="w-16 px-2 py-1.5 border border-gray-300 rounded text-gray-900 font-bold text-sm"
         />
       </td>
-      <td className="px-3 py-3 text-center">
+      <td className="px-3 py-3 text-center align-top">
         <input
           type="number"
           step="1"
@@ -178,57 +272,11 @@ function SortableTableRow({
         />
       </td>
       {showCosts && canViewCost && (
-        <td className="px-3 py-3 text-sm font-semibold text-gray-900 font-cairo text-center">
+        <td className="px-3 py-3 text-sm font-semibold text-gray-900 font-cairo text-center align-top">
           ₪{(item.costPrice || 0).toFixed(2)}
         </td>
       )}
-      <td className="px-3 py-3">
-        <div className="space-y-1 max-h-32 overflow-y-auto">
-          {Array.from({ length: item.quantity }, (_, index) => {
-            const serialNos = item.serialNos || [];
-            while (serialNos.length < item.quantity) {
-              serialNos.push('');
-            }
-            const serialNo = serialNos[index] || '';
-            const isEmpty = !serialNo.trim();
-            const isRequired = item.isSerialized && isEmpty;
-            
-            return (
-              <div key={index} className="flex items-center gap-1">
-                <input
-                  type="text"
-                  value={serialNo}
-                  onChange={(e) => {
-                    const newSerialNos = [...(item.serialNos || [])];
-                    while (newSerialNos.length < item.quantity) {
-                      newSerialNos.push('');
-                    }
-                    newSerialNos[index] = e.target.value;
-                    onUpdateSerialNo(item.detailID, newSerialNos);
-                  }}
-                  placeholder={item.isSerialized ? `سيريال ${index + 1} (مطلوب)` : `سيريال ${index + 1} (اختياري)`}
-                  className={`flex-1 px-2 py-1 border rounded text-xs text-gray-900 font-bold ${
-                    isRequired
-                      ? 'border-yellow-400 bg-yellow-50'
-                      : 'border-gray-300'
-                  }`}
-                />
-                <SerialNumberScanner
-                  onScan={(serialNumber) => {
-                    const newSerialNos = [...(item.serialNos || [])];
-                    while (newSerialNos.length < item.quantity) {
-                      newSerialNos.push('');
-                    }
-                    newSerialNos[index] = serialNumber;
-                    onUpdateSerialNo(item.detailID, newSerialNos);
-                  }}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </td>
-      <td className={`px-3 py-3 text-sm font-semibold font-cairo text-center ${
+      <td className={`px-3 py-3 text-sm font-semibold font-cairo text-center align-top ${
         item.isGift ? 'text-green-600' : 'text-gray-900'
       }`}>
         ₪{(item.quantity * item.unitPrice).toFixed(2)}
@@ -236,7 +284,7 @@ function SortableTableRow({
           <span className="text-xs text-green-600 mr-1 block">(هدية)</span>
         )}
       </td>
-      <td className="px-3 py-3 text-center">
+      <td className="px-3 py-3 text-center align-top">
         <button
           onClick={() => onToggleGift(item.detailID)}
           className={`p-1.5 rounded-lg transition-colors ${
@@ -249,7 +297,7 @@ function SortableTableRow({
           <Gift size={16} />
         </button>
       </td>
-      <td className="px-3 py-3 text-center">
+      <td className="px-3 py-3 text-center align-top">
         <button
           onClick={() => onRemoveItem(item.detailID)}
           className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -307,7 +355,7 @@ function CardRow({
         )}
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-gray-900 font-cairo mb-1">{item.productName}</h3>
-          <div className={`text-lg font-bold font-cairo ${
+          <div className={`text-lg font-bold font-cairo mb-2 ${
             item.isGift ? 'text-green-600' : 'text-gray-900'
           }`}>
             ₪{(item.quantity * item.unitPrice).toFixed(2)}
@@ -315,6 +363,99 @@ function CardRow({
               <span className="text-xs text-green-600 mr-1">(هدية)</span>
             )}
           </div>
+          {/* Serial Numbers Display */}
+          {(item.isSerialized === true || (item.serialNos && item.serialNos.length > 0)) && (
+            <div className="mt-2 space-y-1">
+              {Array.from({ length: item.quantity }, (_, serialIndex) => {
+                const serialNos = item.serialNos || [];
+                while (serialNos.length < item.quantity) {
+                  serialNos.push('');
+                }
+                const serialNo = serialNos[serialIndex] || '';
+                const isEmpty = !serialNo.trim();
+                const isRequired = item.isSerialized && isEmpty;
+                
+                return (
+                  <div key={serialIndex} className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={serialNo}
+                      onChange={(e) => {
+                        const newSerialNos = [...(item.serialNos || [])];
+                        while (newSerialNos.length < item.quantity) {
+                          newSerialNos.push('');
+                        }
+                        newSerialNos[serialIndex] = e.target.value;
+                        onUpdateSerialNo(item.detailID, newSerialNos);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const nextIndex = serialIndex + 1;
+                          if (nextIndex < item.quantity) {
+                            const nextInput = document.querySelector(
+                              `input[data-serial-index="${nextIndex}"][data-detail-id="${item.detailID}"][data-mobile="true"]`
+                            ) as HTMLInputElement;
+                            if (nextInput) {
+                              nextInput.focus();
+                              nextInput.select();
+                            }
+                          }
+                        }
+                      }}
+                      data-serial-index={serialIndex}
+                      data-detail-id={item.detailID}
+                      data-mobile="true"
+                      placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
+                      className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm ${
+                        isRequired
+                          ? 'border-yellow-400 bg-yellow-50'
+                          : 'border-gray-300'
+                      }`}
+                    />
+                    <SerialNumberScanner
+                      onScan={(scannedData) => {
+                        // Support multiple serials in one scan
+                        const serials = scannedData
+                          .split(/[,\n\r]+|\s{2,}/)
+                          .map(s => s.trim())
+                          .filter(s => s.length > 0);
+                        
+                        if (serials.length === 0) return;
+                        
+                        const newSerialNos = [...(item.serialNos || [])];
+                        while (newSerialNos.length < item.quantity) {
+                          newSerialNos.push('');
+                        }
+                        
+                        let currentIndex = serialIndex;
+                        for (const serial of serials) {
+                          if (currentIndex < item.quantity) {
+                            newSerialNos[currentIndex] = serial;
+                            currentIndex++;
+                          }
+                        }
+                        
+                        onUpdateSerialNo(item.detailID, newSerialNos);
+                        
+                        setTimeout(() => {
+                          const nextEmptyIndex = newSerialNos.findIndex((s, idx) => idx >= serialIndex && !s.trim());
+                          if (nextEmptyIndex !== -1) {
+                            const nextInput = document.querySelector(
+                              `input[data-serial-index="${nextEmptyIndex}"][data-detail-id="${item.detailID}"][data-mobile="true"]`
+                            ) as HTMLInputElement;
+                            if (nextInput) {
+                              nextInput.focus();
+                            }
+                          }
+                        }, 100);
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -351,55 +492,6 @@ function CardRow({
           </div>
         </div>
       )}
-      <div className="mb-3">
-        <label className="block text-xs text-gray-600 mb-1 font-cairo">
-          الأرقام التسلسلية {item.isSerialized && <span className="text-red-500">*</span>}
-        </label>
-        <div className="space-y-2">
-          {Array.from({ length: item.quantity }, (_, index) => {
-            const serialNos = item.serialNos || [];
-            while (serialNos.length < item.quantity) {
-              serialNos.push('');
-            }
-            const serialNo = serialNos[index] || '';
-            const isEmpty = !serialNo.trim();
-            const isRequired = item.isSerialized && isEmpty;
-            
-            return (
-              <div key={index} className="flex items-center gap-1">
-                <input
-                  type="text"
-                  value={serialNo}
-                  onChange={(e) => {
-                    const newSerialNos = [...(item.serialNos || [])];
-                    while (newSerialNos.length < item.quantity) {
-                      newSerialNos.push('');
-                    }
-                    newSerialNos[index] = e.target.value;
-                    onUpdateSerialNo(item.detailID, newSerialNos);
-                  }}
-                  placeholder={item.isSerialized ? `سيريال ${index + 1} (مطلوب)` : `سيريال ${index + 1} (اختياري)`}
-                  className={`flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 font-bold ${
-                    isRequired
-                      ? 'border-yellow-400 bg-yellow-50'
-                      : 'border-gray-300'
-                  }`}
-                />
-                <SerialNumberScanner
-                  onScan={(serialNumber) => {
-                    const newSerialNos = [...(item.serialNos || [])];
-                    while (newSerialNos.length < item.quantity) {
-                      newSerialNos.push('');
-                    }
-                    newSerialNos[index] = serialNumber;
-                    onUpdateSerialNo(item.detailID, newSerialNos);
-                  }}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
       <div className="mb-3">
         <label className="block text-xs text-gray-600 mb-1 font-cairo">ملاحظات</label>
@@ -953,8 +1045,18 @@ function QuotationsFormContent() {
       return;
     }
 
-    // Check if product is serialized
-    const isSerialized = productToAdd.is_serialized || productToAdd.IsSerialized || false;
+    // Check if product is serialized - try productToAdd first, then search in products array
+    let isSerialized = productToAdd.is_serialized || productToAdd.IsSerialized || false;
+    if (!isSerialized) {
+      // Fallback: search in products array
+      const originalProduct = products.find(p => {
+        const pId = String(p.ProductID || p.id || p.product_id || '').trim();
+        return pId === productIdForSearch;
+      });
+      if (originalProduct) {
+        isSerialized = originalProduct.is_serialized || originalProduct.IsSerialized || false;
+      }
+    }
     
     // Initialize serial numbers array with empty strings for each quantity
     const serialNos: string[] = Array(quantity).fill('');
@@ -1282,16 +1384,7 @@ function QuotationsFormContent() {
 
           {/* Products */}
           <div>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 font-cairo">المنتجات</h2>
-              <button
-                onClick={() => setShowAddProduct(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo text-sm sm:text-base w-full sm:w-auto justify-center"
-              >
-                <Plus size={18} />
-                <span>إضافة منتج</span>
-              </button>
-            </div>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 font-cairo mb-4">المنتجات</h2>
             
             {/* Barcode Scanner - Always visible */}
             <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -1304,6 +1397,17 @@ function QuotationsFormContent() {
                 placeholder="امسح الباركود أو رقم الشامل..."
                 className="w-full"
               />
+            </div>
+            
+            {/* Add Product Button */}
+            <div className="mb-4">
+              <button
+                onClick={() => setShowAddProduct(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo text-sm sm:text-base w-full sm:w-auto justify-center"
+              >
+                <Plus size={18} />
+                <span>إضافة منتج</span>
+              </button>
             </div>
             
             {showAddProduct && (
@@ -1451,7 +1555,6 @@ function QuotationsFormContent() {
                             {showCosts && canViewCost && (
                               <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
                             )}
-                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الرقم التسلسلي</th>
                             <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الإجمالي</th>
                             <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">هدية</th>
                             <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">إجراءات</th>
