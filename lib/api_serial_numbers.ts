@@ -340,3 +340,31 @@ export async function deleteSerialNumbersByDetailId(
     throw error;
   }
 }
+
+/**
+ * Delete serial numbers by invoice ID (when invoice is updated and details are replaced)
+ */
+export async function deleteSerialNumbersByInvoiceId(
+  invoiceId: string,
+  invoiceType: 'cash' | 'shop_sales' | 'warehouse_sales' | 'quotation'
+): Promise<void> {
+  try {
+    let query = supabase
+      .from('serial_numbers')
+      .delete()
+      .eq('invoice_id', invoiceId)
+      .eq('invoice_type', invoiceType);
+
+    const { error } = await query;
+
+    if (error) {
+      console.error('[API] Error deleting serial numbers by invoice ID:', error);
+      throw new Error(`Failed to delete serial numbers: ${error.message}`);
+    }
+
+    console.log(`[API] Deleted serial numbers for ${invoiceType} invoice: ${invoiceId}`);
+  } catch (error: any) {
+    console.error('[API] deleteSerialNumbersByInvoiceId error:', error);
+    throw error;
+  }
+}

@@ -7677,6 +7677,16 @@ export async function saveQuotation(
     
     // Step 2: Delete existing details if updating
     if (!isNew) {
+      // First, delete existing serial numbers for this quotation
+      try {
+        const { deleteSerialNumbersByInvoiceId } = await import('./api_serial_numbers');
+        await deleteSerialNumbersByInvoiceId(quotationId, 'quotation');
+      } catch (serialDeleteError) {
+        console.error('[API] Error deleting old serial numbers (non-critical):', serialDeleteError);
+        // Continue even if serial deletion fails
+      }
+      
+      // Then delete the details (which will cascade if needed)
       const { error: deleteError } = await supabase
         .from('quotation_details')
         .delete()
@@ -7706,9 +7716,10 @@ export async function saveQuotation(
         };
       });
       
-      const { error: detailsError } = await supabase
+      const { data: insertedDetails, error: detailsError } = await supabase
         .from('quotation_details')
-        .insert(detailsToInsert);
+        .insert(detailsToInsert)
+        .select('quotation_detail_id');
       
       if (detailsError) {
         console.error('[API] Error saving quotation details:', detailsError);
@@ -7716,26 +7727,29 @@ export async function saveQuotation(
       }
 
       // Save serial numbers to dedicated table
-      try {
-        const { saveSerialNumbers } = await import('./api_serial_numbers');
-        for (let i = 0; i < payload.items.length; i++) {
-          const item = payload.items[i];
-          const detail = detailsToInsert[i];
-          if (item.serialNos && item.serialNos.length > 0) {
-            await saveSerialNumbers(
-              item.serialNos,
-              item.productID,
-              'quotation',
-              quotationId,
-              detail.quotation_detail_id,
-              payload.customerId || undefined,
-              payload.date
-            );
+      // Use the actual quotation_detail_id returned from Supabase
+      if (insertedDetails && insertedDetails.length > 0) {
+        try {
+          const { saveSerialNumbers } = await import('./api_serial_numbers');
+          for (let i = 0; i < payload.items.length; i++) {
+            const item = payload.items[i];
+            const insertedDetail = insertedDetails[i];
+            if (item.serialNos && item.serialNos.length > 0 && insertedDetail) {
+              await saveSerialNumbers(
+                item.serialNos,
+                item.productID,
+                'quotation',
+                quotationId,
+                insertedDetail.quotation_detail_id, // Use the actual quotation_detail_id from database
+                payload.customerId || undefined,
+                payload.date
+              );
+            }
           }
+        } catch (serialError) {
+          console.error('[API] Error saving serial numbers (non-critical):', serialError);
+          // Don't throw - serial numbers are saved in details table as backup
         }
-      } catch (serialError) {
-        console.error('[API] Error saving serial numbers (non-critical):', serialError);
-        // Don't throw - serial numbers are saved in details table as backup
       }
     }
     

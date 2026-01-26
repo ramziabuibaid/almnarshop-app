@@ -1192,6 +1192,7 @@ export default function EditQuotationPage() {
           unitPrice: item.UnitPrice,
           notes: item.notes || '',
           isGift: item.isGift || false,
+          serialNos: item.serialNos || [],
         })),
       });
       router.push('/admin/quotations');
@@ -1227,6 +1228,7 @@ export default function EditQuotationPage() {
           unitPrice: item.UnitPrice,
           notes: item.notes || '',
           isGift: item.isGift || false,
+          serialNos: item.serialNos || [],
         })),
       });
       
