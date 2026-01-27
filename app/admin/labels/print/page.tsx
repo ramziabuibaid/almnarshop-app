@@ -15,7 +15,7 @@ function LabelsPrintContent() {
   const [showZeroQuantity, setShowZeroQuantity] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [useQrProductUrl, setUseQrProductUrl] = useState<boolean>(true);
+  const [useQrProductUrl, setUseQrProductUrl] = useState<boolean>(false);
 
   // Get base URL for product links
   const getBaseUrl = () => {

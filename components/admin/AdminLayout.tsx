@@ -30,25 +30,44 @@ interface AdminLayoutProps {
   children: ReactNode;
 }
 
+/** Elegant accent palette: muted, professional. Start-border + subtle bg tint when active. */
+const ACCENT_STYLES: Record<string, { border: string; borderMuted: string; activeBg: string }> = {
+  slate:   { border: 'border-s-slate-400',   borderMuted: 'border-s-slate-500/50',   activeBg: 'bg-slate-500/15' },
+  indigo:  { border: 'border-s-indigo-400',  borderMuted: 'border-s-indigo-500/50',  activeBg: 'bg-indigo-500/15' },
+  violet:  { border: 'border-s-violet-400',  borderMuted: 'border-s-violet-500/50',  activeBg: 'bg-violet-500/15' },
+  emerald: { border: 'border-s-emerald-500', borderMuted: 'border-s-emerald-600/50', activeBg: 'bg-emerald-500/15' },
+  teal:    { border: 'border-s-teal-400',    borderMuted: 'border-s-teal-500/50',    activeBg: 'bg-teal-500/15' },
+  cyan:    { border: 'border-s-cyan-400',    borderMuted: 'border-s-cyan-500/50',    activeBg: 'bg-cyan-500/15' },
+  blue:    { border: 'border-s-blue-400',    borderMuted: 'border-s-blue-500/50',    activeBg: 'bg-blue-500/15' },
+  amber:   { border: 'border-s-amber-400',   borderMuted: 'border-s-amber-500/50',   activeBg: 'bg-amber-500/15' },
+  rose:    { border: 'border-s-rose-400',    borderMuted: 'border-s-rose-500/50',    activeBg: 'bg-rose-500/15' },
+  green:   { border: 'border-s-green-500',   borderMuted: 'border-s-green-600/50',   activeBg: 'bg-green-500/15' },
+  orange:  { border: 'border-s-orange-400',  borderMuted: 'border-s-orange-500/50',  activeBg: 'bg-orange-500/15' },
+  fuchsia: { border: 'border-s-fuchsia-400', borderMuted: 'border-s-fuchsia-500/50', activeBg: 'bg-fuchsia-500/15' },
+  sky:     { border: 'border-s-sky-400',     borderMuted: 'border-s-sky-500/50',     activeBg: 'bg-sky-500/15' },
+  neutral: { border: 'border-s-gray-400',    borderMuted: 'border-s-gray-500/50',    activeBg: 'bg-gray-500/15' },
+  red:     { border: 'border-s-red-400',     borderMuted: 'border-s-red-500/50',     activeBg: 'bg-red-500/15' },
+};
+
 const sidebarLinks = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/notifications', label: 'الإشعارات', icon: Bell, permission: 'dashboardAndNotifications' },
-  { href: '/admin/products', label: 'المنتجات', icon: Package },
-  { href: '/admin/marketing/campaigns', label: 'العروض الترويجية', icon: Megaphone },
-  { href: '/admin/labels', label: 'طباعة الملصقات', icon: Tag },
-  { href: '/admin/pos', label: 'نقطة البيع (POS)', icon: CreditCard },
-  { href: '/admin/invoices', label: 'الفواتير النقدية', icon: FileText },
-  { href: '/admin/quotations', label: 'العروض السعرية', icon: FileText },
-  { href: '/admin/orders', label: 'طلبيات اون لاين', icon: ShoppingBag },
-  { href: '/admin/shop-sales', label: 'فواتير مبيعات المحل', icon: FileText },
-  { href: '/admin/warehouse-sales', label: 'فواتير مبيعات المخزن', icon: FileText },
-  { href: '/admin/shop-finance/cash-box', label: 'صندوق المحل', icon: Wallet },
-  { href: '/admin/warehouse-finance/cash-box', label: 'صندوق المستودع', icon: Wallet },
-  { href: '/admin/maintenance', label: 'الصيانة', icon: Wrench },
-  { href: '/admin/checks', label: 'الشيكات الراجعة', icon: FileText },
-  { href: '/admin/customers', label: 'الزبائن', icon: Users },
-  { href: '/admin/serial-numbers', label: 'الأرقام التسلسلية', icon: Package },
-  { href: '/admin/tasks', label: 'المهام والمتابعات', icon: ClipboardList },
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, accent: 'indigo' as const },
+  { href: '/admin/notifications', label: 'الإشعارات', icon: Bell, permission: 'dashboardAndNotifications' as const, accent: 'amber' as const },
+  { href: '/admin/products', label: 'المنتجات', icon: Package, accent: 'emerald' as const },
+  { href: '/admin/marketing/campaigns', label: 'العروض الترويجية', icon: Megaphone, accent: 'violet' as const },
+  { href: '/admin/labels', label: 'طباعة الملصقات', icon: Tag, accent: 'rose' as const },
+  { href: '/admin/pos', label: 'نقطة البيع (POS)', icon: CreditCard, accent: 'green' as const },
+  { href: '/admin/invoices', label: 'الفواتير النقدية', icon: FileText, accent: 'blue' as const },
+  { href: '/admin/quotations', label: 'العروض السعرية', icon: FileText, accent: 'cyan' as const },
+  { href: '/admin/orders', label: 'طلبيات اون لاين', icon: ShoppingBag, accent: 'orange' as const },
+  { href: '/admin/shop-sales', label: 'فواتير مبيعات المحل', icon: FileText, accent: 'emerald' as const },
+  { href: '/admin/warehouse-sales', label: 'فواتير مبيعات المخزن', icon: FileText, accent: 'teal' as const },
+  { href: '/admin/shop-finance/cash-box', label: 'صندوق المحل', icon: Wallet, accent: 'green' as const },
+  { href: '/admin/warehouse-finance/cash-box', label: 'صندوق المستودع', icon: Wallet, accent: 'teal' as const },
+  { href: '/admin/maintenance', label: 'الصيانة', icon: Wrench, accent: 'amber' as const },
+  { href: '/admin/checks', label: 'الشيكات الراجعة', icon: FileText, accent: 'rose' as const },
+  { href: '/admin/customers', label: 'الزبائن', icon: Users, accent: 'indigo' as const },
+  { href: '/admin/serial-numbers', label: 'الأرقام التسلسلية', icon: Package, accent: 'slate' as const },
+  { href: '/admin/tasks', label: 'المهام والمتابعات', icon: ClipboardList, accent: 'violet' as const },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
@@ -155,7 +174,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
 
           {/* Navigation Links */}
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto overflow-x-hidden flex flex-col" dir="rtl">
+          <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto overflow-x-hidden flex flex-col" dir="rtl">
             <div className="flex-1">
               {sidebarLinks.map((link) => {
                 const Icon = link.icon;
@@ -248,74 +267,81 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   }
                 }
                 
+                const styles = ACCENT_STYLES[link.accent] ?? ACCENT_STYLES.neutral;
+                const borderClass = isActive ? styles.border : styles.borderMuted;
                 return (
                   <a
                     key={link.href}
                     href={link.href}
                     onClick={(e) => {
-                      // Allow default behavior (open in new tab) if Ctrl/Command is pressed
-                      if (e.ctrlKey || e.metaKey) {
-                        return; // Let browser handle it
-                      }
-                      // Otherwise, prevent default and use router for SPA navigation
+                      if (e.ctrlKey || e.metaKey) return;
                       e.preventDefault();
                       router.push(link.href);
                       setSidebarOpen(false);
                     }}
-                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 border-s-4 ${borderClass} ${
                       isActive
-                        ? 'bg-gray-800 text-white'
-                        : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                        ? `${styles.activeBg} text-white font-medium`
+                        : 'text-gray-300 hover:bg-gray-800/80 hover:text-white'
                     }`}
                   >
-                    <Icon size={20} />
-                    <span className="font-medium">{link.label}</span>
+                    <Icon size={20} className="shrink-0" />
+                    <span className="font-medium tracking-wide font-cairo">{link.label}</span>
                   </a>
                 );
               })}
-              {admin.is_super_admin && (
-                <a
-                  href="/admin/admin-users"
-                  onClick={(e) => {
-                    // Allow default behavior (open in new tab) if Ctrl/Command is pressed
-                    if (e.ctrlKey || e.metaKey) {
-                      return; // Let browser handle it
-                    }
-                    // Otherwise, prevent default and use router for SPA navigation
-                    e.preventDefault();
-                    router.push('/admin/admin-users');
-                    setSidebarOpen(false);
-                  }}
-                  className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-                    pathname === '/admin/admin-users'
-                      ? 'bg-gray-800 text-white'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  <Shield size={20} />
-                  <span className="font-medium">Admin Users</span>
-                </a>
-              )}
+              {admin.is_super_admin && (() => {
+                const styles = ACCENT_STYLES.amber;
+                const isActive = pathname === '/admin/admin-users';
+                const borderClass = isActive ? styles.border : styles.borderMuted;
+                return (
+                  <a
+                    href="/admin/admin-users"
+                    onClick={(e) => {
+                      if (e.ctrlKey || e.metaKey) return;
+                      e.preventDefault();
+                      router.push('/admin/admin-users');
+                      setSidebarOpen(false);
+                    }}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 border-s-4 ${borderClass} ${
+                      isActive ? `${styles.activeBg} text-white font-medium` : 'text-gray-300 hover:bg-gray-800/80 hover:text-white'
+                    }`}
+                  >
+                    <Shield size={20} className="shrink-0" />
+                    <span className="font-medium tracking-wide font-cairo">Admin Users</span>
+                  </a>
+                );
+              })()}
 
               {/* Go to Shop Link */}
-              <button
-                onClick={handleGoToShop}
-                className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
-              >
-                <Store size={20} />
-                <span className="font-medium">الذهاب الى المتجر</span>
-              </button>
+              {(() => {
+                const styles = ACCENT_STYLES.neutral;
+                return (
+                  <button
+                    onClick={handleGoToShop}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 border-s-4 ${styles.borderMuted} text-gray-300 hover:bg-gray-800/80 hover:text-white`}
+                  >
+                    <Store size={20} className="shrink-0" />
+                    <span className="font-medium tracking-wide font-cairo">الذهاب الى المتجر</span>
+                  </button>
+                );
+              })()}
             </div>
 
             {/* Logout Button - At the bottom of the navigation */}
             <div className="mt-auto pt-4 border-t border-gray-800">
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
-              >
-                <LogOut size={20} />
-                <span className="font-medium">Logout</span>
-              </button>
+              {(() => {
+                const styles = ACCENT_STYLES.red;
+                return (
+                  <button
+                    onClick={handleLogout}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 border-s-4 ${styles.borderMuted} text-gray-300 hover:bg-gray-800/80 hover:text-white`}
+                  >
+                    <LogOut size={20} className="shrink-0" />
+                    <span className="font-medium tracking-wide font-cairo">Logout</span>
+                  </button>
+                );
+              })()}
             </div>
           </nav>
         </div>

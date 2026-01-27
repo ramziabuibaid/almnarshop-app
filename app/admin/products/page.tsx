@@ -6,11 +6,11 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import ProductFormModal from '@/components/admin/ProductFormModal';
 import MarketingCardGenerator from '@/components/admin/MarketingCardGenerator';
 import { DataTable } from '@/components/ui/data-table';
-import { Plus, Edit, Image as ImageIcon, Loader2, Package, Sparkles, CheckCircle2, Trash, Eye, X, Check, Search, Filter, DollarSign, Warehouse, Store, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Edit2, Image as ImageIcon, Loader2, Package, Sparkles, CheckCircle2, Trash, Eye, X, Check, Search, Filter, DollarSign, Warehouse, Store, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
-import { deleteProduct, getProducts } from '@/lib/api';
+import { deleteProduct, getProducts, saveProduct } from '@/lib/api';
 import { ColumnDef } from '@tanstack/react-table';
 import React from 'react';
 
@@ -353,6 +353,11 @@ export default function ProductsManagerPage() {
   // Check if user has accountant permission (for delete)
   const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
   
+  // Inline barcode editing (table)
+  const [editingBarcode, setEditingBarcode] = useState<string | null>(null);
+  const [editingBarcodeValue, setEditingBarcodeValue] = useState('');
+  const [savingBarcode, setSavingBarcode] = useState<string | null>(null);
+  
   const enableGlobalSearch = true;
 
   useLayoutEffect(() => {
@@ -541,6 +546,92 @@ export default function ProductsManagerPage() {
     setImageErrors((prev) => ({ ...prev, [productId]: true }));
   };
 
+  const handleStartEditBarcode = useCallback((product: Product, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const productId = product.ProductID || product.id || '';
+    if (!productId) return;
+    setEditingBarcode(productId);
+    setEditingBarcodeValue(product.Barcode || product.barcode || '');
+  }, []);
+
+  const handleCancelEditBarcode = useCallback(() => {
+    setEditingBarcode(null);
+    setEditingBarcodeValue('');
+  }, []);
+
+  const handleSaveBarcode = useCallback(async (product: Product, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const productId = product.ProductID || product.id || '';
+    if (!productId || editingBarcode !== productId) return;
+    const barcodeValue = editingBarcodeValue.trim() || null;
+
+    setSavingBarcode(productId);
+    setProducts((prev) =>
+      prev.map((p) => {
+        const pid = p.ProductID || p.id || '';
+        if (pid !== productId) return p;
+        return { ...p, Barcode: barcodeValue ?? undefined, barcode: barcodeValue ?? undefined };
+      })
+    );
+    setEditingBarcode(null);
+    setEditingBarcodeValue('');
+
+    saveProduct({
+      ProductID: productId,
+      Barcode: barcodeValue,
+      Name: product.Name || product.name,
+      Type: product.Type || product.type,
+      Brand: product.Brand || product.brand,
+      Origin: product.Origin || product.origin,
+      Warranty: product.Warranty || product.warranty,
+      Size: product.Size || product.size,
+      Color: product.Color || product.color,
+      Dimention: product.Dimention || product.dimention,
+      CS_War: product.CS_War,
+      CS_Shop: product.CS_Shop,
+      CostPrice: product.CostPrice,
+      SalePrice: product.SalePrice ?? product.price,
+      T1Price: product.T1Price,
+      T2Price: product.T2Price,
+      'Shamel No': product['Shamel No'],
+      Image: product.Image || product.image,
+      'Image 2': product['Image 2'] || product.image2,
+      'image 3': product['image 3'] || product.image3,
+      is_serialized: product.is_serialized ?? product.IsSerialized ?? false,
+    }).catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : 'خطأ غير معروف';
+      setProducts((prev) =>
+        prev.map((p) => {
+          const pid = p.ProductID || p.id || '';
+          if (pid !== productId) return p;
+          return {
+            ...p,
+            Barcode: product.Barcode ?? product.barcode,
+            barcode: product.Barcode ?? product.barcode,
+          };
+        })
+      );
+      alert(`فشل حفظ الباركود: ${msg}`);
+    }).finally(() => {
+      setSavingBarcode(null);
+    });
+  }, [editingBarcode, editingBarcodeValue]);
+
+  const handleBarcodeKeyDown = useCallback((
+    product: Product,
+    e: React.KeyboardEvent<HTMLInputElement>,
+    onSave: () => void,
+    onCancel: () => void
+  ) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
+    }
+  }, []);
+
   // Define columns for the DataTable
   const columns: ColumnDef<Product>[] = useMemo(
     () => [
@@ -644,14 +735,67 @@ export default function ProductsManagerPage() {
         accessorKey: 'Barcode',
         header: 'الباركود',
         enableSorting: true,
-        minSize: 120,
+        minSize: 180,
         cell: ({ row }) => {
           const product = row.original;
+          const productId = product.ProductID || product.id || '';
           const barcode = product.barcode || product.Barcode || '';
-          return barcode ? (
-            <div className="text-sm text-gray-900 font-mono">{barcode}</div>
-          ) : (
-            <span className="text-gray-400 text-sm">—</span>
+          const isEditing = editingBarcode === productId;
+          const isSaving = savingBarcode === productId;
+          return (
+            <div className="flex items-center gap-2 min-w-0" onClick={(e) => e.stopPropagation()}>
+              {isEditing ? (
+                <>
+                  <input
+                    type="text"
+                    value={editingBarcodeValue}
+                    onChange={(e) => setEditingBarcodeValue(e.target.value)}
+                    onKeyDown={(e) => handleBarcodeKeyDown(
+                      product,
+                      e,
+                      () => handleSaveBarcode(product),
+                      handleCancelEditBarcode
+                    )}
+                    className="flex-1 min-w-0 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 font-mono"
+                    placeholder="أدخل الباركود"
+                    autoFocus
+                    disabled={isSaving}
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => handleSaveBarcode(product, e)}
+                    disabled={isSaving}
+                    className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50 shrink-0"
+                    title="حفظ"
+                  >
+                    {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelEditBarcode}
+                    disabled={isSaving}
+                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50 shrink-0"
+                    title="إلغاء"
+                  >
+                    <X size={16} />
+                  </button>
+                </>
+              ) : (
+                <div className="flex items-center gap-2 group min-w-0 flex-1">
+                  <span className="text-sm text-gray-900 font-mono truncate min-w-0">
+                    {barcode || <span className="text-gray-400">—</span>}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => handleStartEditBarcode(product, e)}
+                    className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                    title="تعديل الباركود"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
           );
         },
       },
@@ -965,7 +1109,19 @@ export default function ProductsManagerPage() {
         },
       },
     ],
-    [canViewCost, canAccountant, imageErrors, router]
+    [
+      canViewCost,
+      canAccountant,
+      imageErrors,
+      router,
+      editingBarcode,
+      editingBarcodeValue,
+      savingBarcode,
+      handleStartEditBarcode,
+      handleCancelEditBarcode,
+      handleSaveBarcode,
+      handleBarcodeKeyDown,
+    ]
   );
 
   // Filter products based on search query (additional to column filters)

@@ -6,17 +6,20 @@ import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
+type QuantitySource = 'shop' | 'warehouse' | 'one';
+
 interface LabelsTableRowProps {
   product: Product;
   isSelected: boolean;
   labelType: 'A' | 'B' | 'C';
   useQuantity: boolean;
+  quantitySource: QuantitySource;
   editingBarcode: string | null;
   editingBarcodeValue: string;
   savingBarcode: string | null;
   editingQuantity: string | null;
   editingQuantityValue: string;
-  customQuantities: Record<string, number>;
+  printQuantity: number;
   onToggle: (productId: string) => void;
   onStartEditBarcode: (product: Product, e: React.MouseEvent) => void;
   onCancelEditBarcode: () => void;
@@ -28,7 +31,6 @@ interface LabelsTableRowProps {
   onQuantityKeyDown: (product: Product, e: React.KeyboardEvent<HTMLInputElement>, onSave: () => void, onCancel: () => void) => void;
   onBarcodeValueChange: (value: string) => void;
   onQuantityValueChange: (value: string) => void;
-  getPrintQuantity: (product: Product) => number;
 }
 
 const LabelsTableRow = memo(function LabelsTableRow({
@@ -36,12 +38,13 @@ const LabelsTableRow = memo(function LabelsTableRow({
   isSelected,
   labelType,
   useQuantity,
+  quantitySource,
   editingBarcode,
   editingBarcodeValue,
   savingBarcode,
   editingQuantity,
   editingQuantityValue,
-  customQuantities,
+  printQuantity,
   onToggle,
   onStartEditBarcode,
   onCancelEditBarcode,
@@ -53,7 +56,6 @@ const LabelsTableRow = memo(function LabelsTableRow({
   onQuantityKeyDown,
   onBarcodeValueChange,
   onQuantityValueChange,
-  getPrintQuantity,
 }: LabelsTableRowProps) {
   const router = useRouter();
   
@@ -65,11 +67,11 @@ const LabelsTableRow = memo(function LabelsTableRow({
   const shopQty = product.CS_Shop ?? null;
   const warehouseQty = product.CS_War ?? null;
   const totalQty = (shopQty ?? 0) + (warehouseQty ?? 0);
+  const defaultQty = quantitySource === 'warehouse' ? (warehouseQty ?? 0) : (shopQty ?? 0);
   const isEditing = editingBarcode === productId;
   const isSaving = savingBarcode === productId;
   const barcode = product.Barcode || product.barcode || '';
   const isEditingQuantity = editingQuantity === productId;
-  const printQuantity = getPrintQuantity(product);
 
   return (
     <tr
@@ -205,17 +207,17 @@ const LabelsTableRow = memo(function LabelsTableRow({
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2 group">
-              <span className={`text-sm font-medium flex-1 ${
-                printQuantity !== (shopQty || 0) ? 'text-blue-600' : 'text-gray-900'
-              }`}>
-                {printQuantity}
+          <div className="flex items-center gap-2 group">
+            <span className={`text-sm font-medium flex-1 ${
+              printQuantity !== defaultQty ? 'text-blue-600' : 'text-gray-900'
+            }`}>
+              {printQuantity}
+            </span>
+            {printQuantity !== defaultQty && (
+              <span className="text-xs text-gray-400">
+                (أصلي: {defaultQty})
               </span>
-              {printQuantity !== (shopQty || 0) && (
-                <span className="text-xs text-gray-400">
-                  (أصلي: {shopQty || 0})
-                </span>
-              )}
+            )}
               <button
                 onClick={(e) => onStartEditQuantity(product, e)}
                 className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors opacity-0 group-hover:opacity-100"
@@ -291,16 +293,9 @@ const LabelsTableRow = memo(function LabelsTableRow({
   // Check selection state
   if (prevProps.isSelected !== nextProps.isSelected) return false;
   
-  // Check if custom quantity changed for this product
-  const prevQty = prevProps.customQuantities[prevId];
-  const nextQty = nextProps.customQuantities[nextId];
-  if (prevQty !== nextQty) return false;
+  if (prevProps.printQuantity !== nextProps.printQuantity) return false;
   
-  // Check label type and useQuantity (only if they affect this row)
-  if (prevProps.labelType !== nextProps.labelType || prevProps.useQuantity !== nextProps.useQuantity) {
-    // Only re-render if this affects the row (Type C with useQuantity)
-    if (prevProps.labelType === 'C' && prevProps.useQuantity) return false;
-  }
+  if (prevProps.labelType !== nextProps.labelType || prevProps.useQuantity !== nextProps.useQuantity || prevProps.quantitySource !== nextProps.quantitySource) return false;
   
   // Check if product data changed (only critical fields)
   const prev = prevProps.product;

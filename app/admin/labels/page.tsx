@@ -3,15 +3,18 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useTransition, memo } from 'react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { Search, Printer, Loader2, CheckSquare, Square, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, Printer, Loader2, CheckSquare, Square, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Product } from '@/types';
 import { getProducts, saveProduct } from '@/lib/api';
 import LabelsTableRow from '@/components/admin/LabelsTableRow';
 import { useRouter } from 'next/navigation';
 
 type LabelType = 'A' | 'B' | 'C';
+type QuantitySource = 'shop' | 'warehouse' | 'one';
 type SortField = 'price' | 'quantity' | null;
 type SortDirection = 'asc' | 'desc';
+
+const LABELS_PAGE_SIZE = 50;
 
 export default function LabelsPage() {
   const { admin } = useAdminAuth();
@@ -22,9 +25,10 @@ export default function LabelsPage() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [labelType, setLabelType] = useState<LabelType>('A');
-  const [useQuantity, setUseQuantity] = useState<boolean>(true); // true = حسب الكمية, false = ليبل واحد لكل منتج
+  const [quantitySource, setQuantitySource] = useState<QuantitySource>('shop'); // shop | warehouse | one
+  const useQuantity = quantitySource !== 'one'; // true when repeating by quantity (shop or warehouse)
   const [showZeroQuantity, setShowZeroQuantity] = useState<boolean>(true); // true = إظهار الأصناف ذات الكمية صفر, false = إخفاءها
-  const [useQrProductUrl, setUseQrProductUrl] = useState<boolean>(true); // true = QR يفتح صفحة المنتج، false = QR = الباركود/الشامل
+  const [useQrProductUrl, setUseQrProductUrl] = useState<boolean>(false); // false = QR الباركود/الشامل (افتراضي)، true = QR يفتح صفحة المنتج
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [editingBarcode, setEditingBarcode] = useState<string | null>(null); // productId being edited
@@ -34,13 +38,27 @@ export default function LabelsPage() {
   const [editingQuantity, setEditingQuantity] = useState<string | null>(null); // productId being edited
   const [editingQuantityValue, setEditingQuantityValue] = useState<string>(''); // temporary value while editing
 
+  const [labelsPage, setLabelsPage] = useState(1);
+
   useLayoutEffect(() => {
     document.title = 'طباعة الملصقات';
   }, []);
 
+  const loadProducts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getProducts();
+      setProducts(data);
+    } catch (error: unknown) {
+      console.error('[LabelsPage] Failed to load products:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadProducts();
-  }, []);
+  }, [loadProducts]);
 
   // Debounce search query for better performance
   useEffect(() => {
@@ -50,17 +68,11 @@ export default function LabelsPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const loadProducts = async () => {
-    setLoading(true);
-    try {
-      const data = await getProducts();
-      setProducts(data);
-    } catch (error: any) {
-      console.error('[LabelsPage] Failed to load products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Reset to page 1 when filters/sort change
+  useEffect(() => {
+    setLabelsPage(1);
+  }, [debouncedSearchQuery, sortField, sortDirection]);
+
 
   const filteredProducts = useMemo(() => {
     let filtered = products;
@@ -118,7 +130,21 @@ export default function LabelsPage() {
     return filtered;
   }, [products, debouncedSearchQuery, sortField, sortDirection]);
 
+  const paginatedProducts = useMemo(() => {
+    const start = (labelsPage - 1) * LABELS_PAGE_SIZE;
+    return filteredProducts.slice(start, start + LABELS_PAGE_SIZE);
+  }, [filteredProducts, labelsPage]);
+
+  const totalLabelsPages = Math.max(1, Math.ceil(filteredProducts.length / LABELS_PAGE_SIZE));
+  const labelsPageStart = filteredProducts.length === 0 ? 0 : (labelsPage - 1) * LABELS_PAGE_SIZE + 1;
+  const labelsPageEnd = Math.min(labelsPage * LABELS_PAGE_SIZE, filteredProducts.length);
+
   const [isPending, startTransition] = useTransition();
+
+  // Clamp page when filtered list shrinks (e.g. after search)
+  useEffect(() => {
+    setLabelsPage((p) => (p > totalLabelsPages ? totalLabelsPages : p));
+  }, [totalLabelsPages]);
 
   const toggleProduct = useCallback((productId: string) => {
     setSelectedProducts((prev) => {
@@ -251,10 +277,13 @@ export default function LabelsPage() {
     e.stopPropagation();
     const productId = product.ProductID || product.id || '';
     if (!productId) return;
-    const currentQuantity = customQuantities[productId] ?? (product.CS_Shop || product.cs_shop || 0);
+    const fallback = quantitySource === 'warehouse'
+      ? (product.CS_War ?? product.cs_war ?? 0)
+      : (product.CS_Shop ?? product.cs_shop ?? 0);
+    const currentQuantity = customQuantities[productId] ?? fallback;
     setEditingQuantity(productId);
     setEditingQuantityValue(String(currentQuantity));
-  }, [customQuantities]);
+  }, [customQuantities, quantitySource]);
 
   const handleCancelEditQuantity = useCallback((e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -297,8 +326,10 @@ export default function LabelsPage() {
     if (customQuantities[productId] !== undefined) {
       return customQuantities[productId];
     }
-    return product.CS_Shop || product.cs_shop || 0;
-  }, [customQuantities]);
+    if (quantitySource === 'warehouse') return product.CS_War ?? product.cs_war ?? 0;
+    if (quantitySource === 'shop') return product.CS_Shop ?? product.cs_shop ?? 0;
+    return 1;
+  }, [customQuantities, quantitySource]);
 
   const selectedProductsList = useMemo(() => {
     const selectedIds = Array.from(selectedProducts);
@@ -308,17 +339,21 @@ export default function LabelsPage() {
     for (const p of products) {
       const productId = p.ProductID || p.id || '';
       if (selectedProducts.has(productId)) {
-        const printQuantity = customQuantities[productId] !== undefined 
-          ? customQuantities[productId] 
-          : (p.CS_Shop || p.cs_shop || 0);
-        filtered.push({
-          ...p,
-          printQuantity,
-        });
+        let printQuantity: number;
+        if (customQuantities[productId] !== undefined) {
+          printQuantity = customQuantities[productId];
+        } else if (quantitySource === 'warehouse') {
+          printQuantity = p.CS_War ?? p.cs_war ?? 0;
+        } else if (quantitySource === 'shop') {
+          printQuantity = p.CS_Shop ?? p.cs_shop ?? 0;
+        } else {
+          printQuantity = 1;
+        }
+        filtered.push({ ...p, printQuantity });
       }
     }
     return filtered;
-  }, [products, selectedProducts, customQuantities]);
+  }, [products, selectedProducts, customQuantities, quantitySource]);
 
   const handlePrint = () => {
     if (selectedProductsList.length === 0) {
@@ -426,7 +461,7 @@ export default function LabelsPage() {
                   </div>
 
                   <div className="overflow-x-auto">
-                    <table className="w-full" style={{ willChange: 'auto' }}>
+                    <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200">
                           <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">تحديد</th>
@@ -482,7 +517,7 @@ export default function LabelsPage() {
                             </td>
                           </tr>
                         ) : (
-                          filteredProducts.map((product) => {
+                          paginatedProducts.map((product) => {
                             const productId = product.ProductID || product.id || '';
                             return (
                               <LabelsTableRow
@@ -491,12 +526,13 @@ export default function LabelsPage() {
                                 isSelected={selectedProducts.has(productId)}
                                 labelType={labelType}
                                 useQuantity={useQuantity}
+                                quantitySource={quantitySource}
                                 editingBarcode={editingBarcode}
                                 editingBarcodeValue={editingBarcodeValue}
                                 savingBarcode={savingBarcode}
                                 editingQuantity={editingQuantity}
                                 editingQuantityValue={editingQuantityValue}
-                                customQuantities={customQuantities}
+                                printQuantity={getPrintQuantity(product)}
                                 onToggle={toggleProduct}
                                 onStartEditBarcode={handleStartEditBarcode}
                                 onCancelEditBarcode={handleCancelEditBarcode}
@@ -508,7 +544,6 @@ export default function LabelsPage() {
                                 onQuantityKeyDown={handleQuantityKeyDown}
                                 onBarcodeValueChange={setEditingBarcodeValue}
                                 onQuantityValueChange={setEditingQuantityValue}
-                                getPrintQuantity={getPrintQuantity}
                               />
                             );
                           })
@@ -516,6 +551,36 @@ export default function LabelsPage() {
                       </tbody>
                     </table>
                   </div>
+                  {filteredProducts.length > 0 && (
+                    <div className="flex items-center justify-between gap-4 mt-3 px-1">
+                      <span className="text-sm text-gray-600">
+                        عرض {labelsPageStart}–{labelsPageEnd} من {filteredProducts.length}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setLabelsPage((p) => Math.max(1, p - 1))}
+                          disabled={labelsPage <= 1}
+                          className="p-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          title="السابق"
+                        >
+                          <ChevronRight size={18} />
+                        </button>
+                        <span className="text-sm text-gray-700 min-w-[5rem] text-center">
+                          {labelsPage} / {totalLabelsPages}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setLabelsPage((p) => Math.min(totalLabelsPages, p + 1))}
+                          disabled={labelsPage >= totalLabelsPages}
+                          className="p-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          title="التالي"
+                        >
+                          <ChevronLeft size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -580,21 +645,34 @@ export default function LabelsPage() {
                       <input
                         type="radio"
                         name="quantityOption"
-                        checked={useQuantity}
-                        onChange={() => setUseQuantity(true)}
+                        checked={quantitySource === 'shop'}
+                        onChange={() => setQuantitySource('shop')}
                         className="w-4 h-4 text-gray-900 focus:ring-gray-900"
                       />
                       <div>
                         <div className="font-medium text-gray-900">حسب كمية المحل</div>
-                        <div className="text-xs text-gray-500">طباعة ملصق لكل قطعة متوفرة</div>
+                        <div className="text-xs text-gray-500">تكرار الليبل حسب الكمية في المحل</div>
                       </div>
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="radio"
                         name="quantityOption"
-                        checked={!useQuantity}
-                        onChange={() => setUseQuantity(false)}
+                        checked={quantitySource === 'warehouse'}
+                        onChange={() => setQuantitySource('warehouse')}
+                        className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-900">حسب كمية المخزن</div>
+                        <div className="text-xs text-gray-500">تكرار الليبل حسب الكمية في المخزن</div>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="quantityOption"
+                        checked={quantitySource === 'one'}
+                        onChange={() => setQuantitySource('one')}
                         className="w-4 h-4 text-gray-900 focus:ring-gray-900"
                       />
                       <div>
