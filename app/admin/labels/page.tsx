@@ -9,7 +9,7 @@ import { getProducts, saveProduct } from '@/lib/api';
 import LabelsTableRow from '@/components/admin/LabelsTableRow';
 import { useRouter } from 'next/navigation';
 
-type LabelType = 'A' | 'B' | 'C';
+type LabelType = 'A' | 'B' | 'C' | 'D';
 type QuantitySource = 'shop' | 'warehouse' | 'one';
 type SortField = 'price' | 'quantity' | null;
 type SortDirection = 'asc' | 'desc';
@@ -28,7 +28,10 @@ export default function LabelsPage() {
   const [quantitySource, setQuantitySource] = useState<QuantitySource>('shop'); // shop | warehouse | one
   const useQuantity = quantitySource !== 'one'; // true when repeating by quantity (shop or warehouse)
   const [showZeroQuantity, setShowZeroQuantity] = useState<boolean>(true); // true = إظهار الأصناف ذات الكمية صفر, false = إخفاءها
-  const [useQrProductUrl, setUseQrProductUrl] = useState<boolean>(false); // false = QR الباركود/الشامل (افتراضي)، true = QR يفتح صفحة المنتج
+  const [useQrProductUrl, setUseQrProductUrl] = useState<boolean>(false); // false = QR الباركود/الشامل (افتراضي)، true = QR يفتح صفحة المنتج (لأنواع أ، ب، ج فقط)
+  const [showQrInCatalog, setShowQrInCatalog] = useState<boolean>(false); // لنوع د: false = عدم إظهار QR (افتراضي)، true = إظهار QR لفتح صفحة المنتج
+  const [showZeroShopCatalog, setShowZeroShopCatalog] = useState<boolean>(true); // لنوع د: إظهار المنتجات التي كميتها صفر في المحل
+  const [showZeroWarehouseCatalog, setShowZeroWarehouseCatalog] = useState<boolean>(true); // لنوع د: إظهار المنتجات التي كميتها صفر في المخزن
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [editingBarcode, setEditingBarcode] = useState<string | null>(null); // productId being edited
@@ -361,20 +364,38 @@ export default function LabelsPage() {
       return;
     }
 
+    // لنوع د: تصفية المنتجات حسب خيارات إظهار الكمية صفر في المحل/المخزن
+    const productsToPrint =
+      labelType === 'D'
+        ? selectedProductsList.filter((p) => {
+            const shopQty = p.CS_Shop ?? p.cs_shop ?? 0;
+            const warQty = p.CS_War ?? p.cs_war ?? 0;
+            const includeByShop = showZeroShopCatalog || shopQty > 0;
+            const includeByWarehouse = showZeroWarehouseCatalog || warQty > 0;
+            return includeByShop && includeByWarehouse;
+          })
+        : selectedProductsList;
+
+    if (labelType === 'D' && productsToPrint.length === 0) {
+      alert('لا توجد منتجات تطابق الخيارات المحددة. غيّر خيارات إظهار الكميات أو حدد منتجات أخرى.');
+      return;
+    }
+
     // Store products and labelType in sessionStorage to avoid URL length limits
     const printData = {
-      products: selectedProductsList,
+      products: productsToPrint,
       labelType: labelType,
       useQuantity: labelType === 'C' ? useQuantity : true, // Only relevant for Type C
       showZeroQuantity: labelType === 'C' ? showZeroQuantity : true, // Only relevant for Type C
       useQrProductUrl,
+      showQrInCatalog: labelType === 'D' ? showQrInCatalog : undefined, // لنوع د فقط: إظهار QR لفتح صفحة المنتج
       timestamp: Date.now(),
     };
     
     try {
       const dataString = JSON.stringify(printData);
       console.log('[LabelsPage] Storing print data:', {
-        productsCount: selectedProductsList.length,
+        productsCount: productsToPrint.length,
         labelType: labelType,
         dataSize: dataString.length,
       });
@@ -633,8 +654,55 @@ export default function LabelsPage() {
                       <div className="text-xs text-gray-500">A4 - 70mm × 29.7mm</div>
                     </div>
                   </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="labelType"
+                      value="D"
+                      checked={labelType === 'D'}
+                      onChange={(e) => setLabelType(e.target.value as LabelType)}
+                      className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">نوع د - كتالوج</div>
+                      <div className="text-xs text-gray-500">A4 - صفحة منتج واحدة مع الصورة</div>
+                    </div>
+                  </label>
                 </div>
               </div>
+
+              {/* خيارات الكتالوج — لنوع د فقط: إظهار المنتجات ذات الكمية صفر في المحل / المخزن */}
+              {labelType === 'D' && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 no-print">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">خيارات الكتالوج</h2>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={showZeroShopCatalog}
+                        onChange={(e) => setShowZeroShopCatalog(e.target.checked)}
+                        className="w-4 h-4 text-gray-900 focus:ring-gray-900 rounded"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-900">إظهار المنتجات التي كميتها صفر في المحل</div>
+                        <div className="text-xs text-gray-500">إدراج أصناف بدون كمية في المحل في الكتالوج</div>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={showZeroWarehouseCatalog}
+                        onChange={(e) => setShowZeroWarehouseCatalog(e.target.checked)}
+                        className="w-4 h-4 text-gray-900 focus:ring-gray-900 rounded"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-900">إظهار المنتجات التي كميتها صفر في المخزن</div>
+                        <div className="text-xs text-gray-500">إدراج أصناف بدون كمية في المخزن في الكتالوج</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               {/* Quantity Option for Type C */}
               {labelType === 'C' && (
@@ -698,38 +766,72 @@ export default function LabelsPage() {
                 </div>
               )}
 
-              {/* QR Code Behavior */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 no-print">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">سلوك رمز QR</h2>
-                <div className="space-y-3">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="qrOption"
-                      checked={useQrProductUrl}
-                      onChange={() => setUseQrProductUrl(true)}
-                      className="w-4 h-4 text-gray-900 focus:ring-gray-900"
-                    />
-                    <div>
-                      <div className="font-medium text-gray-900">فتح صفحة المنتج</div>
-                      <div className="text-xs text-gray-500">QR = رابط صفحة المنتج (للهواتف والمتجر)</div>
-                    </div>
-                  </label>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="qrOption"
-                      checked={!useQrProductUrl}
-                      onChange={() => setUseQrProductUrl(false)}
-                      className="w-4 h-4 text-gray-900 focus:ring-gray-900"
-                    />
-                    <div>
-                      <div className="font-medium text-gray-900">استخدام الباركود/الشامل</div>
-                      <div className="text-xs text-gray-500">QR = رقم الباركود أو الشامل (للقراءات القديمة)</div>
-                    </div>
-                  </label>
+              {/* QR: لنوع د = خياران فقط (عدم إظهار / فتح صفحة المنتج). لأنواع أ، ب، ج = فتح صفحة المنتج أو الباركود/الشامل */}
+              {labelType === 'D' ? (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 no-print">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">رمز QR في الكتالوج</h2>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="qrCatalog"
+                        checked={!showQrInCatalog}
+                        onChange={() => setShowQrInCatalog(false)}
+                        className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-900">عدم إظهار رمز QR</div>
+                        <div className="text-xs text-gray-500">الافتراضي — بدون QR في الكتالوج</div>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="qrCatalog"
+                        checked={showQrInCatalog}
+                        onChange={() => setShowQrInCatalog(true)}
+                        className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-900">فتح صفحة المنتج</div>
+                        <div className="text-xs text-gray-500">إظهار QR في زاوية الصفحة يفتح صفحة المنتج</div>
+                      </div>
+                    </label>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 no-print">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">سلوك رمز QR</h2>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="qrOption"
+                        checked={useQrProductUrl}
+                        onChange={() => setUseQrProductUrl(true)}
+                        className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-900">فتح صفحة المنتج</div>
+                        <div className="text-xs text-gray-500">QR = رابط صفحة المنتج (للهواتف والمتجر)</div>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="qrOption"
+                        checked={!useQrProductUrl}
+                        onChange={() => setUseQrProductUrl(false)}
+                        className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-900">استخدام الباركود/الشامل</div>
+                        <div className="text-xs text-gray-500">QR = رقم الباركود أو الشامل (للقراءات القديمة)</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               {/* Print Button */}
               <button

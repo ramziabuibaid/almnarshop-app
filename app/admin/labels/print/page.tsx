@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState, useRef, Suspense } from 'react';
+import { useEffect, useLayoutEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Product } from '@/types';
 import QRCode from '@/components/admin/QRCode';
+import { getDirectImageUrl } from '@/lib/utils';
 
-type LabelType = 'A' | 'B' | 'C';
+type LabelType = 'A' | 'B' | 'C' | 'D';
 
 function LabelsPrintContent() {
   const searchParams = useSearchParams();
@@ -16,6 +17,7 @@ function LabelsPrintContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [useQrProductUrl, setUseQrProductUrl] = useState<boolean>(false);
+  const [showQrInCatalog, setShowQrInCatalog] = useState<boolean>(false); // لنوع د: إظهار QR لفتح صفحة المنتج (افتراضي عدم إظهار)
 
   // Get base URL for product links
   const getBaseUrl = () => {
@@ -54,22 +56,16 @@ function LabelsPrintContent() {
     return fallback;
   };
 
-  // Set unique document title with date and time
-  useEffect(() => {
+  // Force document title = date + time (English numerals 0-9) so saved PDF has a unique filename
+  useLayoutEffect(() => {
     const now = new Date();
-    const dateStr = now.toLocaleDateString('ar-EG', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).replace(/\//g, '-');
-    const timeStr = now.toLocaleTimeString('ar-EG', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    }).replace(/:/g, '-');
-    const uniqueTitle = `ملصقات_${dateStr}_${timeStr}`;
-    document.title = uniqueTitle;
+    const y = now.getFullYear();
+    const m = (now.getMonth() + 1).toString().padStart(2, '0');
+    const d = now.getDate().toString().padStart(2, '0');
+    const h = now.getHours().toString().padStart(2, '0');
+    const min = now.getMinutes().toString().padStart(2, '0');
+    const s = now.getSeconds().toString().padStart(2, '0');
+    document.title = `${y}-${m}-${d}_${h}-${min}-${s}`;
   }, []);
 
   // Auto print when products are loaded
@@ -112,7 +108,7 @@ function LabelsPrintContent() {
             setError('لا توجد منتجات في بيانات الطباعة');
           }
           
-          if (printData.labelType && ['A', 'B', 'C'].includes(printData.labelType)) {
+          if (printData.labelType && ['A', 'B', 'C', 'D'].includes(printData.labelType)) {
             setLabelType(printData.labelType);
           }
           
@@ -130,11 +126,18 @@ function LabelsPrintContent() {
             setShowZeroQuantity(true); // Default behavior
           }
 
-          // Set QR behavior (default to true = product URL)
+          // Set QR behavior (default to true = product URL) — لأنواع أ، ب، ج فقط
           if (typeof printData.useQrProductUrl === 'boolean') {
             setUseQrProductUrl(printData.useQrProductUrl);
           } else {
             setUseQrProductUrl(true);
+          }
+
+          // لنوع د: إظهار QR في الكتالوج (افتراضي عدم إظهار)
+          if (typeof printData.showQrInCatalog === 'boolean') {
+            setShowQrInCatalog(printData.showQrInCatalog);
+          } else {
+            setShowQrInCatalog(false);
           }
           
           // Clean up localStorage after reading
@@ -156,7 +159,7 @@ function LabelsPrintContent() {
             }
           }
 
-          if (typeParam && ['A', 'B', 'C'].includes(typeParam)) {
+          if (typeParam && ['A', 'B', 'C', 'D'].includes(typeParam)) {
             setLabelType(typeParam);
           }
         }
@@ -709,10 +712,163 @@ function LabelsPrintContent() {
             direction: ltr;
             line-height: 1;
           }
+
+          /* Type D: Catalog - page size = design size (no A4) */
+          @page type-d {
+            size: 180mm 110mm;
+            margin: 0;
+          }
+
+          .label-type-d-container {
+            width: 180mm;
+            margin: 0;
+            padding: 0;
+            background: #faf9f7;
+            display: block;
+          }
+
+          .label-type-d {
+            page: type-d;
+            width: 180mm !important;
+            height: 110mm !important;
+            min-height: 110mm !important;
+            max-height: 110mm !important;
+            margin: 0;
+            padding: 8mm 10mm;
+            background: linear-gradient(180deg, #faf9f7 0%, #f5f3f0 100%);
+            box-sizing: border-box;
+            page-break-after: always;
+            break-after: page;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            font-family: 'Cairo', sans-serif;
+            direction: rtl;
+            overflow: hidden;
+          }
+
+          .label-type-d .catalog-header {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            margin-bottom: 6mm;
+            padding-bottom: 5mm;
+            border-bottom: 2px solid #2c3e50;
+            flex-shrink: 0;
+          }
+
+          .label-type-d .catalog-logo {
+            max-width: 100px;
+            max-height: 32px;
+            object-fit: contain;
+          }
+
+          .label-type-d .catalog-body {
+            display: flex;
+            flex-direction: row;
+            gap: 6mm;
+            flex: 1;
+            align-items: stretch;
+            min-height: 0;
+          }
+
+          .label-type-d .catalog-image-wrap {
+            flex-shrink: 0;
+            width: 72mm;
+            min-height: 72mm;
+            max-height: 72mm;
+            background: #fff;
+            border-radius: 3mm;
+            overflow: hidden;
+            box-shadow: 0 1mm 3mm rgba(44, 62, 80, 0.08);
+            border: 1px solid #e8e6e3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .label-type-d .catalog-image-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
+
+          .label-type-d .catalog-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            min-width: 0;
+          }
+
+          .label-type-d .catalog-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 4mm;
+            line-height: 1.35;
+            text-align: right;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+          }
+
+          .label-type-d .catalog-specs {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            font-size: 12px;
+            line-height: 1.8;
+            color: #4a5568;
+            text-align: right;
+          }
+
+          .label-type-d .catalog-specs li {
+            margin-bottom: 2px;
+            padding-right: 0;
+          }
+
+          .label-type-d .catalog-specs li strong {
+            color: #2c3e50;
+            font-weight: 600;
+          }
+
+          .label-type-d .catalog-price-wrap {
+            margin-top: auto;
+            padding-top: 4mm;
+            border-top: 1px solid #e8e6e3;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 4mm;
+            width: 100%;
+          }
+
+          .label-type-d .catalog-price {
+            font-size: 22px;
+            font-weight: 800;
+            color: #2c3e50;
+            text-align: right;
+          }
+
+          .label-type-d .catalog-qr-wrap {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+          }
+
+          .label-type-d .catalog-qr-wrap img {
+            display: block;
+          }
         }
       `}</style>
 
-      <div style={{ padding: 0, margin: 0, fontFamily: 'Cairo, sans-serif', direction: 'rtl', width: labelType === 'A' ? '100mm' : 'auto', height: labelType === 'A' ? '100mm' : 'auto' }}>
+      <div style={{ padding: 0, margin: 0, fontFamily: 'Cairo, sans-serif', direction: 'rtl', width: labelType === 'A' ? '100mm' : labelType === 'D' ? '180mm' : 'auto', height: labelType === 'A' ? '100mm' : 'auto' }}>
         {labelType === 'A' && (
           <>
             {products.map((product, index) => {
@@ -863,6 +1019,82 @@ function LabelsPrintContent() {
                         <div className="barcode-value">{barcodeDisplayValue}</div>
                       </div>
                     )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {labelType === 'D' && (
+          <div className="label-type-d-container">
+            {products.map((product, index) => {
+              const price = product.SalePrice || product.price || 0;
+              const name = product.Name || product.name || '—';
+              const size = product.size || product.Size || '';
+              const dimention = product.dimention || product.Dimention || '';
+              const warranty = product.warranty || product.Warranty || '';
+              const origin = product.origin || product.Origin || '';
+              const imageUrl = getDirectImageUrl(product.Image || product.image || '');
+              const productUrl = getProductUrl(product);
+
+              return (
+                <div key={`${product.ProductID || product.id || index}-${index}`} className="label-type-d">
+                  <div className="catalog-header">
+                    <img
+                      src="/logo.png"
+                      alt="Logo"
+                      className="catalog-logo"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                  <div className="catalog-body">
+                    <div className="catalog-image-wrap">
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={name}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/logo.png';
+                          }}
+                        />
+                      ) : (
+                        <img src="/logo.png" alt="" />
+                      )}
+                    </div>
+                    <div className="catalog-info">
+                      <h2 className="catalog-name">{name}</h2>
+                      <ul className="catalog-specs">
+                        {dimention && (
+                          <li><strong>الأبعاد:</strong> {dimention}</li>
+                        )}
+                        {size && (
+                          <li><strong>الحجم:</strong> {size}</li>
+                        )}
+                        {warranty && (
+                          <li><strong>مدة الكفالة:</strong> {warranty}</li>
+                        )}
+                        {origin && (
+                          <li><strong>بلد المنشأ:</strong> {origin}</li>
+                        )}
+                      </ul>
+                      <div className="catalog-price-wrap">
+                        <div className="catalog-price">{price.toLocaleString('en-US')} ₪</div>
+                        {showQrInCatalog && productUrl ? (
+                          <div className="catalog-qr-wrap">
+                            <QRCode
+                              value={productUrl}
+                              size={60}
+                              margin={1}
+                              color="#2c3e50"
+                              backgroundColor="#ffffff"
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
