@@ -10,6 +10,9 @@ import {
   updateCashInvoice,
   deleteCashInvoice,
   getProducts,
+  getAllCustomers,
+  saveShopSalesInvoice,
+  saveWarehouseSalesInvoice,
 } from '@/lib/api';
 import { getSerialNumbersByDetailId } from '@/lib/api_serial_numbers';
 import { validateSerialNumbers } from '@/lib/validation';
@@ -23,6 +26,7 @@ import {
   ArrowRight,
   Search,
   ChevronDown,
+  Copy,
 } from 'lucide-react';
 import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
 import SerialNumberScanner from '@/components/admin/SerialNumberScanner';
@@ -77,12 +81,39 @@ export default function EditInvoicePage() {
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
   const productDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Copy as shop/warehouse invoice
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [copyTarget, setCopyTarget] = useState<'shop' | 'warehouse' | null>(null);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [copyCustomerId, setCopyCustomerId] = useState('');
+  const [copySelectedCustomer, setCopySelectedCustomer] = useState<any>(null);
+  const [copyCustomerSearchQuery, setCopyCustomerSearchQuery] = useState('');
+  const [isCopyCustomerDropdownOpen, setIsCopyCustomerDropdownOpen] = useState(false);
+  const [copyConverting, setCopyConverting] = useState<'shop' | 'warehouse' | null>(null);
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
+  const copyCustomerDropdownRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (invoiceId) {
       loadInvoiceData();
       loadProducts();
     }
   }, [invoiceId]);
+
+  useEffect(() => {
+    if (showCopyModal && customers.length === 0) {
+      loadCustomers();
+    }
+  }, [showCopyModal, customers.length]);
+
+  const loadCustomers = async () => {
+    try {
+      const customersData = await getAllCustomers();
+      setCustomers(customersData);
+    } catch (err: any) {
+      console.error('[EditInvoicePage] Failed to load customers:', err);
+    }
+  };
 
   const loadInvoiceData = async () => {
     setLoading(true);
@@ -620,11 +651,103 @@ export default function EditInvoicePage() {
         setIsProductDropdownOpen(false);
         setProductSearchQuery('');
       }
+      if (copyCustomerDropdownRef.current && !copyCustomerDropdownRef.current.contains(event.target as Node)) {
+        setIsCopyCustomerDropdownOpen(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const filteredCopyCustomers = useMemo(() => {
+    if (!copyCustomerSearchQuery.trim()) return customers.slice(0, 50);
+    const searchWords = copyCustomerSearchQuery
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    return customers
+      .filter((c) => {
+        const name = String(c.name || c.Name || '').toLowerCase();
+        const cid = String(c.customer_id || c.CustomerID || '').toLowerCase();
+        const phone = String(c.phone || c.Phone || '').toLowerCase();
+        const searchableText = `${name} ${cid} ${phone}`;
+        return searchWords.every((word) => searchableText.includes(word));
+      })
+      .slice(0, 50);
+  }, [customers, copyCustomerSearchQuery]);
+
+  const openCopyModal = (target: 'shop' | 'warehouse') => {
+    setCopyTarget(target);
+    setCopyCustomerId('');
+    setCopySelectedCustomer(null);
+    setCopyCustomerSearchQuery('');
+    setCopyMessage(null);
+    setShowCopyModal(true);
+  };
+
+  const handleCopyAsInvoice = async () => {
+    if (!copyTarget || !copyCustomerId) {
+      alert('يرجى اختيار الزبون');
+      return;
+    }
+    if (details.length === 0) {
+      alert('لا توجد أصناف لنسخها');
+      return;
+    }
+    const validationError = validateSerialNumbers(details.map(item => ({
+      productID: item.productID,
+      quantity: item.quantity,
+      serialNos: item.serialNos || [],
+      isSerialized: item.isSerialized || false,
+    })));
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
+    const itemsPayload = details.map((item) => ({
+      productID: item.productID,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      serialNos: (item.serialNos || []).filter((s) => s && String(s).trim()),
+    }));
+    const invoiceDate = invoice?.DateTime
+      ? new Date(invoice.DateTime).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0];
+    setCopyConverting(copyTarget);
+    setCopyMessage(null);
+    try {
+      if (copyTarget === 'shop') {
+        const res = await saveShopSalesInvoice({
+          customerID: copyCustomerId,
+          date: invoiceDate,
+          items: itemsPayload,
+          notes: notes || undefined,
+          discount: discount || 0,
+          status: 'غير مدفوع',
+          created_by: admin?.id || undefined,
+        });
+        setCopyMessage(`تم نسخ الفاتورة كفاتورة محل بنجاح (رقم: ${res?.invoiceID || '—'}). يمكنك فتحها من فواتير المحل.`);
+      } else {
+        const res = await saveWarehouseSalesInvoice({
+          customerID: copyCustomerId,
+          date: invoiceDate,
+          items: itemsPayload,
+          notes: notes || undefined,
+          discount: discount || 0,
+          status: 'غير مدفوع',
+          created_by: admin?.id || undefined,
+        });
+        setCopyMessage(`تم نسخ الفاتورة كفاتورة مخزن بنجاح (رقم: ${res?.invoiceID || '—'}). يمكنك فتحها من فواتير المخزن.`);
+      }
+    } catch (err: any) {
+      console.error('[EditInvoicePage] copy as invoice error:', err);
+      alert(err?.message || 'فشل نسخ الفاتورة');
+    } finally {
+      setCopyConverting(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -666,7 +789,25 @@ export default function EditInvoicePage() {
             <h1 className="text-3xl font-bold text-gray-900">تعديل الفاتورة</h1>
             <p className="text-gray-600 mt-1">رقم الفاتورة: {invoiceId}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => openCopyModal('shop')}
+              disabled={details.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-cairo"
+              title="نسخ الفاتورة كفاتورة محل على اسم زبون"
+            >
+              <Copy size={18} />
+              نسخ كفاتورة محل
+            </button>
+            <button
+              onClick={() => openCopyModal('warehouse')}
+              disabled={details.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-cairo"
+              title="نسخ الفاتورة كفاتورة مخزن على اسم زبون"
+            >
+              <Copy size={18} />
+              نسخ كفاتورة مخزن
+            </button>
             <button
               onClick={() => router.push('/admin/invoices')}
               className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo"
@@ -1106,6 +1247,136 @@ export default function EditInvoicePage() {
             </div>
           </div>
         </div>
+
+        {/* Copy as Shop/Warehouse Invoice Modal */}
+        {showCopyModal && copyTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" dir="rtl">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col overflow-visible">
+              <div className="p-4 border-b border-gray-200 flex-shrink-0">
+                <h2 className="text-lg font-bold text-gray-900 font-cairo">
+                  {copyTarget === 'shop' ? 'نسخ الفاتورة كفاتورة محل' : 'نسخ الفاتورة كفاتورة مخزن'}
+                </h2>
+                <p className="text-sm text-gray-600 font-cairo mt-1">اختر اسم الزبون</p>
+              </div>
+              <div className="p-4 flex-1 overflow-visible min-h-0">
+                {copyMessage ? (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                    <p className="text-green-700 font-cairo text-sm">{copyMessage}</p>
+                    <div className="flex gap-2 mt-3">
+                      <a
+                        href={copyTarget === 'shop' ? '/admin/shop-sales' : '/admin/warehouse-sales'}
+                        className="text-sm text-blue-600 hover:underline font-cairo"
+                      >
+                        {copyTarget === 'shop' ? 'فتح فواتير المحل' : 'فتح فواتير المخزن'}
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative" ref={copyCustomerDropdownRef}>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الزبون</label>
+                    <input
+                      type="text"
+                      value={copySelectedCustomer ? (copySelectedCustomer.name || copySelectedCustomer.Name || '') : copyCustomerSearchQuery}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setCopyCustomerSearchQuery(value);
+                        if (value === '') {
+                          setCopySelectedCustomer(null);
+                          setCopyCustomerId('');
+                        } else {
+                          setCopySelectedCustomer(null);
+                          setCopyCustomerId('');
+                        }
+                        setIsCopyCustomerDropdownOpen(true);
+                      }}
+                      onFocus={() => {
+                        if (!copySelectedCustomer) setIsCopyCustomerDropdownOpen(true);
+                      }}
+                      placeholder="ابحث عن زبون..."
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo"
+                    />
+                    {isCopyCustomerDropdownOpen && (
+                      <div className="absolute z-[100] top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                        {customers.length === 0 ? (
+                          <div className="px-4 py-3 text-sm text-gray-500 font-cairo flex items-center gap-2">
+                            <Loader2 size={18} className="animate-spin flex-shrink-0" />
+                            جاري تحميل الزبائن...
+                          </div>
+                        ) : filteredCopyCustomers.length === 0 ? (
+                          <div className="px-4 py-3 text-sm text-gray-500 font-cairo">
+                            لا توجد نتائج
+                          </div>
+                        ) : (
+                          filteredCopyCustomers.map((customer) => (
+                            <button
+                              key={customer.customer_id || customer.CustomerID || customer.id}
+                              type="button"
+                              onClick={() => {
+                                setCopyCustomerId(customer.customer_id || customer.CustomerID || customer.id || '');
+                                setCopySelectedCustomer(customer);
+                                setCopyCustomerSearchQuery('');
+                                setIsCopyCustomerDropdownOpen(false);
+                              }}
+                              className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
+                            >
+                              {customer.name || customer.Name} ({customer.customer_id || customer.CustomerID || customer.id})
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="p-4 border-t border-gray-200 flex gap-2 justify-end flex-shrink-0">
+                {copyMessage ? (
+                  <button
+                    onClick={() => {
+                      setShowCopyModal(false);
+                      setCopyTarget(null);
+                      setCopyMessage(null);
+                    }}
+                    className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-cairo"
+                  >
+                    إغلاق
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setShowCopyModal(false);
+                        setCopyTarget(null);
+                        setCopyCustomerId('');
+                        setCopySelectedCustomer(null);
+                        setCopyMessage(null);
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-cairo text-gray-900"
+                    >
+                      إلغاء
+                    </button>
+                    <button
+                      onClick={handleCopyAsInvoice}
+                      disabled={!copyCustomerId || copyConverting !== null}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed font-cairo"
+                    >
+                      {copyConverting ? (
+                        <>
+                          <Loader2 size={18} className="animate-spin" />
+                          جاري النسخ...
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={18} />
+                          نسخ
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );
