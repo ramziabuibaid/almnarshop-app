@@ -395,7 +395,7 @@ export default function ShopSalesPage() {
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cairo">فواتير مبيعات المحل</h1>
             <p className="text-gray-600 mt-1 text-sm sm:text-base font-cairo">
-              إدارة فواتير مبيعات المحل ({allInvoices.length.toLocaleString()} فاتورة محملة
+              إدارة فواتير مبيعات المحل ({allInvoices.length.toLocaleString('en-US')} فاتورة محملة
               {loadingMore && <span className="text-blue-600"> - جاري تحميل المزيد...</span>})
             </p>
           </div>

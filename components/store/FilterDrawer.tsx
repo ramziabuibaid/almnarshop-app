@@ -19,8 +19,8 @@ interface FilterDrawerProps {
 export default function FilterDrawer({ isOpen, onClose, filters, onFilterChange }: FilterDrawerProps) {
   const { products } = useShop();
 
-  // Calculate available options and counts (same logic as FilterSidebar)
-  const { types, brands, sizes, colors, priceRange, productCounts } = useMemo(() => {
+  // Calculate available options and counts (contextual: counts respect other active filters)
+  const { types, brands, sizes, colors, priceRange, typeCounts, brandCounts, sizeCounts, colorCounts } = useMemo(() => {
     let filtered = products;
 
     if (filters.selectedTypes.length > 0) {
@@ -50,17 +50,46 @@ export default function FilterDrawer({ isOpen, onClose, filters, onFilterChange 
       if (p.price) prices.push(p.price);
     });
 
-    const counts: Record<string, number> = {};
-    products.forEach((p) => {
-      if (p.type) {
-        counts[`type_${p.type}`] = (counts[`type_${p.type}`] || 0) + 1;
-      }
-      if (p.brand) {
-        counts[p.brand] = (counts[p.brand] || 0) + 1;
-      }
-      if (p.color) {
-        counts[`color_${p.color}`] = (counts[`color_${p.color}`] || 0) + 1;
-      }
+    const baseForTypes = products.filter((p) => {
+      if (filters.selectedBrands.length && !filters.selectedBrands.includes(p.brand || '')) return false;
+      if (filters.selectedSizes.length && !filters.selectedSizes.includes(p.size || '')) return false;
+      if (filters.selectedColors.length && !filters.selectedColors.includes(p.color || '')) return false;
+      return true;
+    });
+    const baseForBrands = products.filter((p) => {
+      if (filters.selectedTypes.length && !filters.selectedTypes.includes(p.type || '')) return false;
+      if (filters.selectedSizes.length && !filters.selectedSizes.includes(p.size || '')) return false;
+      if (filters.selectedColors.length && !filters.selectedColors.includes(p.color || '')) return false;
+      return true;
+    });
+    const baseForSizes = products.filter((p) => {
+      if (filters.selectedTypes.length && !filters.selectedTypes.includes(p.type || '')) return false;
+      if (filters.selectedBrands.length && !filters.selectedBrands.includes(p.brand || '')) return false;
+      if (filters.selectedColors.length && !filters.selectedColors.includes(p.color || '')) return false;
+      return true;
+    });
+    const baseForColors = products.filter((p) => {
+      if (filters.selectedTypes.length && !filters.selectedTypes.includes(p.type || '')) return false;
+      if (filters.selectedBrands.length && !filters.selectedBrands.includes(p.brand || '')) return false;
+      if (filters.selectedSizes.length && !filters.selectedSizes.includes(p.size || '')) return false;
+      return true;
+    });
+
+    const typeCnt: Record<string, number> = {};
+    baseForTypes.forEach((p) => {
+      if (p.type) typeCnt[`type_${p.type}`] = (typeCnt[`type_${p.type}`] || 0) + 1;
+    });
+    const brandCnt: Record<string, number> = {};
+    baseForBrands.forEach((p) => {
+      if (p.brand) brandCnt[p.brand] = (brandCnt[p.brand] || 0) + 1;
+    });
+    const sizeCnt: Record<string, number> = {};
+    baseForSizes.forEach((p) => {
+      if (p.size) sizeCnt[p.size] = (sizeCnt[p.size] || 0) + 1;
+    });
+    const colorCnt: Record<string, number> = {};
+    baseForColors.forEach((p) => {
+      if (p.color) colorCnt[p.color] = (colorCnt[p.color] || 0) + 1;
     });
 
     const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
@@ -72,7 +101,10 @@ export default function FilterDrawer({ isOpen, onClose, filters, onFilterChange 
       sizes: Array.from(sizesSet).sort(),
       colors: Array.from(colorsSet).sort(),
       priceRange: { min: minPrice, max: maxPrice },
-      productCounts: counts,
+      typeCounts: typeCnt,
+      brandCounts: brandCnt,
+      sizeCounts: sizeCnt,
+      colorCounts: colorCnt,
     };
   }, [products, filters.selectedTypes, filters.selectedBrands, filters.selectedSizes, filters.selectedColors]);
 
@@ -124,16 +156,6 @@ export default function FilterDrawer({ isOpen, onClose, filters, onFilterChange 
     onFilterChange({ ...filters, priceRange: { min, max } });
   };
 
-  const brandCounts: Record<string, number> = {};
-  brands.forEach((brand) => {
-    brandCounts[brand] = productCounts[brand] || 0;
-  });
-
-  const colorCounts: Record<string, number> = {};
-  colors.forEach((color) => {
-    colorCounts[color] = productCounts[`color_${color}`] || 0;
-  });
-
   if (!isOpen) return null;
 
   return (
@@ -163,7 +185,7 @@ export default function FilterDrawer({ isOpen, onClose, filters, onFilterChange 
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {availableTypes.map((type) => {
                 const isSelected = filters.selectedTypes.includes(type);
-                const count = productCounts[`type_${type}`] || 0;
+                const count = typeCounts[`type_${type}`] || 0;
                 return (
                   <label
                     key={type}
@@ -200,6 +222,7 @@ export default function FilterDrawer({ isOpen, onClose, filters, onFilterChange 
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {sizes.map((size) => {
                 const isSelected = filters.selectedSizes.includes(size);
+                const count = sizeCounts[size] || 0;
                 return (
                   <label
                     key={size}
@@ -212,6 +235,9 @@ export default function FilterDrawer({ isOpen, onClose, filters, onFilterChange 
                       className="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
                     />
                     <span className="flex-1 text-sm text-gray-900">{size}</span>
+                    {count > 0 && (
+                      <span className="text-xs text-gray-500">({count})</span>
+                    )}
                   </label>
                 );
               })}

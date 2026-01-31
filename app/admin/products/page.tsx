@@ -6,11 +6,11 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import ProductFormModal from '@/components/admin/ProductFormModal';
 import MarketingCardGenerator from '@/components/admin/MarketingCardGenerator';
 import { DataTable } from '@/components/ui/data-table';
-import { Plus, Edit, Edit2, Image as ImageIcon, Loader2, Package, Sparkles, CheckCircle2, Trash, Eye, X, Check, Search, Filter, DollarSign, Warehouse, Store, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Edit2, Image as ImageIcon, Loader2, Package, Sparkles, CheckCircle2, Trash, Eye, EyeOff, X, Check, Search, Filter, DollarSign, Warehouse, Store, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
-import { deleteProduct, getProducts, saveProduct } from '@/lib/api';
+import { deleteProduct, getProducts, saveProduct, updateProductVisibility } from '@/lib/api';
 import { ColumnDef } from '@tanstack/react-table';
 import React from 'react';
 
@@ -24,7 +24,9 @@ const MobileProductCard = React.memo(({
   handleEdit, 
   handleGenerateAd, 
   handleDeleteClick, 
-  handleImageError 
+  handleImageError,
+  handleToggleVisibility,
+  togglingVisibility,
 }: {
   product: Product;
   imageErrors: Record<string, boolean>;
@@ -35,6 +37,8 @@ const MobileProductCard = React.memo(({
   handleGenerateAd: (product: Product) => void;
   handleDeleteClick: (product: Product) => void;
   handleImageError: (productId: string) => void;
+  handleToggleVisibility: (product: Product) => void;
+  togglingVisibility: string | null;
 }) => {
   const productId = product.ProductID || product.id || '';
   const rawImageUrl = product.image || product.Image || product.ImageUrl || '';
@@ -174,6 +178,23 @@ const MobileProductCard = React.memo(({
 
       {/* Actions */}
       <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+        {(() => {
+          const productId = product.ProductID || product.id || '';
+          const isVisible = product.is_visible !== false && product.isVisible !== false;
+          const isToggling = togglingVisibility === productId;
+          return (
+            <button
+              onClick={() => handleToggleVisibility(product)}
+              disabled={isToggling}
+              className={`px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm ${
+                isVisible ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-amber-600 bg-amber-50 hover:bg-amber-100'
+              } disabled:opacity-50`}
+              title={isVisible ? 'إخفاء من المتجر' : 'إظهار في المتجر'}
+            >
+              {isToggling ? <Loader2 size={16} className="animate-spin" /> : isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
+            </button>
+          );
+        })()}
         <button
           onClick={() => handleEdit(product)}
           className="flex-1 px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2 transition-colors text-sm"
@@ -202,13 +223,15 @@ const MobileProductCard = React.memo(({
   );
 }, (prevProps, nextProps) => {
   // Custom comparison function for React.memo
+  const pid = prevProps.product.ProductID || prevProps.product.id || '';
   return (
     prevProps.product.ProductID === nextProps.product.ProductID &&
     prevProps.product.id === nextProps.product.id &&
-    prevProps.imageErrors[prevProps.product.ProductID || prevProps.product.id || ''] === 
-    nextProps.imageErrors[nextProps.product.ProductID || nextProps.product.id || ''] &&
+    prevProps.product.is_visible === nextProps.product.is_visible &&
+    prevProps.imageErrors[pid] === nextProps.imageErrors[pid] &&
     prevProps.canViewCost === nextProps.canViewCost &&
-    prevProps.canAccountant === nextProps.canAccountant
+    prevProps.canAccountant === nextProps.canAccountant &&
+    prevProps.togglingVisibility === nextProps.togglingVisibility
   );
 });
 
@@ -243,6 +266,7 @@ export default function ProductsManagerPage() {
       T1Price: false,
       T2Price: false,
       Dimention: false,
+      LastRestockedAt: false,
       // Hide CostPrice by default if user doesn't have permission
       CostPrice: canViewCost ? true : false,
     };
@@ -357,6 +381,7 @@ export default function ProductsManagerPage() {
   const [editingBarcode, setEditingBarcode] = useState<string | null>(null);
   const [editingBarcodeValue, setEditingBarcodeValue] = useState('');
   const [savingBarcode, setSavingBarcode] = useState<string | null>(null);
+  const [togglingVisibility, setTogglingVisibility] = useState<string | null>(null);
   
   const enableGlobalSearch = true;
 
@@ -629,6 +654,29 @@ export default function ProductsManagerPage() {
     } else if (e.key === 'Escape') {
       e.preventDefault();
       onCancel();
+    }
+  }, []);
+
+  const handleToggleVisibility = useCallback(async (product: Product) => {
+    const productId = product.ProductID || product.id || '';
+    if (!productId) return;
+    const currentlyVisible = product.is_visible !== false && product.isVisible !== false;
+    const newVisibility = !currentlyVisible;
+    setTogglingVisibility(productId);
+    try {
+      await updateProductVisibility(productId, newVisibility);
+      setProducts((prev) =>
+        prev.map((p) => {
+          const pid = p.ProductID || p.id || '';
+          if (pid !== productId) return p;
+          return { ...p, is_visible: newVisibility, isVisible: newVisibility };
+        })
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'فشل تحديث الظهور';
+      alert(msg);
+    } finally {
+      setTogglingVisibility(null);
     }
   }, []);
 
@@ -958,6 +1006,40 @@ export default function ProductsManagerPage() {
         },
       },
       {
+        id: 'LastRestockedAt',
+        accessorFn: (row) => {
+          const dateStr = row.last_restocked_at || row.LastRestockedAt || row.created_at;
+          return dateStr ? new Date(dateStr).getTime() : 0;
+        },
+        header: 'آخر تجديد',
+        enableSorting: true,
+        enableHiding: true,
+        minSize: 140,
+        cell: ({ row }) => {
+          const product = row.original;
+          const dateStr = product.last_restocked_at || product.LastRestockedAt || product.created_at;
+          if (!dateStr) return <span className="text-gray-400 text-sm">—</span>;
+          try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return <span className="text-gray-400 text-sm">—</span>;
+            const now = new Date();
+            const diffMs = now.getTime() - date.getTime();
+            const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+            const formatted = date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', numberingSystem: 'latn' });
+            return (
+              <div className="text-sm" title={formatted}>
+                <div className="text-gray-900">{formatted}</div>
+                {diffDays >= 0 && diffDays <= 15 && (
+                  <span className="text-xs text-green-600 font-medium">جديد</span>
+                )}
+              </div>
+            );
+          } catch {
+            return <span className="text-gray-400 text-sm">—</span>;
+          }
+        },
+      },
+      {
         id: 'Type',
         accessorKey: 'Type',
         header: 'النوع',
@@ -1079,8 +1161,28 @@ export default function ProductsManagerPage() {
         cell: ({ row }) => {
           const product = row.original;
           const productId = product.ProductID || product.id || '';
+          const isVisible = product.is_visible !== false && product.isVisible !== false;
+          const isToggling = togglingVisibility === productId;
           return (
                           <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleToggleVisibility(product); }}
+                              disabled={isToggling}
+                              className={`p-2 rounded-lg transition-colors ${
+                                isVisible
+                                  ? 'text-green-600 hover:bg-green-50'
+                                  : 'text-amber-600 hover:bg-amber-50'
+                              } disabled:opacity-50`}
+                              title={isVisible ? 'إخفاء من المتجر' : 'إظهار في المتجر'}
+                            >
+                              {isToggling ? (
+                                <Loader2 size={18} className="animate-spin" />
+                              ) : isVisible ? (
+                                <Eye size={18} />
+                              ) : (
+                                <EyeOff size={18} />
+                              )}
+                            </button>
                             <button
                               onClick={() => handleEdit(product)}
                               className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -1121,6 +1223,8 @@ export default function ProductsManagerPage() {
       handleCancelEditBarcode,
       handleSaveBarcode,
       handleBarcodeKeyDown,
+      handleToggleVisibility,
+      togglingVisibility,
     ]
   );
 
@@ -1393,6 +1497,8 @@ export default function ProductsManagerPage() {
                     handleGenerateAd={handleGenerateAd}
                     handleDeleteClick={handleDeleteClick}
                     handleImageError={handleImageError}
+                    handleToggleVisibility={handleToggleVisibility}
+                    togglingVisibility={togglingVisibility}
                   />
                 );
               })}

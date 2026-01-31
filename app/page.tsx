@@ -174,9 +174,19 @@ function HomeContent() {
         break;
       case 'date-desc':
         sorted.sort((a, b) => {
-          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-          return dateB - dateA;
+          const aRestock = a.last_restocked_at || a.LastRestockedAt;
+          const aCreated = a.created_at;
+          const aTime = Math.max(
+            aRestock ? new Date(aRestock).getTime() : 0,
+            aCreated ? new Date(aCreated).getTime() : 0
+          );
+          const bRestock = b.last_restocked_at || b.LastRestockedAt;
+          const bCreated = b.created_at;
+          const bTime = Math.max(
+            bRestock ? new Date(bRestock).getTime() : 0,
+            bCreated ? new Date(bCreated).getTime() : 0
+          );
+          return bTime - aTime;
         });
         break;
     }

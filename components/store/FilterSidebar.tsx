@@ -17,8 +17,8 @@ interface FilterSidebarProps {
 export default function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
   const { products } = useShop();
 
-  // Calculate available options and counts
-  const { types, brands, sizes, colors, priceRange, productCounts } = useMemo(() => {
+  // Calculate available options and counts (contextual: counts respect other active filters)
+  const { types, brands, sizes, colors, priceRange, typeCounts, brandCounts, sizeCounts, colorCounts } = useMemo(() => {
     let filtered = products;
 
     // Apply existing filters to calculate available options
@@ -35,7 +35,7 @@ export default function FilterSidebar({ filters, onFilterChange }: FilterSidebar
       filtered = filtered.filter((p) => filters.selectedColors.includes(p.color || ''));
     }
 
-    // Extract unique values
+    // Extract unique values from filtered set
     const typesSet = new Set<string>();
     const brandsSet = new Set<string>();
     const sizesSet = new Set<string>();
@@ -50,28 +50,48 @@ export default function FilterSidebar({ filters, onFilterChange }: FilterSidebar
       if (p.price) prices.push(p.price);
     });
 
-    // Calculate product counts for each category
-    const counts: Record<string, number> = {};
-    
-    // Count by type
-    products.forEach((p) => {
-      if (p.type) {
-        counts[`type_${p.type}`] = (counts[`type_${p.type}`] || 0) + 1;
-      }
+    // Base sets for each filter: apply all OTHER filters (counts are contextual)
+    const baseForTypes = products.filter((p) => {
+      if (filters.selectedBrands.length && !filters.selectedBrands.includes(p.brand || '')) return false;
+      if (filters.selectedSizes.length && !filters.selectedSizes.includes(p.size || '')) return false;
+      if (filters.selectedColors.length && !filters.selectedColors.includes(p.color || '')) return false;
+      return true;
+    });
+    const baseForBrands = products.filter((p) => {
+      if (filters.selectedTypes.length && !filters.selectedTypes.includes(p.type || '')) return false;
+      if (filters.selectedSizes.length && !filters.selectedSizes.includes(p.size || '')) return false;
+      if (filters.selectedColors.length && !filters.selectedColors.includes(p.color || '')) return false;
+      return true;
+    });
+    const baseForSizes = products.filter((p) => {
+      if (filters.selectedTypes.length && !filters.selectedTypes.includes(p.type || '')) return false;
+      if (filters.selectedBrands.length && !filters.selectedBrands.includes(p.brand || '')) return false;
+      if (filters.selectedColors.length && !filters.selectedColors.includes(p.color || '')) return false;
+      return true;
+    });
+    const baseForColors = products.filter((p) => {
+      if (filters.selectedTypes.length && !filters.selectedTypes.includes(p.type || '')) return false;
+      if (filters.selectedBrands.length && !filters.selectedBrands.includes(p.brand || '')) return false;
+      if (filters.selectedSizes.length && !filters.selectedSizes.includes(p.size || '')) return false;
+      return true;
     });
 
-    // Count by brand
-    products.forEach((p) => {
-      if (p.brand) {
-        counts[p.brand] = (counts[p.brand] || 0) + 1;
-      }
+    // Count per option within its contextual base
+    const typeCnt: Record<string, number> = {};
+    baseForTypes.forEach((p) => {
+      if (p.type) typeCnt[`type_${p.type}`] = (typeCnt[`type_${p.type}`] || 0) + 1;
     });
-
-    // Count by color
-    products.forEach((p) => {
-      if (p.color) {
-        counts[`color_${p.color}`] = (counts[`color_${p.color}`] || 0) + 1;
-      }
+    const brandCnt: Record<string, number> = {};
+    baseForBrands.forEach((p) => {
+      if (p.brand) brandCnt[p.brand] = (brandCnt[p.brand] || 0) + 1;
+    });
+    const sizeCnt: Record<string, number> = {};
+    baseForSizes.forEach((p) => {
+      if (p.size) sizeCnt[p.size] = (sizeCnt[p.size] || 0) + 1;
+    });
+    const colorCnt: Record<string, number> = {};
+    baseForColors.forEach((p) => {
+      if (p.color) colorCnt[p.color] = (colorCnt[p.color] || 0) + 1;
     });
 
     const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
@@ -83,7 +103,10 @@ export default function FilterSidebar({ filters, onFilterChange }: FilterSidebar
       sizes: Array.from(sizesSet).sort(),
       colors: Array.from(colorsSet).sort(),
       priceRange: { min: minPrice, max: maxPrice },
-      productCounts: counts,
+      typeCounts: typeCnt,
+      brandCounts: brandCnt,
+      sizeCounts: sizeCnt,
+      colorCounts: colorCnt,
     };
   }, [products, filters.selectedTypes, filters.selectedBrands, filters.selectedSizes, filters.selectedColors]);
 
@@ -137,24 +160,6 @@ export default function FilterSidebar({ filters, onFilterChange }: FilterSidebar
     onFilterChange({ ...filters, priceRange: { min, max } });
   };
 
-  // Build type counts object
-  const typeCounts: Record<string, number> = {};
-  availableTypes.forEach((type) => {
-    typeCounts[`type_${type}`] = productCounts[`type_${type}`] || 0;
-  });
-
-  // Build brand counts object
-  const brandCounts: Record<string, number> = {};
-  brands.forEach((brand) => {
-    brandCounts[brand] = productCounts[brand] || 0;
-  });
-
-  // Build color counts object
-  const colorCounts: Record<string, number> = {};
-  colors.forEach((color) => {
-    colorCounts[color] = productCounts[`color_${color}`] || 0;
-  });
-
   return (
     <div className="w-64 flex-shrink-0" dir="rtl">
       <div className="bg-white rounded-lg border border-gray-200 p-4 sticky top-4 space-y-6">
@@ -183,6 +188,7 @@ export default function FilterSidebar({ filters, onFilterChange }: FilterSidebar
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {sizes.map((size) => {
               const isSelected = filters.selectedSizes.includes(size);
+              const count = sizeCounts[size] || 0;
               return (
                 <label
                   key={size}
@@ -195,6 +201,9 @@ export default function FilterSidebar({ filters, onFilterChange }: FilterSidebar
                     className="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
                   />
                   <span className="flex-1 text-sm text-gray-900">{size}</span>
+                  {count > 0 && (
+                    <span className="text-xs text-gray-500">({count})</span>
+                  )}
                 </label>
               );
             })}

@@ -121,7 +121,7 @@ export default function ProfilePage() {
 
   const loadProducts = async () => {
     try {
-      const productsData = await getProducts();
+      const productsData = await getProducts({ forStore: true });
       setProducts(productsData);
     } catch (error) {
       console.error('[Profile] Failed to load products:', error);

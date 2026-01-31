@@ -65,6 +65,7 @@ export default function ProductFormModal({
           'Image 2': product['Image 2'] || product.image2 || '',
           'image 3': product['image 3'] || product.image3 || '',
           is_serialized: product.is_serialized || product.IsSerialized || false,
+          is_visible: product.is_visible !== false && product.isVisible !== false,
         });
       } else {
         // Add mode - empty form
@@ -90,6 +91,7 @@ export default function ProductFormModal({
           'Image 2': '',
           'image 3': '',
           is_serialized: false,
+          is_visible: true,
         });
       }
       setError('');
@@ -352,6 +354,8 @@ export default function ProductFormModal({
         'image 3': formData['image 3'] !== undefined ? (formData['image 3'] || '') : undefined,
         // Serial number support
         is_serialized: formData.is_serialized || false,
+        // Store visibility
+        is_visible: formData.is_visible !== false,
       };
 
       // Remove undefined values, but keep empty strings for image fields and Shamel No to allow deletion
@@ -610,6 +614,25 @@ export default function ProductFormModal({
                   </div>
                   <p className="mt-2 text-xs text-gray-600 mr-8">
                     عند تفعيل هذا الخيار، سيتم طلب إدخال رقم تسلسلي لكل قطعة عند إضافة المنتج إلى الفواتير
+                  </p>
+                </div>
+
+                {/* Store Visibility - Show/Hide in online store */}
+                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="is_visible"
+                      checked={formData.is_visible !== false}
+                      onChange={(e) => handleChange('is_visible', e.target.checked)}
+                      className="w-5 h-5 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
+                    />
+                    <label htmlFor="is_visible" className="mr-3 text-sm font-semibold text-gray-900 cursor-pointer">
+                      إظهار المنتج في المتجر الإلكتروني
+                    </label>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-600 mr-8">
+                    عند إلغاء التفعيل، سيتم إخفاء المنتج من المتجر الإلكتروني (الصفحة الرئيسية والبحث) ولكن يبقى ظاهراً في لوحة التحكم والفواتير
                   </p>
                 </div>
               </div>

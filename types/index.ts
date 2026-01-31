@@ -37,6 +37,15 @@ export interface Product {
   // Serial Number Support
   is_serialized?: boolean;
   IsSerialized?: boolean;
+
+  // Store Visibility (hidden products don't appear in online store)
+  is_visible?: boolean;
+  isVisible?: boolean;
+
+  // Restock tracking (for "new" badge and store sorting)
+  last_restocked_at?: string | null;
+  LastRestockedAt?: string | null;
+  created_at?: string | null;
   
   // Legacy fields (for backward compatibility)
   id?: string;

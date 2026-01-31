@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import ProductFormModal from '@/components/admin/ProductFormModal';
-import { getProductById, getShopSalesInvoicesByProduct, getWarehouseSalesInvoicesByProduct, getQuotationsByProduct, getCashInvoicesByProduct, getProducts } from '@/lib/api';
+import { getProductById, getShopSalesInvoicesByProduct, getWarehouseSalesInvoicesByProduct, getQuotationsByProduct, getCashInvoicesByProduct, getProducts, updateProductVisibility } from '@/lib/api';
 import { getDirectImageUrl } from '@/lib/utils';
 import {
   Loader2,
@@ -13,6 +13,8 @@ import {
   Barcode,
   Hash,
   Edit,
+  Eye,
+  EyeOff,
   ShoppingCart,
   FileText,
   ArrowLeft,
@@ -80,6 +82,7 @@ export default function ProductProfilePage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [imageErrors, setImageErrors] = useState<Record<number, boolean>>({});
+  const [togglingVisibility, setTogglingVisibility] = useState(false);
   
   // Product search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -600,6 +603,21 @@ export default function ProductProfilePage() {
     loadProductHeavyData();
   };
 
+  const handleToggleVisibility = async () => {
+    if (!product || !productId) return;
+    const currentlyVisible = product.is_visible !== false && product.isVisible !== false;
+    const newVisibility = !currentlyVisible;
+    setTogglingVisibility(true);
+    try {
+      await updateProductVisibility(productId, newVisibility);
+      setProduct((prev: any) => prev ? { ...prev, is_visible: newVisibility, isVisible: newVisibility } : prev);
+    } catch (err: any) {
+      alert(err?.message || 'فشل تحديث الظهور');
+    } finally {
+      setTogglingVisibility(false);
+    }
+  };
+
   // Show loading state while checking permissions
   if (loading || adminLoading) {
     return (
@@ -970,6 +988,37 @@ export default function ProductProfilePage() {
                 </div>
               </div>
             </div>
+
+            {/* Visibility Toggle - Show/Hide in Store */}
+            {(() => {
+              const isVisible = product.is_visible !== false && product.isVisible !== false;
+              return (
+                <button
+                  onClick={handleToggleVisibility}
+                  disabled={togglingVisibility}
+                  className={`w-full px-4 py-3 rounded-lg transition-colors font-medium flex items-center justify-center gap-2 mb-3 ${
+                    isVisible
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-amber-600 hover:bg-amber-700 text-white'
+                  } disabled:opacity-50`}
+                  title={isVisible ? 'إخفاء من المتجر' : 'إظهار في المتجر'}
+                >
+                  {togglingVisibility ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : isVisible ? (
+                    <>
+                      <Eye size={18} />
+                      <span>ظاهر في المتجر - اضغط للإخفاء</span>
+                    </>
+                  ) : (
+                    <>
+                      <EyeOff size={18} />
+                      <span>مخفي من المتجر - اضغط للإظهار</span>
+                    </>
+                  )}
+                </button>
+              );
+            })()}
 
             {/* Edit Product Button */}
             <button

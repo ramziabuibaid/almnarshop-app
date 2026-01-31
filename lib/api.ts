@@ -409,11 +409,21 @@ function mapProductFromSupabase(product: any): any {
     // Serial Number Support
     is_serialized: product.is_serialized || false,
     IsSerialized: product.is_serialized || false,
+
+    // Store Visibility (default true for backward compatibility)
+    is_visible: product.is_visible !== false,
+    isVisible: product.is_visible !== false,
     
+    // Restock tracking (for "new" badge and sorting)
+    last_restocked_at: product.last_restocked_at || null,
+    LastRestockedAt: product.last_restocked_at || null,
+
     // Legacy fields (for backward compatibility)
     id: product.product_id || '',
     name: product.name || '',
     price: parseFloat(String(product.sale_price || 0)) || 0,
+    is_visible: product.is_visible !== false,
+    isVisible: product.is_visible !== false,
     type: product.type || '',
     brand: product.brand || '',
     size: product.size || '',
@@ -544,10 +554,12 @@ export async function getProductById(productId: string): Promise<any | null> {
 /**
  * Get all products from Supabase
  * Maps Supabase snake_case columns to app PascalCase format
+ * @param options.forStore - If true, returns only products visible in the online store (is_visible !== false)
  */
-export async function getProducts(): Promise<any[]> {
+export async function getProducts(options?: { forStore?: boolean }): Promise<any[]> {
   try {
-    console.log('[API] Fetching products from Supabase...');
+    const forStore = options?.forStore === true;
+    console.log(`[API] Fetching products from Supabase${forStore ? ' (store only)' : ''}...`);
     const startTime = Date.now();
     
     // Fetch all products from Supabase using pagination to get all records
@@ -596,7 +608,29 @@ export async function getProducts(): Promise<any[]> {
     });
     
     // Map products (synchronous mapping - no longer async)
-    const mappedProducts = filteredProducts.map((product: any) => mapProductFromSupabase(product));
+    let mappedProducts = filteredProducts.map((product: any) => mapProductFromSupabase(product));
+
+    // For store: filter to visible products only, and sort by most recent (add OR restock)
+    if (forStore) {
+      mappedProducts = mappedProducts.filter((p: any) => p.is_visible !== false && p.isVisible !== false);
+      // Sort: by the most recent of (created_at, last_restocked_at) - newest additions and restocks first
+      mappedProducts.sort((a: any, b: any) => {
+        const aRestock = a.last_restocked_at || a.LastRestockedAt;
+        const aCreated = a.created_at;
+        const aTime = Math.max(
+          aRestock ? new Date(aRestock).getTime() : 0,
+          aCreated ? new Date(aCreated).getTime() : 0
+        );
+        const bRestock = b.last_restocked_at || b.LastRestockedAt;
+        const bCreated = b.created_at;
+        const bTime = Math.max(
+          bRestock ? new Date(bRestock).getTime() : 0,
+          bCreated ? new Date(bCreated).getTime() : 0
+        );
+        return bTime - aTime; // Descending (newest first)
+      });
+      console.log(`[API] Store products (visible only, sorted by latest add/restock): ${mappedProducts.length}`);
+    }
     
     const totalTime = Date.now() - startTime;
     console.log(`[API] Products loaded from Supabase: ${mappedProducts.length} in ${totalTime}ms`);
@@ -695,6 +729,7 @@ export async function saveProduct(productData: any): Promise<any> {
       t1_price: productData.T1Price !== undefined ? productData.T1Price : null,
       t2_price: productData.T2Price !== undefined ? productData.T2Price : null,
       is_serialized: productData.is_serialized !== undefined ? productData.is_serialized : (productData.IsSerialized !== undefined ? productData.IsSerialized : false),
+      is_visible: productData.is_visible !== undefined ? productData.is_visible : (productData.isVisible !== undefined ? productData.isVisible : true),
       // Images - store full URLs from Supabase Storage using new fields
       // Use image_url, image_url_2, image_url_3 (new Supabase Storage fields)
       image_url: productData.Image !== undefined ? (productData.Image || null) : (productData.image !== undefined ? (productData.image || null) : (productData.image_url !== undefined ? (productData.image_url || null) : null)),
@@ -729,7 +764,7 @@ export async function saveProduct(productData: any): Promise<any> {
     if (productId) {
       const { data, error } = await supabase
         .from('products')
-        .select('product_id')
+        .select('product_id, cs_war, cs_shop')
         .eq('product_id', productId)
         .single();
 
@@ -743,10 +778,29 @@ export async function saveProduct(productData: any): Promise<any> {
       }
     }
 
+    // Check if stock increased (for last_restocked_at update)
+    // Use productData directly - form sends CS_War/CS_Shop
+    let stockIncreased = false;
+    if (existingProduct) {
+      const oldWar = parseFloat(String(existingProduct.cs_war ?? 0)) || 0;
+      const oldShop = parseFloat(String(existingProduct.cs_shop ?? 0)) || 0;
+      const newWar = (productData.CS_War !== undefined && productData.CS_War !== null)
+        ? (parseFloat(String(productData.CS_War)) || 0) : oldWar;
+      const newShop = (productData.CS_Shop !== undefined && productData.CS_Shop !== null)
+        ? (parseFloat(String(productData.CS_Shop)) || 0) : oldShop;
+      const oldTotal = oldWar + oldShop;
+      const newTotal = newWar + newShop;
+      stockIncreased = newTotal > oldTotal;
+      if (stockIncreased) {
+        supabaseData.last_restocked_at = new Date().toISOString();
+        console.log('[API] Stock increased:', { oldTotal, newTotal, action: 'setting last_restocked_at' });
+      }
+    }
+
     let result;
     if (existingProduct) {
       // Update existing product
-      console.log('[API] Updating existing product:', productId);
+      console.log('[API] Updating existing product:', productId, stockIncreased ? '(stock increased - setting last_restocked_at)' : '');
       const { data, error } = await supabase
         .from('products')
         .update(supabaseData)
@@ -760,7 +814,7 @@ export async function saveProduct(productData: any): Promise<any> {
       }
 
       result = data;
-      console.log('[API] Product updated successfully:', result);
+      console.log('[API] Product updated successfully:', result, stockIncreased ? '(last_restocked_at set)' : '');
       
       // Create notification for product update
       try {
@@ -786,6 +840,9 @@ export async function saveProduct(productData: any): Promise<any> {
       if (!supabaseData.product_id) {
         throw new Error('ProductID is required for new products');
       }
+
+      // New product: set last_restocked_at to now (treat as "new")
+      supabaseData.last_restocked_at = new Date().toISOString();
 
       const { data, error } = await supabase
         .from('products')
@@ -910,6 +967,27 @@ export async function getProductUsage(productId: string): Promise<{
   }
 
   return usage;
+}
+
+/**
+ * Toggle product visibility in the online store
+ * @param productId - Product ID to update
+ * @param isVisible - true to show in store, false to hide
+ */
+export async function updateProductVisibility(productId: string, isVisible: boolean): Promise<void> {
+  if (!productId) {
+    throw new Error('ProductID is required');
+  }
+
+  const { error } = await supabase
+    .from('products')
+    .update({ is_visible: isVisible })
+    .eq('product_id', productId);
+
+  if (error) {
+    console.error('[API] Error updating product visibility:', error);
+    throw new Error(`Failed to update visibility: ${error.message}`);
+  }
 }
 
 /**

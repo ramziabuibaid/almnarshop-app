@@ -69,6 +69,7 @@ export default function CampaignsPage() {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      numberingSystem: 'latn',
     });
   };
 

@@ -214,7 +214,7 @@ export default function SerialNumbersPage() {
                         {result.sale_date && (
                           <div className="flex items-center gap-2">
                             <Calendar size={14} />
-                            <span>تاريخ البيع: {new Date(result.sale_date).toLocaleDateString('ar-EG')}</span>
+                            <span>تاريخ البيع: {new Date(result.sale_date).toLocaleDateString('ar-EG', { numberingSystem: 'latn' })}</span>
                           </div>
                         )}
                       </div>
@@ -319,7 +319,7 @@ export default function SerialNumbersPage() {
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1 font-cairo">تاريخ البيع</label>
                           <div className="text-gray-900 font-bold font-cairo">
-                            {new Date(details.sale_date).toLocaleDateString('ar-EG')}
+                            {new Date(details.sale_date).toLocaleDateString('ar-EG', { numberingSystem: 'latn' })}
                           </div>
                         </div>
                       )}

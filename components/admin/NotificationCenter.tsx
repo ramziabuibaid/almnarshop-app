@@ -159,6 +159,7 @@ export default function NotificationCenter() {
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        numberingSystem: 'latn',
       });
     } catch {
       return dateString;

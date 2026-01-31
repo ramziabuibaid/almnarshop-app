@@ -328,7 +328,7 @@ export default function QuotationsPage() {
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cairo">العروض السعرية</h1>
             <p className="text-gray-600 mt-1 text-sm sm:text-base font-cairo">
-              عرض وإدارة جميع العروض السعرية ({allQuotations.length.toLocaleString()} عرض محمل
+              عرض وإدارة جميع العروض السعرية ({allQuotations.length.toLocaleString('en-US')} عرض محمل
               {loadingMore && <span className="text-blue-600"> - جاري تحميل المزيد...</span>})
             </p>
           </div>

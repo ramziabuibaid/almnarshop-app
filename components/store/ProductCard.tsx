@@ -48,19 +48,22 @@ export default function ProductCard({ product }: ProductCardProps) {
   const totalStock = warehouseStock + shopStock;
   const isAvailable = totalStock > 0;
   
-  // Check if product is new (created within last 30 days)
+  // Check if product is "new" (recently restocked or added within last 15 days)
+  // Uses last_restocked_at when stock increased, otherwise created_at for new products
   // Use useState to prevent hydration mismatch (Date.now() differs between server and client)
   const [isNew, setIsNew] = useState(false);
   
   useEffect(() => {
-    if (product.created_at) {
+    const referenceDate = product.last_restocked_at || product.LastRestockedAt || product.created_at;
+    if (referenceDate) {
       const now = Date.now();
-      const createdTime = new Date(product.created_at).getTime();
-      setIsNew((now - createdTime) < 30 * 24 * 60 * 60 * 1000);
+      const refTime = new Date(referenceDate).getTime();
+      const fifteenDaysMs = 15 * 24 * 60 * 60 * 1000;
+      setIsNew((now - refTime) < fifteenDaysMs);
     } else {
       setIsNew(false);
     }
-  }, [product.created_at]);
+  }, [product.last_restocked_at, product.LastRestockedAt, product.created_at]);
 
   // Intersection Observer for lazy loading
   useEffect(() => {

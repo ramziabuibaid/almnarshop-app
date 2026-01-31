@@ -40,6 +40,11 @@ export default function ProductPage() {
           setNotFoundPage(true);
           return;
         }
+        // Hidden products: 404 on store
+        if (productData.is_visible === false || productData.isVisible === false) {
+          setNotFoundPage(true);
+          return;
+        }
 
         setProduct(productData);
         setLoading(false);
@@ -67,7 +72,7 @@ export default function ProductPage() {
     // Load all products for related products section (in background)
     const fetchAllProducts = async () => {
       try {
-        const products = await getProducts();
+        const products = await getProducts({ forStore: true });
         setAllProducts(products || []);
       } catch (error) {
         console.error('[ProductPage] Error loading all products:', error);

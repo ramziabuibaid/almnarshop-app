@@ -138,7 +138,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       console.log('[ShopContext] Loading products...');
-      const fetchedProducts = await getProducts();
+      const fetchedProducts = await getProducts({ forStore: true });
       console.log('[ShopContext] Products loaded:', fetchedProducts.length);
       setProducts(fetchedProducts);
     } catch (error: any) {
