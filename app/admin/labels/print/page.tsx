@@ -18,6 +18,7 @@ function LabelsPrintContent() {
   const [error, setError] = useState<string | null>(null);
   const [useQrProductUrl, setUseQrProductUrl] = useState<boolean>(false);
   const [showQrInCatalog, setShowQrInCatalog] = useState<boolean>(false); // لنوع د: إظهار QR لفتح صفحة المنتج (افتراضي عدم إظهار)
+  const [showPriceInCatalog, setShowPriceInCatalog] = useState<boolean>(true); // لنوع د: إظهار السعر (افتراضي إظهار)
 
   // Get base URL for product links
   const getBaseUrl = () => {
@@ -138,6 +139,13 @@ function LabelsPrintContent() {
             setShowQrInCatalog(printData.showQrInCatalog);
           } else {
             setShowQrInCatalog(false);
+          }
+
+          // لنوع د: إظهار السعر (افتراضي إظهار)
+          if (typeof printData.showPriceInCatalog === 'boolean') {
+            setShowPriceInCatalog(printData.showPriceInCatalog);
+          } else {
+            setShowPriceInCatalog(true);
           }
           
           // Clean up localStorage after reading
@@ -749,18 +757,42 @@ function LabelsPrintContent() {
 
           .label-type-d .catalog-header {
             display: flex;
-            justify-content: flex-start;
+            flex-direction: row;
+            justify-content: space-between;
             align-items: center;
             margin-bottom: 6mm;
             padding-bottom: 5mm;
             border-bottom: 2px solid #2c3e50;
             flex-shrink: 0;
+            width: 100%;
           }
 
           .label-type-d .catalog-logo {
             max-width: 100px;
             max-height: 32px;
             object-fit: contain;
+          }
+
+          .label-type-d .catalog-store-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            text-align: right;
+          }
+
+          .label-type-d .catalog-store-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #2c3e50;
+            line-height: 1.3;
+          }
+
+          .label-type-d .catalog-store-phone {
+            font-size: 12px;
+            font-weight: 500;
+            color: #4a5568;
+            margin-top: 2px;
+            direction: ltr;
           }
 
           .label-type-d .catalog-body {
@@ -1049,6 +1081,10 @@ function LabelsPrintContent() {
                         (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
+                    <div className="catalog-store-info">
+                      <div className="catalog-store-name">شركة المنار للأجهزة الكهربائية</div>
+                      <div className="catalog-store-phone">04-2438815</div>
+                    </div>
                   </div>
                   <div className="catalog-body">
                     <div className="catalog-image-wrap">
@@ -1080,8 +1116,14 @@ function LabelsPrintContent() {
                           <li><strong>بلد المنشأ:</strong> {origin}</li>
                         )}
                       </ul>
+                      {(showPriceInCatalog || (showQrInCatalog && productUrl)) && (
                       <div className="catalog-price-wrap">
-                        <div className="catalog-price">{price.toLocaleString('en-US')} ₪</div>
+                        {showPriceInCatalog && (
+                          <div className="catalog-price">{price.toLocaleString('en-US')} ₪</div>
+                        )}
+                        {!showPriceInCatalog && showQrInCatalog && productUrl ? (
+                          <div style={{ flex: 1 }} />
+                        ) : null}
                         {showQrInCatalog && productUrl ? (
                           <div className="catalog-qr-wrap">
                             <QRCode
@@ -1094,6 +1136,7 @@ function LabelsPrintContent() {
                           </div>
                         ) : null}
                       </div>
+                    )}
                     </div>
                   </div>
                 </div>

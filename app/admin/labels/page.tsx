@@ -32,6 +32,7 @@ export default function LabelsPage() {
   const [showQrInCatalog, setShowQrInCatalog] = useState<boolean>(false); // لنوع د: false = عدم إظهار QR (افتراضي)، true = إظهار QR لفتح صفحة المنتج
   const [showZeroShopCatalog, setShowZeroShopCatalog] = useState<boolean>(true); // لنوع د: إظهار المنتجات التي كميتها صفر في المحل
   const [showZeroWarehouseCatalog, setShowZeroWarehouseCatalog] = useState<boolean>(true); // لنوع د: إظهار المنتجات التي كميتها صفر في المخزن
+  const [showPriceInCatalog, setShowPriceInCatalog] = useState<boolean>(true); // لنوع د: إظهار السعر في الكتالوج
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [editingBarcode, setEditingBarcode] = useState<string | null>(null); // productId being edited
@@ -389,6 +390,7 @@ export default function LabelsPage() {
       showZeroQuantity: labelType === 'C' ? showZeroQuantity : true, // Only relevant for Type C
       useQrProductUrl,
       showQrInCatalog: labelType === 'D' ? showQrInCatalog : undefined, // لنوع د فقط: إظهار QR لفتح صفحة المنتج
+      showPriceInCatalog: labelType === 'D' ? showPriceInCatalog : undefined, // لنوع د فقط: إظهار السعر
       timestamp: Date.now(),
     };
     
@@ -700,6 +702,20 @@ export default function LabelsPage() {
                         <div className="text-xs text-gray-500">إدراج أصناف بدون كمية في المخزن في الكتالوج</div>
                       </div>
                     </label>
+                    <div className="pt-2 border-t border-gray-200">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={showPriceInCatalog}
+                          onChange={(e) => setShowPriceInCatalog(e.target.checked)}
+                          className="w-4 h-4 text-gray-900 focus:ring-gray-900 rounded"
+                        />
+                        <div>
+                          <div className="font-medium text-gray-900">إظهار السعر</div>
+                          <div className="text-xs text-gray-500">إظهار سعر المنتج في الكتالوج</div>
+                        </div>
+                      </label>
+                    </div>
                   </div>
                 </div>
               )}
