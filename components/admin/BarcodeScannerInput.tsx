@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Camera, X, Search, RotateCcw } from 'lucide-react';
 import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
+import { getLatinCharFromKeyEvent, normalizeBarcodeInput, SCANNER_KEY } from '@/lib/barcodeScannerLatin';
 
 interface BarcodeScannerInputProps {
   onProductFound: (product: any) => void;
@@ -340,7 +341,8 @@ export default function BarcodeScannerInput({
 
   // Auto-submit when barcode is entered (like supermarket scanner)
   const handleBarcodeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+    const raw = e.target.value;
+    const value = normalizeBarcodeInput(raw);
     setBarcodeInput(value);
 
     // Clear existing timeout
@@ -349,18 +351,44 @@ export default function BarcodeScannerInput({
     }
 
     // Auto-submit if barcode looks complete
-    // Typical barcodes are 8+ characters, but we'll auto-submit after a short delay
-    // This works with both manual typing and barcode scanners
     if (value.trim().length >= 3) {
       scanTimeoutRef.current = setTimeout(() => {
         const currentValue = barcodeInputRef.current?.value.trim();
         if (currentValue && currentValue === value.trim()) {
-          // Simulate form submit
           const fakeEvent = new Event('submit', { bubbles: true, cancelable: true });
           handleBarcodeSubmit(fakeEvent as any);
         }
-      }, 300); // Delay to allow complete barcode entry from scanner
+      }, 300);
     }
+  }, [handleBarcodeSubmit]);
+
+  // Force Latin (English) input from physical scanner (ZKB etc.) when OS keyboard is Arabic
+  const handleBarcodeKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    const ch = getLatinCharFromKeyEvent(e.nativeEvent);
+    if (ch === null) return; // e.g. Ctrl+V — let default happen, then normalize in onChange
+
+    if (ch === SCANNER_KEY.ENTER) {
+      e.preventDefault();
+      handleBarcodeSubmit(e as any);
+      return;
+    }
+    if (ch === SCANNER_KEY.BACKSPACE) {
+      e.preventDefault();
+      setBarcodeInput((prev) => prev.slice(0, -1));
+      return;
+    }
+
+    e.preventDefault();
+    setBarcodeInput((prev) => prev + ch);
+
+    if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
+    scanTimeoutRef.current = setTimeout(() => {
+      const currentValue = barcodeInputRef.current?.value?.trim();
+      if (currentValue && currentValue.length >= 3) {
+        const fakeEvent = new Event('submit', { bubbles: true, cancelable: true });
+        handleBarcodeSubmit(fakeEvent as any);
+      }
+    }, 300);
   }, [handleBarcodeSubmit]);
 
   // Start camera scanning
@@ -632,9 +660,21 @@ export default function BarcodeScannerInput({
           placeholder={placeholder}
           value={barcodeInput}
           onChange={handleBarcodeChange}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              handleBarcodeSubmit(e);
+          onKeyDown={handleBarcodeKeyDown}
+          onPaste={(e) => {
+            e.preventDefault();
+            const pasted = (e.clipboardData?.getData('text') ?? '').trim();
+            const normalized = normalizeBarcodeInput(pasted);
+            setBarcodeInput((prev) => prev + normalized);
+            if (normalized.length >= 3) {
+              if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
+              scanTimeoutRef.current = setTimeout(() => {
+                const currentValue = barcodeInputRef.current?.value?.trim();
+                if (currentValue && currentValue.length >= 3) {
+                  const fakeEvent = new Event('submit', { bubbles: true, cancelable: true });
+                  handleBarcodeSubmit(fakeEvent as any);
+                }
+              }, 300);
             }
           }}
           className={`w-full pr-12 pl-3 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}

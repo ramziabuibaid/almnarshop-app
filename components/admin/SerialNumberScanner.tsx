@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Camera, X, RotateCcw } from 'lucide-react';
 import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
+import { normalizeBarcodeInput } from '@/lib/barcodeScannerLatin';
 
 interface SerialNumberScannerProps {
   onScan: (serialNumber: string) => void;
@@ -146,7 +147,8 @@ export default function SerialNumberScanner({
 
   // Handle barcode scan result
   const handleBarcodeScanned = useCallback((barcode: string) => {
-    const trimmedBarcode = barcode.trim();
+    const normalized = normalizeBarcodeInput(barcode);
+    const trimmedBarcode = normalized.trim();
     if (!trimmedBarcode || trimmedBarcode === lastScannedRef.current || isProcessing) {
       return;
     }

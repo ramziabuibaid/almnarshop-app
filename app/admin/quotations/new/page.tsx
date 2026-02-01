@@ -47,6 +47,7 @@ import {
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
 import SerialNumberScanner from '@/components/admin/SerialNumberScanner';
+import ScannerLatinInput from '@/components/admin/ScannerLatinInput';
 
 interface QuotationDetail {
   detailID?: string;
@@ -162,7 +163,7 @@ function SortableTableRow({
                     
                     return (
                       <div key={serialIndex} className="flex items-center gap-1">
-                        <input
+                        <ScannerLatinInput
                           type="text"
                           value={serialNo}
                           onChange={(e) => {
@@ -377,7 +378,7 @@ function CardRow({
                 
                 return (
                   <div key={serialIndex} className="flex items-center gap-1">
-                    <input
+                    <ScannerLatinInput
                       type="text"
                       value={serialNo}
                       onChange={(e) => {

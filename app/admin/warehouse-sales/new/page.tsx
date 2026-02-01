@@ -26,6 +26,7 @@ import {
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
 import SerialNumberScanner from '@/components/admin/SerialNumberScanner';
+import ScannerLatinInput from '@/components/admin/ScannerLatinInput';
 
 interface InvoiceDetail {
   detailID?: string;
@@ -1032,7 +1033,7 @@ function WarehouseSalesFormContent() {
                                       
                                       return (
                                         <div key={serialIndex} className="flex items-center gap-1">
-                                          <input
+                                          <ScannerLatinInput
                                             type="text"
                                             value={serialNo}
                                             onChange={(e) => {
@@ -1211,7 +1212,7 @@ function WarehouseSalesFormContent() {
                                   
                                   return (
                                     <div key={serialIndex} className="flex items-center gap-1">
-                                      <input
+                                      <ScannerLatinInput
                                         type="text"
                                         value={serialNo}
                                         onChange={(e) => {

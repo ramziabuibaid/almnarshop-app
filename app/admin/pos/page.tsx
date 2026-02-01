@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
 import SerialNumberScanner from '@/components/admin/SerialNumberScanner';
+import ScannerLatinInput from '@/components/admin/ScannerLatinInput';
+import { normalizeBarcodeInput, getLatinCharFromKeyEvent, SCANNER_KEY } from '@/lib/barcodeScannerLatin';
 
 interface CartItem {
   productID: string;
@@ -52,7 +54,7 @@ export default function POSPage() {
   useLayoutEffect(() => {
     document.title = 'نقطة البيع - POS';
   }, []);
-  const [barcodeInput, setBarcodeInput] = useState('');
+  const [barcodeInputKey, setBarcodeInputKey] = useState(0); // only to clear uncontrolled input
   const [filters, setFilters] = useState({
     type: '',
     brand: '',
@@ -100,6 +102,8 @@ export default function POSPage() {
   const [isDesktop, setIsDesktop] = useState(false);
   
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const barcodeBufferRef = useRef(''); // uncontrolled: no re-render per keystroke
+  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scannerRef = useRef<BrowserMultiFormatReader | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scanAreaRef = useRef<HTMLDivElement>(null);
@@ -210,6 +214,104 @@ export default function POSPage() {
     );
   };
 
+  // Serial input cell: local state so typing doesn't re-render whole POS; commit on blur/Enter
+  const SerialInputCell = ({
+    value,
+    onCommit,
+    productID,
+    serialIndex,
+    quantity,
+    currentSerialNos,
+    onScanUpdate,
+    placeholder,
+    className,
+    isRequired = false,
+    dataMobile = false,
+  }: {
+    value: string;
+    onCommit: (value: string) => void;
+    productID: string;
+    serialIndex: number;
+    quantity: number;
+    currentSerialNos: string[];
+    onScanUpdate: (newSerialNos: string[]) => void;
+    placeholder: string;
+    className: string;
+    isRequired?: boolean;
+    dataMobile?: boolean;
+  }) => {
+    const [localValue, setLocalValue] = useState(value);
+    useEffect(() => {
+      setLocalValue(value);
+    }, [value]);
+    const showRequired = isRequired && !localValue.trim();
+    const handleBlur = () => onCommit(localValue);
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        onCommit(localValue);
+        // Defer focus to next tick so parent re-render (setCart) is committed first
+        const nextIndex = serialIndex + 1;
+        if (nextIndex < quantity) {
+          const sel = dataMobile
+            ? `input[data-serial-index="${nextIndex}"][data-product-id="${productID}"][data-mobile="true"]`
+            : `input[data-serial-index="${nextIndex}"][data-product-id="${productID}"]`;
+          setTimeout(() => {
+            const nextInput = document.querySelector(sel) as HTMLInputElement;
+            if (nextInput) {
+              nextInput.focus();
+              nextInput.select();
+            }
+          }, 0);
+        }
+      }
+    };
+    const handleScan = (scannedData: string) => {
+      const serials = scannedData
+        .split(/[,\n\r]+|\s{2,}/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      if (serials.length === 0) return;
+      const newSerialNos = [...currentSerialNos];
+      while (newSerialNos.length < quantity) newSerialNos.push('');
+      let idx = serialIndex;
+      for (const s of serials) {
+        if (idx < quantity) {
+          newSerialNos[idx] = s;
+          idx++;
+        }
+      }
+      onScanUpdate(newSerialNos);
+      setTimeout(() => {
+        const nextEmpty = newSerialNos.findIndex((s, i) => i >= serialIndex && !s.trim());
+        if (nextEmpty !== -1) {
+          const sel = dataMobile
+            ? `input[data-serial-index="${nextEmpty}"][data-product-id="${productID}"][data-mobile="true"]`
+            : `input[data-serial-index="${nextEmpty}"][data-product-id="${productID}"]`;
+          const nextInput = document.querySelector(sel) as HTMLInputElement;
+          if (nextInput) nextInput.focus();
+        }
+      }, 100);
+    };
+    return (
+      <div className={dataMobile ? 'flex items-center gap-1' : 'flex items-center gap-1.5'}>
+        <ScannerLatinInput
+          type="text"
+          value={localValue}
+          onChange={(e) => setLocalValue(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          data-serial-index={serialIndex}
+          data-product-id={productID}
+          {...(dataMobile ? { 'data-mobile': 'true' } : {})}
+          placeholder={placeholder}
+          className={`${className} ${showRequired ? 'border-yellow-400 bg-yellow-50' : ''}`}
+        />
+        <SerialNumberScanner onScan={handleScan} />
+      </div>
+    );
+  };
+
   // Check if desktop
   useEffect(() => {
     const checkDesktop = () => {
@@ -297,33 +399,33 @@ export default function POSPage() {
     return null;
   }, []);
 
-  // Handle barcode input (separate from search)
-  const handleBarcodeSubmit = useCallback((e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!barcodeInput.trim()) return;
+  // Submit barcode from ref (uncontrolled) — no state, no re-render during scan
+  const submitBarcodeFromRef = useCallback(() => {
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+      scanTimeoutRef.current = null;
+    }
+    const raw = (barcodeInputRef.current?.value ?? barcodeBufferRef.current).trim();
+    barcodeBufferRef.current = '';
+    if (barcodeInputRef.current) barcodeInputRef.current.value = '';
+    setBarcodeInputKey((k) => k + 1); // force input remount to clear if needed
+    if (!raw) return;
 
-    const scannedValue = barcodeInput.trim();
-    
-    // Check if scanned value is a URL and extract product ID
+    const scannedValue = normalizeBarcodeInput(raw);
     const productIdFromUrl = extractProductIdFromUrl(scannedValue);
     const searchValue = productIdFromUrl || scannedValue;
-    
-    // First, try to find by ProductID if we extracted it from URL
+
     let product: any = null;
     if (productIdFromUrl) {
       product = products.find(
         (p) => String(p.ProductID || p.id || '') === productIdFromUrl
       );
     }
-
-    // If not found, try to find by Barcode
     if (!product) {
       product = products.find(
         (p) => String(p.Barcode || p.barcode || '') === searchValue
       );
     }
-
-    // If not found, try to find by Shamel No (رقم الشامل)
     if (!product) {
       product = products.find(
         (p) => String(p['Shamel No'] || p.shamel_no || '') === searchValue
@@ -332,15 +434,57 @@ export default function POSPage() {
 
     if (product) {
       addToCart(product, 'Scan', scannedValue);
-      setBarcodeInput(''); // Clear after adding
-      barcodeInputRef.current?.focus(); // Keep focus for next scan
+      barcodeInputRef.current?.focus();
     } else {
-      // Product not found - could show a message
       console.log('Product not found for barcode/shamel no:', scannedValue);
       alert(`المنتج غير موجود للباركود أو رقم الشامل: ${scannedValue}`);
-      setBarcodeInput(''); // Clear anyway
     }
-  }, [barcodeInput, products, addToCart, extractProductIdFromUrl]);
+  }, [products, addToCart, extractProductIdFromUrl]);
+
+  // Uncontrolled barcode keydown — Latin from event.code, no setState
+  const handleBarcodeKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      const ch = getLatinCharFromKeyEvent(e.nativeEvent);
+      if (ch === null) return;
+
+      if (ch === SCANNER_KEY.ENTER) {
+        e.preventDefault();
+        submitBarcodeFromRef();
+        return;
+      }
+      if (ch === SCANNER_KEY.BACKSPACE) {
+        e.preventDefault();
+        barcodeBufferRef.current = barcodeBufferRef.current.slice(0, -1);
+        if (barcodeInputRef.current) barcodeInputRef.current.value = barcodeBufferRef.current;
+        return;
+      }
+
+      e.preventDefault();
+      barcodeBufferRef.current += ch;
+      if (barcodeInputRef.current) barcodeInputRef.current.value = barcodeBufferRef.current;
+
+      if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
+      if (barcodeBufferRef.current.trim().length >= 3) {
+        scanTimeoutRef.current = setTimeout(submitBarcodeFromRef, 80);
+      }
+    },
+    [submitBarcodeFromRef]
+  );
+
+  const handleBarcodePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLInputElement>) => {
+      e.preventDefault();
+      const pasted = (e.clipboardData?.getData('text') ?? '').trim();
+      const normalized = normalizeBarcodeInput(pasted);
+      barcodeBufferRef.current += normalized;
+      if (barcodeInputRef.current) barcodeInputRef.current.value = barcodeBufferRef.current;
+      if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
+      if (barcodeBufferRef.current.trim().length >= 3) {
+        scanTimeoutRef.current = setTimeout(submitBarcodeFromRef, 80);
+      }
+    },
+    [submitBarcodeFromRef]
+  );
 
   // Play success sound
   const playSuccessSound = useCallback(() => {
@@ -432,8 +576,9 @@ export default function POSPage() {
 
   // Handle barcode scan result
   const handleBarcodeScanned = useCallback((barcode: string) => {
+    const normalizedBarcode = normalizeBarcodeInput(barcode.trim());
     // Prevent duplicate scans and processing
-    if (barcode === lastScannedRef.current || isScanProcessing) {
+    if (normalizedBarcode === lastScannedRef.current || isScanProcessing) {
       return;
     }
 
@@ -441,8 +586,8 @@ export default function POSPage() {
     setErrorMessage(null);
 
     // Check if scanned value is a URL and extract product ID
-    const productIdFromUrl = extractProductIdFromUrl(barcode);
-    const searchValue = productIdFromUrl || barcode;
+    const productIdFromUrl = extractProductIdFromUrl(normalizedBarcode);
+    const searchValue = productIdFromUrl || normalizedBarcode;
     
     // First, try to find by ProductID if we extracted it from URL
     let product: any = null;
@@ -467,14 +612,14 @@ export default function POSPage() {
     }
 
     if (product) {
-      lastScannedRef.current = barcode;
+      lastScannedRef.current = normalizedBarcode;
       
       // Show success feedback
       setScanSuccess(true);
       playSuccessSound();
       
       // Add to cart
-      addToCart(product, 'Scan', barcode);
+      addToCart(product, 'Scan', normalizedBarcode);
       
       // Close camera after short delay to show success feedback
       setTimeout(() => {
@@ -490,7 +635,7 @@ export default function POSPage() {
     } else {
       // Show error feedback (only once, not repeatedly)
       if (!errorMessage) {
-        setErrorMessage(`المنتج غير موجود: ${barcode}`);
+        setErrorMessage(`المنتج غير موجود: ${normalizedBarcode}`);
         playErrorSound();
         
         // Clear error message after 3 seconds
@@ -1234,23 +1379,20 @@ export default function POSPage() {
                 {/* Barcode Input (Separate) */}
                 <div className="w-full lg:w-64 xl:w-72 relative">
                   <input
+                    key={barcodeInputKey}
                     ref={barcodeInputRef}
                     type="text"
                     placeholder="مسح الباركود..."
-                    value={barcodeInput}
-                    onChange={(e) => setBarcodeInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleBarcodeSubmit();
-                      }
-                    }}
+                    defaultValue=""
+                    onKeyDown={handleBarcodeKeyDown}
+                    onPaste={handleBarcodePaste}
                     dir="ltr"
                     lang="en"
                     inputMode="url"
                     autoComplete="off"
                     autoCorrect="off"
                     autoCapitalize="off"
-                    spellCheck="false"
+                    spellCheck={false}
                     className="w-full pr-12 pl-4 py-3 border-2 border-blue-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm lg:text-base font-mono shadow-sm"
                     autoFocus
                     disabled={isScanning}
@@ -1642,97 +1784,39 @@ export default function POSPage() {
                                     serialNos.push('');
                                   }
                                   const serialNo = serialNos[serialIndex] || '';
-                                  const isEmpty = !serialNo.trim();
-                                  const isRequired = item.isSerialized && isEmpty;
-                                  
                                   return (
-                                    <div key={serialIndex} className="flex items-center gap-1.5">
-                                      <input
-                                        type="text"
-                                        value={serialNo}
-                                        onChange={(e) => {
-                                          const newSerialNos = [...(item.serialNos || [])];
-                                          while (newSerialNos.length < Math.abs(item.quantity)) {
-                                            newSerialNos.push('');
-                                          }
-                                          newSerialNos[serialIndex] = e.target.value;
-                                          setCart((prev) =>
-                                            prev.map((cartItem) =>
-                                              cartItem.productID === item.productID
-                                                ? { ...cartItem, serialNos: newSerialNos }
-                                                : cartItem
-                                            )
-                                          );
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            const nextIndex = serialIndex + 1;
-                                            if (nextIndex < Math.abs(item.quantity)) {
-                                              const nextInput = document.querySelector(
-                                                `input[data-serial-index="${nextIndex}"][data-product-id="${item.productID}"]`
-                                              ) as HTMLInputElement;
-                                              if (nextInput) {
-                                                nextInput.focus();
-                                                nextInput.select();
-                                              }
-                                            }
-                                          }
-                                        }}
-                                        data-serial-index={serialIndex}
-                                        data-product-id={item.productID}
-                                        placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                                        className={`flex-1 px-2 py-1.5 border rounded text-xs text-gray-900 font-mono ${
-                                          isRequired
-                                            ? 'border-yellow-400 bg-yellow-50'
-                                            : 'border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-400'
-                                        }`}
-                                      />
-                                      <SerialNumberScanner
-                                        onScan={(scannedData) => {
-                                          // Support multiple serials in one scan (separated by comma, newline, or multiple spaces)
-                                          const serials = scannedData
-                                            .split(/[,\n\r]+|\s{2,}/)
-                                            .map(s => s.trim())
-                                            .filter(s => s.length > 0);
-                                          
-                                          if (serials.length === 0) return;
-                                          
-                                          const newSerialNos = [...(item.serialNos || [])];
-                                          while (newSerialNos.length < Math.abs(item.quantity)) {
-                                            newSerialNos.push('');
-                                          }
-                                          
-                                          let currentIndex = serialIndex;
-                                          for (const serial of serials) {
-                                            if (currentIndex < item.quantity) {
-                                              newSerialNos[currentIndex] = serial;
-                                              currentIndex++;
-                                            }
-                                          }
-                                          
-                                          setCart((prev) =>
-                                            prev.map((cartItem) =>
-                                              cartItem.productID === item.productID
-                                                ? { ...cartItem, serialNos: newSerialNos }
-                                                : cartItem
-                                            )
-                                          );
-                                          
-                                          setTimeout(() => {
-                                            const nextEmptyIndex = newSerialNos.findIndex((s, idx) => idx >= serialIndex && !s.trim());
-                                            if (nextEmptyIndex !== -1) {
-                                              const nextInput = document.querySelector(
-                                                `input[data-serial-index="${nextEmptyIndex}"][data-product-id="${item.productID}"]`
-                                              ) as HTMLInputElement;
-                                              if (nextInput) {
-                                                nextInput.focus();
-                                              }
-                                            }
-                                          }, 100);
-                                        }}
-                                      />
-                                    </div>
+                                    <SerialInputCell
+                                      key={serialIndex}
+                                      value={serialNo}
+                                      onCommit={(v) => {
+                                        const newSerialNos = [...(item.serialNos || [])];
+                                        while (newSerialNos.length < Math.abs(item.quantity)) newSerialNos.push('');
+                                        newSerialNos[serialIndex] = v;
+                                        setCart((prev) =>
+                                          prev.map((cartItem) =>
+                                            cartItem.productID === item.productID
+                                              ? { ...cartItem, serialNos: newSerialNos }
+                                              : cartItem
+                                          )
+                                        );
+                                      }}
+                                      productID={item.productID}
+                                      serialIndex={serialIndex}
+                                      quantity={Math.abs(item.quantity)}
+                                      currentSerialNos={serialNos}
+                                      onScanUpdate={(newSerialNos) =>
+                                        setCart((prev) =>
+                                          prev.map((cartItem) =>
+                                            cartItem.productID === item.productID
+                                              ? { ...cartItem, serialNos: newSerialNos }
+                                              : cartItem
+                                          )
+                                        )
+                                      }
+                                      placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
+                                      className="flex-1 px-2 py-1.5 border rounded text-xs text-gray-900 font-mono border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+                                      isRequired={item.isSerialized}
+                                    />
                                   );
                                 })}
                               </div>
@@ -1829,98 +1913,40 @@ export default function POSPage() {
                                     serialNos.push('');
                                   }
                                   const serialNo = serialNos[serialIndex] || '';
-                                  const isEmpty = !serialNo.trim();
-                                  const isRequired = item.isSerialized && isEmpty;
-                                  
                                   return (
-                                    <div key={serialIndex} className="flex items-center gap-1">
-                                      <input
-                                        type="text"
-                                        value={serialNo}
-                                        onChange={(e) => {
-                                          const newSerialNos = [...(item.serialNos || [])];
-                                          while (newSerialNos.length < Math.abs(item.quantity)) {
-                                            newSerialNos.push('');
-                                          }
-                                          newSerialNos[serialIndex] = e.target.value;
-                                          setCart((prev) =>
-                                            prev.map((cartItem) =>
-                                              cartItem.productID === item.productID
-                                                ? { ...cartItem, serialNos: newSerialNos }
-                                                : cartItem
-                                            )
-                                          );
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            const nextIndex = serialIndex + 1;
-                                            if (nextIndex < Math.abs(item.quantity)) {
-                                              const nextInput = document.querySelector(
-                                                `input[data-serial-index="${nextIndex}"][data-product-id="${item.productID}"][data-mobile="true"]`
-                                              ) as HTMLInputElement;
-                                              if (nextInput) {
-                                                nextInput.focus();
-                                                nextInput.select();
-                                              }
-                                            }
-                                          }
-                                        }}
-                                        data-serial-index={serialIndex}
-                                        data-product-id={item.productID}
-                                        data-mobile="true"
-                                        placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                                        className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm ${
-                                          isRequired
-                                            ? 'border-yellow-400 bg-yellow-50'
-                                            : 'border-gray-300'
-                                        }`}
-                                      />
-                                      <SerialNumberScanner
-                                        onScan={(scannedData) => {
-                                          // Support multiple serials in one scan
-                                          const serials = scannedData
-                                            .split(/[,\n\r]+|\s{2,}/)
-                                            .map(s => s.trim())
-                                            .filter(s => s.length > 0);
-                                          
-                                          if (serials.length === 0) return;
-                                          
-                                          const newSerialNos = [...(item.serialNos || [])];
-                                          while (newSerialNos.length < Math.abs(item.quantity)) {
-                                            newSerialNos.push('');
-                                          }
-                                          
-                                          let currentIndex = serialIndex;
-                                          for (const serial of serials) {
-                                            if (currentIndex < item.quantity) {
-                                              newSerialNos[currentIndex] = serial;
-                                              currentIndex++;
-                                            }
-                                          }
-                                          
-                                          setCart((prev) =>
-                                            prev.map((cartItem) =>
-                                              cartItem.productID === item.productID
-                                                ? { ...cartItem, serialNos: newSerialNos }
-                                                : cartItem
-                                            )
-                                          );
-                                          
-                                          setTimeout(() => {
-                                            const nextEmptyIndex = newSerialNos.findIndex((s, idx) => idx >= serialIndex && !s.trim());
-                                            if (nextEmptyIndex !== -1) {
-                                              const nextInput = document.querySelector(
-                                                `input[data-serial-index="${nextEmptyIndex}"][data-product-id="${item.productID}"][data-mobile="true"]`
-                                              ) as HTMLInputElement;
-                                              if (nextInput) {
-                                                nextInput.focus();
-                                              }
-                                            }
-                                          }, 100);
-                                        }}
-                                      />
-                                    </div>
+                                    <SerialInputCell
+                                      key={serialIndex}
+                                      value={serialNo}
+                                      onCommit={(v) => {
+                                        const newSerialNos = [...(item.serialNos || [])];
+                                        while (newSerialNos.length < Math.abs(item.quantity)) newSerialNos.push('');
+                                        newSerialNos[serialIndex] = v;
+                                        setCart((prev) =>
+                                          prev.map((cartItem) =>
+                                            cartItem.productID === item.productID
+                                              ? { ...cartItem, serialNos: newSerialNos }
+                                              : cartItem
+                                          )
+                                        );
+                                      }}
+                                      productID={item.productID}
+                                      serialIndex={serialIndex}
+                                      quantity={Math.abs(item.quantity)}
+                                      currentSerialNos={serialNos}
+                                      onScanUpdate={(newSerialNos) =>
+                                        setCart((prev) =>
+                                          prev.map((cartItem) =>
+                                            cartItem.productID === item.productID
+                                              ? { ...cartItem, serialNos: newSerialNos }
+                                              : cartItem
+                                          )
+                                        )
+                                      }
+                                      placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
+                                      className="flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm border-gray-300"
+                                      isRequired={item.isSerialized}
+                                      dataMobile
+                                    />
                                   );
                                 })}
                               </div>

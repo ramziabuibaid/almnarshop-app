@@ -29,6 +29,7 @@ import {
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
 import SerialNumberScanner from '@/components/admin/SerialNumberScanner';
+import ScannerLatinInput from '@/components/admin/ScannerLatinInput';
 
 interface InvoiceDetail {
   detailID?: string;
@@ -1218,7 +1219,7 @@ export default function EditShopSalesInvoicePage() {
                                       
                                       return (
                                         <div key={serialIndex} className="flex items-center gap-1">
-                                          <input
+                                          <ScannerLatinInput
                                             type="text"
                                             value={serialNo}
                                             onChange={(e) => handleUpdateSerialNo(item.detailID, serialIndex, e.target.value)}
@@ -1386,7 +1387,7 @@ export default function EditShopSalesInvoicePage() {
                                   
                                   return (
                                     <div key={serialIndex} className="flex items-center gap-1">
-                                      <input
+                                      <ScannerLatinInput
                                         type="text"
                                         value={serialNo}
                                         onChange={(e) => handleUpdateSerialNo(item.detailID, serialIndex, e.target.value)}
