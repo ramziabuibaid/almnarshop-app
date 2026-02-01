@@ -5,6 +5,7 @@ import { X, Save, Loader2, Camera } from 'lucide-react';
 import { Product } from '@/types';
 import { saveProduct } from '@/lib/api';
 import ImageUploadField from './ImageUploadField';
+import ScannerLatinInput from './ScannerLatinInput';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import { Html5Qrcode } from 'html5-qrcode';
 
@@ -474,7 +475,7 @@ export default function ProductFormModal({
                       Barcode
                     </label>
                     <div className="relative">
-                      <input
+                      <ScannerLatinInput
                         type="text"
                         value={formData.Barcode || ''}
                         onChange={(e) => handleChange('Barcode', e.target.value)}

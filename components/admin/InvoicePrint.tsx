@@ -157,11 +157,12 @@ export default function InvoicePrint({
         @media print {
           @page {
             size: A6 portrait;
-            margin: 8mm 7mm 8mm 7mm;
+            margin: 0;
           }
 
           /* Prevent page breaks */
           .invoice-print {
+            padding: 8mm 7mm 8mm 7mm !important;
             page-break-after: avoid !important;
             page-break-inside: avoid !important;
           }
@@ -175,10 +176,11 @@ export default function InvoicePrint({
         @media print and (min-width: 200mm) {
           @page {
             size: A4 portrait;
-            margin: 15mm;
+            margin: 0;
           }
 
           .invoice-print {
+            padding: 15mm !important;
             /* Scale up for A4 */
             --pad: 10px;
             --gap: 10px;

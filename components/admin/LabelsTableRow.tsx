@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { CheckSquare, Square, Edit2, Check, X, Loader2 } from 'lucide-react';
 import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
+import ScannerLatinInput from '@/components/admin/ScannerLatinInput';
 import { useRouter } from 'next/navigation';
 
 type QuantitySource = 'shop' | 'warehouse' | 'one';
@@ -133,7 +134,7 @@ const LabelsTableRow = memo(function LabelsTableRow({
       <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
         {isEditing ? (
           <div className="flex items-center gap-2">
-            <input
+            <ScannerLatinInput
               type="text"
               value={editingBarcodeValue}
               onChange={(e) => onBarcodeValueChange(e.target.value)}

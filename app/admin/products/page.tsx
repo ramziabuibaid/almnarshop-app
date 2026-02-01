@@ -12,6 +12,7 @@ import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
 import { deleteProduct, getProducts, saveProduct, updateProductVisibility } from '@/lib/api';
 import { ColumnDef } from '@tanstack/react-table';
+import ScannerLatinInput from '@/components/admin/ScannerLatinInput';
 import React from 'react';
 
 // Optimized Mobile Product Card Component
@@ -794,7 +795,7 @@ export default function ProductsManagerPage() {
             <div className="flex items-center gap-2 min-w-0" onClick={(e) => e.stopPropagation()}>
               {isEditing ? (
                 <>
-                  <input
+                  <ScannerLatinInput
                     type="text"
                     value={editingBarcodeValue}
                     onChange={(e) => setEditingBarcodeValue(e.target.value)}

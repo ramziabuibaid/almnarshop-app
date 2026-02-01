@@ -124,3 +124,10 @@ select {
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
 }
+
+/* Hide browser print headers/footers (URL, title, date) - especially on mobile Chrome */
+@media print {
+  @page {
+    margin: 0 !important;
+  }
+}

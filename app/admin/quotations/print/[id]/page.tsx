@@ -210,10 +210,14 @@ export default function QuotationPrintPage() {
 
         @page {
           size: A4 portrait;
-          margin: 15mm 20mm 15mm 20mm;
+          margin: 0;
         }
 
         @media print {
+          body {
+            padding: 15mm 20mm 15mm 20mm;
+          }
+
           .no-print {
             display: none;
           }

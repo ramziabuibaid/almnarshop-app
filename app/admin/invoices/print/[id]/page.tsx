@@ -190,7 +190,7 @@ export default function InvoicePrintPage() {
         /* A6 Page Setup - 105mm x 148mm */
         @page {
           size: A6 portrait;
-          margin: 3mm;
+          margin: 0;
         }
 
         @media print {
@@ -207,7 +207,7 @@ export default function InvoicePrintPage() {
             width: 100%;
             max-width: 100%;
             margin: 0;
-            padding: 0;
+            padding: 3mm;
           }
         }
 
