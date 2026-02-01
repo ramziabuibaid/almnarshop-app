@@ -129,6 +129,23 @@ export default function LabelsPage() {
           return bValue - aValue;
         }
       });
+    } else {
+      // Default: sort by last restocked / created (newest first)
+      filtered = [...filtered].sort((a, b) => {
+        const aRestock = a.last_restocked_at || a.LastRestockedAt || a.created_at;
+        const aCreated = a.created_at;
+        const aTime = Math.max(
+          aRestock ? new Date(aRestock).getTime() : 0,
+          aCreated ? new Date(aCreated).getTime() : 0
+        );
+        const bRestock = b.last_restocked_at || b.LastRestockedAt || b.created_at;
+        const bCreated = b.created_at;
+        const bTime = Math.max(
+          bRestock ? new Date(bRestock).getTime() : 0,
+          bCreated ? new Date(bCreated).getTime() : 0
+        );
+        return bTime - aTime;
+      });
     }
 
     return filtered;
