@@ -778,29 +778,16 @@ export async function saveProduct(productData: any): Promise<any> {
       }
     }
 
-    // Check if stock increased (for last_restocked_at update)
-    // Use productData directly - form sends CS_War/CS_Shop
-    let stockIncreased = false;
+    // last_restocked_at is updated ONLY by the DB trigger when stock (cs_war+cs_shop) increases.
+    // We never send last_restocked_at on UPDATE so that editing barcode/name/etc. does not change it.
     if (existingProduct) {
-      const oldWar = parseFloat(String(existingProduct.cs_war ?? 0)) || 0;
-      const oldShop = parseFloat(String(existingProduct.cs_shop ?? 0)) || 0;
-      const newWar = (productData.CS_War !== undefined && productData.CS_War !== null)
-        ? (parseFloat(String(productData.CS_War)) || 0) : oldWar;
-      const newShop = (productData.CS_Shop !== undefined && productData.CS_Shop !== null)
-        ? (parseFloat(String(productData.CS_Shop)) || 0) : oldShop;
-      const oldTotal = oldWar + oldShop;
-      const newTotal = newWar + newShop;
-      stockIncreased = newTotal > oldTotal;
-      if (stockIncreased) {
-        supabaseData.last_restocked_at = new Date().toISOString();
-        console.log('[API] Stock increased:', { oldTotal, newTotal, action: 'setting last_restocked_at' });
-      }
+      delete supabaseData.last_restocked_at;
     }
 
     let result;
     if (existingProduct) {
-      // Update existing product
-      console.log('[API] Updating existing product:', productId, stockIncreased ? '(stock increased - setting last_restocked_at)' : '');
+      // Update existing product (trigger will set last_restocked_at only when stock increases)
+      console.log('[API] Updating existing product:', productId);
       const { data, error } = await supabase
         .from('products')
         .update(supabaseData)
@@ -814,7 +801,7 @@ export async function saveProduct(productData: any): Promise<any> {
       }
 
       result = data;
-      console.log('[API] Product updated successfully:', result, stockIncreased ? '(last_restocked_at set)' : '');
+      console.log('[API] Product updated successfully:', result);
       
       // Create notification for product update
       try {
