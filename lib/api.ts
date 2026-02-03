@@ -3116,29 +3116,44 @@ export async function getCashInvoicesFromSupabase(limit: number = 50): Promise<a
       return [];
     }
     
-    // Fetch details for all invoices to calculate totals
+    // Fetch details for all invoices to calculate totals.
+    // Supabase/PostgREST returns at most 1000 rows by default, so we paginate to get
+    // ALL detail rows (otherwise the newest invoices' details are missing and show as 0).
     const invoiceIds = invoices.map((inv: any) => inv.invoice_id);
-    
-    const { data: allDetails, error: detailsError } = await supabase
-      .from('cash_invoice_details')
-      .select('invoice_id, quantity, unit_price')
-      .in('invoice_id', invoiceIds);
-    
-    if (detailsError) {
-      console.error('[API] Error fetching invoice details:', detailsError);
-      // Continue without totals if details fetch fails
+    const allDetails: any[] = [];
+    const pageSize = 1000;
+    let offset = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data: page, error: detailsError } = await supabase
+        .from('cash_invoice_details')
+        .select('invoice_id, quantity, unit_price')
+        .in('invoice_id', invoiceIds)
+        .order('detail_id', { ascending: true })
+        .range(offset, offset + pageSize - 1);
+
+      if (detailsError) {
+        console.error('[API] Error fetching invoice details:', detailsError);
+        break;
+      }
+      if (page && Array.isArray(page) && page.length > 0) {
+        allDetails.push(...page);
+        hasMore = page.length === pageSize;
+        offset += pageSize;
+      } else {
+        hasMore = false;
+      }
     }
-    
+
     // Calculate total for each invoice
     const totalsMap = new Map<string, number>();
-    if (allDetails && Array.isArray(allDetails)) {
-      allDetails.forEach((detail: any) => {
-        const invoiceId = detail.invoice_id;
-        const itemTotal = parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0));
-        const currentTotal = totalsMap.get(invoiceId) || 0;
-        totalsMap.set(invoiceId, currentTotal + itemTotal);
-      });
-    }
+    allDetails.forEach((detail: any) => {
+      const invoiceId = detail.invoice_id;
+      const itemTotal = parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0));
+      const currentTotal = totalsMap.get(invoiceId) || 0;
+      totalsMap.set(invoiceId, currentTotal + itemTotal);
+    });
     
     // Map invoices with totals
     const mappedInvoices = invoices.map((invoice: any) => {
