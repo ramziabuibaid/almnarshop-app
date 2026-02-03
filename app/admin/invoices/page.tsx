@@ -7,6 +7,7 @@ import { useAdminAuth } from '@/context/AdminAuthContext';
 import {
   getCashInvoicesFromSupabase,
   getCashInvoice,
+  searchCashInvoiceById,
   updateCashInvoiceSettlementStatus,
 } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
@@ -64,6 +65,7 @@ export default function InvoicesPage() {
     yesterday: 0,
     dayBeforeYesterday: 0,
   });
+  const [searchByIdResult, setSearchByIdResult] = useState<CashInvoice | null>(null);
 
   // Check if user has permission to view cash invoices
   const canViewCashInvoices = admin?.is_super_admin || admin?.permissions?.viewCashInvoices === true;
@@ -79,6 +81,21 @@ export default function InvoicesPage() {
     loadInvoices();
     loadUsers();
   }, []);
+
+  // When user searches, try to fetch by exact invoice ID so older invoices (not in last 50) can be found
+  useEffect(() => {
+    const q = (searchQuery || '').trim();
+    if (!q) {
+      setSearchByIdResult(null);
+      return;
+    }
+    let cancelled = false;
+    searchCashInvoiceById(q).then((found) => {
+      if (!cancelled && found) setSearchByIdResult(found);
+      else if (!cancelled) setSearchByIdResult(null);
+    });
+    return () => { cancelled = true; };
+  }, [searchQuery]);
 
   const loadUsers = async () => {
     try {
@@ -112,11 +129,11 @@ export default function InvoicesPage() {
     setLoading(true);
     setError(null);
     try {
-      // Load more invoices to ensure we get all invoices from last 3 days
-      const data = await getCashInvoicesFromSupabase(1000);
+      // Fetch last 50 invoices by default (reduces egress); use Search by ID for older invoices
+      const data = await getCashInvoicesFromSupabase(50);
       setInvoices(data);
       
-      // Calculate daily totals for last 3 days
+      // Daily totals are computed from the loaded set (last 50)
       calculateDailyTotals(data);
     } catch (err: any) {
       console.error('[InvoicesPage] Failed to load invoices:', err);
@@ -405,12 +422,16 @@ export default function InvoicesPage() {
   };
 
   const filteredInvoices = useMemo(() => {
-    if (!searchQuery) return invoices;
-    const query = searchQuery.toLowerCase();
-    return invoices.filter((invoice) => {
-      return String(invoice.InvoiceID || '').toLowerCase().includes(query);
-    });
-  }, [invoices, searchQuery]);
+    const query = (searchQuery || '').toLowerCase();
+    const fromList = !query
+      ? invoices
+      : invoices.filter((inv) => String(inv.InvoiceID || '').toLowerCase().includes(query));
+    // Include search-by-ID result so user can find invoices not in the last 50
+    if (searchByIdResult && !fromList.some((inv) => inv.InvoiceID === searchByIdResult.InvoiceID)) {
+      return [searchByIdResult, ...fromList];
+    }
+    return fromList;
+  }, [invoices, searchQuery, searchByIdResult]);
 
   // Check permissions
   if (!canViewCashInvoices) {

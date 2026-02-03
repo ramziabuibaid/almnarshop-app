@@ -39,6 +39,7 @@ interface InvoiceDetail {
   costPrice?: number;
   isNew?: boolean;
   productImage?: string;
+  notes?: string;
   serialNos?: string[]; // Array of serial numbers - one per quantity
   isSerialized?: boolean;
 }
@@ -182,6 +183,7 @@ export default function EditWarehouseSalesInvoicePage() {
             productName: item.ProductName || '',
             quantity: item.Quantity || 0,
             unitPrice: item.UnitPrice || 0,
+            notes: item.notes || '',
             costPrice: 0, // Will be updated when products are loaded
             isNew: false,
             serialNos: serialNos,
@@ -360,6 +362,14 @@ export default function EditWarehouseSalesInvoicePage() {
     setDetails((prev) =>
       prev.map((item) =>
         item.detailID === detailID ? { ...item, unitPrice: newPrice } : item
+      )
+    );
+  };
+
+  const handleUpdateNotes = (detailID: string | undefined, newNotes: string) => {
+    setDetails((prev) =>
+      prev.map((item) =>
+        item.detailID === detailID ? { ...item, notes: newNotes } : item
       )
     );
   };
@@ -738,8 +748,8 @@ export default function EditWarehouseSalesInvoicePage() {
       }
 
       // Separate items into: existing (to update), new (to add), and deleted (to remove)
-      const itemsToUpdate: Array<{ detailID: string; productID: string; quantity: number; unitPrice: number; serialNos?: string[] }> = [];
-      const itemsToAdd: Array<{ productID: string; quantity: number; unitPrice: number; serialNos?: string[] }> = [];
+      const itemsToUpdate: Array<{ detailID: string; productID: string; quantity: number; unitPrice: number; notes?: string; serialNos?: string[] }> = [];
+      const itemsToAdd: Array<{ productID: string; quantity: number; unitPrice: number; notes?: string; serialNos?: string[] }> = [];
       
       // Get original invoice to find deleted items
       const originalInvoice = await getWarehouseSalesInvoice(invoiceId);
@@ -760,7 +770,8 @@ export default function EditWarehouseSalesInvoicePage() {
             const changed = 
               originalItem.Quantity !== item.quantity ||
               originalItem.UnitPrice !== item.unitPrice ||
-              originalItem.ProductID !== item.productID;
+              originalItem.ProductID !== item.productID ||
+              String(originalItem.notes || '') !== String(item.notes || '');
             
             if (changed || serialNos.length > 0) {
               itemsToUpdate.push({
@@ -768,6 +779,7 @@ export default function EditWarehouseSalesInvoicePage() {
                 productID: item.productID,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
+                notes: item.notes || '',
                 serialNos: serialNos.length > 0 ? serialNos : undefined,
               });
             }
@@ -778,6 +790,7 @@ export default function EditWarehouseSalesInvoicePage() {
             productID: item.productID,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
+            notes: item.notes || '',
             serialNos: serialNos.length > 0 ? serialNos : undefined,
           });
         }
@@ -1303,6 +1316,13 @@ export default function EditWarehouseSalesInvoicePage() {
                                     })}
                                   </div>
                                 )}
+                                <textarea
+                                  value={item.notes || ''}
+                                  onChange={(e) => handleUpdateNotes(item.detailID, e.target.value)}
+                                  placeholder="ملاحظات..."
+                                  rows={1}
+                                  className="w-full mt-2 px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo resize-none"
+                                />
                               </div>
                             </div>
                           </td>

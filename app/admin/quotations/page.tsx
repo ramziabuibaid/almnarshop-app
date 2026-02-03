@@ -6,6 +6,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import {
   getQuotationsFromSupabase,
+  searchQuotationById,
   deleteQuotation,
   updateQuotationStatus,
 } from '@/lib/api';
@@ -67,7 +68,8 @@ export default function QuotationsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const QUOTATIONS_PER_PAGE = 30;
+  const QUOTATIONS_PER_PAGE = 50;
+  const [searchByIdResult, setSearchByIdResult] = useState<Quotation | null>(null);
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
@@ -110,42 +112,36 @@ export default function QuotationsPage() {
     }
   };
 
-  // Load first page quickly, then load more in background
+  // Load last 50 quotations only (same technique as cash invoices; use Search by ID for older)
   const loadFirstPage = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Load first page immediately for fast initial display
-      const firstPageResult = await getQuotationsFromSupabase(1, QUOTATIONS_PER_PAGE);
-      setAllQuotations(firstPageResult.quotations);
-      setLoading(false); // Show page immediately
-      
-      // Continue loading more quotations in background
-      if (firstPageResult.total > QUOTATIONS_PER_PAGE) {
-        setLoadingMore(true);
-        loadMoreQuotations();
-      }
+      const result = await getQuotationsFromSupabase(1, QUOTATIONS_PER_PAGE);
+      setAllQuotations(result.quotations);
     } catch (err: any) {
       console.error('[QuotationsPage] Failed to load quotations:', err);
       setError(err?.message || 'فشل تحميل العروض السعرية');
       setAllQuotations([]);
+    } finally {
       setLoading(false);
     }
   };
 
-  // Load remaining quotations in background
-  const loadMoreQuotations = async () => {
-    try {
-      // Load a large number of quotations in background
-      const result = await getQuotationsFromSupabase(1, 1000);
-      setAllQuotations(result.quotations);
-    } catch (err: any) {
-      console.error('[QuotationsPage] Failed to load more quotations:', err);
-      // Don't show error to user, just log it
-    } finally {
-      setLoadingMore(false);
+  // When user searches, try to fetch by exact quotation ID so older quotations (not in last 50) can be found
+  useEffect(() => {
+    const q = (searchQuery || '').trim();
+    if (!q) {
+      setSearchByIdResult(null);
+      return;
     }
-  };
+    let cancelled = false;
+    searchQuotationById(q).then((found) => {
+      if (!cancelled && found) setSearchByIdResult(found);
+      else if (!cancelled) setSearchByIdResult(null);
+    });
+    return () => { cancelled = true; };
+  }, [searchQuery]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -182,7 +178,7 @@ export default function QuotationsPage() {
       console.error('[QuotationsPage] Failed to update quotation status:', err);
       alert(err?.message || 'فشل تحديث حالة العرض السعري');
       // Reload to revert any optimistic update
-      await loadAllQuotations();
+      await loadFirstPage();
     } finally {
       setUpdatingStatusId(null);
     }
@@ -274,9 +270,14 @@ export default function QuotationsPage() {
     if (statusFilter && statusFilter !== 'الكل') {
       filtered = filtered.filter((quotation) => quotation.Status === statusFilter);
     }
+
+    // Include search-by-ID result so user can find quotations not in the last 50
+    if (searchByIdResult && !filtered.some((q) => q.QuotationID === searchByIdResult.QuotationID)) {
+      return [searchByIdResult, ...filtered];
+    }
     
     return filtered;
-  }, [allQuotations, searchQuery, statusFilter]);
+  }, [allQuotations, searchQuery, statusFilter, searchByIdResult]);
 
   // Client-side pagination (like maintenance page)
   const totalPages = Math.ceil(filteredQuotations.length / QUOTATIONS_PER_PAGE);

@@ -36,6 +36,7 @@ interface InvoiceDetail {
   unitPrice: number;
   costPrice?: number;
   productImage?: string;
+  notes?: string;
   serialNos?: string[]; // Array of serial numbers - one per quantity
   isSerialized?: boolean;
 }
@@ -237,6 +238,14 @@ function WarehouseSalesFormContent() {
     setDetails((prev) =>
       prev.map((item) =>
         item.detailID === detailID ? { ...item, unitPrice: newPrice } : item
+      )
+    );
+  };
+
+  const handleUpdateNotes = (detailID: string | undefined, newNotes: string) => {
+    setDetails((prev) =>
+      prev.map((item) =>
+        item.detailID === detailID ? { ...item, notes: newNotes } : item
       )
     );
   };
@@ -611,6 +620,7 @@ function WarehouseSalesFormContent() {
           productID: item.productID,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
+          notes: item.notes || '',
           serialNos: item.serialNos || [],
         })),
         notes: notes.trim() || undefined,
@@ -1124,6 +1134,13 @@ function WarehouseSalesFormContent() {
                                     })}
                                   </div>
                                 )}
+                                <textarea
+                                  value={item.notes || ''}
+                                  onChange={(e) => handleUpdateNotes(item.detailID, e.target.value)}
+                                  placeholder="ملاحظات..."
+                                  rows={1}
+                                  className="w-full mt-2 px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo resize-none"
+                                />
                               </div>
                             </div>
                           </td>

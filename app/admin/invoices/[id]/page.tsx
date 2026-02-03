@@ -6,7 +6,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import {
   getCashInvoiceDetailsFromSupabase,
-  getCashInvoicesFromSupabase,
+  searchCashInvoiceById,
   updateCashInvoice,
   deleteCashInvoice,
   getProducts,
@@ -120,9 +120,8 @@ export default function EditInvoicePage() {
     setLoading(true);
     setError(null);
     try {
-      // Load invoice header
-      const invoices = await getCashInvoicesFromSupabase(1000);
-      const foundInvoice = invoices.find((inv: CashInvoice) => inv.InvoiceID === invoiceId);
+      // Load single invoice by ID (avoids fetching full list)
+      const foundInvoice = await searchCashInvoiceById(invoiceId);
       
       if (!foundInvoice) {
         throw new Error('الفاتورة غير موجودة');

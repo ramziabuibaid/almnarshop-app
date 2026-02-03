@@ -568,11 +568,15 @@ export async function getProducts(options?: { forStore?: boolean }): Promise<any
     const pageSize = 1000; // Supabase default limit
     let hasMore = true;
     
+    // Lightweight select: only columns needed for POS/Catalog (reduces egress)
+    // Note: include cost_price because UI shows "سعر التكلفة"
+    const productColumns =
+      'product_id, shamel_no, barcode, name, cost_price, sale_price, cs_shop, cs_war, image_url, image_url_2, image_url_3, type, brand, last_restocked_at, is_visible, created_at';
     while (hasMore) {
       // Fetch products ordered by created_at descending (newest first)
       const { data: products, error } = await supabase
         .from('products')
-        .select('*')
+        .select(productColumns)
         .order('created_at', { ascending: false })
         .range(page * pageSize, (page + 1) * pageSize - 1);
       
@@ -1136,11 +1140,12 @@ export async function getAllCustomers(): Promise<any[]> {
     const pageSize = 1000; // Supabase default limit
     let hasMore = true;
     
+    // Lightweight select: only columns needed for list/CRM (excludes notes, address, history_logs, etc.)
+    const customerColumns = 'customer_id, name, phone, balance, shamel_no';
     while (hasMore) {
-      // Fetch customers without ordering to avoid column errors
       const { data: customers, error } = await supabase
         .from('customers')
-        .select('*')
+        .select(customerColumns)
         .range(page * pageSize, (page + 1) * pageSize - 1);
       
       if (error) {
@@ -2965,13 +2970,11 @@ export async function saveCashInvoice(payload: {
 }
 
 /**
- * Get all Cash Invoices
- * DEPRECATED: Use getCashInvoicesFromSupabase instead
- * This function is kept for backward compatibility but now uses Supabase
+ * Get all Cash Invoices (last 50 by default to reduce egress)
+ * Use getCashInvoicesFromSupabase(limit) for custom limit, or searchCashInvoiceById(id) for search by ID
  */
 export async function getCashInvoices(): Promise<any[]> {
-  // Use Supabase implementation
-  return getCashInvoicesFromSupabase(1000);
+  return getCashInvoicesFromSupabase(50);
 }
 
 /**
@@ -3091,15 +3094,42 @@ function mapCashInvoiceDetailFromSupabase(detail: any, product?: any): any {
 }
 
 /**
+ * Search for a single cash invoice by ID (for Search by ID when not in last 50).
+ * Returns the same list-item shape as getCashInvoicesFromSupabase for merging into UI.
+ */
+export async function searchCashInvoiceById(invoiceId: string): Promise<any | null> {
+  if (!invoiceId || !String(invoiceId).trim()) return null;
+  try {
+    const { data: invoice, error } = await supabase
+      .from('cash_invoices')
+      .select('*')
+      .eq('invoice_id', String(invoiceId).trim())
+      .single();
+    if (error || !invoice) return null;
+    const { data: details } = await supabase
+      .from('cash_invoice_details')
+      .select('invoice_id, quantity, unit_price')
+      .eq('invoice_id', invoice.invoice_id);
+    const totalAmount = (details || []).reduce(
+      (sum: number, d: any) => sum + parseFloat(String(d.quantity || 0)) * parseFloat(String(d.unit_price || 0)),
+      0
+    );
+    return mapCashInvoiceFromSupabase(invoice, totalAmount);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Get cash invoices from Supabase (for Invoices History page)
- * Fetches invoices with calculated total amounts
+ * Fetches last N invoices with calculated total amounts (default 50 to reduce egress)
  */
 export async function getCashInvoicesFromSupabase(limit: number = 50): Promise<any[]> {
   try {
     console.log('[API] Fetching cash invoices from Supabase...');
     const startTime = Date.now();
     
-    // Fetch invoices ordered by date_time descending
+    // Fetch invoices ordered by date_time descending (server-side pagination)
     const { data: invoices, error } = await supabase
       .from('cash_invoices')
       .select('*')
@@ -4736,6 +4766,7 @@ export async function saveShopSalesInvoice(payload: {
     productID: string;
     quantity: number;
     unitPrice: number;
+    notes?: string; // Per-item notes (like quotations)
     serialNos?: string[]; // Array of serial numbers - one per quantity
   }>;
   notes?: string;
@@ -4798,6 +4829,7 @@ export async function saveShopSalesInvoice(payload: {
           product_id: item.productID,
           quantity: item.quantity,
           unit_price: item.unitPrice,
+          notes: item.notes || null,
           serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
         },
         serialNos,
@@ -4913,9 +4945,64 @@ export async function saveShopSalesInvoice(payload: {
 }
 
 /**
- * Get shop sales invoices from Supabase with pagination
+ * Search for a single shop sales invoice by ID (for Search by ID when not in last 50).
+ * Returns the same list-item shape as getShopSalesInvoices for merging into UI.
  */
-export async function getShopSalesInvoices(page: number = 1, pageSize: number = 20, searchQuery?: string): Promise<{ invoices: any[]; total: number }> {
+export async function searchShopSalesInvoiceById(invoiceId: string): Promise<any | null> {
+  if (!invoiceId || !String(invoiceId).trim()) return null;
+  try {
+    const { data: invoice, error } = await supabase
+      .from('shop_sales_invoices')
+      .select('*')
+      .eq('invoice_id', String(invoiceId).trim())
+      .single();
+    if (error || !invoice) return null;
+    const { data: details } = await supabase
+      .from('shop_sales_details')
+      .select('quantity, unit_price')
+      .eq('invoice_id', invoice.invoice_id);
+    const subtotal = (details || []).reduce(
+      (sum: number, d: any) => sum + parseFloat(String(d.quantity || 0)) * parseFloat(String(d.unit_price || 0)),
+      0
+    );
+    const discount = parseFloat(String(invoice.discount || 0));
+    const total = Math.max(0, subtotal - discount);
+    let customerName = '';
+    let customerShamelNo = '';
+    if (invoice.customer_id) {
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('name, shamel_no')
+        .eq('customer_id', invoice.customer_id)
+        .single();
+      customerName = customer?.name || '';
+      customerShamelNo = customer?.shamel_no || '';
+    }
+    return {
+      InvoiceID: invoice.invoice_id,
+      CustomerID: invoice.customer_id,
+      CustomerName: customerName,
+      CustomerShamelNo: customerShamelNo,
+      Date: invoice.date,
+      AccountantSign: invoice.accountant_sign,
+      Notes: invoice.notes || '',
+      Discount: discount,
+      Status: invoice.status,
+      TotalAmount: total,
+      CreatedAt: invoice.created_at,
+      created_by: invoice.created_by || null,
+      createdBy: invoice.created_by || null,
+      user_id: invoice.created_by || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get shop sales invoices from Supabase with pagination (default last 50 to reduce egress)
+ */
+export async function getShopSalesInvoices(page: number = 1, pageSize: number = 50, searchQuery?: string): Promise<{ invoices: any[]; total: number }> {
   try {
     console.log('[API] Fetching shop sales invoices from Supabase...', { page, pageSize, searchQuery });
 
@@ -5156,6 +5243,7 @@ export async function getShopSalesInvoice(invoiceId: string): Promise<any> {
         Quantity: parseFloat(String(detail.quantity || 0)),
         UnitPrice: parseFloat(String(detail.unit_price || 0)),
         TotalPrice: parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0)),
+        notes: detail.notes || '',
       };
     });
 
@@ -5251,12 +5339,14 @@ export async function updateShopSalesInvoice(
       productID: string;
       quantity: number;
       unitPrice: number;
+      notes?: string;
       serialNos?: string[]; // Array of serial numbers - one per quantity
     }>;
     itemsToAdd?: Array<{
       productID: string;
       quantity: number;
       unitPrice: number;
+      notes?: string;
       serialNos?: string[]; // Array of serial numbers - one per quantity
     }>;
     itemIDsToDelete?: string[];
@@ -5309,6 +5399,7 @@ export async function updateShopSalesInvoice(
             product_id: item.productID,
             quantity: item.quantity,
             unit_price: item.unitPrice,
+            notes: item.notes || null,
             serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
           })
           .eq('details_id', item.detailID)
@@ -5363,6 +5454,7 @@ export async function updateShopSalesInvoice(
             product_id: item.productID,
             quantity: item.quantity,
             unit_price: item.unitPrice,
+            notes: item.notes || null,
             serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
           },
           serialNos,
@@ -5497,6 +5589,7 @@ export async function saveWarehouseSalesInvoice(payload: {
     productID: string;
     quantity: number;
     unitPrice: number;
+    notes?: string; // Per-item notes (like quotations)
     serialNos?: string[]; // Array of serial numbers - one per quantity
   }>;
   notes?: string;
@@ -5559,6 +5652,7 @@ export async function saveWarehouseSalesInvoice(payload: {
           product_id: item.productID,
           quantity: item.quantity,
           unit_price: item.unitPrice,
+          notes: item.notes || null,
           serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
         },
         serialNos,
@@ -5649,9 +5743,64 @@ export async function saveWarehouseSalesInvoice(payload: {
 }
 
 /**
- * Get warehouse sales invoices from Supabase with pagination
+ * Search for a single warehouse sales invoice by ID (for Search by ID when not in last 50).
+ * Returns the same list-item shape as getWarehouseSalesInvoices for merging into UI.
  */
-export async function getWarehouseSalesInvoices(page: number = 1, pageSize: number = 20, searchQuery?: string): Promise<{ invoices: any[]; total: number }> {
+export async function searchWarehouseSalesInvoiceById(invoiceId: string): Promise<any | null> {
+  if (!invoiceId || !String(invoiceId).trim()) return null;
+  try {
+    const { data: invoice, error } = await supabase
+      .from('warehouse_sales_invoices')
+      .select('*')
+      .eq('invoice_id', String(invoiceId).trim())
+      .single();
+    if (error || !invoice) return null;
+    const { data: details } = await supabase
+      .from('warehouse_sales_details')
+      .select('quantity, unit_price')
+      .eq('invoice_id', invoice.invoice_id);
+    const subtotal = (details || []).reduce(
+      (sum: number, d: any) => sum + parseFloat(String(d.quantity || 0)) * parseFloat(String(d.unit_price || 0)),
+      0
+    );
+    const discount = parseFloat(String(invoice.discount || 0));
+    const total = Math.max(0, subtotal - discount);
+    let customerName = '';
+    let customerShamelNo = '';
+    if (invoice.customer_id) {
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('name, shamel_no')
+        .eq('customer_id', invoice.customer_id)
+        .single();
+      customerName = customer?.name || '';
+      customerShamelNo = customer?.shamel_no || '';
+    }
+    return {
+      InvoiceID: invoice.invoice_id,
+      CustomerID: invoice.customer_id,
+      CustomerName: customerName,
+      CustomerShamelNo: customerShamelNo,
+      Date: invoice.date,
+      AccountantSign: invoice.accountant_sign,
+      Notes: invoice.notes || '',
+      Discount: discount,
+      Status: invoice.status,
+      TotalAmount: total,
+      CreatedAt: invoice.created_at,
+      created_by: invoice.created_by || null,
+      createdBy: invoice.created_by || null,
+      user_id: invoice.created_by || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get warehouse sales invoices from Supabase with pagination (default last 50 to reduce egress)
+ */
+export async function getWarehouseSalesInvoices(page: number = 1, pageSize: number = 50, searchQuery?: string): Promise<{ invoices: any[]; total: number }> {
   try {
     console.log('[API] Fetching warehouse sales invoices from Supabase...', { page, pageSize, searchQuery });
 
@@ -5891,6 +6040,7 @@ export async function getWarehouseSalesInvoice(invoiceId: string): Promise<any> 
         Quantity: parseFloat(String(detail.quantity || 0)),
         UnitPrice: parseFloat(String(detail.unit_price || 0)),
         TotalPrice: parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0)),
+        notes: detail.notes || '',
       };
     });
 
@@ -5986,12 +6136,14 @@ export async function updateWarehouseSalesInvoice(
       productID: string;
       quantity: number;
       unitPrice: number;
+      notes?: string;
       serialNos?: string[]; // Array of serial numbers - one per quantity
     }>;
     itemsToAdd?: Array<{
       productID: string;
       quantity: number;
       unitPrice: number;
+      notes?: string;
       serialNos?: string[]; // Array of serial numbers - one per quantity
     }>;
     itemIDsToDelete?: string[];
@@ -6044,6 +6196,7 @@ export async function updateWarehouseSalesInvoice(
             product_id: item.productID,
             quantity: item.quantity,
             unit_price: item.unitPrice,
+            notes: item.notes || null,
             serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
           })
           .eq('details_id', item.detailID)
@@ -6098,6 +6251,7 @@ export async function updateWarehouseSalesInvoice(
             product_id: item.productID,
             quantity: item.quantity,
             unit_price: item.unitPrice,
+            notes: item.notes || null,
             serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
           },
           serialNos,
@@ -7448,9 +7602,39 @@ function mapQuotationFromSupabase(quotation: any, totalAmount: number = 0): any 
 }
 
 /**
- * Get all quotations from Supabase
+ * Search for a single quotation by ID (for Search by ID when not in last 50).
+ * Returns the same list-item shape as getQuotationsFromSupabase for merging into UI.
  */
-export async function getQuotationsFromSupabase(page: number = 1, pageSize: number = 20, searchQuery?: string): Promise<{ quotations: any[]; total: number }> {
+export async function searchQuotationById(quotationId: string): Promise<any | null> {
+  if (!quotationId || !String(quotationId).trim()) return null;
+  try {
+    const { data: quotation, error } = await supabase
+      .from('quotations')
+      .select('*, customers:customer_id(name, phone, address, shamel_no)')
+      .eq('quotation_id', String(quotationId).trim())
+      .single();
+    if (error || !quotation) return null;
+    const { data: details } = await supabase
+      .from('quotation_details')
+      .select('quantity, unit_price')
+      .eq('quotation_id', quotation.quotation_id);
+    const subtotal = (details || []).reduce(
+      (sum: number, d: any) => sum + parseFloat(String(d.quantity || 0)) * parseFloat(String(d.unit_price || 0)),
+      0
+    );
+    const specialDiscount = parseFloat(String(quotation.special_discount_amount || 0)) || 0;
+    const giftDiscount = parseFloat(String(quotation.gift_discount_amount || 0)) || 0;
+    const totalAmount = Math.max(0, subtotal - specialDiscount - giftDiscount);
+    return mapQuotationFromSupabase(quotation, totalAmount);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get all quotations from Supabase (default last 50 to reduce egress)
+ */
+export async function getQuotationsFromSupabase(page: number = 1, pageSize: number = 50, searchQuery?: string): Promise<{ quotations: any[]; total: number }> {
   try {
     console.log('[API] Fetching quotations from Supabase...', { page, pageSize, searchQuery });
     const startTime = Date.now();

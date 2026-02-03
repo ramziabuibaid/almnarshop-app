@@ -13,6 +13,7 @@ interface InvoiceItem {
   TotalPrice: number;
   DetailsID?: string;
   serialNos?: string[];
+  notes?: string;
 }
 
 export default function WarehouseSalesInvoicePrintPage() {
@@ -535,6 +536,11 @@ export default function WarehouseSalesInvoicePrintPage() {
                                 SN: {serial}
                               </span>
                             ))}
+                          </div>
+                        )}
+                        {item.notes && String(item.notes).trim() && (
+                          <div style={{ fontSize: '12px', color: '#dc2626', marginTop: '4px', fontStyle: 'italic' }}>
+                            {item.notes}
                           </div>
                         )}
                       </td>

@@ -4,7 +4,7 @@ import { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
-import { getWarehouseSalesInvoices, getWarehouseSalesInvoice, updateWarehouseSalesInvoiceSign, updateWarehouseSalesInvoiceStatus } from '@/lib/api';
+import { getWarehouseSalesInvoices, getWarehouseSalesInvoice, searchWarehouseSalesInvoiceById, updateWarehouseSalesInvoiceSign, updateWarehouseSalesInvoiceStatus } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { Lock } from 'lucide-react';
 import {
@@ -55,7 +55,8 @@ export default function WarehouseSalesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [signFilter, setSignFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const INVOICES_PER_PAGE = 30;
+  const INVOICES_PER_PAGE = 50;
+  const [searchByIdResult, setSearchByIdResult] = useState<WarehouseSalesInvoice | null>(null);
   const [viewing, setViewing] = useState<{
     invoice: any | null;
     details: any[] | null;
@@ -104,42 +105,36 @@ export default function WarehouseSalesPage() {
     }
   };
 
-  // Load first page quickly, then load more in background
+  // Load last 50 invoices only (same technique as cash invoices; use Search by ID for older)
   const loadFirstPage = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Load first page immediately for fast initial display
-      const firstPageResult = await getWarehouseSalesInvoices(1, INVOICES_PER_PAGE);
-      setAllInvoices(firstPageResult.invoices);
-      setLoading(false); // Show page immediately
-      
-      // Continue loading more invoices in background
-      if (firstPageResult.total > INVOICES_PER_PAGE) {
-        setLoadingMore(true);
-        loadMoreInvoices();
-      }
+      const result = await getWarehouseSalesInvoices(1, INVOICES_PER_PAGE);
+      setAllInvoices(result.invoices);
     } catch (err: any) {
       console.error('[WarehouseSalesPage] Failed to load invoices:', err);
       setError(err?.message || 'فشل تحميل الفواتير');
       setAllInvoices([]);
+    } finally {
       setLoading(false);
     }
   };
 
-  // Load remaining invoices in background
-  const loadMoreInvoices = async () => {
-    try {
-      // Load a large number of invoices in background
-      const result = await getWarehouseSalesInvoices(1, 1000);
-      setAllInvoices(result.invoices);
-    } catch (err: any) {
-      console.error('[WarehouseSalesPage] Failed to load more invoices:', err);
-      // Don't show error to user, just log it
-    } finally {
-      setLoadingMore(false);
+  // When user searches, try to fetch by exact invoice ID so older invoices (not in last 50) can be found
+  useEffect(() => {
+    const q = (searchQuery || '').trim();
+    if (!q) {
+      setSearchByIdResult(null);
+      return;
     }
-  };
+    let cancelled = false;
+    searchWarehouseSalesInvoiceById(q).then((found) => {
+      if (!cancelled && found) setSearchByIdResult(found);
+      else if (!cancelled) setSearchByIdResult(null);
+    });
+    return () => { cancelled = true; };
+  }, [searchQuery]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -348,8 +343,12 @@ export default function WarehouseSalesPage() {
       filtered = filtered.filter((invoice) => invoice.AccountantSign === signFilter);
     }
 
+    // Include search-by-ID result so user can find invoices not in the last 50
+    if (searchByIdResult && !filtered.some((inv) => inv.InvoiceID === searchByIdResult.InvoiceID)) {
+      return [searchByIdResult, ...filtered];
+    }
     return filtered;
-  }, [allInvoices, searchQuery, statusFilter, signFilter]);
+  }, [allInvoices, searchQuery, statusFilter, signFilter, searchByIdResult]);
 
   // Client-side pagination (like maintenance page)
   const totalPages = Math.ceil(filteredInvoices.length / INVOICES_PER_PAGE);
@@ -1041,6 +1040,11 @@ export default function WarehouseSalesPage() {
                               >
                                 {item.ProductName || item.productName || item.product_name || item.Name || item.name || '—'}
                               </button>
+                              {(item.notes || item.Notes) && String(item.notes || item.Notes).trim() && (
+                                <p className="text-xs text-red-600 mt-1 font-cairo italic">
+                                  {item.notes || item.Notes}
+                                </p>
+                              )}
                             </td>
                             <td className="px-3 py-2 text-right text-gray-800 font-cairo">
                               {item.Quantity || item.quantity || 0}
