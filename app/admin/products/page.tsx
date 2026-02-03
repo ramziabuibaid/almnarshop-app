@@ -6,7 +6,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import ProductFormModal from '@/components/admin/ProductFormModal';
 import MarketingCardGenerator from '@/components/admin/MarketingCardGenerator';
 import { DataTable } from '@/components/ui/data-table';
-import { Plus, Edit, Edit2, Image as ImageIcon, Loader2, Package, Sparkles, CheckCircle2, Trash, Eye, EyeOff, X, Check, Search, Filter, DollarSign, Warehouse, Store, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Edit2, Image as ImageIcon, Loader2, Package, Sparkles, CheckCircle2, Trash, Eye, EyeOff, X, Check, Search, Filter, DollarSign, Warehouse, Store, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
@@ -457,13 +457,26 @@ export default function ProductsManagerPage() {
     loadProducts();
   }, []);
 
-  // Reload products
+  // Reload products (from cache if available)
   const reloadProducts = async () => {
     try {
       const data = await getProducts();
       setProducts(data || []);
     } catch (error) {
       console.error('[ProductsPage] Error reloading products:', error);
+    }
+  };
+
+  // Force refresh from database (bypasses 60-min cache)
+  const refreshFromDatabase = async () => {
+    try {
+      setLoading(true);
+      const data = await getProducts({ force: true });
+      setProducts(data || []);
+    } catch (error) {
+      console.error('[ProductsPage] Error refreshing from database:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1300,13 +1313,24 @@ export default function ProductsManagerPage() {
                   إدارة مخزون المنتجات ({products.length} منتج)
                 </p>
               </div>
-              <button
-                onClick={handleAddNew}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
-              >
-                <Plus size={20} />
-                <span>إضافة منتج جديد</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <button
+                  onClick={refreshFromDatabase}
+                  disabled={loading}
+                  className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700 disabled:opacity-50"
+                  title="تحديث قائمة المنتجات من قاعدة البيانات (يتخطى الكاش)"
+                >
+                  <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                  <span>تحديث من قاعدة البيانات</span>
+                </button>
+                <button
+                  onClick={handleAddNew}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+                >
+                  <Plus size={20} />
+                  <span>إضافة منتج جديد</span>
+                </button>
+              </div>
             </div>
           
           {/* Global Search and Column Visibility */}
