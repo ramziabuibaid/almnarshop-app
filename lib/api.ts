@@ -551,29 +551,114 @@ export async function getProductById(productId: string): Promise<any | null> {
   }
 }
 
+/** Client-side cache TTL: 60 minutes (reduces Supabase egress) */
+const CACHE_TTL_MS = 60 * 60 * 1000;
+
+const CACHE_PRODUCTS_DATA = 'cache_products_data';
+const CACHE_PRODUCTS_TIMESTAMP = 'cache_products_timestamp';
+const CACHE_CUSTOMERS_DATA = 'cache_customers_data';
+const CACHE_CUSTOMERS_TIMESTAMP = 'cache_customers_timestamp';
+
+function getFromCache<T>(dataKey: string, timestampKey: string): T | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(dataKey);
+    const ts = localStorage.getItem(timestampKey);
+    if (!raw || !ts) return null;
+    const age = Date.now() - parseInt(ts, 10);
+    if (age >= CACHE_TTL_MS) return null;
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+function setCache(dataKey: string, timestampKey: string, data: any): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(dataKey, JSON.stringify(data));
+    localStorage.setItem(timestampKey, String(Date.now()));
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Clear products cache (e.g. after adding/editing a product so next getProducts fetches fresh data)
+ */
+export function clearProductsCache(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(CACHE_PRODUCTS_DATA);
+    localStorage.removeItem(CACHE_PRODUCTS_TIMESTAMP);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Clear customers cache (e.g. after adding/editing a customer)
+ */
+export function clearCustomersCache(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(CACHE_CUSTOMERS_DATA);
+    localStorage.removeItem(CACHE_CUSTOMERS_TIMESTAMP);
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Get all products from Supabase
  * Maps Supabase snake_case columns to app PascalCase format
+ * Uses client-side cache (60 min TTL) unless options.force is true.
  * @param options.forStore - If true, returns only products visible in the online store (is_visible !== false)
+ * @param options.force - If true, bypass cache and fetch from Supabase (e.g. after "Refresh" or add product)
  */
-export async function getProducts(options?: { forStore?: boolean }): Promise<any[]> {
+export async function getProducts(options?: { forStore?: boolean; force?: boolean }): Promise<any[]> {
   try {
     const forStore = options?.forStore === true;
-    console.log(`[API] Fetching products from Supabase${forStore ? ' (store only)' : ''}...`);
+    const force = options?.force === true;
+
+    if (!force) {
+      const cached = getFromCache<any[]>(CACHE_PRODUCTS_DATA, CACHE_PRODUCTS_TIMESTAMP);
+      if (cached && Array.isArray(cached)) {
+        console.log(`[API] Products loaded from cache (${cached.length} items)${forStore ? ' (store filter applied)' : ''}`);
+        if (forStore) {
+          const filtered = cached.filter((p: any) => p.is_visible !== false && p.isVisible !== false);
+          const sorted = [...filtered].sort((a: any, b: any) => {
+            const aRestock = a.last_restocked_at || a.LastRestockedAt;
+            const aCreated = a.created_at;
+            const aTime = Math.max(
+              aRestock ? new Date(aRestock).getTime() : 0,
+              aCreated ? new Date(aCreated).getTime() : 0
+            );
+            const bRestock = b.last_restocked_at || b.LastRestockedAt;
+            const bCreated = b.created_at;
+            const bTime = Math.max(
+              bRestock ? new Date(bRestock).getTime() : 0,
+              bCreated ? new Date(bCreated).getTime() : 0
+            );
+            return bTime - aTime;
+          });
+          return sorted;
+        }
+        return cached;
+      }
+    }
+
+    console.log(`[API] Fetching products from Supabase${forStore ? ' (store only)' : ''}${force ? ' (force refresh)' : ''}...`);
     const startTime = Date.now();
     
-    // Fetch all products from Supabase using pagination to get all records
     let allProducts: any[] = [];
     let page = 0;
-    const pageSize = 1000; // Supabase default limit
+    const pageSize = 1000;
     let hasMore = true;
     
-    // Lightweight select: only columns needed for POS/Catalog (reduces egress)
-    // Note: include cost_price because UI shows "سعر التكلفة"
     const productColumns =
       'product_id, shamel_no, barcode, name, cost_price, sale_price, cs_shop, cs_war, image_url, image_url_2, image_url_3, type, brand, last_restocked_at, is_visible, created_at';
     while (hasMore) {
-      // Fetch products ordered by created_at descending (newest first)
       const { data: products, error } = await supabase
         .from('products')
         .select(productColumns)
@@ -594,7 +679,6 @@ export async function getProducts(options?: { forStore?: boolean }): Promise<any
         hasMore = false;
       } else {
         allProducts = allProducts.concat(products);
-        // If we got less than pageSize, we've reached the end
         if (products.length < pageSize) {
           hasMore = false;
         } else {
@@ -603,21 +687,18 @@ export async function getProducts(options?: { forStore?: boolean }): Promise<any
       }
     }
     
-    // Map snake_case to PascalCase
     const filteredProducts = allProducts.filter((product: any) => {
-      // Filter out products without required fields
       const hasId = !!(product.product_id);
       const hasName = !!(product.name);
       return hasId && hasName;
     });
     
-    // Map products (synchronous mapping - no longer async)
     let mappedProducts = filteredProducts.map((product: any) => mapProductFromSupabase(product));
 
-    // For store: filter to visible products only, and sort by most recent (add OR restock)
+    setCache(CACHE_PRODUCTS_DATA, CACHE_PRODUCTS_TIMESTAMP, mappedProducts);
+
     if (forStore) {
       mappedProducts = mappedProducts.filter((p: any) => p.is_visible !== false && p.isVisible !== false);
-      // Sort: by the most recent of (created_at, last_restocked_at) - newest additions and restocks first
       mappedProducts.sort((a: any, b: any) => {
         const aRestock = a.last_restocked_at || a.LastRestockedAt;
         const aCreated = a.created_at;
@@ -631,7 +712,7 @@ export async function getProducts(options?: { forStore?: boolean }): Promise<any
           bRestock ? new Date(bRestock).getTime() : 0,
           bCreated ? new Date(bCreated).getTime() : 0
         );
-        return bTime - aTime; // Descending (newest first)
+        return bTime - aTime;
       });
       console.log(`[API] Store products (visible only, sorted by latest add/restock): ${mappedProducts.length}`);
     }
@@ -639,7 +720,6 @@ export async function getProducts(options?: { forStore?: boolean }): Promise<any
     const totalTime = Date.now() - startTime;
     console.log(`[API] Products loaded from Supabase: ${mappedProducts.length} in ${totalTime}ms`);
     
-    // Log sample products for debugging
     if (mappedProducts.length > 0) {
       const sampleProducts = mappedProducts.slice(0, 3);
       sampleProducts.forEach((p, idx) => {
@@ -867,6 +947,7 @@ export async function saveProduct(productData: any): Promise<any> {
       }
     }
 
+    clearProductsCache();
     return {
       status: 'success',
       message: existingProduct ? 'Product updated successfully' : 'Product created successfully',
@@ -979,6 +1060,7 @@ export async function updateProductVisibility(productId: string, isVisible: bool
     console.error('[API] Error updating product visibility:', error);
     throw new Error(`Failed to update visibility: ${error.message}`);
   }
+  clearProductsCache();
 }
 
 /**
@@ -1128,19 +1210,29 @@ export async function uploadImage(imageData: {
 /**
  * Get all customers from Supabase
  * Maps Supabase snake_case columns to app PascalCase format
+ * Uses client-side cache (60 min TTL) unless options.force is true.
+ * @param options.force - If true, bypass cache and fetch from Supabase (e.g. after "Refresh" or add customer)
  */
-export async function getAllCustomers(): Promise<any[]> {
+export async function getAllCustomers(options?: { force?: boolean }): Promise<any[]> {
   try {
-    console.log('[API] Fetching all customers from Supabase...');
+    const force = options?.force === true;
+
+    if (!force) {
+      const cached = getFromCache<any[]>(CACHE_CUSTOMERS_DATA, CACHE_CUSTOMERS_TIMESTAMP);
+      if (cached && Array.isArray(cached)) {
+        console.log(`[API] Customers loaded from cache (${cached.length} items)`);
+        return cached;
+      }
+    }
+
+    console.log(`[API] Fetching all customers from Supabase${force ? ' (force refresh)' : ''}...`);
     const startTime = Date.now();
     
-    // Fetch all customers from Supabase using pagination to get all records
     let allCustomers: any[] = [];
     let page = 0;
-    const pageSize = 1000; // Supabase default limit
+    const pageSize = 1000;
     let hasMore = true;
     
-    // Lightweight select: only columns needed for list/CRM (excludes notes, address, history_logs, etc.)
     const customerColumns = 'customer_id, name, phone, balance, shamel_no';
     while (hasMore) {
       const { data: customers, error } = await supabase
@@ -1162,7 +1254,6 @@ export async function getAllCustomers(): Promise<any[]> {
         hasMore = false;
       } else {
         allCustomers = allCustomers.concat(customers);
-        // If we got less than pageSize, we've reached the end
         if (customers.length < pageSize) {
           hasMore = false;
         } else {
@@ -1171,13 +1262,12 @@ export async function getAllCustomers(): Promise<any[]> {
       }
     }
     
-    // Map snake_case to PascalCase
     const mappedCustomers = allCustomers.map((customer: any) => mapCustomerFromSupabase(customer));
+    setCache(CACHE_CUSTOMERS_DATA, CACHE_CUSTOMERS_TIMESTAMP, mappedCustomers);
     
     const totalTime = Date.now() - startTime;
     console.log(`[API] Customers loaded from Supabase: ${mappedCustomers.length} in ${totalTime}ms`);
     
-    // Debug: Log sample customer to see structure
     if (mappedCustomers.length > 0) {
       console.log('[API] Sample customer from Supabase:', mappedCustomers[0]);
       console.log('[API] Sample customer keys:', Object.keys(mappedCustomers[0]));
@@ -1422,6 +1512,7 @@ export async function saveCustomer(customerData: {
       }
     }
 
+    clearCustomersCache();
     return { status: 'success', data: result };
   } catch (error: any) {
     console.error('[API] saveCustomer error:', error);
