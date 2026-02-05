@@ -35,6 +35,7 @@ interface DataTableProps<TData, TValue> {
   tableRef?: React.MutableRefObject<any>; // Ref to expose table instance
   showStickyPagination?: boolean; // Show pagination as sticky when near bottom
   stickyHeaderOffset?: number; // Offset for sticky header (when page header is hidden)
+  initialSorting?: SortingState; // Default sort (e.g. [{ id: 'LastRestockedAt', desc: true }])
 }
 
 export function DataTable<TData, TValue>({
@@ -56,6 +57,7 @@ export function DataTable<TData, TValue>({
   tableRef,
   showStickyPagination = false,
   stickyHeaderOffset = 0,
+  initialSorting = [],
 }: DataTableProps<TData, TValue>) {
   // Load column visibility from localStorage on mount
   const getInitialColumnVisibility = (): VisibilityState => {
@@ -77,7 +79,7 @@ export function DataTable<TData, TValue>({
     return defaultColumnVisibility;
   };
 
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>(initialSorting);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [internalColumnVisibility, setInternalColumnVisibility] = useState<VisibilityState>(getInitialColumnVisibility);
   const [activeFilterColumn, setActiveFilterColumn] = useState<string | null>(null);

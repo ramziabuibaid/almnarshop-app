@@ -7,9 +7,9 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AddInteractionModal from '@/components/admin/AddInteractionModal';
 import CustomerFormModal from '@/components/admin/CustomerFormModal';
+import CustomerSelect from '@/components/admin/CustomerSelect';
 import PhoneActions from '@/components/admin/PhoneActions';
-import { getDashboardData, saveCustomer, getAllCustomers } from '@/lib/api';
-import { fixPhoneNumber } from '@/lib/utils';
+import { getDashboardData, getAllCustomers, updatePTPStatus, logActivity } from '@/lib/api';
 import {
   Users,
   Loader2,
@@ -31,6 +31,12 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  RefreshCw,
+  CheckCircle2,
+  Copy,
+  MessageSquare,
+  MapPin,
+  Mail,
 } from 'lucide-react';
 
 interface Customer {
@@ -255,6 +261,13 @@ export default function CustomersPage() {
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [showOverdueList, setShowOverdueList] = useState(false);
   const [showTodayList, setShowTodayList] = useState(false);
+  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
+  const [rescheduleModal, setRescheduleModal] = useState<{ isOpen: boolean; item: any }>({ isOpen: false, item: null });
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleNote, setRescheduleNote] = useState('');
+  const [copyModal, setCopyModal] = useState<{ isOpen: boolean; item: any }>({ isOpen: false, item: null });
+  const [copyForm, setCopyForm] = useState({ customerID: '', date: '', note: '', channel: 'Phone' });
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | null }>({ message: '', type: null });
 
   // Set page title
   useEffect(() => {
@@ -286,13 +299,28 @@ export default function CustomersPage() {
     loadDashboardData();
   }, []);
 
-  // Reload customers
+  // Reload customers (from cache if available)
   const reloadCustomers = async () => {
     try {
       const data = await getAllCustomers();
       setCustomers(data || []);
     } catch (err: any) {
       console.error('[CustomersPage] Error reloading customers:', err);
+    }
+  };
+
+  // Force refresh from database (bypasses 60-min cache — e.g. when another user added a customer)
+  const refreshFromDatabase = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getAllCustomers({ force: true });
+      setCustomers(data || []);
+    } catch (err: any) {
+      console.error('[CustomersPage] Error refreshing from database:', err);
+      setError(err?.message || 'فشل تحديث القائمة');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -703,6 +731,163 @@ export default function CustomersPage() {
     }
   };
 
+  const formatDateToYYYYMMDD = (dateString: string): string => {
+    if (!dateString) return '';
+    if (/^\d{4}-\d{2}-\d{2}/.test(dateString)) return dateString.split('T')[0];
+    const ddMMyyyyMatch = dateString.match(/^(\d{2})-(\d{2})-(\d{4})/);
+    if (ddMMyyyyMatch) {
+      const [, day, month, year] = ddMMyyyyMatch;
+      return `${year}-${month}-${day}`;
+    }
+    try {
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime())) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+    } catch {}
+    return '';
+  };
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast({ message: '', type: null }), 3000);
+  };
+
+  const handleResolved = async (item: any) => {
+    const interactionId = item.InteractionID || item.id || item.ActivityID;
+    if (!interactionId) {
+      showToast('معرف المهمة غير متوفر', 'error');
+      return;
+    }
+    setUpdatingIds((prev) => new Set(prev).add(interactionId));
+    try {
+      await updatePTPStatus(interactionId, 'Fulfilled');
+      setDashboardData((prev: any) => ({
+        ...prev,
+        overdue: (prev.overdue || []).filter((i: any) => (i.InteractionID || i.id) !== interactionId),
+        today: (prev.today || []).filter((i: any) => (i.InteractionID || i.id) !== interactionId),
+      }));
+      showToast('تم تحديث الحالة بنجاح', 'success');
+    } catch (err: any) {
+      showToast(`فشل تحديث الحالة: ${err?.message || 'خطأ غير معروف'}`, 'error');
+    } finally {
+      setUpdatingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(interactionId);
+        return next;
+      });
+    }
+  };
+
+  const handleRescheduleClick = (item: any) => {
+    setRescheduleModal({ isOpen: true, item });
+    const oneWeekLater = new Date();
+    oneWeekLater.setDate(oneWeekLater.getDate() + 7);
+    setRescheduleDate(oneWeekLater.toISOString().split('T')[0]);
+    setRescheduleNote('');
+  };
+
+  const handleRescheduleSubmit = async () => {
+    if (!rescheduleModal.item || !rescheduleDate) {
+      showToast('يرجى إدخال التاريخ', 'error');
+      return;
+    }
+    const item = rescheduleModal.item;
+    const interactionId = item.InteractionID || item.id || item.ActivityID;
+    if (interactionId) setUpdatingIds((prev) => new Set(prev).add(interactionId));
+    try {
+      const formattedDate = formatDateToYYYYMMDD(rescheduleDate);
+      const originalAmount = item.PromiseAmount ? parseFloat(String(item.PromiseAmount)) : 0;
+      const customerId = item.CustomerID || item.customerID;
+      if (interactionId) {
+        try {
+          await updatePTPStatus(interactionId, 'Archived');
+        } catch {}
+      }
+      await logActivity({
+        CustomerID: customerId,
+        ActionType: 'Call',
+        Outcome: 'Promised',
+        Notes: rescheduleNote || 'تم إعادة الجدولة',
+        PromiseDate: formattedDate,
+        PromiseAmount: originalAmount,
+      });
+      showToast('تم إعادة الجدولة بنجاح', 'success');
+      setRescheduleModal({ isOpen: false, item: null });
+      setRescheduleDate('');
+      setRescheduleNote('');
+      loadDashboardData();
+    } catch (err: any) {
+      showToast(`فشل إعادة الجدولة: ${err?.message || 'خطأ غير معروف'}`, 'error');
+    } finally {
+      if (interactionId) {
+        setUpdatingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(interactionId);
+          return next;
+        });
+      }
+    }
+  };
+
+  const handleCopyClick = (item: any) => {
+    setCopyModal({ isOpen: true, item });
+    const oneWeekLater = new Date();
+    oneWeekLater.setDate(oneWeekLater.getDate() + 7);
+    setCopyForm({
+      customerID: item.CustomerID || item.customerID || '',
+      date: oneWeekLater.toISOString().split('T')[0],
+      note: item.Notes || item.notes || '',
+      channel: 'Phone',
+    });
+  };
+
+  const handleCopySubmit = async () => {
+    if (!copyModal.item || !copyForm.customerID || !copyForm.date) {
+      showToast('يرجى إدخال جميع الحقول المطلوبة', 'error');
+      return;
+    }
+    const item = copyModal.item;
+    const interactionId = item.InteractionID || item.id || item.ActivityID;
+    if (interactionId) setUpdatingIds((prev) => new Set(prev).add(interactionId));
+    try {
+      const formattedDate = formatDateToYYYYMMDD(copyForm.date);
+      const originalAmount = item.PromiseAmount ? parseFloat(String(item.PromiseAmount)) : 0;
+      const channelMapping: Record<string, string> = {
+        Phone: 'Call',
+        WhatsApp: 'WhatsApp',
+        Visit: 'Visit',
+        Email: 'Email',
+      };
+      const actionType = channelMapping[copyForm.channel] || 'Call';
+      await logActivity({
+        CustomerID: copyForm.customerID,
+        ActionType: actionType,
+        Outcome: 'Promised',
+        Notes: copyForm.note || 'تم نسخ التفاعل',
+        PromiseDate: formattedDate,
+        PromiseAmount: originalAmount,
+      });
+      showToast('تم نسخ التفاعل بنجاح', 'success');
+      setCopyModal({ isOpen: false, item: null });
+      setCopyForm({ customerID: '', date: '', note: '', channel: 'Phone' });
+      loadDashboardData();
+    } catch (err: any) {
+      showToast(`فشل نسخ التفاعل: ${err?.message || 'خطأ غير معروف'}`, 'error');
+    } finally {
+      if (interactionId) {
+        setUpdatingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(interactionId);
+          return next;
+        });
+      }
+    }
+  };
+
   const getBalanceColor = (balance: number | undefined | null) => {
     const value = balance || 0;
     if (value > 0) return 'text-red-600 font-semibold';
@@ -756,6 +941,20 @@ export default function CustomersPage() {
 
   return (
     <AdminLayout>
+      {/* Toast */}
+      {toast.message && (
+        <div
+          className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 transition-all duration-300 ${
+            toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+          }`}
+        >
+          <span>{toast.message}</span>
+          <button onClick={() => setToast({ message: '', type: null })} className="hover:opacity-80">
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
       <div className="space-y-6" dir="rtl">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -765,16 +964,27 @@ export default function CustomersPage() {
               إدارة علاقات العملاء ومتابعة المستحقات والمديونيات
             </p>
           </div>
-          <button
-            onClick={() => {
-              setEditingCustomer(null);
-              setIsCustomerModalOpen(true);
-            }}
-            className="w-full sm:w-auto px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium flex items-center justify-center gap-2"
-          >
-            <Users size={20} />
-            <span>إضافة عميل جديد</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={refreshFromDatabase}
+              disabled={loading}
+              className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700 disabled:opacity-50"
+              title="تحديث قائمة الزبائن من قاعدة البيانات (مفيد عند إضافة عميل من جهاز أو حساب آخر)"
+            >
+              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+              <span>تحديث من قاعدة البيانات</span>
+            </button>
+            <button
+              onClick={() => {
+                setEditingCustomer(null);
+                setIsCustomerModalOpen(true);
+              }}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+            >
+              <Users size={20} />
+              <span>إضافة عميل جديد</span>
+            </button>
+          </div>
         </div>
 
         {/* Follow-up Dashboard */}
@@ -805,52 +1015,96 @@ export default function CustomersPage() {
                     .filter((item: any) => item) // Filter out null/undefined items
                     .map((item: any, index: number) => {
                       const itemId = item.InteractionID || item.id || item.CustomerID || item.customerID || `overdue-${index}`;
+                      const customer = customers.find(
+                        (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
+                      );
+                      const customerName = item.CustomerName || item.customerName || customer?.Name || customer?.name || 'عميل';
+                      const customerPhone = customer?.Phone || customer?.phone || '';
                       return (
                         <div
                           key={`overdue-${itemId}-${index}`}
                           className="bg-white rounded-lg p-3 border border-red-200 flex items-center justify-between"
                         >
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900">
-                          {item.CustomerName || item.customerName || 'عميل'}
-                        </p>
+                        <button
+                          onClick={(e) => {
+                            if (customer) {
+                              handleViewProfile(customer, e);
+                            } else if (item.CustomerID || item.customerID) {
+                              const cid = item.CustomerID || item.customerID;
+                              if (e?.ctrlKey || e?.metaKey || e?.button === 1) {
+                                window.open(`/admin/customers/${cid}`, '_blank');
+                              } else {
+                                router.push(`/admin/customers/${cid}`);
+                              }
+                            }
+                          }}
+                          onMouseDown={(e) => {
+                            if (e.button === 1 && (item.CustomerID || item.customerID)) {
+                              e.preventDefault();
+                              window.open(`/admin/customers/${item.CustomerID || item.customerID}`, '_blank');
+                            }
+                          }}
+                          className="font-medium text-gray-900 hover:text-blue-600 hover:underline text-right transition-colors cursor-pointer block"
+                          title="عرض الملف الشخصي (Ctrl+Click لفتح في تاب جديد)"
+                        >
+                          {customerName}
+                        </button>
+                        {customerPhone && (
+                          <div className="mt-1">
+                            <PhoneActions phone={customerPhone} />
+                          </div>
+                        )}
                         <p className="text-sm text-gray-600 mt-1">
                           {item.Notes || item.notes || 'لا توجد ملاحظات'}
                         </p>
-                        {item.NextFollowUpDate && (
+                        {(item.NextFollowUpDate || item.NextDate) && (
                           <p className="text-xs text-red-600 mt-1">
-                            كان من المفترض: {formatDate(item.NextFollowUpDate)}
+                            كان من المفترض: {formatDate(item.NextFollowUpDate || item.NextDate)}
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
                         <button
-                          onClick={() => {
-                            const customer = customers.find(
-                              (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
-                            );
-                            if (customer) {
-                              handleOpenInteractionModal(customer, item);
-                            }
-                          }}
-                          className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
-                          title="تعديل"
+                          onClick={() => handleResolved(item)}
+                          disabled={updatingIds.has(item.InteractionID || item.id || '')}
+                          className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
+                          title="تم الدفع"
                         >
-                          <Edit size={14} />
+                          {updatingIds.has(item.InteractionID || item.id || '') ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <CheckCircle2 size={14} />
+                          )}
+                          تم الدفع
+                        </button>
+                        <button
+                          onClick={() => handleRescheduleClick(item)}
+                          disabled={updatingIds.has(item.InteractionID || item.id || '')}
+                          className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
+                          title="إعادة جدولة"
+                        >
+                          <Calendar size={14} />
+                          إعادة جدولة
+                        </button>
+                        <button
+                          onClick={() => handleCopyClick(item)}
+                          disabled={updatingIds.has(item.InteractionID || item.id || '')}
+                          className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
+                          title="نسخ تفاعل"
+                        >
+                          <Copy size={14} />
+                          نسخ تفاعل
                         </button>
                         <button
                           onClick={() => {
-                            const customer = customers.find(
-                              (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
-                            );
-                            if (customer) {
-                              handleOpenInteractionModal(customer, item);
-                            }
+                            const cust = customers.find((c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID));
+                            if (cust) handleOpenInteractionModal(cust, item);
                           }}
-                          className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                          className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
                           title="فتح/تعديل"
                         >
-                          فتح
+                          <Edit size={14} />
                         </button>
                       </div>
                     </div>
@@ -884,47 +1138,91 @@ export default function CustomersPage() {
                     .filter((item: any) => item) // Filter out null/undefined items
                     .map((item: any, index: number) => {
                       const itemId = item.InteractionID || item.id || item.CustomerID || item.customerID || `today-${index}`;
+                      const customer = customers.find(
+                        (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
+                      );
+                      const customerName = item.CustomerName || item.customerName || customer?.Name || customer?.name || 'عميل';
+                      const customerPhone = customer?.Phone || customer?.phone || '';
                       return (
                         <div
                           key={`today-${itemId}-${index}`}
                           className="bg-white rounded-lg p-3 border border-blue-200 flex items-center justify-between"
                         >
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900">
-                          {item.CustomerName || item.customerName || 'عميل'}
-                        </p>
+                        <button
+                          onClick={(e) => {
+                            if (customer) {
+                              handleViewProfile(customer, e);
+                            } else if (item.CustomerID || item.customerID) {
+                              const cid = item.CustomerID || item.customerID;
+                              if (e?.ctrlKey || e?.metaKey || e?.button === 1) {
+                                window.open(`/admin/customers/${cid}`, '_blank');
+                              } else {
+                                router.push(`/admin/customers/${cid}`);
+                              }
+                            }
+                          }}
+                          onMouseDown={(e) => {
+                            if (e.button === 1 && (item.CustomerID || item.customerID)) {
+                              e.preventDefault();
+                              window.open(`/admin/customers/${item.CustomerID || item.customerID}`, '_blank');
+                            }
+                          }}
+                          className="font-medium text-gray-900 hover:text-blue-600 hover:underline text-right transition-colors cursor-pointer block"
+                          title="عرض الملف الشخصي (Ctrl+Click لفتح في تاب جديد)"
+                        >
+                          {customerName}
+                        </button>
+                        {customerPhone && (
+                          <div className="mt-1">
+                            <PhoneActions phone={customerPhone} />
+                          </div>
+                        )}
                         <p className="text-sm text-gray-600 mt-1">
                           {item.Notes || item.notes || 'لا توجد ملاحظات'}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
                         <button
-                          onClick={() => {
-                            const customer = customers.find(
-                              (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
-                            );
-                            if (customer) {
-                              handleOpenInteractionModal(customer, item);
-                            }
-                          }}
-                          className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
-                          title="تعديل"
+                          onClick={() => handleResolved(item)}
+                          disabled={updatingIds.has(item.InteractionID || item.id || '')}
+                          className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
+                          title="تم الدفع"
                         >
-                          <Edit size={14} />
+                          {updatingIds.has(item.InteractionID || item.id || '') ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <CheckCircle2 size={14} />
+                          )}
+                          تم الدفع
+                        </button>
+                        <button
+                          onClick={() => handleRescheduleClick(item)}
+                          disabled={updatingIds.has(item.InteractionID || item.id || '')}
+                          className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
+                          title="إعادة جدولة"
+                        >
+                          <Calendar size={14} />
+                          إعادة جدولة
+                        </button>
+                        <button
+                          onClick={() => handleCopyClick(item)}
+                          disabled={updatingIds.has(item.InteractionID || item.id || '')}
+                          className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
+                          title="نسخ تفاعل"
+                        >
+                          <Copy size={14} />
+                          نسخ تفاعل
                         </button>
                         <button
                           onClick={() => {
-                            const customer = customers.find(
-                              (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
-                            );
-                            if (customer) {
-                              handleOpenInteractionModal(customer, item);
-                            }
+                            const cust = customers.find((c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID));
+                            if (cust) handleOpenInteractionModal(cust, item);
                           }}
-                          className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                          className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
                           title="فتح/تعديل"
                         >
-                          فتح
+                          <Edit size={14} />
                         </button>
                       </div>
                     </div>
@@ -1591,6 +1889,210 @@ export default function CustomersPage() {
         customer={editingCustomer}
         onSuccess={handleCustomerSuccess}
       />
+
+      {/* Reschedule Modal */}
+      {rescheduleModal.isOpen && rescheduleModal.item && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          dir="rtl"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setRescheduleModal({ isOpen: false, item: null });
+              setRescheduleDate('');
+              setRescheduleNote('');
+            }
+          }}
+        >
+          <div
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">إعادة جدولة</h3>
+              <button
+                onClick={() => {
+                  setRescheduleModal({ isOpen: false, item: null });
+                  setRescheduleDate('');
+                  setRescheduleNote('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  تاريخ السداد الجديد <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={rescheduleDate}
+                  onChange={(e) => setRescheduleDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">ملاحظات</label>
+                <textarea
+                  value={rescheduleNote}
+                  onChange={(e) => setRescheduleNote(e.target.value)}
+                  placeholder="أضف ملاحظات..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setRescheduleModal({ isOpen: false, item: null });
+                  setRescheduleDate('');
+                  setRescheduleNote('');
+                }}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleRescheduleSubmit}
+                disabled={!rescheduleDate || updatingIds.has(rescheduleModal.item?.InteractionID || rescheduleModal.item?.id || '')}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {updatingIds.has(rescheduleModal.item?.InteractionID || rescheduleModal.item?.id || '') ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    جاري الحفظ...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={16} />
+                    حفظ
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Copy Interaction Modal */}
+      {copyModal.isOpen && copyModal.item && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          dir="rtl"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setCopyModal({ isOpen: false, item: null });
+              setCopyForm({ customerID: '', date: '', note: '', channel: 'Phone' });
+            }
+          }}
+        >
+          <div
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">نسخ تفاعل</h3>
+              <button
+                onClick={() => {
+                  setCopyModal({ isOpen: false, item: null });
+                  setCopyForm({ customerID: '', date: '', note: '', channel: 'Phone' });
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <CustomerSelect
+                value={copyForm.customerID}
+                onChange={(customerID) => setCopyForm({ ...copyForm, customerID })}
+                customers={customers}
+                placeholder="اختر العميل"
+                required
+              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">طريقة التواصل</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { value: 'Phone', label: 'اتصال', icon: Phone },
+                    { value: 'WhatsApp', label: 'واتس اب', icon: MessageSquare },
+                    { value: 'Visit', label: 'زيارة', icon: MapPin },
+                    { value: 'Email', label: 'بريد', icon: Mail },
+                  ].map((ch) => {
+                    const Icon = ch.icon;
+                    return (
+                      <button
+                        key={ch.value}
+                        type="button"
+                        onClick={() => setCopyForm({ ...copyForm, channel: ch.value })}
+                        className={`flex flex-col items-center gap-2 px-3 py-3 border-2 rounded-lg transition-colors ${
+                          copyForm.channel === ch.value
+                            ? 'border-gray-900 bg-gray-50 text-gray-900'
+                            : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                        }`}
+                      >
+                        <Icon size={20} />
+                        <span className="text-xs font-medium">{ch.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  تاريخ الموعد <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={copyForm.date}
+                  onChange={(e) => setCopyForm({ ...copyForm, date: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">ملاحظات</label>
+                <textarea
+                  value={copyForm.note}
+                  onChange={(e) => setCopyForm({ ...copyForm, note: e.target.value })}
+                  placeholder="أضف ملاحظات..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setCopyModal({ isOpen: false, item: null });
+                  setCopyForm({ customerID: '', date: '', note: '', channel: 'Phone' });
+                }}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleCopySubmit}
+                disabled={!copyForm.customerID || !copyForm.date || updatingIds.has(copyModal.item?.InteractionID || copyModal.item?.id || '')}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {updatingIds.has(copyModal.item?.InteractionID || copyModal.item?.id || '') ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    جاري الحفظ...
+                  </>
+                ) : (
+                  <>
+                    <Copy size={16} />
+                    نسخ التفاعل
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

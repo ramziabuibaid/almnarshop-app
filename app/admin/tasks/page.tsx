@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import CustomerSelect from '@/components/admin/CustomerSelect';
+import PhoneActions from '@/components/admin/PhoneActions';
 import { getDashboardData, logActivity, updatePTPStatus, getAllCustomers } from '@/lib/api';
 import {
   Loader2,
@@ -645,7 +646,9 @@ export default function TasksPage() {
                   <p className="text-gray-500">لا توجد وعود فائتة</p>
                 </div>
               ) : (
-                tasks.overdue.map((task) => (
+                tasks.overdue.map((task) => {
+                  const customerPhone = task.CustomerPhone || task.Customerphone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.Phone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.phone || '';
+                  return (
                   <div
                     key={task.InteractionID}
                     className="bg-white rounded-lg border-2 border-red-400 p-4 shadow-sm hover:shadow-md transition-shadow"
@@ -654,10 +657,15 @@ export default function TasksPage() {
                       href={`/admin/customers/${task.CustomerID}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-lg font-bold text-gray-900 mb-2 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
+                      className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
                     >
                       {task.CustomerName}
                     </a>
+                    {customerPhone && (
+                      <div className="mb-2">
+                        <PhoneActions phone={customerPhone} />
+                      </div>
+                    )}
                     {task.PromiseAmount && (
                       <p className="text-sm font-semibold text-red-600 mb-1">
                         المبلغ: {formatCurrency(task.PromiseAmount)}
@@ -710,7 +718,8 @@ export default function TasksPage() {
                       </button>
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -732,7 +741,9 @@ export default function TasksPage() {
                   <p className="text-gray-500">لا توجد مهام اليوم</p>
                 </div>
               ) : (
-                tasks.today.map((task) => (
+                tasks.today.map((task) => {
+                  const customerPhone = task.CustomerPhone || task.Customerphone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.Phone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.phone || '';
+                  return (
                   <div
                     key={task.InteractionID}
                     className="bg-white rounded-lg border-2 border-blue-200 p-4 shadow-sm hover:shadow-md transition-shadow"
@@ -741,10 +752,15 @@ export default function TasksPage() {
                       href={`/admin/customers/${task.CustomerID}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-lg font-bold text-gray-900 mb-2 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
+                      className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
                     >
                       {task.CustomerName}
                     </a>
+                    {customerPhone && (
+                      <div className="mb-2">
+                        <PhoneActions phone={customerPhone} />
+                      </div>
+                    )}
                     {task.PromiseAmount && (
                       <p className="text-sm font-semibold text-blue-600 mb-1">
                         المبلغ: {formatCurrency(task.PromiseAmount)}
@@ -797,7 +813,8 @@ export default function TasksPage() {
                       </button>
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -819,7 +836,9 @@ export default function TasksPage() {
                   <p className="text-gray-500">لا توجد وعود قادمة</p>
                 </div>
               ) : (
-                tasks.upcoming.map((task) => (
+                tasks.upcoming.map((task) => {
+                  const customerPhone = task.CustomerPhone || task.Customerphone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.Phone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.phone || '';
+                  return (
                   <div
                     key={task.InteractionID}
                     className="bg-white rounded-lg border-2 border-green-200 p-4 shadow-sm hover:shadow-md transition-shadow"
@@ -828,10 +847,15 @@ export default function TasksPage() {
                       href={`/admin/customers/${task.CustomerID}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-lg font-bold text-gray-900 mb-2 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
+                      className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
                     >
                       {task.CustomerName}
                     </a>
+                    {customerPhone && (
+                      <div className="mb-2">
+                        <PhoneActions phone={customerPhone} />
+                      </div>
+                    )}
                     {task.PromiseAmount && (
                       <p className="text-sm font-semibold text-green-600 mb-1">
                         المبلغ: {formatCurrency(task.PromiseAmount)}
@@ -884,7 +908,8 @@ export default function TasksPage() {
                       </button>
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

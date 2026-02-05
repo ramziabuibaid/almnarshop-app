@@ -1243,31 +1243,31 @@ export default function ProductsManagerPage() {
   );
 
   // Filter products based on search query (additional to column filters)
-  // Optimized with early returns and cached lowercase strings
+  // Default sort: آخر تجديد (newest first) for both table and mobile
   const filteredProducts = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return products;
+    let list = products;
+    if (searchQuery.trim()) {
+      const searchWords = searchQuery
+        .toLowerCase()
+        .trim()
+        .split(/\s+/)
+        .filter((word) => word.length > 0);
+      if (searchWords.length > 0) {
+        list = products.filter((p) => {
+          const name = String(p.name || p.Name || '').toLowerCase();
+          const id = String(p.id || p.ProductID || '').toLowerCase();
+          const barcode = String(p.barcode || p.Barcode || '').toLowerCase();
+          const brand = String(p.brand || p.Brand || '').toLowerCase();
+          const searchableText = `${name} ${id} ${barcode} ${brand}`;
+          return searchWords.every((word) => searchableText.includes(word));
+        });
+      }
     }
-
-    const searchWords = searchQuery
-      .toLowerCase()
-      .trim()
-      .split(/\s+/)
-      .filter((word) => word.length > 0);
-
-    if (searchWords.length === 0) {
-      return products;
-    }
-
-    // Pre-compute searchable text for better performance
-    return products.filter((p) => {
-      const name = String(p.name || p.Name || '').toLowerCase();
-      const id = String(p.id || p.ProductID || '').toLowerCase();
-      const barcode = String(p.barcode || p.Barcode || '').toLowerCase();
-      const brand = String(p.brand || p.Brand || '').toLowerCase();
-
-      const searchableText = `${name} ${id} ${barcode} ${brand}`;
-      return searchWords.every((word) => searchableText.includes(word));
+    // Sort by آخر تجديد descending (newest first)
+    return [...list].sort((a, b) => {
+      const aTime = (a.last_restocked_at || a.LastRestockedAt || a.created_at) ? new Date(a.last_restocked_at || a.LastRestockedAt || a.created_at).getTime() : 0;
+      const bTime = (b.last_restocked_at || b.LastRestockedAt || b.created_at) ? new Date(b.last_restocked_at || b.LastRestockedAt || b.created_at).getTime() : 0;
+      return bTime - aTime;
     });
   }, [products, searchQuery]);
   
@@ -1482,6 +1482,7 @@ export default function ProductsManagerPage() {
               hideToolbar={true}
               showStickyPagination={isNearBottom}
               stickyHeaderOffset={0}
+              initialSorting={[{ id: 'LastRestockedAt', desc: true }]}
             />
           )}
         </div>
