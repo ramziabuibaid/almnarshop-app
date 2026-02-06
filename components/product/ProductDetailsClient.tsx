@@ -6,6 +6,7 @@ import { ShoppingCart, MessageCircle, Image as ImageIcon, Ruler, Palette, Shield
 import { useShop } from '@/context/ShopContext';
 import { getDirectImageUrl } from '@/lib/utils';
 import { getProductActiveCampaign } from '@/lib/api';
+import { event } from '@/lib/fpixel';
 
 interface ProductDetailsClientProps {
   product: any;
@@ -107,6 +108,16 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
         ? { ...product, price: offerPrice, SalePrice: offerPrice }
         : product;
       addToCart(productToAdd);
+
+      // Facebook Pixel: AddToCart
+      const productId = product.product_id || product.id || product.ProductID;
+      event('AddToCart', {
+        content_ids: [String(productId)],
+        content_name: product.name || product.Name || '',
+        content_type: 'product',
+        value: displayPrice,
+        currency: 'ILS',
+      });
     }
   };
 

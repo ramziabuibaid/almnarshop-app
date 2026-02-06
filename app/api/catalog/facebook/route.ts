@@ -23,36 +23,52 @@ function toAbsoluteImageUrl(imageUrl: string | null | undefined, baseUrl: string
   return url.startsWith('/') ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
 }
 
+const PAGE_SIZE = 1000; // Supabase/PostgREST default max rows per request
+const MAX_PAGES = 10;   // Cap at 10k products total
+
 export async function GET() {
   try {
     const baseUrl = getSiteUrl();
 
-    const { data: products, error } = await supabase
-      .from('products')
-      .select('product_id, name, sale_price, image_url, brand, cs_shop, cs_war, type, is_visible')
-      .or('is_visible.eq.true,is_visible.is.null')
-      .order('created_at', { ascending: false })
-      .range(0, 4999);
+    const allProducts: any[] = [];
+    let page = 0;
+    let hasMore = true;
 
-    if (error) {
-      console.error('[Facebook Feed] Supabase error:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch products', details: error.message },
-        { status: 500 }
-      );
+    while (hasMore && page < MAX_PAGES) {
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      const { data: products, error } = await supabase
+        .from('products')
+        .select('product_id, name, sale_price, image_url, brand, cs_shop, cs_war, type, is_visible')
+        .or('is_visible.eq.true,is_visible.is.null')
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (error) {
+        console.error('[Facebook Feed] Supabase error:', error);
+        return NextResponse.json(
+          { error: 'Failed to fetch products', details: error.message },
+          { status: 500 }
+        );
+      }
+
+      const chunk = products ?? [];
+      allProducts.push(...chunk);
+      hasMore = chunk.length >= PAGE_SIZE;
+      page++;
     }
 
-    const raw = products ?? null;
-    if (raw === null) {
-      console.warn('[Facebook Feed] Products data is null, returning empty feed.');
-    }
-
-    const items = (raw || []).filter(
+    const items = allProducts.filter(
       (p) =>
         p?.product_id != null &&
         (p?.name ?? '').trim() !== '' &&
         p?.is_visible !== false
     );
+
+    if (allProducts.length > 0) {
+      console.log(`[Facebook Feed] Fetched ${allProducts.length} rows, ${items.length} valid items (${page} page(s))`);
+    }
 
     const channelItems = items.map((p) => {
       const productId = String(p.product_id ?? '');

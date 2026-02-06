@@ -8,6 +8,7 @@ import RelatedProducts from '@/components/product/RelatedProducts';
 import StoreHeader from '@/components/store/StoreHeader';
 import { useShop } from '@/context/ShopContext';
 import { useState } from 'react';
+import { event } from '@/lib/fpixel';
 
 interface PageProps {
   params: Promise<{
@@ -48,7 +49,7 @@ export default function ProductPage() {
 
         setProduct(productData);
         setLoading(false);
-        
+
         // Set page title immediately
         document.title = `${productData.name || productData.Name || 'Product'} - My Shop`;
       } catch (error) {
@@ -91,6 +92,22 @@ export default function ProductPage() {
     return () => clearTimeout(timer);
   }, [id, contextProducts.length, loadProducts]);
 
+  // Facebook Pixel: ViewContent on product page load (when product data is ready)
+  useEffect(() => {
+    if (!product) return;
+    const productId = product.product_id || product.id || product.ProductID || id;
+    const productName = product.name || product.Name || '';
+    const salePrice = Number(product.sale_price ?? product.SalePrice ?? product.price ?? 0) || 0;
+    const contentCategory = product.type || product.Type || undefined;
+    event('ViewContent', {
+      content_name: productName,
+      content_ids: [String(productId)],
+      content_type: 'product',
+      value: salePrice,
+      currency: 'ILS',
+      ...(contentCategory ? { content_category: contentCategory } : {}),
+    });
+  }, [product, id]);
 
   if (notFoundPage) {
     notFound();

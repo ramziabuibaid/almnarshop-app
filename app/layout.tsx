@@ -5,6 +5,7 @@ import { ShopProvider } from "@/context/ShopContext";
 import { InvoicesProvider } from "@/context/InvoicesContext";
 import { AdminAuthProvider } from "@/context/AdminAuthContext";
 import { getSiteUrl } from "@/lib/siteUrl";
+import FacebookPixel from "@/components/analytics/FacebookPixel";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -67,6 +68,7 @@ export default function RootLayout({
         <AdminAuthProvider>
           <ShopProvider>
             <InvoicesProvider>
+              <FacebookPixel />
               {children}
             </InvoicesProvider>
           </ShopProvider>
