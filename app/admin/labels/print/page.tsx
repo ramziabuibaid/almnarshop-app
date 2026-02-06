@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Product } from '@/types';
 import QRCode from '@/components/admin/QRCode';
 import { getDirectImageUrl } from '@/lib/utils';
+import { getSiteUrl } from '@/lib/siteUrl';
 
 type LabelType = 'A' | 'B' | 'C' | 'D';
 
@@ -20,15 +21,12 @@ function LabelsPrintContent() {
   const [showQrInCatalog, setShowQrInCatalog] = useState<boolean>(false); // لنوع د: إظهار QR لفتح صفحة المنتج (افتراضي عدم إظهار)
   const [showPriceInCatalog, setShowPriceInCatalog] = useState<boolean>(true); // لنوع د: إظهار السعر (افتراضي إظهار)
 
-  // Get base URL for product links
+  // Get base URL for product links (client: current origin; SSR: site URL)
   const getBaseUrl = () => {
     if (typeof window !== 'undefined') {
       return window.location.origin;
     }
-    // Fallback for SSR - use environment variable or hardcoded domain
-    return process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_VERCEL_URL 
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` 
-      : 'https://almnarshop-app.vercel.app';
+    return getSiteUrl();
   };
 
   // Generate product URL for QR code

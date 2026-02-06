@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async rewrites() {
+    return [
+      { source: '/catalog/facebook', destination: '/api/catalog/facebook' },
+    ];
+  },
   images: {
     remotePatterns: [
       {

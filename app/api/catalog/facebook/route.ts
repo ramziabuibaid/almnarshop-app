@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getSiteUrl } from '@/lib/siteUrl';
 
 const RSS_TITLE = 'Almnar Shop Catalog';
 const GOOGLE_NS = 'http://base.google.com/ns/1.0';
@@ -15,14 +16,6 @@ function escapeXml(text: string): string {
     .replace(/'/g, '&apos;');
 }
 
-function getBaseUrl(): string {
-  const site = process.env.NEXT_PUBLIC_SITE_URL;
-  if (site) return site.replace(/\/$/, '');
-  const vercel = process.env.VERCEL_URL;
-  if (vercel) return `https://${vercel}`;
-  return 'https://almnar.com';
-}
-
 function toAbsoluteImageUrl(imageUrl: string | null | undefined, baseUrl: string): string {
   const url = (imageUrl || '').trim();
   if (!url) return '';
@@ -32,11 +25,11 @@ function toAbsoluteImageUrl(imageUrl: string | null | undefined, baseUrl: string
 
 export async function GET() {
   try {
-    const baseUrl = getBaseUrl();
+    const baseUrl = getSiteUrl();
 
     const { data: products, error } = await supabase
       .from('products')
-      .select('product_id, name, sale_price, image_url, brand, cs_shop, cs_war, type, description')
+      .select('product_id, name, sale_price, image_url, brand, cs_shop, cs_war, type')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -56,7 +49,6 @@ export async function GET() {
       const name = (p.name ?? '').trim();
       const brand = (p.brand ?? '').trim() || 'Generic';
       const type = (p.type ?? '').trim();
-      const description = (p.description ?? '').trim();
       const salePrice = Number(p.sale_price);
       const priceFormatted = Number.isFinite(salePrice) ? salePrice.toFixed(2) : '0.00';
       const csShop = Number(p.cs_shop) || 0;
@@ -64,10 +56,7 @@ export async function GET() {
       const availability = csShop + csWar > 0 ? 'in stock' : 'out of stock';
       const productLink = `${baseUrl}/product/${encodeURIComponent(productId)}`;
       const imageLink = toAbsoluteImageUrl(p.image_url, baseUrl);
-      const descText =
-        description !== ''
-          ? description
-          : `${name} - Brand: ${brand} - Type: ${type}`;
+      const descText = `${name} - Brand: ${brand} - Type: ${type}`;
 
       return [
         `  <item>`,

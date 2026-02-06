@@ -4,6 +4,7 @@ import "./globals.css";
 import { ShopProvider } from "@/context/ShopContext";
 import { InvoicesProvider } from "@/context/InvoicesContext";
 import { AdminAuthProvider } from "@/context/AdminAuthContext";
+import { getSiteUrl } from "@/lib/siteUrl";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,6 +41,7 @@ const raleway = Raleway({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   title: "My Shop - Retail Web App",
   description: "Modern mobile-first retail web app",
 };
