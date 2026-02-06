@@ -29,8 +29,10 @@ export async function GET() {
 
     const { data: products, error } = await supabase
       .from('products')
-      .select('product_id, name, sale_price, image_url, brand, cs_shop, cs_war, type')
-      .order('created_at', { ascending: false });
+      .select('product_id, name, sale_price, image_url, brand, cs_shop, cs_war, type, is_visible')
+      .or('is_visible.eq.true,is_visible.is.null')
+      .order('created_at', { ascending: false })
+      .range(0, 4999);
 
     if (error) {
       console.error('[Facebook Feed] Supabase error:', error);
@@ -40,8 +42,16 @@ export async function GET() {
       );
     }
 
-    const items = (products || []).filter(
-      (p) => p?.product_id != null && (p?.name ?? '').trim() !== ''
+    const raw = products ?? null;
+    if (raw === null) {
+      console.warn('[Facebook Feed] Products data is null, returning empty feed.');
+    }
+
+    const items = (raw || []).filter(
+      (p) =>
+        p?.product_id != null &&
+        (p?.name ?? '').trim() !== '' &&
+        p?.is_visible !== false
     );
 
     const channelItems = items.map((p) => {
