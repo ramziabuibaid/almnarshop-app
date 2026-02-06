@@ -7890,7 +7890,13 @@ export async function getQuotationDetailsFromSupabase(quotationId: string): Prom
           barcode,
           shamel_no,
           sale_price,
-          cost_price
+          cost_price,
+          image_url,
+          image_url_2,
+          image_url_3,
+          image,
+          image_2,
+          image_3
         )
       `)
       .eq('quotation_id', quotationId)
@@ -7923,6 +7929,7 @@ export async function getQuotationDetailsFromSupabase(quotationId: string): Prom
           shamelNo: product.shamel_no || '',
           costPrice: parseFloat(String(product.cost_price || 0)) || 0,
           sale_price: parseFloat(String(product.sale_price || 0)) || 0,
+          image: product.image_url || product.image_url_2 || product.image_url_3 || product.image || product.image_2 || product.image_3 || '',
         },
       };
     });

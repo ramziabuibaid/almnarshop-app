@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { getQuotationFromSupabase } from '@/lib/api';
+import { getDirectImageUrl } from '@/lib/utils';
 
 interface QuotationItem {
   QuotationDetailID: string;
@@ -17,7 +18,9 @@ interface QuotationItem {
 
 export default function QuotationPrintPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const quotationId = params?.id as string;
+  const useImageVariant = searchParams?.get('variant') === 'image';
 
   const [data, setData] = useState<{
     quotationID: string;
@@ -45,20 +48,58 @@ export default function QuotationPrintPage() {
   }, [quotationId]);
 
   useEffect(() => {
-    // Set document title for PDF filename (customer name + quotation number)
-    if (data && !loading) {
-      const customerName = data.customer?.name || 'عميل';
-      const quotationId = data.quotationID || '';
-      document.title = `${customerName} ${quotationId}`;
-      
-      // Auto-print when page loads in the new window
-      // This won't freeze the main app because it's in a separate window
-      const timer = setTimeout(() => {
-        window.print();
-      }, 500); // Slightly longer delay to ensure content is fully rendered
-      return () => clearTimeout(timer);
-    }
-  }, [data, loading]);
+    if (!data || loading) return;
+
+    const customerName = data.customer?.name || 'عميل';
+    const quotationId = data.quotationID || '';
+    document.title = `${customerName} ${quotationId}`;
+
+    let printed = false;
+    const doPrint = () => {
+      if (printed) return;
+      printed = true;
+      window.print();
+    };
+
+    // When using image variant, wait for images to load before printing
+    const printAfterReady = () => {
+      if (!useImageVariant) {
+        setTimeout(doPrint, 400);
+        return;
+      }
+
+      // Preload images and wait for them
+      const directUrls = data.items
+        .map((item) => {
+          const raw = item.product?.image || (item as any).product?.Image || '';
+          return raw ? getDirectImageUrl(raw) : '';
+        })
+        .filter(Boolean);
+
+      if (directUrls.length === 0) {
+        setTimeout(doPrint, 500);
+        return;
+      }
+
+      const loadPromises = directUrls.map(
+        (src) =>
+          new Promise<void>((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+            img.src = src;
+          })
+      );
+
+      Promise.all(loadPromises).then(() => setTimeout(doPrint, 300));
+
+      // Fallback: print after 3 seconds if images take too long
+      setTimeout(doPrint, 3000);
+    };
+
+    const timer = setTimeout(printAfterReady, 150);
+    return () => clearTimeout(timer);
+  }, [data, loading, useImageVariant]);
 
   const loadData = async () => {
     try {
@@ -377,6 +418,7 @@ export default function QuotationPrintPage() {
         }
 
         table.items col.col-no { width: var(--w-no); }
+        table.items.col-image col.col-no { width: 28mm; }
         table.items col.col-name { width: auto; }
         table.items col.col-qty { width: var(--w-qty); }
         table.items col.col-price { width: var(--w-price); }
@@ -405,6 +447,26 @@ export default function QuotationPrintPage() {
         .ta-c { text-align: center; }
         .ta-r { text-align: right; }
         .nowrap { white-space: nowrap; }
+
+        .item-img-wrap {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 24mm;
+          height: 24mm;
+          min-height: 24mm;
+          margin: 0 auto;
+          border-radius: 4px;
+          overflow: hidden;
+          background: #f8f9fa;
+          border: 1px solid var(--border-light);
+        }
+        .item-img-wrap img {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+          vertical-align: middle;
+        }
 
         .nameCell {
           word-break: break-word;
@@ -571,7 +633,7 @@ export default function QuotationPrintPage() {
 
               {/* Regular Items */}
               {regularItems.length > 0 && (
-                <table className="items">
+                <table className={`items ${useImageVariant ? 'col-image' : ''}`}>
                   <colgroup>
                     <col className="col-no" />
                     <col className="col-name" />
@@ -581,7 +643,7 @@ export default function QuotationPrintPage() {
                   </colgroup>
                   <thead>
                     <tr>
-                      <th>Item No</th>
+                      <th>{useImageVariant ? 'صورة' : 'Item No'}</th>
                       <th>ITEM NAME</th>
                       <th>QTY</th>
                       <th>Price</th>
@@ -589,14 +651,34 @@ export default function QuotationPrintPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {regularItems.map((item, index) => (
+                    {regularItems.map((item, index) => {
+                      const productImage = item.product?.image || (item as any).product?.Image || '';
+                      const imageUrl = getDirectImageUrl(productImage);
+                      return (
                       <tr key={item.QuotationDetailID || index}>
                         <td className="ta-c nowrap">
-                          {item.product?.shamelNo || item.product?.barcode || item.ProductID}
+                          {useImageVariant ? (
+                            imageUrl ? (
+                              <div className="item-img-wrap">
+                                <img src={imageUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                              </div>
+                            ) : (
+                              <div className="item-img-wrap" style={{ fontSize: '9px', color: '#999', padding: '4px' }}>
+                                —
+                              </div>
+                            )
+                          ) : (
+                            item.product?.shamelNo || item.product?.barcode || item.ProductID
+                          )}
                         </td>
                         <td className="ta-r nameCell">
                           <div>
                             <div>{item.product?.name || `Product ${item.ProductID}`}</div>
+                            {useImageVariant && (item.product?.shamelNo || item.product?.barcode || item.ProductID) && (
+                              <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                                رقم شامل: {item.product?.shamelNo || item.product?.barcode || item.ProductID}
+                              </div>
+                            )}
                             {item.serialNos && item.serialNos.length > 0 && (
                               <div style={{ 
                                 fontSize: '12px', 
@@ -625,7 +707,8 @@ export default function QuotationPrintPage() {
                         <td className="ta-c nowrap">{item.UnitPrice.toFixed(2)} ₪</td>
                         <td className="ta-c nowrap">{(item.Quantity * item.UnitPrice).toFixed(2)} ₪</td>
                       </tr>
-                    ))}
+                    );
+                    })}
                   </tbody>
                 </table>
               )}
@@ -635,7 +718,7 @@ export default function QuotationPrintPage() {
                 <div className="gift-section">
                   <div className="gift-title">🎁 الهدايا</div>
                   <div className="gift-items">
-                    <table className="items">
+                    <table className={`items ${useImageVariant ? 'col-image' : ''}`}>
                       <colgroup>
                         <col className="col-no" />
                         <col className="col-name" />
@@ -644,14 +727,34 @@ export default function QuotationPrintPage() {
                         <col className="col-amt" />
                       </colgroup>
                       <tbody>
-                        {giftItems.map((item, index) => (
+                        {giftItems.map((item, index) => {
+                          const productImage = item.product?.image || (item as any).product?.Image || '';
+                          const imageUrl = getDirectImageUrl(productImage);
+                          return (
                           <tr key={item.QuotationDetailID || `gift-${index}`}>
                             <td className="ta-c nowrap">
-                              {item.product?.shamelNo || item.product?.barcode || item.ProductID}
+                              {useImageVariant ? (
+                                imageUrl ? (
+                                  <div className="item-img-wrap">
+                                    <img src={imageUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                  </div>
+                                ) : (
+                                  <div className="item-img-wrap" style={{ fontSize: '9px', color: '#999', padding: '4px' }}>
+                                    —
+                                  </div>
+                                )
+                              ) : (
+                                item.product?.shamelNo || item.product?.barcode || item.ProductID
+                              )}
                             </td>
                             <td className="ta-r nameCell">
                               <div>
                                 <div>{item.product?.name || `Product ${item.ProductID}`}</div>
+                                {useImageVariant && (item.product?.shamelNo || item.product?.barcode || item.ProductID) && (
+                                  <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                                    رقم شامل: {item.product?.shamelNo || item.product?.barcode || item.ProductID}
+                                  </div>
+                                )}
                                 {item.serialNos && item.serialNos.length > 0 && (
                                   <div style={{ 
                                     fontSize: '12px', 
@@ -680,7 +783,8 @@ export default function QuotationPrintPage() {
                             <td className="ta-c nowrap">{item.UnitPrice.toFixed(2)} ₪</td>
                             <td className="ta-c nowrap">{(item.Quantity * item.UnitPrice).toFixed(2)} ₪</td>
                           </tr>
-                        ))}
+                        );
+                        })}
                       </tbody>
                     </table>
                   </div>

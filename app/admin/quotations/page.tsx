@@ -22,6 +22,8 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Image,
 } from 'lucide-react';
 
 interface Quotation {
@@ -215,10 +217,14 @@ export default function QuotationsPage() {
     }
   };
 
-  const handlePrint = (quotationId: string) => {
-    // Open print page in new window - will auto-print when loaded
-    const url = `/admin/quotations/print/${quotationId}`;
+  const [printMenuOpen, setPrintMenuOpen] = useState<string | null>(null);
+
+  const handlePrint = (quotationId: string, withImages = true) => {
+    const url = withImages
+      ? `/admin/quotations/print/${quotationId}?variant=image`
+      : `/admin/quotations/print/${quotationId}`;
     window.open(url, `print-quotation-${quotationId}`, 'noopener,noreferrer');
+    setPrintMenuOpen(null);
   };
 
   const formatCurrency = (amount: number | undefined | null) => {
@@ -521,13 +527,43 @@ export default function QuotationsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handlePrint(quotation.QuotationID)}
-                              className="text-blue-600 hover:text-blue-900 flex items-center gap-1 font-cairo"
-                            >
-                              <Printer size={16} />
-                              طباعة
-                            </button>
+                            <div className="relative inline-block">
+                              <button
+                                onClick={() => handlePrint(quotation.QuotationID)}
+                                className="text-blue-600 hover:text-blue-900 flex items-center gap-1 font-cairo"
+                              >
+                                <Printer size={16} />
+                                طباعة
+                              </button>
+                              <button
+                                onClick={() => setPrintMenuOpen(printMenuOpen === quotation.QuotationID ? null : quotation.QuotationID)}
+                                className="text-blue-600 hover:text-blue-900 p-0.5 -mr-1 font-cairo"
+                                title="خيارات الطباعة"
+                              >
+                                <ChevronDown size={14} className={printMenuOpen === quotation.QuotationID ? 'rotate-180' : ''} />
+                              </button>
+                              {printMenuOpen === quotation.QuotationID && (
+                                <>
+                                  <div className="fixed inset-0 z-10" onClick={() => setPrintMenuOpen(null)} />
+                                  <div className="absolute right-0 top-full mt-1 py-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[180px]">
+                                    <button
+                                      onClick={() => handlePrint(quotation.QuotationID, true)}
+                                      className="w-full px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-cairo"
+                                    >
+                                      <Image size={14} />
+                                      طباعة مع صور المنتجات
+                                    </button>
+                                    <button
+                                      onClick={() => handlePrint(quotation.QuotationID, false)}
+                                      className="w-full px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-cairo"
+                                    >
+                                      <Printer size={14} />
+                                      طباعة عادية (رقم شامل)
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
                             <button
                               onClick={() => router.push(`/admin/quotations/${quotation.QuotationID}`)}
                               className="text-yellow-600 hover:text-yellow-900 flex items-center gap-1 font-cairo"
@@ -647,13 +683,43 @@ export default function QuotationsPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
-                    <button
-                      onClick={() => handlePrint(quotation.QuotationID)}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-cairo"
-                    >
-                      <Printer size={16} />
-                      <span>طباعة</span>
-                    </button>
+                    <div className="flex-1 relative">
+                      <button
+                        onClick={() => handlePrint(quotation.QuotationID)}
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-cairo"
+                      >
+                        <Printer size={16} />
+                        <span>طباعة</span>
+                      </button>
+                      <button
+                        onClick={() => setPrintMenuOpen(printMenuOpen === quotation.QuotationID ? null : quotation.QuotationID)}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700"
+                        title="خيارات الطباعة"
+                      >
+                        <ChevronDown size={14} className={printMenuOpen === quotation.QuotationID ? 'rotate-180' : ''} />
+                      </button>
+                      {printMenuOpen === quotation.QuotationID && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setPrintMenuOpen(null)} />
+                          <div className="absolute right-0 bottom-full mb-1 py-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[200px]">
+                            <button
+                              onClick={() => handlePrint(quotation.QuotationID, true)}
+                              className="w-full px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-cairo"
+                            >
+                              <Image size={14} />
+                              طباعة مع صور المنتجات
+                            </button>
+                            <button
+                              onClick={() => handlePrint(quotation.QuotationID, false)}
+                              className="w-full px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-cairo"
+                            >
+                              <Printer size={14} />
+                              طباعة عادية (رقم شامل)
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                     <button
                       onClick={() => router.push(`/admin/quotations/${quotation.QuotationID}`)}
                       className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-cairo"
