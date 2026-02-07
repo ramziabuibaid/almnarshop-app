@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { Suspense, useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getShopReceipt, getShopPayment } from '@/lib/api';
 
@@ -254,7 +254,7 @@ function PaymentSlip({ data }: { data: NonNullable<SlipItem['data']> extends inf
   );
 }
 
-export default function ShopCashBoxPrintBatchPage() {
+function ShopCashBoxPrintBatchContent() {
   const searchParams = useSearchParams();
   const [items, setItems] = useState<SlipItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -589,5 +589,19 @@ export default function ShopCashBoxPrintBatchPage() {
         </div>
       ))}
     </div>
+  );
+}
+
+export default function ShopCashBoxPrintBatchPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Cairo' }}>
+          <p>جاري تحميل السندات...</p>
+        </div>
+      }
+    >
+      <ShopCashBoxPrintBatchContent />
+    </Suspense>
   );
 }

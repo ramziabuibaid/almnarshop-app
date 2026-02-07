@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { Suspense, useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getCashInvoiceDetailsFromSupabase } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
@@ -129,7 +129,7 @@ function InvoiceSlip({ data }: { data: InvoicePrintData }) {
   );
 }
 
-export default function InvoicesPrintBatchPage() {
+function InvoicesPrintBatchContent() {
   const searchParams = useSearchParams();
   const [items, setItems] = useState<InvoicePrintData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -537,5 +537,19 @@ export default function InvoicesPrintBatchPage() {
         </div>
       ))}
     </>
+  );
+}
+
+export default function InvoicesPrintBatchPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'Cairo' }}>
+          <p>جاري التحميل...</p>
+        </div>
+      }
+    >
+      <InvoicesPrintBatchContent />
+    </Suspense>
   );
 }
