@@ -20,6 +20,7 @@ function LabelsPrintContent() {
   const [useQrProductUrl, setUseQrProductUrl] = useState<boolean>(false);
   const [showQrInCatalog, setShowQrInCatalog] = useState<boolean>(false); // لنوع د: إظهار QR لفتح صفحة المنتج (افتراضي عدم إظهار)
   const [showPriceInCatalog, setShowPriceInCatalog] = useState<boolean>(true); // لنوع د: إظهار السعر (افتراضي إظهار)
+  const [hideCatalogHeader, setHideCatalogHeader] = useState<boolean>(false); // لنوع د: الطباعة بلا الترويسة الخاصة بالمعرض
 
   // Get base URL for product links (client: current origin; SSR: site URL)
   const getBaseUrl = () => {
@@ -144,6 +145,13 @@ function LabelsPrintContent() {
             setShowPriceInCatalog(printData.showPriceInCatalog);
           } else {
             setShowPriceInCatalog(true);
+          }
+
+          // لنوع د: الطباعة بلا الترويسة الخاصة بالمعرض (افتراضي إظهار الترويسة)
+          if (typeof printData.hideCatalogHeader === 'boolean') {
+            setHideCatalogHeader(printData.hideCatalogHeader);
+          } else {
+            setHideCatalogHeader(false);
           }
           
           // Clean up localStorage after reading
@@ -744,7 +752,9 @@ function LabelsPrintContent() {
             background: linear-gradient(180deg, #faf9f7 0%, #f5f3f0 100%);
             box-sizing: border-box;
             page-break-after: always;
+            page-break-inside: avoid;
             break-after: page;
+            break-inside: avoid;
             display: flex;
             flex-direction: column;
             align-items: stretch;
@@ -802,9 +812,26 @@ function LabelsPrintContent() {
             min-height: 0;
           }
 
+          .label-type-d .catalog-images-column {
+            flex-shrink: 0;
+            width: 72mm;
+            display: flex;
+            flex-direction: column;
+            gap: 2mm;
+            min-height: 0;
+          }
+
+          .label-type-d .catalog-images-column-has-secondary .catalog-image-wrap {
+            width: 50mm;
+            height: 50mm;
+            min-height: 50mm;
+            max-height: 50mm;
+          }
+
           .label-type-d .catalog-image-wrap {
             flex-shrink: 0;
             width: 72mm;
+            height: 72mm;
             min-height: 72mm;
             max-height: 72mm;
             background: #fff;
@@ -818,6 +845,36 @@ function LabelsPrintContent() {
           }
 
           .label-type-d .catalog-image-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
+
+          .label-type-d .catalog-images-secondary {
+            display: flex;
+            flex-direction: row;
+            gap: 2mm;
+            flex-wrap: nowrap;
+            justify-content: flex-start;
+            flex-shrink: 0;
+          }
+
+          .label-type-d .catalog-image-wrap-secondary {
+            width: 22mm;
+            height: 22mm;
+            min-width: 22mm;
+            min-height: 22mm;
+            background: #fff;
+            border-radius: 2mm;
+            overflow: hidden;
+            box-shadow: 0 0.5px 1.5px rgba(44, 62, 80, 0.06);
+            border: 1px solid #e8e6e3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .label-type-d .catalog-image-wrap-secondary img {
             width: 100%;
             height: 100%;
             object-fit: contain;
@@ -1065,37 +1122,59 @@ function LabelsPrintContent() {
               const dimention = product.dimention || product.Dimention || '';
               const warranty = product.warranty || product.Warranty || '';
               const origin = product.origin || product.Origin || '';
-              const imageUrl = getDirectImageUrl(product.Image || product.image || '');
+              const mainImageUrl = getDirectImageUrl(product.Image || product.image || '');
+              const image2Url = getDirectImageUrl(product['Image 2'] || product.image2 || '');
+              const image3Url = getDirectImageUrl(product['image 3'] || product.image3 || '');
+              const secondaryUrls = [image2Url, image3Url].filter((u) => u && u.trim() !== '');
               const productUrl = getProductUrl(product);
 
               return (
                 <div key={`${product.ProductID || product.id || index}-${index}`} className="label-type-d">
-                  <div className="catalog-header">
-                    <img
-                      src="/logo.png"
-                      alt="Logo"
-                      className="catalog-logo"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                    <div className="catalog-store-info">
-                      <div className="catalog-store-name">شركة المنار للأجهزة الكهربائية</div>
-                      <div className="catalog-store-phone">04-2438815</div>
+                  {!hideCatalogHeader && (
+                    <div className="catalog-header">
+                      <img
+                        src="/logo.png"
+                        alt="Logo"
+                        className="catalog-logo"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                      <div className="catalog-store-info">
+                        <div className="catalog-store-name">شركة المنار للأجهزة الكهربائية</div>
+                        <div className="catalog-store-phone">04-2438815</div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   <div className="catalog-body">
-                    <div className="catalog-image-wrap">
-                      {imageUrl ? (
-                        <img
-                          src={imageUrl}
-                          alt={name}
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/logo.png';
-                          }}
-                        />
-                      ) : (
-                        <img src="/logo.png" alt="" />
+                    <div className={`catalog-images-column${secondaryUrls.length > 0 ? ' catalog-images-column-has-secondary' : ''}`}>
+                      <div className="catalog-image-wrap">
+                        {mainImageUrl ? (
+                          <img
+                            src={mainImageUrl}
+                            alt={name}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/logo.png';
+                            }}
+                          />
+                        ) : (
+                          <img src="/logo.png" alt="" />
+                        )}
+                      </div>
+                      {secondaryUrls.length > 0 && (
+                        <div className="catalog-images-secondary">
+                          {secondaryUrls.map((url, i) => (
+                            <div key={i} className="catalog-image-wrap-secondary">
+                              <img
+                                src={url}
+                                alt={`${name} ${i + 2}`}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = '/logo.png';
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
                     <div className="catalog-info">

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import CustomerSelect from '@/components/admin/CustomerSelect';
-import { getShopCashFlow, getAllCustomers, deleteShopReceipt, deleteShopPayment, saveShopReceipt, saveShopPayment, getShopReceipt, getShopPayment, updateShopReceipt, updateShopPayment, updateShopReceiptSettlementStatus, updateShopPaymentSettlementStatus } from '@/lib/api';
+import { getShopCashFlow, getAllCustomers, deleteShopReceipt, deleteShopPayment, saveShopReceipt, saveShopPayment, getShopReceipt, getShopPayment, updateShopReceipt, updateShopPayment, updateShopReceiptSettlementStatus, updateShopPaymentSettlementStatus, getCashInvoicesFromSupabase } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import {
   Loader2,
@@ -87,6 +87,9 @@ export default function ShopCashBoxPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const TRANSACTIONS_PER_PAGE = 30;
+
+  // Multi-select for batch print
+  const [selectedForPrint, setSelectedForPrint] = useState<Set<string>>(new Set());
 
   // Check permissions
   const canAccess = admin?.is_super_admin || admin?.permissions?.accessShopCashBox === true;
@@ -498,6 +501,109 @@ export default function ShopCashBoxPage() {
     }).format(amount);
   };
 
+  const getSelectKey = (tx: TransactionWithBalance) =>
+    tx.receipt_id ? `receipt:${tx.receipt_id}` : `payment:${tx.payment_id}`;
+
+  const toggleSelectForPrint = (tx: TransactionWithBalance) => {
+    const key = getSelectKey(tx);
+    setSelectedForPrint((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const selectAllOnPage = () => {
+    setSelectedForPrint((prev) => {
+      const next = new Set(prev);
+      paginatedTransactions.forEach((tx) => next.add(getSelectKey(tx)));
+      return next;
+    });
+  };
+
+  const clearPrintSelection = () => setSelectedForPrint(new Set());
+
+  const openBatchPrint = () => {
+    const orderedIds = transactionsWithBalance
+      .map((tx) => getSelectKey(tx))
+      .filter((key) => selectedForPrint.has(key));
+    if (orderedIds.length === 0) {
+      alert('لم يتم تحديد أي سند. حدد سندات من الجدول ثم اضغط طباعة المحدد.');
+      return;
+    }
+    const url = `/admin/shop-finance/cash-box/print-batch?ids=${encodeURIComponent(orderedIds.join(','))}`;
+    window.open(url, 'print-batch', 'noopener,noreferrer');
+  };
+
+  // أزرار سريعة: سند صرف/قبض مع زبون افتراضي
+  const openQuickPayment = (customerId: string) => {
+    setEditingTransaction(null);
+    setFormData({
+      customerID: customerId,
+      date: new Date().toISOString().split('T')[0],
+      cash_amount: '',
+      check_amount: '',
+      notes: '',
+    });
+    setFormError(null);
+    setPaymentModalOpen(true);
+  };
+
+  // صرف الى المخزن: افتراضي كامل النقدي وكامل الشيكات (قابل للتعديل)
+  const openQuickPaymentToWarehouse = () => {
+    setEditingTransaction(null);
+    const cashStr = currentCashBalance != null && currentCashBalance !== 0
+      ? currentCashBalance.toFixed(2)
+      : '';
+    const checkStr = currentCheckBalance != null && currentCheckBalance !== 0
+      ? currentCheckBalance.toFixed(2)
+      : '';
+    setFormData({
+      customerID: 'CUS-1003',
+      date: new Date().toISOString().split('T')[0],
+      cash_amount: cashStr,
+      check_amount: checkStr,
+      notes: '',
+    });
+    setFormError(null);
+    setPaymentModalOpen(true);
+  };
+
+  const openQuickReceiptForInvoicesTotal = async () => {
+    setEditingTransaction(null);
+    setFormError(null);
+    try {
+      const invoices = await getCashInvoicesFromSupabase(50);
+      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+      const todayTotal = invoices
+        .filter((inv: any) => {
+          if (!inv.DateTime) return false;
+          const d = new Date(inv.DateTime).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+          return d === todayStr;
+        })
+        .reduce((sum: number, inv: any) => sum + (parseFloat(inv.totalAmount) || 0), 0);
+      setFormData({
+        customerID: 'CUS-0896',
+        date: new Date().toISOString().split('T')[0],
+        cash_amount: todayTotal > 0 ? todayTotal.toFixed(2) : '',
+        check_amount: '',
+        notes: '',
+      });
+      setReceiptModalOpen(true);
+    } catch (err: any) {
+      console.error('[ShopCashBox] Failed to load cash invoices total:', err);
+      setFormData({
+        customerID: 'CUS-0896',
+        date: new Date().toISOString().split('T')[0],
+        cash_amount: '',
+        check_amount: '',
+        notes: '',
+      });
+      setReceiptModalOpen(true);
+    }
+  };
+
   const handleReceiptSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -717,6 +823,40 @@ export default function ShopCashBoxPage() {
           </div>
         )}
 
+        {/* أزرار سريعة */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-500 mb-2 font-cairo">أزرار سريعة</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={openQuickPaymentToWarehouse}
+              className="inline-flex items-center gap-2 px-3 py-2 bg-amber-100 text-amber-900 border border-amber-300 rounded-lg hover:bg-amber-200 transition-colors text-sm font-medium font-cairo"
+              title="سند صرف إلى المخزن - زبون CUS-1003 (افتراضي: كامل النقدي والشيكات)"
+            >
+              <ArrowDown size={16} />
+              صرف الى المخزن
+            </button>
+            <button
+              type="button"
+              onClick={openQuickReceiptForInvoicesTotal}
+              className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-lg hover:bg-emerald-200 transition-colors text-sm font-medium font-cairo"
+              title="سند قبض - مجموع الفواتير النقدية لليوم - زبون CUS-0896"
+            >
+              <ArrowUp size={16} />
+              قبض الفواتير النقدية
+            </button>
+            <button
+              type="button"
+              onClick={() => openQuickPayment('CUS-0778')}
+              className="inline-flex items-center gap-2 px-3 py-2 bg-rose-100 text-rose-900 border border-rose-300 rounded-lg hover:bg-rose-200 transition-colors text-sm font-medium font-cairo"
+              title="سند صرف فيزا - زبون CUS-0778"
+            >
+              <ArrowDown size={16} />
+              صرف فيزا
+            </button>
+          </div>
+        </div>
+
         {/* Search Bar */}
         <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
           <div className="flex items-center gap-2 sm:gap-4">
@@ -744,6 +884,39 @@ export default function ShopCashBoxPage() {
           {searchQuery && (
             <div className="mt-2 text-xs sm:text-sm text-gray-600 font-cairo">
               تم العثور على <span className="font-semibold">{transactionsWithBalance.length}</span> سند
+            </div>
+          )}
+          {transactionsWithBalance.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-200 flex flex-wrap items-center gap-2 font-cairo">
+              <button
+                type="button"
+                onClick={selectAllOnPage}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+              >
+                تحديد كل الصفحة
+              </button>
+              <button
+                type="button"
+                onClick={clearPrintSelection}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+              >
+                إلغاء التحديد
+              </button>
+              {selectedForPrint.size > 0 && (
+                <>
+                  <span className="text-sm text-gray-600">
+                    تم تحديد <span className="font-semibold">{selectedForPrint.size}</span> سند
+                  </span>
+                  <button
+                    type="button"
+                    onClick={openBatchPrint}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                  >
+                    <Printer size={18} />
+                    طباعة المحدد (PDF واحد)
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -775,6 +948,15 @@ export default function ShopCashBoxPage() {
                   <div key={tx.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                     {/* Header Row */}
                     <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
+                      <div className="flex items-center gap-2 flex-shrink-0 pt-0.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedForPrint.has(getSelectKey(tx))}
+                          onChange={() => toggleSelectForPrint(tx)}
+                          className="rounded border-gray-300"
+                          title="تحديد للطباعة"
+                        />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="text-base font-bold text-gray-900 font-cairo">
@@ -1033,6 +1215,18 @@ export default function ShopCashBoxPage() {
                 <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
+                    <th className="px-2 py-3 text-center w-10">
+                      <input
+                        type="checkbox"
+                        checked={paginatedTransactions.length > 0 && paginatedTransactions.every((tx) => selectedForPrint.has(getSelectKey(tx)))}
+                        onChange={(e) => {
+                          if (e.target.checked) selectAllOnPage();
+                          else clearPrintSelection();
+                        }}
+                        className="rounded border-gray-300"
+                        title="تحديد كل الصفحة"
+                      />
+                    </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
                       رقم السند
                     </th>
@@ -1066,6 +1260,15 @@ export default function ShopCashBoxPage() {
                 <tbody className="divide-y divide-gray-200">
                   {paginatedTransactions.map((tx) => (
                     <tr key={tx.id} className="hover:bg-gray-200 transition-colors">
+                      <td className="px-2 py-3 text-center w-10 align-middle">
+                        <input
+                          type="checkbox"
+                          checked={selectedForPrint.has(getSelectKey(tx))}
+                          onChange={() => toggleSelectForPrint(tx)}
+                          className="rounded border-gray-300"
+                          title="تحديد للطباعة"
+                        />
+                      </td>
                       <td className="px-4 py-3 text-right">
                         <div className="font-medium text-gray-900 font-cairo">
                           {tx.receipt_id || tx.payment_id || tx.id || '—'}

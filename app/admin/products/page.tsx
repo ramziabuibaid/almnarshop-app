@@ -40,11 +40,13 @@ const MobileProductCard = React.memo(({
   handleImageError: (productId: string) => void;
   handleToggleVisibility: (product: Product) => void;
   togglingVisibility: string | null;
+  onImageClick?: (product: Product) => void;
 }) => {
   const productId = product.ProductID || product.id || '';
   const rawImageUrl = product.image || product.Image || product.ImageUrl || '';
   const imageUrl = getDirectImageUrl(rawImageUrl);
   const hasImageError = imageErrors[productId] || !imageUrl;
+  const hasAnyImage = !!(product.Image || product.image || product['Image 2'] || product.image2 || product['image 3'] || product.image3);
   const warehouseStock = product.CS_War !== undefined && product.CS_War !== null ? (product.CS_War || 0) : null;
   const shopStock = product.CS_Shop !== undefined && product.CS_Shop !== null ? (product.CS_Shop || 0) : null;
   const totalStock = (warehouseStock || 0) + (shopStock || 0);
@@ -56,7 +58,12 @@ const MobileProductCard = React.memo(({
       {/* Header with Image and Basic Info */}
       <div className="flex items-start gap-3 mb-3">
         {/* Product Image */}
-        <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+        <button
+          type="button"
+          onClick={() => hasAnyImage && onImageClick?.(product)}
+          className={`w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center ${hasAnyImage ? 'cursor-pointer hover:ring-2 hover:ring-gray-400 transition-shadow' : 'cursor-default'}`}
+          title={hasAnyImage ? 'انقر لعرض الصور' : undefined}
+        >
           {hasImageError || !imageUrl ? (
             <ImageIcon size={24} className="text-gray-300" />
           ) : (
@@ -69,7 +76,7 @@ const MobileProductCard = React.memo(({
               decoding="async"
             />
           )}
-        </div>
+        </button>
         
         {/* Product Info */}
         <div className="flex-1 min-w-0">
@@ -254,9 +261,52 @@ export default function ProductsManagerPage() {
   const [toast, setToast] = useState<{ message: string; type: 'saving' | 'success' | null }>({ message: '', type: null });
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  const [lightboxProduct, setLightboxProduct] = useState<Product | null>(null);
+  const [lightboxImageIndex, setLightboxImageIndex] = useState(0);
   const headerRef = useRef<HTMLDivElement>(null);
   const lastScrollY = useRef(0);
   const tableRef = useRef<any>(null);
+
+  const lightboxProductImages = useMemo(() => {
+    if (!lightboxProduct) return [];
+    return [
+      lightboxProduct.Image || lightboxProduct.image,
+      lightboxProduct['Image 2'] || lightboxProduct.image2,
+      lightboxProduct['image 3'] || lightboxProduct.image3,
+    ]
+      .filter(Boolean)
+      .map((img) => {
+        if (!img) return '';
+        const trimmed = String(img).trim();
+        if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+        return getDirectImageUrl(trimmed);
+      })
+      .filter((url) => url && url.trim() !== '');
+  }, [lightboxProduct]);
+
+  const openImageLightbox = useCallback((product: Product, index = 0) => {
+    setLightboxProduct(product);
+    setLightboxImageIndex(index);
+  }, []);
+
+  const closeImageLightbox = useCallback(() => {
+    setLightboxProduct(null);
+    setLightboxImageIndex(0);
+  }, []);
+
+  useEffect(() => {
+    if (!lightboxProduct || lightboxProductImages.length === 0) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeImageLightbox();
+      else if (e.key === 'ArrowLeft' && lightboxProductImages.length > 1) {
+        setLightboxImageIndex((prev) => (prev === 0 ? lightboxProductImages.length - 1 : prev - 1));
+      } else if (e.key === 'ArrowRight' && lightboxProductImages.length > 1) {
+        setLightboxImageIndex((prev) => (prev === lightboxProductImages.length - 1 ? 0 : prev + 1));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxProduct, lightboxProductImages.length, closeImageLightbox]);
   
   // Check if user has permission to view cost
   const canViewCost = admin?.is_super_admin || admin?.permissions?.viewCost === true;
@@ -707,26 +757,31 @@ export default function ProductsManagerPage() {
         minSize: 100,
         cell: ({ row }) => {
           const product = row.original;
-                    const rawImageUrl = product.image || product.Image || product.ImageUrl || '';
-                    const imageUrl = getDirectImageUrl(rawImageUrl);
+          const rawImageUrl = product.image || product.Image || product.ImageUrl || '';
+          const imageUrl = getDirectImageUrl(rawImageUrl);
           const productId = product.id || product.ProductID || '';
           const hasImageError = imageErrors[productId] || !imageUrl;
-                    
-                    return (
-                          <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden relative flex items-center justify-center">
-                            {hasImageError || !imageUrl ? (
-                              <ImageIcon size={24} className="text-gray-300" />
-                            ) : (
-                              <img
-                                src={imageUrl}
+          const hasAnyImage = !!(product.Image || product.image || product['Image 2'] || product.image2 || product['image 3'] || product.image3);
+          return (
+            <button
+              type="button"
+              onClick={() => hasAnyImage && openImageLightbox(product, 0)}
+              className={`w-16 h-16 bg-gray-100 rounded-lg overflow-hidden relative flex items-center justify-center ${hasAnyImage ? 'cursor-pointer hover:ring-2 hover:ring-gray-400 transition-shadow' : 'cursor-default'}`}
+              title={hasAnyImage ? 'انقر لعرض الصور' : undefined}
+            >
+              {hasImageError || !imageUrl ? (
+                <ImageIcon size={24} className="text-gray-300" />
+              ) : (
+                <img
+                  src={imageUrl}
                   alt={product.name || product.Name || ''}
-                                className="object-contain w-full h-full"
+                  className="object-contain w-full h-full"
                   onError={() => handleImageError(productId)}
-                                loading="lazy"
-                                decoding="async"
-                              />
-                            )}
-                          </div>
+                  loading="lazy"
+                  decoding="async"
+                />
+              )}
+            </button>
           );
         },
       },
@@ -1239,6 +1294,8 @@ export default function ProductsManagerPage() {
       handleBarcodeKeyDown,
       handleToggleVisibility,
       togglingVisibility,
+      handleImageError,
+      openImageLightbox,
     ]
   );
 
@@ -1525,6 +1582,7 @@ export default function ProductsManagerPage() {
                     handleImageError={handleImageError}
                     handleToggleVisibility={handleToggleVisibility}
                     togglingVisibility={togglingVisibility}
+                    onImageClick={(p) => openImageLightbox(p, 0)}
                   />
                 );
               })}
@@ -1673,6 +1731,75 @@ export default function ProductsManagerPage() {
         isOpen={isMarketingModalOpen}
         onClose={handleMarketingModalClose}
       />
+
+      {/* Image Lightbox - معرض الصور العائم (يبدأ من نهاية القائمة الجانبية) */}
+      {lightboxProduct && lightboxProductImages.length > 0 && (
+        <div
+          className="fixed top-0 left-0 bottom-0 right-0 md:right-64 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={closeImageLightbox}
+          role="dialog"
+          aria-label="معرض صور المنتج"
+        >
+          <button
+            onClick={(e) => { e.stopPropagation(); closeImageLightbox(); }}
+            className="absolute top-4 right-4 z-10 p-2 bg-white/90 hover:bg-white rounded-full text-gray-900 transition-all shadow-lg"
+            title="إغلاق (ESC)"
+          >
+            <X size={24} />
+          </button>
+          {lightboxProductImages.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxImageIndex((prev) => (prev === 0 ? lightboxProductImages.length - 1 : prev - 1));
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/90 hover:bg-white rounded-full text-gray-900 transition-all shadow-lg"
+                title="الصورة السابقة (←)"
+              >
+                <ChevronRight size={28} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxImageIndex((prev) => (prev === lightboxProductImages.length - 1 ? 0 : prev + 1));
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/90 hover:bg-white rounded-full text-gray-900 transition-all shadow-lg"
+                title="الصورة التالية (→)"
+              >
+                <ChevronLeft size={28} />
+              </button>
+            </>
+          )}
+          <div className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={lightboxProductImages[lightboxImageIndex]}
+              alt={`${lightboxProduct.Name || lightboxProduct.name || 'Product'} ${lightboxImageIndex + 1}`}
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            />
+            {lightboxProductImages.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full text-sm font-medium">
+                {lightboxImageIndex + 1} / {lightboxProductImages.length}
+              </div>
+            )}
+          </div>
+          {lightboxProductImages.length > 1 && (
+            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-2 z-10" onClick={(e) => e.stopPropagation()}>
+              {lightboxProductImages.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setLightboxImageIndex(idx)}
+                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all hover:opacity-100 bg-white ${
+                    lightboxImageIndex === idx ? 'border-white shadow-lg opacity-100' : 'border-white/50 opacity-70'
+                  }`}
+                >
+                  <img src={img} alt="" className="w-full h-full object-contain" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </AdminLayout>
   );
 }

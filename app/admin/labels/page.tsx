@@ -33,6 +33,7 @@ export default function LabelsPage() {
   const [showZeroShopCatalog, setShowZeroShopCatalog] = useState<boolean>(true); // لنوع د: إظهار المنتجات التي كميتها صفر في المحل
   const [showZeroWarehouseCatalog, setShowZeroWarehouseCatalog] = useState<boolean>(true); // لنوع د: إظهار المنتجات التي كميتها صفر في المخزن
   const [showPriceInCatalog, setShowPriceInCatalog] = useState<boolean>(true); // لنوع د: إظهار السعر في الكتالوج
+  const [hideCatalogHeader, setHideCatalogHeader] = useState<boolean>(false); // لنوع د: الطباعة بلا الترويسة الخاصة بالمعرض
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [editingBarcode, setEditingBarcode] = useState<string | null>(null); // productId being edited
@@ -408,6 +409,7 @@ export default function LabelsPage() {
       useQrProductUrl,
       showQrInCatalog: labelType === 'D' ? showQrInCatalog : undefined, // لنوع د فقط: إظهار QR لفتح صفحة المنتج
       showPriceInCatalog: labelType === 'D' ? showPriceInCatalog : undefined, // لنوع د فقط: إظهار السعر
+      hideCatalogHeader: labelType === 'D' ? hideCatalogHeader : undefined, // لنوع د فقط: الطباعة بلا الترويسة
       timestamp: Date.now(),
     };
     
@@ -730,6 +732,20 @@ export default function LabelsPage() {
                         <div>
                           <div className="font-medium text-gray-900">إظهار السعر</div>
                           <div className="text-xs text-gray-500">إظهار سعر المنتج في الكتالوج</div>
+                        </div>
+                      </label>
+                    </div>
+                    <div className="pt-2 border-t border-gray-200">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={hideCatalogHeader}
+                          onChange={(e) => setHideCatalogHeader(e.target.checked)}
+                          className="w-4 h-4 text-gray-900 focus:ring-gray-900 rounded"
+                        />
+                        <div>
+                          <div className="font-medium text-gray-900">الطباعة بلا الترويسة الخاصة بالمعرض</div>
+                          <div className="text-xs text-gray-500">طباعة الكتالوج بدون الشعار وبيانات المعرض في أعلى الصفحة</div>
                         </div>
                       </label>
                     </div>

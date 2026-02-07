@@ -66,6 +66,7 @@ export default function InvoicesPage() {
     dayBeforeYesterday: 0,
   });
   const [searchByIdResult, setSearchByIdResult] = useState<CashInvoice | null>(null);
+  const [selectedForPrint, setSelectedForPrint] = useState<Set<string>>(new Set());
 
   // Check if user has permission to view cash invoices
   const canViewCashInvoices = admin?.is_super_admin || admin?.permissions?.viewCashInvoices === true;
@@ -247,6 +248,34 @@ export default function InvoicesPage() {
     // This prevents browser freezing
     const printUrl = `/admin/invoices/print/${invoice.InvoiceID}`;
     window.open(printUrl, `print-${invoice.InvoiceID}`, 'noopener,noreferrer');
+  };
+
+  const getSelectKey = (invoice: CashInvoice) => invoice.InvoiceID;
+  const toggleSelectForPrint = (invoice: CashInvoice) => {
+    const key = getSelectKey(invoice);
+    setSelectedForPrint((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+  const selectAllFiltered = () => {
+    setSelectedForPrint((prev) => {
+      const next = new Set(prev);
+      filteredInvoices.forEach((inv) => next.add(getSelectKey(inv)));
+      return next;
+    });
+  };
+  const clearPrintSelection = () => setSelectedForPrint(new Set());
+  const openBatchPrint = () => {
+    const orderedIds = filteredInvoices.map(getSelectKey).filter((id) => selectedForPrint.has(id));
+    if (orderedIds.length === 0) {
+      alert('لم يتم تحديد أي فاتورة. حدد فواتير من الجدول ثم اضغط طباعة المحدد.');
+      return;
+    }
+    const url = `/admin/invoices/print-batch?ids=${encodeURIComponent(orderedIds.join(','))}`;
+    window.open(url, 'print-batch-invoices', 'noopener,noreferrer');
   };
 
 
@@ -542,6 +571,39 @@ export default function InvoicesPage() {
               </button>
             )}
           </div>
+          {filteredInvoices.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-200 flex flex-wrap items-center gap-2 font-cairo">
+              <button
+                type="button"
+                onClick={selectAllFiltered}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+              >
+                تحديد الكل
+              </button>
+              <button
+                type="button"
+                onClick={clearPrintSelection}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+              >
+                إلغاء التحديد
+              </button>
+              {selectedForPrint.size > 0 && (
+                <>
+                  <span className="text-sm text-gray-600">
+                    تم تحديد <span className="font-semibold">{selectedForPrint.size}</span> فاتورة
+                  </span>
+                  <button
+                    type="button"
+                    onClick={openBatchPrint}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                  >
+                    <Printer size={18} />
+                    طباعة المحدد (PDF واحد)
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Invoices List */}
@@ -558,6 +620,21 @@ export default function InvoicesPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
+                      <th className="px-2 py-3 text-center w-10">
+                        <input
+                          type="checkbox"
+                          checked={
+                            filteredInvoices.length > 0 &&
+                            filteredInvoices.every((inv) => selectedForPrint.has(getSelectKey(inv)))
+                          }
+                          onChange={(e) => {
+                            if (e.target.checked) selectAllFiltered();
+                            else clearPrintSelection();
+                          }}
+                          className="rounded border-gray-300"
+                          title="تحديد الكل"
+                        />
+                      </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
                         # الفاتورة
                       </th>
@@ -581,6 +658,15 @@ export default function InvoicesPage() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredInvoices.map((invoice, index) => (
                       <tr key={invoice.InvoiceID || `invoice-${index}`} className="hover:bg-gray-200 transition-colors">
+                        <td className="px-2 py-4 text-center w-10 align-middle">
+                          <input
+                            type="checkbox"
+                            checked={selectedForPrint.has(getSelectKey(invoice))}
+                            onChange={() => toggleSelectForPrint(invoice)}
+                            className="rounded border-gray-300"
+                            title="تحديد للطباعة"
+                          />
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900 font-cairo">{invoice.InvoiceID}</div>
                           {(() => {
@@ -707,6 +793,15 @@ export default function InvoicesPage() {
                 <div key={invoice.InvoiceID || `invoice-${index}`} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                   {/* Header Row */}
                   <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
+                    <div className="flex items-center gap-2 flex-shrink-0 pt-0.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedForPrint.has(getSelectKey(invoice))}
+                        onChange={() => toggleSelectForPrint(invoice)}
+                        className="rounded border-gray-300"
+                        title="تحديد للطباعة"
+                      />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-base font-bold text-gray-900 font-cairo">#{invoice.InvoiceID}</h3>

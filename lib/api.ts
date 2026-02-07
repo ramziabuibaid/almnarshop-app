@@ -551,8 +551,8 @@ export async function getProductById(productId: string): Promise<any | null> {
   }
 }
 
-/** Client-side cache TTL: 60 minutes (reduces Supabase egress) */
-const CACHE_TTL_MS = 60 * 60 * 1000;
+/** Client-side cache TTL: 24 hours. Stock/customers change only via daily Google Sheets sync; use "تحديث من قاعدة البيانات" button for immediate refresh. */
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const CACHE_PRODUCTS_DATA = 'cache_products_data';
 const CACHE_PRODUCTS_TIMESTAMP = 'cache_products_timestamp';
