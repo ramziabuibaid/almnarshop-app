@@ -1233,7 +1233,7 @@ export async function getAllCustomers(options?: { force?: boolean }): Promise<an
     const pageSize = 1000;
     let hasMore = true;
     
-    const customerColumns = 'customer_id, name, phone, balance, shamel_no';
+    const customerColumns = 'customer_id, name, phone, balance, shamel_no, type, last_pay_date, last_inv_date';
     while (hasMore) {
       const { data: customers, error } = await supabase
         .from('customers')

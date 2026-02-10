@@ -1290,32 +1290,8 @@ export default function CustomersPage() {
           </div>
         </div>
 
-        {/* Filters and Search */}
+        {/* Filters */}
         <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 space-y-3 sm:space-y-4">
-          {/* Search */}
-          <div className="relative">
-            <Search
-              size={18}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="البحث بالاسم أو الهاتف..."
-              value={searchInput}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 text-sm sm:text-base"
-              dir="rtl"
-            />
-            {searchInput && (
-              <button
-                onClick={() => handleSearchChange('')}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X size={18} />
-              </button>
-            )}
-          </div>
-
           {/* Type Filter Tabs */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs sm:text-sm font-semibold text-gray-700 mr-2">فلترة حسب النوع:</span>
@@ -1443,6 +1419,32 @@ export default function CustomersPage() {
             </div>
           )}
 
+        </div>
+
+        {/* Search - below filters, above table */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="relative">
+            <Search
+              size={18}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="البحث بالاسم أو الهاتف..."
+              value={searchInput}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 text-sm sm:text-base"
+              dir="rtl"
+            />
+            {searchInput && (
+              <button
+                onClick={() => handleSearchChange('')}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Error Message */}

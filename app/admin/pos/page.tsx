@@ -465,7 +465,10 @@ export default function POSPage() {
 
       if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
       if (barcodeBufferRef.current.trim().length >= 3) {
-        scanTimeoutRef.current = setTimeout(submitBarcodeFromRef, 80);
+        // Use a generous delay so slower Bluetooth scanners can finish sending all digits
+        // before we attempt to look up the product. This mirrors the behavior of other
+        // barcode inputs in the system and prevents partial codes from triggering errors.
+        scanTimeoutRef.current = setTimeout(submitBarcodeFromRef, 300);
       }
     },
     [submitBarcodeFromRef]
