@@ -7,6 +7,7 @@ import { Search, Printer, Loader2, CheckSquare, Square, ArrowUp, ArrowDown, Chev
 import { Product } from '@/types';
 import { getProducts, saveProduct } from '@/lib/api';
 import LabelsTableRow from '@/components/admin/LabelsTableRow';
+import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
 import { useRouter } from 'next/navigation';
 
 type LabelType = 'A' | 'B' | 'C' | 'D';
@@ -464,6 +465,22 @@ export default function LabelsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column: Product Selection */}
             <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-4 no-print">
+              {/* مسح الباركود: ماسح خارجي أو كاميرا — يحدد الصنف تلقائياً ويبقى جاهزاً لمسح جديد */}
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
+                <BarcodeScannerInput
+                  onProductFound={(product) => {
+                    const productId = product.ProductID || product.id || '';
+                    if (productId) toggleProduct(productId);
+                  }}
+                  products={products}
+                  placeholder="امسح الباركود أو رقم الشامل..."
+                  className="w-full"
+                  disabled={loading}
+                />
+                <p className="text-xs text-gray-500 mt-1.5 font-cairo">الماسح الخارجي أو كاميرا الموبايل — كل مسح يحدد/يلغي الصنف ويجهز لمسح التالي</p>
+              </div>
+              {/* بحث نصي عن المنتجات */}
               <div className="mb-4">
                 <div className="relative">
                   <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />

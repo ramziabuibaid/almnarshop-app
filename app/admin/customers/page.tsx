@@ -9,7 +9,7 @@ import AddInteractionModal from '@/components/admin/AddInteractionModal';
 import CustomerFormModal from '@/components/admin/CustomerFormModal';
 import CustomerSelect from '@/components/admin/CustomerSelect';
 import PhoneActions from '@/components/admin/PhoneActions';
-import { getDashboardData, getAllCustomers, updatePTPStatus, logActivity } from '@/lib/api';
+import { getDashboardData, getAllCustomers, updatePTPStatus, logActivity, setCustomersCacheInvalidated, clearCustomersCache } from '@/lib/api';
 import {
   Users,
   Loader2,
@@ -205,6 +205,8 @@ export default function CustomersPage() {
 
   // Check if user has permission to view balances
   const canViewBalances = admin?.is_super_admin || admin?.permissions?.viewBalances === true;
+  // Permission to refresh customers cache (invalidates cache for all admin users)
+  const canRefreshCustomersCache = admin?.is_super_admin || admin?.permissions?.refreshCustomersCache === true;
   const [searchInput, setSearchInput] = useState(''); // For input field - updates immediately
   const [searchQuery, setSearchQuery] = useState(''); // For actual filtering - updates in background
   const [isPending, startTransition] = useTransition();
@@ -309,11 +311,13 @@ export default function CustomersPage() {
     }
   };
 
-  // Force refresh from database (bypasses 60-min cache — e.g. when another user added a customer)
+  // Force refresh from database and invalidate cache for all users (everyone gets fresh list on next load)
   const refreshFromDatabase = async () => {
     try {
       setLoading(true);
       setError(null);
+      await setCustomersCacheInvalidated();
+      clearCustomersCache();
       const data = await getAllCustomers({ force: true });
       setCustomers(data || []);
     } catch (err: any) {
@@ -965,15 +969,17 @@ export default function CustomersPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <button
-              onClick={refreshFromDatabase}
-              disabled={loading}
-              className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700 disabled:opacity-50"
-              title="تحديث قائمة الزبائن من قاعدة البيانات (مفيد عند إضافة عميل من جهاز أو حساب آخر)"
-            >
-              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-              <span>تحديث من قاعدة البيانات</span>
-            </button>
+            {canRefreshCustomersCache && (
+              <button
+                onClick={refreshFromDatabase}
+                disabled={loading}
+                className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700 disabled:opacity-50"
+                title="تحديث كاش الزبائن من قاعدة البيانات (يُحدّث القائمة لجميع المستخدمين)"
+              >
+                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                <span>تحديث كاش الزبائن</span>
+              </button>
+            )}
             <button
               onClick={() => {
                 setEditingCustomer(null);

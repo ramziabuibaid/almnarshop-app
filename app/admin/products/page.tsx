@@ -10,7 +10,7 @@ import { Plus, Edit, Edit2, Image as ImageIcon, Loader2, Package, Sparkles, Chec
 import { useRouter } from 'next/navigation';
 import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
-import { deleteProduct, getProducts, saveProduct, updateProductVisibility } from '@/lib/api';
+import { deleteProduct, getProducts, saveProduct, updateProductVisibility, setProductsCacheInvalidated, clearProductsCache } from '@/lib/api';
 import { ColumnDef } from '@tanstack/react-table';
 import ScannerLatinInput from '@/components/admin/ScannerLatinInput';
 import React from 'react';
@@ -310,6 +310,8 @@ export default function ProductsManagerPage() {
   
   // Check if user has permission to view cost
   const canViewCost = admin?.is_super_admin || admin?.permissions?.viewCost === true;
+  // Permission to refresh products cache (invalidates cache for all store visitors)
+  const canRefreshProductsCache = admin?.is_super_admin || admin?.permissions?.refreshProductsCache === true;
   
   // Load column visibility from localStorage
   const getInitialColumnVisibility = (): Record<string, boolean> => {
@@ -517,10 +519,12 @@ export default function ProductsManagerPage() {
     }
   };
 
-  // Force refresh from database (bypasses 60-min cache)
+  // Force refresh from database and invalidate cache for all users (store visitors will get fresh data on next load)
   const refreshFromDatabase = async () => {
     try {
       setLoading(true);
+      await setProductsCacheInvalidated();
+      clearProductsCache();
       const data = await getProducts({ force: true });
       setProducts(data || []);
     } catch (error) {
@@ -1371,15 +1375,17 @@ export default function ProductsManagerPage() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                <button
-                  onClick={refreshFromDatabase}
-                  disabled={loading}
-                  className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700 disabled:opacity-50"
-                  title="تحديث قائمة المنتجات من قاعدة البيانات (يتخطى الكاش)"
-                >
-                  <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                  <span>تحديث من قاعدة البيانات</span>
-                </button>
+                {canRefreshProductsCache && (
+                  <button
+                    onClick={refreshFromDatabase}
+                    disabled={loading}
+                    className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700 disabled:opacity-50"
+                    title="تحديث كاش المنتجات من قاعدة البيانات (يُحدّث القائمة لجميع زوار المتجر)"
+                  >
+                    <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                    <span>تحديث كاش المنتجات</span>
+                  </button>
+                )}
                 <button
                   onClick={handleAddNew}
                   className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"

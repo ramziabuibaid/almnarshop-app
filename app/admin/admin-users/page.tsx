@@ -22,6 +22,8 @@ const permissionLabels: { key: keyof AdminPermissions; label: string }[] = [
   { key: 'viewCashBoxBalance', label: 'View cash box balance (shop & warehouse)' },
   { key: 'accountant', label: 'Accountant (post invoices & change status)' },
   { key: 'viewNotifications', label: 'View notifications' },
+  { key: 'refreshProductsCache', label: 'Refresh products cache (تحديث كاش المنتجات لجميع الزوار)' },
+  { key: 'refreshCustomersCache', label: 'Refresh customers cache (تحديث كاش الزبائن لجميع المستخدمين)' },
 ];
 
 const emptyPermissions: AdminPermissions = {
@@ -41,6 +43,9 @@ const emptyPermissions: AdminPermissions = {
   viewCashBoxBalance: false,
   accountant: false,
   viewNotifications: false,
+  dashboardAndNotifications: false,
+  refreshProductsCache: false,
+  refreshCustomersCache: false,
 };
 
 export default function AdminUsersPage() {

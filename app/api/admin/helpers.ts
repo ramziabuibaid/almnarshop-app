@@ -15,9 +15,14 @@ export const DEFAULT_PERMISSIONS = {
   accessChecks: false,
   accessQuotations: false,
   accessPayPage: false,
+  accessShopCashBox: false,
+  accessWarehouseCashBox: false,
+  viewCashBoxBalance: false,
   accountant: false,
   dashboardAndNotifications: false,
   viewNotifications: false,
+  refreshProductsCache: false,
+  refreshCustomersCache: false,
 };
 
 export type Permissions = typeof DEFAULT_PERMISSIONS;

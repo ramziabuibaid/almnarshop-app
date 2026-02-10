@@ -551,13 +551,67 @@ export async function getProductById(productId: string): Promise<any | null> {
   }
 }
 
-/** Client-side cache TTL: 24 hours. Stock/customers change only via daily Google Sheets sync; use "تحديث من قاعدة البيانات" button for immediate refresh. */
+/** Client-side cache TTL: 24 hours. Use "تحديث كاش المنتجات" in admin (with permission) to refresh for all users. */
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const CACHE_PRODUCTS_DATA = 'cache_products_data';
 const CACHE_PRODUCTS_TIMESTAMP = 'cache_products_timestamp';
+const CACHE_PRODUCTS_INVALIDATED_AT = 'cache_products_invalidated_at';
 const CACHE_CUSTOMERS_DATA = 'cache_customers_data';
 const CACHE_CUSTOMERS_TIMESTAMP = 'cache_customers_timestamp';
+const CACHE_CUSTOMERS_INVALIDATED_AT = 'cache_customers_invalidated_at';
+
+/** Get global products cache invalidation timestamp from Supabase (used so all clients get fresh data after admin sync) */
+export async function getProductsCacheInvalidatedAt(): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('app_cache_control')
+      .select('value')
+      .eq('key', 'products_invalidated_at')
+      .maybeSingle();
+    if (error) return null;
+    return data?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Bump global products cache invalidation (call when admin clicks "تحديث كاش المنتجات") so all users get fresh data on next load */
+export async function setProductsCacheInvalidated(): Promise<void> {
+  try {
+    await supabase
+      .from('app_cache_control')
+      .upsert({ key: 'products_invalidated_at', value: new Date().toISOString() }, { onConflict: 'key' });
+  } catch (e) {
+    console.error('[API] setProductsCacheInvalidated error:', e);
+  }
+}
+
+/** Get global customers cache invalidation timestamp from Supabase */
+export async function getCustomersCacheInvalidatedAt(): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('app_cache_control')
+      .select('value')
+      .eq('key', 'customers_invalidated_at')
+      .maybeSingle();
+    if (error) return null;
+    return data?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Bump global customers cache invalidation (call when admin clicks "تحديث كاش الزبائن") so all users get fresh data on next load */
+export async function setCustomersCacheInvalidated(): Promise<void> {
+  try {
+    await supabase
+      .from('app_cache_control')
+      .upsert({ key: 'customers_invalidated_at', value: new Date().toISOString() }, { onConflict: 'key' });
+  } catch (e) {
+    console.error('[API] setCustomersCacheInvalidated error:', e);
+  }
+}
 
 function getFromCache<T>(dataKey: string, timestampKey: string): T | null {
   if (typeof window === 'undefined') return null;
@@ -591,6 +645,7 @@ export function clearProductsCache(): void {
   try {
     localStorage.removeItem(CACHE_PRODUCTS_DATA);
     localStorage.removeItem(CACHE_PRODUCTS_TIMESTAMP);
+    localStorage.removeItem(CACHE_PRODUCTS_INVALIDATED_AT);
   } catch {
     // ignore
   }
@@ -604,6 +659,7 @@ export function clearCustomersCache(): void {
   try {
     localStorage.removeItem(CACHE_CUSTOMERS_DATA);
     localStorage.removeItem(CACHE_CUSTOMERS_TIMESTAMP);
+    localStorage.removeItem(CACHE_CUSTOMERS_INVALIDATED_AT);
   } catch {
     // ignore
   }
@@ -612,7 +668,7 @@ export function clearCustomersCache(): void {
 /**
  * Get all products from Supabase
  * Maps Supabase snake_case columns to app PascalCase format
- * Uses client-side cache (60 min TTL) unless options.force is true.
+ * Uses client-side cache (4h TTL) unless options.force is true. Cache is invalidated globally when admin clicks "تحديث من قاعدة البيانات".
  * @param options.forStore - If true, returns only products visible in the online store (is_visible !== false)
  * @param options.force - If true, bypass cache and fetch from Supabase (e.g. after "Refresh" or add product)
  */
@@ -622,8 +678,12 @@ export async function getProducts(options?: { forStore?: boolean; force?: boolea
     const force = options?.force === true;
 
     if (!force) {
+      const serverInvalidatedAt = await getProductsCacheInvalidatedAt();
       const cached = getFromCache<any[]>(CACHE_PRODUCTS_DATA, CACHE_PRODUCTS_TIMESTAMP);
-      if (cached && Array.isArray(cached)) {
+      const cachedInvalidatedAt = typeof window !== 'undefined' ? localStorage.getItem(CACHE_PRODUCTS_INVALIDATED_AT) : null;
+      const cacheStillValid = cached && Array.isArray(cached) &&
+        (serverInvalidatedAt == null || (cachedInvalidatedAt != null && serverInvalidatedAt <= cachedInvalidatedAt));
+      if (cacheStillValid) {
         console.log(`[API] Products loaded from cache (${cached.length} items)${forStore ? ' (store filter applied)' : ''}`);
         if (forStore) {
           const filtered = cached.filter((p: any) => p.is_visible !== false && p.isVisible !== false);
@@ -696,6 +756,14 @@ export async function getProducts(options?: { forStore?: boolean; force?: boolea
     let mappedProducts = filteredProducts.map((product: any) => mapProductFromSupabase(product));
 
     setCache(CACHE_PRODUCTS_DATA, CACHE_PRODUCTS_TIMESTAMP, mappedProducts);
+    const invalidationAt = await getProductsCacheInvalidatedAt();
+    if (typeof window !== 'undefined' && invalidationAt) {
+      try {
+        localStorage.setItem(CACHE_PRODUCTS_INVALIDATED_AT, invalidationAt);
+      } catch {
+        // ignore
+      }
+    }
 
     if (forStore) {
       mappedProducts = mappedProducts.filter((p: any) => p.is_visible !== false && p.isVisible !== false);
@@ -1210,7 +1278,7 @@ export async function uploadImage(imageData: {
 /**
  * Get all customers from Supabase
  * Maps Supabase snake_case columns to app PascalCase format
- * Uses client-side cache (60 min TTL) unless options.force is true.
+ * Uses client-side cache (24h TTL). Cache is invalidated globally when admin clicks "تحديث كاش الزبائن".
  * @param options.force - If true, bypass cache and fetch from Supabase (e.g. after "Refresh" or add customer)
  */
 export async function getAllCustomers(options?: { force?: boolean }): Promise<any[]> {
@@ -1218,8 +1286,12 @@ export async function getAllCustomers(options?: { force?: boolean }): Promise<an
     const force = options?.force === true;
 
     if (!force) {
+      const serverInvalidatedAt = await getCustomersCacheInvalidatedAt();
       const cached = getFromCache<any[]>(CACHE_CUSTOMERS_DATA, CACHE_CUSTOMERS_TIMESTAMP);
-      if (cached && Array.isArray(cached)) {
+      const cachedInvalidatedAt = typeof window !== 'undefined' ? localStorage.getItem(CACHE_CUSTOMERS_INVALIDATED_AT) : null;
+      const cacheStillValid = cached && Array.isArray(cached) &&
+        (serverInvalidatedAt == null || (cachedInvalidatedAt != null && serverInvalidatedAt <= cachedInvalidatedAt));
+      if (cacheStillValid) {
         console.log(`[API] Customers loaded from cache (${cached.length} items)`);
         return cached;
       }
@@ -1264,7 +1336,15 @@ export async function getAllCustomers(options?: { force?: boolean }): Promise<an
     
     const mappedCustomers = allCustomers.map((customer: any) => mapCustomerFromSupabase(customer));
     setCache(CACHE_CUSTOMERS_DATA, CACHE_CUSTOMERS_TIMESTAMP, mappedCustomers);
-    
+    const invalidationAt = await getCustomersCacheInvalidatedAt();
+    if (typeof window !== 'undefined' && invalidationAt) {
+      try {
+        localStorage.setItem(CACHE_CUSTOMERS_INVALIDATED_AT, invalidationAt);
+      } catch {
+        // ignore
+      }
+    }
+
     const totalTime = Date.now() - startTime;
     console.log(`[API] Customers loaded from Supabase: ${mappedCustomers.length} in ${totalTime}ms`);
     

@@ -19,7 +19,9 @@ type PermissionKey =
   | 'viewCashBoxBalance'
   | 'accountant'
   | 'dashboardAndNotifications'
-  | 'viewNotifications';
+  | 'viewNotifications'
+  | 'refreshProductsCache'
+  | 'refreshCustomersCache';
 
 export type AdminPermissions = Record<PermissionKey, boolean>;
 
