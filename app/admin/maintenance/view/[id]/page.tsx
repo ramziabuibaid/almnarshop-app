@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import MaintenanceTimeline from '@/components/admin/MaintenanceTimeline';
@@ -13,6 +13,7 @@ import {
   Printer,
   MessageCircle,
   History,
+  X,
 } from 'lucide-react';
 import { convertDriveImageUrl } from '@/lib/api';
 import { fixPhoneNumber } from '@/lib/utils';
@@ -27,12 +28,29 @@ export default function ViewMaintenancePage() {
   const [error, setError] = useState<string | null>(null);
   const [record, setRecord] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
+  const [printOverlayMaintNo, setPrintOverlayMaintNo] = useState<string | null>(null);
+  const printIframeRef = useRef<HTMLIFrameElement>(null);
+
+  const isMobilePrint = () => typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   useEffect(() => {
     if (maintNo) {
       loadRecord();
     }
   }, [maintNo]);
+
+  useEffect(() => {
+    if (!printOverlayMaintNo) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'print-ready' && printIframeRef.current?.contentWindow) {
+        try {
+          printIframeRef.current.contentWindow.print();
+        } catch (_) {}
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [printOverlayMaintNo]);
 
   const loadRecord = async () => {
     setLoading(true);
@@ -223,9 +241,11 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
             )}
             <button
               onClick={() => {
-                // Open print page in new window - will auto-print when loaded
-                const printUrl = `/admin/maintenance/print/${record.MaintNo}`;
-                window.open(printUrl, `print-maintenance-${record.MaintNo}`, 'noopener,noreferrer');
+                if (isMobilePrint()) {
+                  window.open(`/admin/maintenance/print/${record.MaintNo}`, `print-maintenance-${record.MaintNo}`, 'noopener,noreferrer');
+                  return;
+                }
+                setPrintOverlayMaintNo(record.MaintNo);
               }}
               className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
             >
@@ -419,6 +439,51 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
           )}
         </div>
       </div>
+
+      {printOverlayMaintNo && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+          dir="rtl"
+          onClick={() => setPrintOverlayMaintNo(null)}
+        >
+          <div
+            className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+            style={{ minWidth: '120mm', maxHeight: '95vh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+              <span className="text-sm font-cairo text-gray-700">معاينة الطباعة — معاملة صيانة</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => printIframeRef.current?.contentWindow?.print()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  <Printer size={20} />
+                  طباعة مرة أخرى
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintOverlayMaintNo(null)}
+                  className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                  aria-label="إغلاق"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto bg-white min-h-0">
+              <iframe
+                ref={printIframeRef}
+                src={`/admin/maintenance/print/${printOverlayMaintNo}?embed=1`}
+                title="طباعة معاملة الصيانة"
+                className="w-full border-0 bg-white"
+                style={{ minHeight: '70vh', height: '70vh' }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

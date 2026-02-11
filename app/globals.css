@@ -125,6 +125,21 @@ select {
   animation: fadeIn 0.3s ease-out;
 }
 
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-toast-in {
+  animation: toastIn 0.35s cubic-bezier(0.21, 1.02, 0.73, 1);
+}
+
 /* Hide browser print headers/footers (URL, title, date) - especially on mobile Chrome */
 @media print {
   @page {

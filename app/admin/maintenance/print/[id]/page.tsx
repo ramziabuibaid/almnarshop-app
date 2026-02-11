@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { getMaintenance, getAllCustomers } from '@/lib/api';
 
 export default function MaintenancePrintPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const isEmbed = searchParams?.get('embed') === '1';
   const maintNo = params?.id as string;
   
   const [maintenanceData, setMaintenanceData] = useState<{
@@ -37,20 +39,19 @@ export default function MaintenancePrintPage() {
   }, [maintNo]);
 
   useEffect(() => {
-    // Set document title for PDF filename (customer name + maintenance number)
-    if (maintenanceData && !loading) {
-      const customerName = maintenanceData.CustomerName || 'عميل';
-      const maintNo = maintenanceData.MaintNo || '';
-      document.title = `${customerName} ${maintNo}`;
-      
-      // Auto-print when page loads in the new window
-      // This won't freeze the main app because it's in a separate window
-      const timer = setTimeout(() => {
-        window.print();
-      }, 500); // Slightly longer delay to ensure content is fully rendered
-      return () => clearTimeout(timer);
+    if (!maintenanceData || loading) return;
+    const customerName = maintenanceData.CustomerName || 'عميل';
+    const no = maintenanceData.MaintNo || '';
+    document.title = `${customerName} ${no}`;
+    if (isEmbed) {
+      try {
+        window.parent.postMessage({ type: 'print-ready' }, '*');
+      } catch (_) {}
+      return;
     }
-  }, [maintenanceData, loading]);
+    const timer = setTimeout(() => window.print(), 500);
+    return () => clearTimeout(timer);
+  }, [maintenanceData, loading, isEmbed]);
 
   const loadMaintenanceData = async () => {
     try {
@@ -317,9 +318,11 @@ export default function MaintenancePrintPage() {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;900&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
-      <div className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
-        <button onClick={() => window.print()}>إعادة الطباعة</button>
-      </div>
+      {!isEmbed && (
+        <div className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
+          <button onClick={() => window.print()}>إعادة الطباعة</button>
+        </div>
+      )}
       <table className="sheet">
         <thead>
           <tr>

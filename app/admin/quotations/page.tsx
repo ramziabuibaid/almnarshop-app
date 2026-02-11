@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -73,6 +73,9 @@ export default function QuotationsPage() {
   const QUOTATIONS_PER_PAGE = 50;
   const [searchByIdResult, setSearchByIdResult] = useState<Quotation | null>(null);
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
+  const [printOverlayQuotation, setPrintOverlayQuotation] = useState<{ id: string; variant?: 'image' } | null>(null);
+  const printIframeRef = useRef<HTMLIFrameElement>(null);
+  const isMobilePrint = () => typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   useEffect(() => {
     document.title = 'العروض السعرية - Quotations';
@@ -83,6 +86,19 @@ export default function QuotationsPage() {
     loadUsers();
     loadFirstPage();
   }, []);
+
+  useEffect(() => {
+    if (!printOverlayQuotation) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'print-ready' && printIframeRef.current?.contentWindow) {
+        try {
+          printIframeRef.current.contentWindow.print();
+        } catch (_) {}
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [printOverlayQuotation]);
 
   const loadUsers = async () => {
     try {
@@ -220,11 +236,15 @@ export default function QuotationsPage() {
   const [printMenuOpen, setPrintMenuOpen] = useState<string | null>(null);
 
   const handlePrint = (quotationId: string, withImages = true) => {
-    const url = withImages
-      ? `/admin/quotations/print/${quotationId}?variant=image`
-      : `/admin/quotations/print/${quotationId}`;
-    window.open(url, `print-quotation-${quotationId}`, 'noopener,noreferrer');
     setPrintMenuOpen(null);
+    if (isMobilePrint()) {
+      const url = withImages
+        ? `/admin/quotations/print/${quotationId}?variant=image`
+        : `/admin/quotations/print/${quotationId}`;
+      window.open(url, `print-quotation-${quotationId}`, 'noopener,noreferrer');
+      return;
+    }
+    setPrintOverlayQuotation({ id: quotationId, variant: withImages ? 'image' : undefined });
   };
 
   const formatCurrency = (amount: number | undefined | null) => {
@@ -807,7 +827,50 @@ export default function QuotationsPage() {
           </div>
         )}
 
-
+        {printOverlayQuotation && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+            dir="rtl"
+            onClick={() => setPrintOverlayQuotation(null)}
+          >
+            <div
+              className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+              style={{ minWidth: '120mm', maxHeight: '95vh' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                <span className="text-sm font-cairo text-gray-700">معاينة الطباعة — عرض سعري</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => printIframeRef.current?.contentWindow?.print()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    <Printer size={16} />
+                    طباعة مرة أخرى
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPrintOverlayQuotation(null)}
+                    className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                    aria-label="إغلاق"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto bg-white min-h-0">
+                <iframe
+                  ref={printIframeRef}
+                  src={`/admin/quotations/print/${printOverlayQuotation.id}${printOverlayQuotation.variant === 'image' ? '?variant=image&' : '?'}embed=1`}
+                  title="طباعة العرض السعري"
+                  className="w-full border-0 bg-white"
+                  style={{ minHeight: '70vh', height: '70vh' }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

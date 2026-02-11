@@ -100,6 +100,9 @@ export default function POSPage() {
   });
   const [isResizing, setIsResizing] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [printOverlayInvoiceId, setPrintOverlayInvoiceId] = useState<string | null>(null);
+  const printIframeRef = useRef<HTMLIFrameElement>(null);
+  const isMobilePrint = () => typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const barcodeBufferRef = useRef(''); // uncontrolled: no re-render per keystroke
@@ -1261,6 +1264,19 @@ export default function POSPage() {
     });
   }, [availableTypes, availableBrands, availableSizes, availableColors]);
 
+  useEffect(() => {
+    if (!printOverlayInvoiceId) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'invoice-print-ready' && printIframeRef.current?.contentWindow) {
+        try {
+          printIframeRef.current.contentWindow.print();
+        } catch (_) {}
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [printOverlayInvoiceId]);
+
   // Calculate totals
   const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
   const netTotal = subtotal - (discount || 0);
@@ -1324,10 +1340,12 @@ export default function POSPage() {
         notes: notes.trim() || undefined,
       });
 
-      // Open print in new window - user will click print button manually
-      // This prevents browser freezing and allows multiple invoices to be opened
-      const printUrl = `/admin/invoices/print/${result.invoiceID}`;
-      window.open(printUrl, `print-${result.invoiceID}`, 'noopener,noreferrer');
+      // Print: on mobile open new tab; on desktop show overlay with iframe (no new tab)
+      if (isMobilePrint()) {
+        window.open(`/admin/invoices/print/${result.invoiceID}`, `print-${result.invoiceID}`, 'noopener,noreferrer');
+      } else {
+        setPrintOverlayInvoiceId(result.invoiceID);
+      }
 
       // Clear cart after successful save
       setTimeout(() => {
@@ -1849,6 +1867,7 @@ export default function POSPage() {
                                 type="number"
                                 value={item.quantity}
                                 onChange={(e) => updateQuantity(item.productID, parseFloat(e.target.value) || 0)}
+                                onFocus={(e) => e.target.select()}
                                 className="w-16 text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
                               />
                               <button
@@ -1978,6 +1997,7 @@ export default function POSPage() {
                                 type="number"
                                 value={item.quantity}
                                 onChange={(e) => updateQuantity(item.productID, parseFloat(e.target.value) || 0)}
+                                onFocus={(e) => e.target.select()}
                                 className="flex-1 text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold"
                               />
                               <button
@@ -1994,6 +2014,7 @@ export default function POSPage() {
                               type="number"
                               value={item.unitPrice}
                               onChange={(e) => updatePrice(item.productID, parseFloat(e.target.value) || 0)}
+                              onFocus={(e) => e.target.select()}
                               step="0.01"
                               min="0"
                               className="w-full text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold"
@@ -2184,6 +2205,52 @@ export default function POSPage() {
             </span>
           )}
         </button>
+      )}
+
+      {/* معاينة الطباعة (ديسكتوب) — بدون تاب جديد */}
+      {printOverlayInvoiceId && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+          dir="rtl"
+          onClick={() => setPrintOverlayInvoiceId(null)}
+        >
+          <div
+            className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+            style={{ width: '105mm', minHeight: '148mm', maxHeight: '90vh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+              <span className="text-sm font-cairo text-gray-700">معاينة الطباعة</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => printIframeRef.current?.contentWindow?.print()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  <Printer size={16} />
+                  طباعة مرة أخرى
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintOverlayInvoiceId(null)}
+                  className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                  aria-label="إغلاق"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto bg-white min-h-0">
+              <iframe
+                ref={printIframeRef}
+                src={`/admin/invoices/print/${printOverlayInvoiceId}?embed=1`}
+                title="طباعة الفاتورة"
+                className="w-full border-0 bg-white"
+                style={{ width: '105mm', minHeight: '148mm', height: '70vh' }}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Print Component */}

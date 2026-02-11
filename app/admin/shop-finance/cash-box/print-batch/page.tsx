@@ -260,6 +260,7 @@ function ShopCashBoxPrintBatchContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const isEmbed = searchParams.get('embed') === '1';
   const idsParam = searchParams.get('ids') ?? '';
   const idList = useMemo(() => {
     return idsParam
@@ -287,6 +288,15 @@ function ShopCashBoxPrintBatchContent() {
     const dateStr = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); // YYYY-MM-DD
     document.title = `صندوق المحل سندات قبض وصرف ${dateStr}`;
   }, [items.length]);
+
+  // عند التضمين (embed): إعلام الصفحة الأم لفتح نافذة الطباعة
+  useEffect(() => {
+    if (isEmbed && items.length > 0 && !loading) {
+      try {
+        window.parent.postMessage({ type: 'batch-print-ready' }, '*');
+      } catch (_) {}
+    }
+  }, [isEmbed, items.length, loading]);
 
   useEffect(() => {
     if (parsed.length === 0) {
@@ -555,23 +565,25 @@ function ShopCashBoxPrintBatchContent() {
         href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;900&family=Cairo:wght@400;600;700;900&display=swap"
         rel="stylesheet"
       />
-      <div className="no-print" style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #eee' }}>
-        <button
-          onClick={() => window.print()}
-          style={{
-            padding: '8px 20px',
-            fontSize: '16px',
-            fontFamily: 'Cairo',
-            backgroundColor: '#2563eb',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-          }}
-        >
-          طباعة / حفظ PDF ({items.length} سند)
-        </button>
-      </div>
+      {!isEmbed && (
+        <div className="no-print" style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #eee' }}>
+          <button
+            onClick={() => window.print()}
+            style={{
+              padding: '8px 20px',
+              fontSize: '16px',
+              fontFamily: 'Cairo',
+              backgroundColor: '#2563eb',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+            }}
+          >
+            طباعة / حفظ PDF ({items.length} سند)
+          </button>
+        </div>
+      )}
       {items.map((item, index) => (
         <div
           key={`${item.type}-${item.id}`}

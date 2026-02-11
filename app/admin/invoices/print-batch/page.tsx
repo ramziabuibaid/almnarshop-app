@@ -135,6 +135,7 @@ function InvoicesPrintBatchContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const isEmbed = searchParams.get('embed') === '1';
   const idsParam = searchParams.get('ids') ?? '';
   const idList = useMemo(
     () =>
@@ -152,6 +153,15 @@ function InvoicesPrintBatchContent() {
     const dateStr = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); // YYYY-MM-DD
     document.title = `الفواتير النقدية ${dateStr}`;
   }, [items.length]);
+
+  // عند التضمين (embed): إعلام الصفحة الأم لفتح نافذة الطباعة
+  useEffect(() => {
+    if (isEmbed && items.length > 0 && !loading) {
+      try {
+        window.parent.postMessage({ type: 'batch-print-ready' }, '*');
+      } catch (_) {}
+    }
+  }, [isEmbed, items.length, loading]);
 
   useEffect(() => {
     if (idList.length === 0) {
@@ -519,11 +529,13 @@ function InvoicesPrintBatchContent() {
         }
       `}</style>
 
-      <div className="no-print">
-        <button className="print-button" onClick={() => window.print()}>
-          طباعة / حفظ PDF ({items.length} فاتورة)
-        </button>
-      </div>
+      {!isEmbed && (
+        <div className="no-print">
+          <button className="print-button" onClick={() => window.print()}>
+            طباعة / حفظ PDF ({items.length} فاتورة)
+          </button>
+        </div>
+      )}
 
       {items.map((data, index) => (
         <div

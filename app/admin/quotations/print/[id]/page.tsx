@@ -21,6 +21,7 @@ export default function QuotationPrintPage() {
   const searchParams = useSearchParams();
   const quotationId = params?.id as string;
   const useImageVariant = searchParams?.get('variant') === 'image';
+  const isEmbed = searchParams?.get('embed') === '1';
 
   const [data, setData] = useState<{
     quotationID: string;
@@ -51,8 +52,15 @@ export default function QuotationPrintPage() {
     if (!data || loading) return;
 
     const customerName = data.customer?.name || 'عميل';
-    const quotationId = data.quotationID || '';
-    document.title = `${customerName} ${quotationId}`;
+    const qId = data.quotationID || '';
+    document.title = `${customerName} ${qId}`;
+
+    if (isEmbed) {
+      try {
+        window.parent.postMessage({ type: 'print-ready' }, '*');
+      } catch (_) {}
+      return;
+    }
 
     let printed = false;
     const doPrint = () => {
@@ -61,26 +69,21 @@ export default function QuotationPrintPage() {
       window.print();
     };
 
-    // When using image variant, wait for images to load before printing
     const printAfterReady = () => {
       if (!useImageVariant) {
         setTimeout(doPrint, 400);
         return;
       }
-
-      // Preload images and wait for them
       const directUrls = data.items
         .map((item) => {
           const raw = item.product?.image || (item as any).product?.Image || '';
           return raw ? getDirectImageUrl(raw) : '';
         })
         .filter(Boolean);
-
       if (directUrls.length === 0) {
         setTimeout(doPrint, 500);
         return;
       }
-
       const loadPromises = directUrls.map(
         (src) =>
           new Promise<void>((resolve) => {
@@ -90,16 +93,13 @@ export default function QuotationPrintPage() {
             img.src = src;
           })
       );
-
       Promise.all(loadPromises).then(() => setTimeout(doPrint, 300));
-
-      // Fallback: print after 3 seconds if images take too long
       setTimeout(doPrint, 3000);
     };
 
     const timer = setTimeout(printAfterReady, 150);
     return () => clearTimeout(timer);
-  }, [data, loading, useImageVariant]);
+  }, [data, loading, useImageVariant, isEmbed]);
 
   const loadData = async () => {
     try {
@@ -567,9 +567,11 @@ export default function QuotationPrintPage() {
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;900&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
 
-      <div className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
-        <button onClick={() => window.print()}>إعادة الطباعة</button>
-      </div>
+      {!isEmbed && (
+        <div className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
+          <button onClick={() => window.print()}>إعادة الطباعة</button>
+        </div>
+      )}
 
       <table className="sheet">
         <thead>

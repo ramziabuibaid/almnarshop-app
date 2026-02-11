@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { getShopPayment } from '@/lib/api';
 
 export default function PaymentPrintPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const isEmbed = searchParams?.get('embed') === '1';
   const payId = params?.id as string;
   
   const [paymentData, setPaymentData] = useState<{
@@ -36,17 +38,22 @@ export default function PaymentPrintPage() {
     // Set document title for PDF filename (customer name + payment number)
     if (paymentData && !loading) {
       const customerName = paymentData.CustomerName || 'عميل';
-      const payId = paymentData.PayID || '';
-      document.title = `${customerName} ${payId}`;
+      const pid = paymentData.PayID || '';
+      document.title = `${customerName} ${pid}`;
       
-      // Auto-print when page loads in the new window
-      // This won't freeze the main app because it's in a separate window
+      if (isEmbed) {
+        try {
+          window.parent.postMessage({ type: 'slip-print-ready' }, '*');
+        } catch (_) {}
+        return;
+      }
+      
       const timer = setTimeout(() => {
         window.print();
-      }, 500); // Slightly longer delay to ensure content is fully rendered
+      }, 500);
       return () => clearTimeout(timer);
     }
-  }, [paymentData, loading]);
+  }, [paymentData, loading, isEmbed]);
 
   const loadPaymentData = async () => {
     try {
@@ -306,9 +313,11 @@ export default function PaymentPrintPage() {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;900&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
-      <div className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
-        <button onClick={() => window.print()}>إعادة الطباعة</button>
-      </div>
+      {!isEmbed && (
+        <div className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
+          <button onClick={() => window.print()}>إعادة الطباعة</button>
+        </div>
+      )}
       <table className="sheet">
         <thead>
           <tr>

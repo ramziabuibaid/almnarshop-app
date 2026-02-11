@@ -932,6 +932,7 @@ function WarehouseSalesFormContent() {
                       value={newProductQuantity}
                       onChange={(e) => setNewProductQuantity(parseFloat(e.target.value) || 1)}
                       onWheel={(e) => e.currentTarget.blur()}
+                      onFocus={(e) => e.target.select()}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
                     />
                   </div>
@@ -943,6 +944,7 @@ function WarehouseSalesFormContent() {
                       value={newProductPrice}
                       onChange={(e) => setNewProductPrice(parseFloat(e.target.value) || 0)}
                       onWheel={(e) => e.currentTarget.blur()}
+                      onFocus={(e) => e.target.select()}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
                     />
                   </div>
@@ -1151,6 +1153,7 @@ function WarehouseSalesFormContent() {
                               value={item.quantity}
                               onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
                               onWheel={(e) => e.currentTarget.blur()}
+                              onFocus={(e) => e.target.select()}
                               className="w-20 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
                             />
                           </td>
@@ -1161,6 +1164,7 @@ function WarehouseSalesFormContent() {
                               value={item.unitPrice}
                               onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
                               onWheel={(e) => e.currentTarget.blur()}
+                              onFocus={(e) => e.target.select()}
                               className="w-24 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
                             />
                           </td>
@@ -1339,6 +1343,7 @@ function WarehouseSalesFormContent() {
                               value={item.quantity}
                               onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
                               onWheel={(e) => e.currentTarget.blur()}
+                              onFocus={(e) => e.target.select()}
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
                             />
                           </div>
@@ -1350,6 +1355,7 @@ function WarehouseSalesFormContent() {
                               value={item.unitPrice}
                               onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
                               onWheel={(e) => e.currentTarget.blur()}
+                              onFocus={(e) => e.target.select()}
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
                             />
                           </div>

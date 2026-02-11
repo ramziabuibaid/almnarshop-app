@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell, X, CheckCircle, AlertCircle, Activity } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAdminAuth } from '@/context/AdminAuthContext';
+
+const TOAST_DURATION_MS = 5500;
+const POLL_INTERVAL_MS = 20000; // 20 ثانية — توازن بين ظهور الإشعارات واستهلاك Supabase
 
 interface Notification {
   id: string;
@@ -24,8 +27,12 @@ export default function NotificationCenter() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [toasts, setToasts] = useState<Notification[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const subscriptionRef = useRef<any>(null);
+  const toastTimeoutsRef = useRef<Record<string, NodeJS.Timeout>>({});
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check if user has permission to view notifications
   const canViewNotifications = admin?.is_super_admin || 
@@ -49,25 +56,37 @@ export default function NotificationCenter() {
           table: 'system_notifications',
         },
         (payload) => {
-          console.log('[NotificationCenter] New notification received:', payload);
           const newNotification = payload.new as Notification;
+          seenIdsRef.current.add(newNotification.id);
           setNotifications((prev) => [newNotification, ...prev]);
           setUnreadCount((prev) => prev + 1);
-          
-          // Play notification sound (optional)
+          setToasts((prev) => [newNotification, ...prev]);
+          const id = newNotification.id;
+          const t = setTimeout(() => {
+            setToasts((prev) => prev.filter((n) => n.id !== id));
+            delete toastTimeoutsRef.current[id];
+          }, TOAST_DURATION_MS);
+          toastTimeoutsRef.current[id] = t;
           try {
-            const audio = new Audio('/notification.mp3');
-            audio.play().catch(() => {
-              // Ignore if audio fails (file might not exist)
-            });
-          } catch (err) {
-            // Ignore audio errors
-          }
+            new Audio('/notification.mp3').play().catch(() => {});
+          } catch (_) {}
         }
       )
       .subscribe();
 
     subscriptionRef.current = channel;
+
+    // استطلاع دوري — يضمن ظهور الإشعارات حتى لو لم يعمل Realtime (فقط عند ظهور التبويب)
+    const runPoll = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        loadNotifications(true);
+      }
+    };
+    pollIntervalRef.current = setInterval(runPoll, POLL_INTERVAL_MS);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') runPoll();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     // Click outside to close dropdown
     const handleClickOutside = (event: MouseEvent) => {
@@ -82,25 +101,62 @@ export default function NotificationCenter() {
       if (subscriptionRef.current) {
         supabase.removeChannel(subscriptionRef.current);
       }
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       document.removeEventListener('mousedown', handleClickOutside);
+      Object.values(toastTimeoutsRef.current).forEach(clearTimeout);
+      toastTimeoutsRef.current = {};
     };
   }, [canViewNotifications]);
 
-  const loadNotifications = async () => {
+  const dismissToast = useCallback((id: string) => {
+    if (toastTimeoutsRef.current[id]) {
+      clearTimeout(toastTimeoutsRef.current[id]);
+      delete toastTimeoutsRef.current[id];
+    }
+    setToasts((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const loadNotifications = async (isPoll = false) => {
     if (!canViewNotifications) return;
     
-    setLoading(true);
+    if (!isPoll) setLoading(true);
     try {
-      const response = await fetch('/api/admin/notifications?limit=10');
+      const response = await fetch('/api/admin/notifications?limit=15');
       if (response.ok) {
         const data = await response.json();
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
+        const list: Notification[] = data.notifications || [];
+        const unread = data.unreadCount ?? 0;
+
+        if (isPoll) {
+          setNotifications(list);
+          setUnreadCount(unread);
+          list.forEach((n) => {
+            if (seenIdsRef.current.has(n.id)) return;
+            seenIdsRef.current.add(n.id);
+            setToasts((prev) => [n, ...prev]);
+            const t = setTimeout(() => {
+              setToasts((p) => p.filter((x) => x.id !== n.id));
+              delete toastTimeoutsRef.current[n.id];
+            }, TOAST_DURATION_MS);
+            toastTimeoutsRef.current[n.id] = t;
+            try {
+              new Audio('/notification.mp3').play().catch(() => {});
+            } catch (_) {}
+          });
+        } else {
+          setNotifications(list);
+          setUnreadCount(unread);
+          list.forEach((n) => seenIdsRef.current.add(n.id));
+        }
       }
     } catch (error) {
-      console.error('[NotificationCenter] Failed to load notifications:', error);
+      if (!isPoll) console.error('[NotificationCenter] Failed to load notifications:', error);
     } finally {
-      setLoading(false);
+      if (!isPoll) setLoading(false);
     }
   };
 
@@ -250,7 +306,19 @@ export default function NotificationCenter() {
     return null;
   }
 
+  const handleToastClick = async (notification: Notification, e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+    dismissToast(notification.id);
+    if (!notification.is_read) await markAsRead(notification.id);
+    const url = await getNotificationUrl(notification);
+    if (url) {
+      router.push(url);
+      setIsOpen(false);
+    }
+  };
+
   return (
+    <>
     <div className="relative" ref={dropdownRef} dir="rtl">
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -260,7 +328,7 @@ export default function NotificationCenter() {
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
           <span className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-            {unreadCount > 9 ? '9+' : unreadCount}
+            {unreadCount > 50 ? '50+' : unreadCount}
           </span>
         )}
       </button>
@@ -335,5 +403,40 @@ export default function NotificationCenter() {
         </div>
       )}
     </div>
+
+    {/* إشعارات عائمة — تظهر فوراً، الأحدث في الأعلى، وتختفي بعد وقت قصير */}
+    {toasts.length > 0 && (
+      <div
+        className="fixed top-16 right-4 left-4 sm:left-auto z-[200] flex flex-col gap-2 w-full sm:w-[22rem] pointer-events-none"
+        style={{ direction: 'rtl' }}
+        aria-live="polite"
+      >
+        {toasts.map((n) => (
+          <div
+            key={n.id}
+            className="pointer-events-auto flex items-start gap-3 p-3 pr-4 bg-white rounded-xl shadow-lg border border-gray-200/80 animate-toast-in hover:shadow-md transition-shadow"
+            role="alert"
+          >
+            <div className="mt-0.5 flex-shrink-0">{getNotificationIcon(n.type)}</div>
+            <div
+              className="flex-1 min-w-0 cursor-pointer"
+              onClick={(e) => handleToastClick(n, e)}
+            >
+              <p className="text-sm text-gray-900 font-cairo line-clamp-2">{n.message}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{n.user_name}</p>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); dismissToast(n.id); }}
+              className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
+              aria-label="إغلاق"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+    )}
+    </>
   );
 }

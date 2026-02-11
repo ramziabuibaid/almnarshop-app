@@ -469,6 +469,7 @@ function CardRow({
             value={item.quantity}
             onChange={(e) => onUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
             onWheel={(e) => e.currentTarget.blur()}
+            onFocus={(e) => e.target.select()}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
           />
         </div>
@@ -480,6 +481,7 @@ function CardRow({
             value={item.unitPrice}
             onChange={(e) => onUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
             onWheel={(e) => e.currentTarget.blur()}
+            onFocus={(e) => e.target.select()}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
           />
         </div>
@@ -1495,6 +1497,7 @@ function QuotationsFormContent() {
                       value={newProductQuantity}
                       onChange={(e) => setNewProductQuantity(parseFloat(e.target.value) || 1)}
                       onWheel={(e) => e.currentTarget.blur()}
+                      onFocus={(e) => e.target.select()}
                       className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold text-sm sm:text-base"
                     />
                   </div>
@@ -1506,6 +1509,7 @@ function QuotationsFormContent() {
                       value={newProductPrice}
                       onChange={(e) => setNewProductPrice(parseFloat(e.target.value) || 0)}
                       onWheel={(e) => e.currentTarget.blur()}
+                      onFocus={(e) => e.target.select()}
                       className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold text-sm sm:text-base"
                     />
                   </div>

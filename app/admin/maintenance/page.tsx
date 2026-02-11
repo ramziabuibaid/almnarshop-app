@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useLayoutEffect, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -83,7 +83,11 @@ export default function MaintenancePage() {
   const [viewingRecordFull, setViewingRecordFull] = useState<any | null>(null);
   const [loadingViewRecord, setLoadingViewRecord] = useState(false);
   const [viewActiveTab, setViewActiveTab] = useState<'details' | 'history'>('details');
+  const [printOverlayMaintNo, setPrintOverlayMaintNo] = useState<string | null>(null);
+  const printIframeRef = useRef<HTMLIFrameElement>(null);
   const itemsPerPage = 20;
+
+  const isMobilePrint = () => typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   useEffect(() => {
     document.title = 'الصيانة - Maintenance';
@@ -93,6 +97,19 @@ export default function MaintenancePage() {
     loadRecords();
     loadUsers();
   }, []);
+
+  useEffect(() => {
+    if (!printOverlayMaintNo) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'print-ready' && printIframeRef.current?.contentWindow) {
+        try {
+          printIframeRef.current.contentWindow.print();
+        } catch (_) {}
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [printOverlayMaintNo]);
 
   const loadUsers = async () => {
     try {
@@ -235,9 +252,11 @@ ${viewingRecordFull.SerialNo ? `الرقم التسلسلي: ${viewingRecordFull
   };
 
   const handlePrintRecord = (record: MaintenanceRecord) => {
-    // Open print page in new window - will auto-print when loaded
-    const printUrl = `/admin/maintenance/print/${record.MaintNo}`;
-    window.open(printUrl, `print-maintenance-${record.MaintNo}`, 'noopener,noreferrer');
+    if (isMobilePrint()) {
+      window.open(`/admin/maintenance/print/${record.MaintNo}`, `print-maintenance-${record.MaintNo}`, 'noopener,noreferrer');
+      return;
+    }
+    setPrintOverlayMaintNo(record.MaintNo);
   };
 
   const getActionButtons = (currentStatus: string, maintNo: string) => {
@@ -1372,8 +1391,11 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   )}
                   <button
                     onClick={() => {
-                      const printUrl = `/admin/maintenance/print/${viewingRecord.MaintNo}`;
-                      window.open(printUrl, `print-maintenance-${viewingRecord.MaintNo}`, 'noopener,noreferrer');
+                      if (isMobilePrint()) {
+                        window.open(`/admin/maintenance/print/${viewingRecord.MaintNo}`, `print-maintenance-${viewingRecord.MaintNo}`, 'noopener,noreferrer');
+                        return;
+                      }
+                      setPrintOverlayMaintNo(viewingRecord.MaintNo);
                     }}
                     className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-cairo"
                   >
@@ -1586,6 +1608,51 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                     <MaintenanceTimeline maintNo={viewingRecord.MaintNo} />
                   </div>
                 ) : null}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {printOverlayMaintNo && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+            dir="rtl"
+            onClick={() => setPrintOverlayMaintNo(null)}
+          >
+            <div
+              className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+              style={{ minWidth: '120mm', maxHeight: '95vh' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                <span className="text-sm font-cairo text-gray-700">معاينة الطباعة — معاملة صيانة</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => printIframeRef.current?.contentWindow?.print()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    <Printer size={16} />
+                    طباعة مرة أخرى
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPrintOverlayMaintNo(null)}
+                    className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                    aria-label="إغلاق"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto bg-white min-h-0">
+                <iframe
+                  ref={printIframeRef}
+                  src={`/admin/maintenance/print/${printOverlayMaintNo}?embed=1`}
+                  title="طباعة معاملة الصيانة"
+                  className="w-full border-0 bg-white"
+                  style={{ minHeight: '70vh', height: '70vh' }}
+                />
               </div>
             </div>
           </div>

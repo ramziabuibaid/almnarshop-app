@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { getWarehousePayment, getAllCustomers } from '@/lib/api';
 
 export default function WarehousePaymentPrintPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const isEmbed = searchParams?.get('embed') === '1';
   const paymentId = params?.id as string;
   
   const [paymentData, setPaymentData] = useState<{
@@ -33,23 +35,21 @@ export default function WarehousePaymentPrintPage() {
   }, [paymentId]);
 
   useEffect(() => {
-    // Set document title for PDF filename (customer name + payment number)
-    if (paymentData && !loading) {
-      const customerName = paymentData.customer_name || 'عميل';
-      const payId = paymentData.payment_id || '';
-      document.title = `${customerName} ${payId}`;
-      
-      // Auto-print when page loads in the new window
-      // Use longer delay to ensure content is fully rendered and prevent blocking
-      const timer = setTimeout(() => {
-        // Only print if window is focused (to avoid issues)
-        if (window.document.readyState === 'complete') {
-          window.print();
-        }
-      }, 800); // Longer delay to ensure rendering is complete
-      return () => clearTimeout(timer);
+    if (!paymentData || loading) return;
+    const customerName = paymentData.customer_name || 'عميل';
+    const pid = paymentData.payment_id || '';
+    document.title = `${customerName} ${pid}`;
+    if (isEmbed) {
+      try {
+        window.parent.postMessage({ type: 'slip-print-ready' }, '*');
+      } catch (_) {}
+      return;
     }
-  }, [paymentData, loading]);
+    const timer = setTimeout(() => {
+      if (window.document.readyState === 'complete') window.print();
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [paymentData, loading, isEmbed]);
 
   const loadPaymentData = async () => {
     try {
@@ -330,9 +330,11 @@ export default function WarehousePaymentPrintPage() {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;900&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
-      <div className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
-        <button onClick={() => window.print()}>إعادة الطباعة</button>
-      </div>
+      {!isEmbed && (
+        <div className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
+          <button onClick={() => window.print()}>إعادة الطباعة</button>
+        </div>
+      )}
       <table className="sheet">
         <thead>
           <tr>

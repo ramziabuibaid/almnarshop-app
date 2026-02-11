@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -67,6 +67,11 @@ export default function InvoicesPage() {
   });
   const [searchByIdResult, setSearchByIdResult] = useState<CashInvoice | null>(null);
   const [selectedForPrint, setSelectedForPrint] = useState<Set<string>>(new Set());
+  const [printOverlayInvoiceId, setPrintOverlayInvoiceId] = useState<string | null>(null);
+  const [printOverlayBatchIds, setPrintOverlayBatchIds] = useState<string[] | null>(null);
+  const printIframeRef = useRef<HTMLIFrameElement>(null);
+  const printBatchIframeRef = useRef<HTMLIFrameElement>(null);
+  const isMobilePrint = () => typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   // Check if user has permission to view cash invoices
   const canViewCashInvoices = admin?.is_super_admin || admin?.permissions?.viewCashInvoices === true;
@@ -82,6 +87,34 @@ export default function InvoicesPage() {
     loadInvoices();
     loadUsers();
   }, []);
+
+  // When invoice print iframe signals ready, open print dialog for iframe (no new tab)
+  useEffect(() => {
+    if (!printOverlayInvoiceId) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'invoice-print-ready' && printIframeRef.current?.contentWindow) {
+        try {
+          printIframeRef.current.contentWindow.print();
+        } catch (_) {}
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [printOverlayInvoiceId]);
+
+  // When batch print iframe signals ready, open print dialog (no new tab)
+  useEffect(() => {
+    if (!printOverlayBatchIds || printOverlayBatchIds.length === 0) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'batch-print-ready' && printBatchIframeRef.current?.contentWindow) {
+        try {
+          printBatchIframeRef.current.contentWindow.print();
+        } catch (_) {}
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [printOverlayBatchIds]);
 
   // When user searches, try to fetch by exact invoice ID so older invoices (not in last 50) can be found
   useEffect(() => {
@@ -244,10 +277,11 @@ export default function InvoicesPage() {
   };
 
   const handlePrintInvoice = (invoice: CashInvoice) => {
-    // Open print page in new window - user will click print button manually
-    // This prevents browser freezing
-    const printUrl = `/admin/invoices/print/${invoice.InvoiceID}`;
-    window.open(printUrl, `print-${invoice.InvoiceID}`, 'noopener,noreferrer');
+    if (isMobilePrint()) {
+      window.open(`/admin/invoices/print/${invoice.InvoiceID}`, `print-${invoice.InvoiceID}`, 'noopener,noreferrer');
+      return;
+    }
+    setPrintOverlayInvoiceId(invoice.InvoiceID);
   };
 
   const getSelectKey = (invoice: CashInvoice) => invoice.InvoiceID;
@@ -274,8 +308,11 @@ export default function InvoicesPage() {
       alert('لم يتم تحديد أي فاتورة. حدد فواتير من الجدول ثم اضغط طباعة المحدد.');
       return;
     }
-    const url = `/admin/invoices/print-batch?ids=${encodeURIComponent(orderedIds.join(','))}`;
-    window.open(url, 'print-batch-invoices', 'noopener,noreferrer');
+    if (isMobilePrint()) {
+      window.open(`/admin/invoices/print-batch?ids=${encodeURIComponent(orderedIds.join(','))}`, 'print-batch-invoices', 'noopener,noreferrer');
+      return;
+    }
+    setPrintOverlayBatchIds(orderedIds);
   };
 
 
@@ -950,8 +987,14 @@ export default function InvoicesPage() {
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 <button
                   onClick={() => {
-                    const printUrl = `/admin/invoices/print/${viewing.invoice.InvoiceID || viewing.invoice.invoice_id}`;
-                    window.open(printUrl, `print-cash-invoice-${viewing.invoice.InvoiceID || viewing.invoice.invoice_id}`, 'noopener,noreferrer');
+                    const id = viewing.invoice.InvoiceID || viewing.invoice.invoice_id;
+                    if (!id) return;
+                    if (isMobilePrint()) {
+                      window.open(`/admin/invoices/print/${id}`, `print-cash-invoice-${id}`, 'noopener,noreferrer');
+                      return;
+                    }
+                    setPrintOverlayInvoiceId(id);
+                    closeView();
                   }}
                   className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-cairo"
                 >
@@ -1106,6 +1149,100 @@ export default function InvoicesPage() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* طباعة الفاتورة داخل الصفحة (بدون تاب جديد) — شاشة الطباعة تظهر مباشرة */}
+      {printOverlayInvoiceId && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+          dir="rtl"
+          onClick={() => setPrintOverlayInvoiceId(null)}
+        >
+          <div
+            className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+            style={{ width: '105mm', minHeight: '148mm', maxHeight: '90vh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+              <span className="text-sm font-cairo text-gray-700">معاينة الطباعة</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => printIframeRef.current?.contentWindow?.print()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  <Printer size={16} />
+                  طباعة مرة أخرى
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintOverlayInvoiceId(null)}
+                  className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                  aria-label="إغلاق"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto bg-white min-h-0">
+              <iframe
+                ref={printIframeRef}
+                src={`/admin/invoices/print/${printOverlayInvoiceId}?embed=1`}
+                title="طباعة الفاتورة"
+                className="w-full border-0 bg-white"
+                style={{ width: '105mm', minHeight: '148mm', height: '70vh' }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* طباعة المحدد (عدة فواتير) داخل الصفحة — نافذة عائمة */}
+      {printOverlayBatchIds && printOverlayBatchIds.length > 0 && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+          dir="rtl"
+          onClick={() => setPrintOverlayBatchIds(null)}
+        >
+          <div
+            className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+            style={{ minWidth: '120mm', minHeight: '200px', maxHeight: '95vh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+              <span className="text-sm font-cairo text-gray-700">
+                معاينة الطباعة — {printOverlayBatchIds.length} فاتورة
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => printBatchIframeRef.current?.contentWindow?.print()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  <Printer size={16} />
+                  طباعة مرة أخرى
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintOverlayBatchIds(null)}
+                  className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                  aria-label="إغلاق"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto bg-white min-h-0">
+              <iframe
+                ref={printBatchIframeRef}
+                src={`/admin/invoices/print-batch?ids=${encodeURIComponent(printOverlayBatchIds.join(','))}&embed=1`}
+                title="طباعة الفواتير المحددة"
+                className="w-full border-0 bg-white"
+                style={{ minHeight: '80vh', height: '80vh' }}
+              />
             </div>
           </div>
         </div>

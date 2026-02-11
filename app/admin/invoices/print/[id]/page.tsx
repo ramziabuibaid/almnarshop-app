@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { getCashInvoiceDetailsFromSupabase } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
@@ -18,6 +18,8 @@ interface InvoiceItem {
 
 export default function InvoicePrintPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const isEmbed = searchParams?.get('embed') === '1';
   const invoiceId = params?.id as string;
   
   const [invoiceData, setInvoiceData] = useState<{
@@ -47,13 +49,21 @@ export default function InvoicePrintPage() {
     if (invoiceData && !loading) {
       document.title = invoiceData.invoiceID;
       
-      // Auto-print when page loads in the new window
+      if (isEmbed) {
+        // Embedded in iframe: tell parent to open print dialog (no new tab)
+        try {
+          window.parent.postMessage({ type: 'invoice-print-ready' }, '*');
+        } catch (_) {}
+        return;
+      }
+      
+      // Standalone (new tab): auto-print when page loads
       const timer = setTimeout(() => {
         window.print();
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [invoiceData, loading]);
+  }, [invoiceData, loading, isEmbed]);
 
   const loadInvoiceData = async () => {
     try {
@@ -436,11 +446,13 @@ export default function InvoicePrintPage() {
         }
       `}</style>
 
-      <div className="no-print">
-        <button className="print-button" onClick={() => window.print()}>
-          طباعة الفاتورة
-        </button>
-      </div>
+      {!isEmbed && (
+        <div className="no-print">
+          <button className="print-button" onClick={() => window.print()}>
+            طباعة الفاتورة
+          </button>
+        </div>
+      )}
 
       <div className="invoice-container">
         {/* Header */}
