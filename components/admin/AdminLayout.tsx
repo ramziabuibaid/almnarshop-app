@@ -30,22 +30,23 @@ interface AdminLayoutProps {
 }
 
 /** Sidebar accent: thin border + subtle active bg for compact professional look */
-const ACCENT_STYLES: Record<string, { border: string; borderMuted: string; activeBg: string }> = {
-  slate:   { border: 'border-s-slate-400',   borderMuted: 'border-s-slate-600/40',   activeBg: 'bg-slate-500/10' },
-  indigo:  { border: 'border-s-indigo-400',  borderMuted: 'border-s-indigo-600/40',  activeBg: 'bg-indigo-500/10' },
-  violet:  { border: 'border-s-violet-400',  borderMuted: 'border-s-violet-600/40',  activeBg: 'bg-violet-500/10' },
-  emerald: { border: 'border-s-emerald-500', borderMuted: 'border-s-emerald-600/40', activeBg: 'bg-emerald-500/10' },
-  teal:    { border: 'border-s-teal-400',    borderMuted: 'border-s-teal-600/40',    activeBg: 'bg-teal-500/10' },
-  cyan:    { border: 'border-s-cyan-400',    borderMuted: 'border-s-cyan-600/40',    activeBg: 'bg-cyan-500/10' },
-  blue:    { border: 'border-s-blue-400',    borderMuted: 'border-s-blue-600/40',    activeBg: 'bg-blue-500/10' },
-  amber:   { border: 'border-s-amber-400',   borderMuted: 'border-s-amber-600/40',   activeBg: 'bg-amber-500/10' },
-  rose:    { border: 'border-s-rose-400',    borderMuted: 'border-s-rose-600/40',    activeBg: 'bg-rose-500/10' },
-  green:   { border: 'border-s-green-500',   borderMuted: 'border-s-green-600/40',   activeBg: 'bg-green-500/10' },
-  orange:  { border: 'border-s-orange-400',  borderMuted: 'border-s-orange-600/40',  activeBg: 'bg-orange-500/10' },
-  fuchsia: { border: 'border-s-fuchsia-400', borderMuted: 'border-s-fuchsia-600/40', activeBg: 'bg-fuchsia-500/10' },
-  sky:     { border: 'border-s-sky-400',     borderMuted: 'border-s-sky-600/40',     activeBg: 'bg-sky-500/10' },
-  neutral: { border: 'border-s-gray-400',    borderMuted: 'border-s-gray-600/40',    activeBg: 'bg-gray-500/10' },
-  red:     { border: 'border-s-red-400',     borderMuted: 'border-s-red-600/40',     activeBg: 'bg-red-500/10' },
+/** Light sidebar — active: blue bg, hover: subtle gray (ResearchCollab-inspired) */
+const ACCENT_STYLES: Record<string, { border: string; borderMuted: string; activeBg: string; activeText?: string }> = {
+  slate:   { border: 'border-s-slate-500',   borderMuted: 'border-s-transparent',   activeBg: 'bg-slate-100' },
+  indigo:  { border: 'border-s-indigo-500',  borderMuted: 'border-s-transparent',  activeBg: 'bg-indigo-50', activeText: 'text-indigo-700' },
+  violet:  { border: 'border-s-violet-500',  borderMuted: 'border-s-transparent',  activeBg: 'bg-violet-50' },
+  emerald: { border: 'border-s-emerald-500', borderMuted: 'border-s-transparent', activeBg: 'bg-emerald-50' },
+  teal:    { border: 'border-s-teal-500',    borderMuted: 'border-s-transparent',   activeBg: 'bg-teal-50' },
+  cyan:    { border: 'border-s-cyan-500',    borderMuted: 'border-s-transparent',   activeBg: 'bg-cyan-50' },
+  blue:    { border: 'border-s-blue-500',    borderMuted: 'border-s-transparent',   activeBg: 'bg-blue-50', activeText: 'text-blue-700' },
+  amber:   { border: 'border-s-amber-500',   borderMuted: 'border-s-transparent',   activeBg: 'bg-amber-50' },
+  rose:    { border: 'border-s-rose-500',   borderMuted: 'border-s-transparent',    activeBg: 'bg-rose-50' },
+  green:   { border: 'border-s-green-500',   borderMuted: 'border-s-transparent',   activeBg: 'bg-green-50' },
+  orange:  { border: 'border-s-orange-500',  borderMuted: 'border-s-transparent',  activeBg: 'bg-orange-50' },
+  fuchsia: { border: 'border-s-fuchsia-500', borderMuted: 'border-s-transparent', activeBg: 'bg-fuchsia-50' },
+  sky:     { border: 'border-s-sky-500',     borderMuted: 'border-s-transparent',   activeBg: 'bg-sky-50' },
+  neutral: { border: 'border-s-gray-500',    borderMuted: 'border-s-transparent',   activeBg: 'bg-gray-100' },
+  red:     { border: 'border-s-red-500',    borderMuted: 'border-s-transparent',   activeBg: 'bg-red-50' },
 };
 
 /** Submenu shown on hover under "المنتجات" */
@@ -75,15 +76,22 @@ const customersSubmenu = [
 ];
 
 const sidebarLinks = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, accent: 'indigo' as const },
-  { href: '/admin/products', label: 'المنتجات', icon: Package, accent: 'emerald' as const, hasSubmenu: true as const },
-  { href: '/admin/pos', label: 'نقطة البيع (POS)', icon: CreditCard, accent: 'green' as const, hasSubmenu: true as const },
-  { href: '/admin/shop-sales', label: 'الفواتير', icon: FileText, accent: 'blue' as const, hasSubmenu: true as const },
-  { href: '/admin/shop-finance/cash-box', label: 'صندوق المحل', icon: Wallet, accent: 'green' as const },
-  { href: '/admin/warehouse-finance/cash-box', label: 'صندوق المستودع', icon: Wallet, accent: 'teal' as const },
-  { href: '/admin/maintenance', label: 'الصيانة', icon: Wrench, accent: 'amber' as const },
-  { href: '/admin/customers', label: 'الزبائن', icon: Users, accent: 'indigo' as const, hasSubmenu: true as const },
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, accent: 'indigo' as const, section: 'main' as const },
+  { href: '/admin/products', label: 'المنتجات', icon: Package, accent: 'emerald' as const, hasSubmenu: true as const, section: 'ops' as const },
+  { href: '/admin/pos', label: 'نقطة البيع (POS)', icon: CreditCard, accent: 'green' as const, hasSubmenu: true as const, section: 'ops' as const },
+  { href: '/admin/shop-sales', label: 'الفواتير', icon: FileText, accent: 'blue' as const, hasSubmenu: true as const, section: 'ops' as const },
+  { href: '/admin/shop-finance/cash-box', label: 'صندوق المحل', icon: Wallet, accent: 'green' as const, section: 'finance' as const },
+  { href: '/admin/warehouse-finance/cash-box', label: 'صندوق المستودع', icon: Wallet, accent: 'teal' as const, section: 'finance' as const },
+  { href: '/admin/maintenance', label: 'الصيانة', icon: Wrench, accent: 'amber' as const, section: 'admin' as const },
+  { href: '/admin/customers', label: 'الزبائن', icon: Users, accent: 'indigo' as const, hasSubmenu: true as const, section: 'admin' as const },
 ];
+
+const SECTION_LABELS: Record<string, string> = {
+  main: 'الرئيسية',
+  ops: 'المبيعات والمخزون',
+  finance: 'المالية',
+  admin: 'الإدارة',
+};
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { logout } = useShop();
@@ -92,13 +100,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [productsSubmenuOpen, setProductsSubmenuOpen] = useState(false);
-  const productsSubmenuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [posSubmenuOpen, setPosSubmenuOpen] = useState(false);
-  const posSubmenuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [invoicesSubmenuOpen, setInvoicesSubmenuOpen] = useState(false);
-  const invoicesSubmenuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [customersSubmenuOpen, setCustomersSubmenuOpen] = useState(false);
-  const customersSubmenuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
@@ -172,32 +176,43 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         />
       )}
 
-      {/* Sidebar — compact, professional */}
+      {/* Sidebar — light, professional (Almnar System / ResearchCollab-inspired) */}
       <aside
-        className={`fixed top-0 right-0 h-full w-52 bg-gray-800 text-white z-[70] transform transition-transform duration-300 shadow-xl border-l border-gray-700/50 ${
+        className={`fixed top-0 right-0 h-full w-56 bg-white text-gray-800 z-[70] transform transition-transform duration-300 shadow-xl border-l border-gray-200 ${
           pathname === '/admin/pos' 
             ? (sidebarOpen ? 'translate-x-0' : 'translate-x-full')
             : (sidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0')
         }`}
       >
         <div className="flex flex-col h-full">
-          {/* Header — compact */}
-          <div className="px-3 py-2.5 border-b border-gray-700/80 flex items-center justify-between shrink-0">
-            <h1 className="text-sm font-semibold tracking-tight text-gray-100">Admin</h1>
+          {/* Header — Almnar System */}
+          <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between shrink-0 bg-gray-50/50">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
+                <Store size={18} className="text-white" />
+              </div>
+              <h1 className="text-base font-bold text-indigo-600 tracking-tight font-cairo">Almnar System</h1>
+            </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className={`p-1.5 hover:bg-gray-700/80 rounded-md text-gray-400 hover:text-white transition-colors ${pathname === '/admin/pos' ? 'lg:block' : 'md:hidden'}`}
+              className={`p-1.5 hover:bg-gray-200 rounded-md text-gray-500 hover:text-gray-700 transition-colors ${pathname === '/admin/pos' ? 'lg:block' : 'md:hidden'}`}
             >
               <X size={18} />
             </button>
           </div>
 
-          {/* Navigation — tight spacing, small text for quick scan */}
-          <nav className="flex-1 p-2.5 space-y-0.5 overflow-y-auto overflow-x-hidden flex flex-col" dir="rtl">
-            <div className="flex-1">
-              {sidebarLinks.map((link) => {
+          {/* Navigation — section headers + links */}
+          <nav className="flex-1 p-3 overflow-y-auto overflow-x-hidden flex flex-col" dir="rtl">
+            <div className="flex-1 space-y-0.5">
+              {sidebarLinks.map((link, idx) => {
                 const Icon = link.icon;
                 const isActive = pathname === link.href || pathname?.startsWith(link.href + '/');
+                const showSection = link.section && (idx === 0 || sidebarLinks[idx - 1]?.section !== link.section);
+                const sectionHeader = showSection && link.section ? (
+                  <div className="pt-2 pb-1 first:pt-0" key={`sec-${link.section}`}>
+                    <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">{SECTION_LABELS[link.section]}</span>
+                  </div>
+                ) : null;
                 const isProductsWithSubmenu = 'hasSubmenu' in link && link.hasSubmenu && link.href === '/admin/products';
                 const isPosWithSubmenu = 'hasSubmenu' in link && link.hasSubmenu && link.href === '/admin/pos';
                 const isInvoicesWithSubmenu = 'hasSubmenu' in link && link.hasSubmenu && link.href === '/admin/shop-sales';
@@ -246,47 +261,47 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 const styles = ACCENT_STYLES[link.accent] ?? ACCENT_STYLES.neutral;
                 const borderClass = isActive ? styles.border : styles.borderMuted;
 
-                // Products: main button opens /admin/products, hover shows العروض الترويجية + طباعة الملصقات
+                // Products: قائمة منبثقة واضحة — سهم يدل على التبعيات، تبعيات مضمنة مع خط ربط
                 if (isProductsWithSubmenu) {
                   const submenuActive = pathname?.startsWith('/admin/marketing') || pathname?.startsWith('/admin/labels') || pathname?.startsWith('/admin/serial-numbers');
+                  const styles = ACCENT_STYLES[link.accent] ?? ACCENT_STYLES.neutral;
+                  const borderClass = (isActive || submenuActive) ? styles.border : styles.borderMuted;
                   return (
-                    <div
-                      key={link.href}
-                      className="relative"
-                      onMouseEnter={() => {
-                        if (productsSubmenuTimeout.current) {
-                          clearTimeout(productsSubmenuTimeout.current);
-                          productsSubmenuTimeout.current = null;
-                        }
-                        productsSubmenuTimeout.current = setTimeout(() => setProductsSubmenuOpen(true), 150);
-                      }}
-                      onMouseLeave={() => {
-                        if (productsSubmenuTimeout.current) {
-                          clearTimeout(productsSubmenuTimeout.current);
-                          productsSubmenuTimeout.current = null;
-                        }
-                        productsSubmenuTimeout.current = setTimeout(() => setProductsSubmenuOpen(false), 120);
-                      }}
-                    >
-                      <a
-                        href={link.href}
-                        onClick={(e) => {
-                          if (e.ctrlKey || e.metaKey) return;
-                          e.preventDefault();
-                          router.push(link.href);
-                          setSidebarOpen(false);
-                        }}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors border-s-2 text-sm ${borderClass} ${
-                          isActive || submenuActive
-                            ? `${styles.activeBg} text-white font-medium`
-                            : 'text-gray-300 hover:bg-gray-700/60 hover:text-white'
-                        }`}
-                      >
-                        <Icon size={18} className="shrink-0" />
-                        <span className="font-cairo truncate">{link.label}</span>
-                      </a>
+                    <div key={link.href} className="space-y-0.5">
+                      {sectionHeader}
+                      <div className="flex items-center gap-0">
+                        <a
+                          href={link.href}
+                          onClick={(e) => {
+                            if (e.ctrlKey || e.metaKey) return;
+                            e.preventDefault();
+                            router.push(link.href);
+                            setSidebarOpen(false);
+                          }}
+                          className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${borderClass} ${
+                            isActive || submenuActive
+                              ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          <Icon size={18} className="shrink-0" />
+                          <span className="font-cairo truncate">{link.label}</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setProductsSubmenuOpen((v) => !v);
+                          }}
+                          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                          aria-label={productsSubmenuOpen ? 'طي التبعيات' : 'عرض التبعيات'}
+                        >
+                          <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${productsSubmenuOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                      </div>
                       {productsSubmenuOpen && (
-                        <div className="absolute top-full right-0 mt-0.5 w-full min-w-[11rem] py-0.5 bg-gray-700/95 rounded-md shadow-xl border border-gray-600/80 z-20">
+                        <div className="border-s-2 border-gray-200 mr-3 pr-2 mt-0.5 space-y-0.5">
                           {productsSubmenu.map((sub) => {
                             const SubIcon = sub.icon;
                             const subActive = pathname === sub.href || pathname?.startsWith(sub.href + '/');
@@ -301,8 +316,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                   setSidebarOpen(false);
                                   setProductsSubmenuOpen(false);
                                 }}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded transition-colors ${
-                                  subActive ? 'bg-gray-600 text-white' : 'text-gray-300 hover:bg-gray-600/80 hover:text-white'
+                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${
+                                  subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                               >
                                 <SubIcon size={14} className="shrink-0" />
@@ -312,66 +327,53 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                           })}
                         </div>
                       )}
-                      {/* على الجوال: سهم لفتح القائمة الفرعية */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setProductsSubmenuOpen((v) => !v);
-                        }}
-                        className="md:hidden absolute left-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-gray-400 hover:text-white"
-                        aria-label="فتح قائمة المنتجات"
-                      >
-                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${productsSubmenuOpen ? 'rotate-180' : ''}`} />
-                      </button>
                     </div>
                   );
                 }
 
-                // نقطة البيع: الزر الرئيسي يفتح POS، وعند التمرير تظهر "قائمة الفواتير النقدية"
+                // نقطة البيع: قائمة منبثقة مع سهم وتبعيات مضمنة
                 if (isPosWithSubmenu) {
                   const canViewCashInvoices = admin.is_super_admin || admin.permissions?.viewCashInvoices === true;
                   const filteredPosSubmenu = posSubmenu.filter((s) => (s.permission ? (s.permission === 'viewCashInvoices' && canViewCashInvoices) : true));
                   const submenuActive = pathname?.startsWith('/admin/invoices');
                   return (
-                    <div
-                      key={link.href}
-                      className="relative"
-                      onMouseEnter={() => {
-                        if (posSubmenuTimeout.current) {
-                          clearTimeout(posSubmenuTimeout.current);
-                          posSubmenuTimeout.current = null;
-                        }
-                        posSubmenuTimeout.current = setTimeout(() => setPosSubmenuOpen(true), 150);
-                      }}
-                      onMouseLeave={() => {
-                        if (posSubmenuTimeout.current) {
-                          clearTimeout(posSubmenuTimeout.current);
-                          posSubmenuTimeout.current = null;
-                        }
-                        posSubmenuTimeout.current = setTimeout(() => setPosSubmenuOpen(false), 120);
-                      }}
-                    >
-                      <a
-                        href={link.href}
-                        onClick={(e) => {
-                          if (e.ctrlKey || e.metaKey) return;
-                          e.preventDefault();
-                          router.push(link.href);
-                          setSidebarOpen(false);
-                        }}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors border-s-2 text-sm ${borderClass} ${
-                          isActive || submenuActive
-                            ? `${styles.activeBg} text-white font-medium`
-                            : 'text-gray-300 hover:bg-gray-700/60 hover:text-white'
-                        }`}
-                      >
-                        <Icon size={18} className="shrink-0" />
-                        <span className="font-cairo truncate">{link.label}</span>
-                      </a>
+                    <div key={link.href} className="space-y-0.5">
+                      {sectionHeader}
+                      <div className="flex items-center gap-0">
+                        <a
+                          href={link.href}
+                          onClick={(e) => {
+                            if (e.ctrlKey || e.metaKey) return;
+                            e.preventDefault();
+                            router.push(link.href);
+                            setSidebarOpen(false);
+                          }}
+                          className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${(isActive || submenuActive) ? styles.border : styles.borderMuted} ${
+                            isActive || submenuActive
+                              ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          <Icon size={18} className="shrink-0" />
+                          <span className="font-cairo truncate">{link.label}</span>
+                        </a>
+                        {filteredPosSubmenu.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setPosSubmenuOpen((v) => !v);
+                            }}
+                            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                            aria-label={posSubmenuOpen ? 'طي التبعيات' : 'عرض التبعيات'}
+                          >
+                            <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${posSubmenuOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                        )}
+                      </div>
                       {posSubmenuOpen && filteredPosSubmenu.length > 0 && (
-                        <div className="absolute top-full right-0 mt-0.5 w-full min-w-[11rem] py-0.5 bg-gray-700/95 rounded-md shadow-xl border border-gray-600/80 z-20">
+                        <div className="border-s-2 border-gray-200 mr-3 pr-2 mt-0.5 space-y-0.5">
                           {filteredPosSubmenu.map((sub) => {
                             const SubIcon = sub.icon;
                             const subActive = pathname === sub.href || pathname?.startsWith(sub.href + '/');
@@ -386,8 +388,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                   setSidebarOpen(false);
                                   setPosSubmenuOpen(false);
                                 }}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded transition-colors ${
-                                  subActive ? 'bg-gray-600 text-white' : 'text-gray-300 hover:bg-gray-600/80 hover:text-white'
+                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${
+                                  subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                               >
                                 <SubIcon size={14} className="shrink-0" />
@@ -397,68 +399,52 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                           })}
                         </div>
                       )}
-                      {filteredPosSubmenu.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setPosSubmenuOpen((v) => !v);
-                          }}
-                          className="md:hidden absolute left-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-gray-400 hover:text-white"
-                          aria-label="فتح قائمة نقطة البيع"
-                        >
-                          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${posSubmenuOpen ? 'rotate-180' : ''}`} />
-                        </button>
-                      )}
                     </div>
                   );
                 }
 
-                // الفواتير: قائمة رئيسية تنبثق منها فواتير المحل، فواتير المخزن، عرض سعر، طلبيات اون لاين
+                // الفواتير: قائمة منبثقة مع سهم وتبعيات مضمنة
                 if (isInvoicesWithSubmenu) {
                   const hasPerm = (p: string) => admin.is_super_admin || (admin.permissions as Record<string, boolean>)?.[p] === true;
                   const filteredInvoicesSubmenu = invoicesSubmenu.filter((s) => !('permission' in s && s.permission) || hasPerm(s.permission));
                   if (filteredInvoicesSubmenu.length === 0) return null;
                   const invoicesSubmenuActive = pathname?.startsWith('/admin/shop-sales') || pathname?.startsWith('/admin/warehouse-sales') || pathname?.startsWith('/admin/quotations') || pathname?.startsWith('/admin/orders');
                   return (
-                    <div
-                      key={link.href}
-                      className="relative"
-                      onMouseEnter={() => {
-                        if (invoicesSubmenuTimeout.current) {
-                          clearTimeout(invoicesSubmenuTimeout.current);
-                          invoicesSubmenuTimeout.current = null;
-                        }
-                        invoicesSubmenuTimeout.current = setTimeout(() => setInvoicesSubmenuOpen(true), 150);
-                      }}
-                      onMouseLeave={() => {
-                        if (invoicesSubmenuTimeout.current) {
-                          clearTimeout(invoicesSubmenuTimeout.current);
-                          invoicesSubmenuTimeout.current = null;
-                        }
-                        invoicesSubmenuTimeout.current = setTimeout(() => setInvoicesSubmenuOpen(false), 120);
-                      }}
-                    >
-                      <a
-                        href={link.href}
-                        onClick={(e) => {
-                          if (e.ctrlKey || e.metaKey) return;
-                          e.preventDefault();
-                          router.push(link.href);
-                          setSidebarOpen(false);
-                        }}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors border-s-2 text-sm ${borderClass} ${
-                          isActive || invoicesSubmenuActive
-                            ? `${styles.activeBg} text-white font-medium`
-                            : 'text-gray-300 hover:bg-gray-700/60 hover:text-white'
-                        }`}
-                      >
-                        <Icon size={18} className="shrink-0" />
-                        <span className="font-cairo truncate">{link.label}</span>
-                      </a>
+                    <div key={link.href} className="space-y-0.5">
+                      {sectionHeader}
+                      <div className="flex items-center gap-0">
+                        <a
+                          href={link.href}
+                          onClick={(e) => {
+                            if (e.ctrlKey || e.metaKey) return;
+                            e.preventDefault();
+                            router.push(link.href);
+                            setSidebarOpen(false);
+                          }}
+                          className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${(isActive || invoicesSubmenuActive) ? styles.border : styles.borderMuted} ${
+                            isActive || invoicesSubmenuActive
+                              ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          <Icon size={18} className="shrink-0" />
+                          <span className="font-cairo truncate">{link.label}</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setInvoicesSubmenuOpen((v) => !v);
+                          }}
+                          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                          aria-label={invoicesSubmenuOpen ? 'طي التبعيات' : 'عرض التبعيات'}
+                        >
+                          <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${invoicesSubmenuOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                      </div>
                       {invoicesSubmenuOpen && (
-                        <div className="absolute top-full right-0 mt-0.5 w-full min-w-[11rem] py-0.5 bg-gray-700/95 rounded-md shadow-xl border border-gray-600/80 z-20">
+                        <div className="border-s-2 border-gray-200 mr-3 pr-2 mt-0.5 space-y-0.5">
                           {filteredInvoicesSubmenu.map((sub) => {
                             const SubIcon = sub.icon;
                             const subActive = pathname === sub.href || pathname?.startsWith(sub.href + '/');
@@ -473,8 +459,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                   setSidebarOpen(false);
                                   setInvoicesSubmenuOpen(false);
                                 }}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded transition-colors ${
-                                  subActive ? 'bg-gray-600 text-white' : 'text-gray-300 hover:bg-gray-600/80 hover:text-white'
+                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${
+                                  subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                               >
                                 <SubIcon size={14} className="shrink-0" />
@@ -484,65 +470,53 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                           })}
                         </div>
                       )}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setInvoicesSubmenuOpen((v) => !v);
-                        }}
-                        className="md:hidden absolute left-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-gray-400 hover:text-white"
-                        aria-label="فتح قائمة الفواتير"
-                      >
-                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${invoicesSubmenuOpen ? 'rotate-180' : ''}`} />
-                      </button>
                     </div>
                   );
                 }
 
-                // الزبائن: قائمة رئيسية تنبثق منها المهام والمتابعات، الشيكات الراجعة
+                // الزبائن: قائمة منبثقة مع سهم وتبعيات مضمنة
                 if (isCustomersWithSubmenu) {
                   const hasPerm = (p: string) => admin.is_super_admin || (admin.permissions as Record<string, boolean>)?.[p] === true;
                   const filteredCustomersSubmenu = customersSubmenu.filter((s) => !('permission' in s && s.permission) || hasPerm(s.permission));
                   const customersSubmenuActive = pathname?.startsWith('/admin/tasks') || pathname?.startsWith('/admin/checks');
                   return (
-                    <div
-                      key={link.href}
-                      className="relative"
-                      onMouseEnter={() => {
-                        if (customersSubmenuTimeout.current) {
-                          clearTimeout(customersSubmenuTimeout.current);
-                          customersSubmenuTimeout.current = null;
-                        }
-                        customersSubmenuTimeout.current = setTimeout(() => setCustomersSubmenuOpen(true), 150);
-                      }}
-                      onMouseLeave={() => {
-                        if (customersSubmenuTimeout.current) {
-                          clearTimeout(customersSubmenuTimeout.current);
-                          customersSubmenuTimeout.current = null;
-                        }
-                        customersSubmenuTimeout.current = setTimeout(() => setCustomersSubmenuOpen(false), 120);
-                      }}
-                    >
-                      <a
-                        href={link.href}
-                        onClick={(e) => {
-                          if (e.ctrlKey || e.metaKey) return;
-                          e.preventDefault();
-                          router.push(link.href);
-                          setSidebarOpen(false);
-                        }}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors border-s-2 text-sm ${borderClass} ${
-                          isActive || customersSubmenuActive
-                            ? `${styles.activeBg} text-white font-medium`
-                            : 'text-gray-300 hover:bg-gray-700/60 hover:text-white'
-                        }`}
-                      >
-                        <Icon size={18} className="shrink-0" />
-                        <span className="font-cairo truncate">{link.label}</span>
-                      </a>
+                    <div key={link.href} className="space-y-0.5">
+                      {sectionHeader}
+                      <div className="flex items-center gap-0">
+                        <a
+                          href={link.href}
+                          onClick={(e) => {
+                            if (e.ctrlKey || e.metaKey) return;
+                            e.preventDefault();
+                            router.push(link.href);
+                            setSidebarOpen(false);
+                          }}
+                          className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${(isActive || customersSubmenuActive) ? styles.border : styles.borderMuted} ${
+                            isActive || customersSubmenuActive
+                              ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          <Icon size={18} className="shrink-0" />
+                          <span className="font-cairo truncate">{link.label}</span>
+                        </a>
+                        {filteredCustomersSubmenu.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setCustomersSubmenuOpen((v) => !v);
+                            }}
+                            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                            aria-label={customersSubmenuOpen ? 'طي التبعيات' : 'عرض التبعيات'}
+                          >
+                            <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${customersSubmenuOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                        )}
+                      </div>
                       {customersSubmenuOpen && filteredCustomersSubmenu.length > 0 && (
-                        <div className="absolute top-full right-0 mt-0.5 w-full min-w-[11rem] py-0.5 bg-gray-700/95 rounded-md shadow-xl border border-gray-600/80 z-20">
+                        <div className="border-s-2 border-gray-200 mr-3 pr-2 mt-0.5 space-y-0.5">
                           {filteredCustomersSubmenu.map((sub) => {
                             const SubIcon = sub.icon;
                             const subActive = pathname === sub.href || pathname?.startsWith(sub.href + '/');
@@ -557,8 +531,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                   setSidebarOpen(false);
                                   setCustomersSubmenuOpen(false);
                                 }}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded transition-colors ${
-                                  subActive ? 'bg-gray-600 text-white' : 'text-gray-300 hover:bg-gray-600/80 hover:text-white'
+                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${
+                                  subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                               >
                                 <SubIcon size={14} className="shrink-0" />
@@ -568,27 +542,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                           })}
                         </div>
                       )}
-                      {filteredCustomersSubmenu.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setCustomersSubmenuOpen((v) => !v);
-                          }}
-                          className="md:hidden absolute left-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-gray-400 hover:text-white"
-                          aria-label="فتح قائمة الزبائن"
-                        >
-                          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${customersSubmenuOpen ? 'rotate-180' : ''}`} />
-                        </button>
-                      )}
                     </div>
                   );
                 }
 
                 return (
+                  <div key={link.href} className="space-y-0.5">
+                    {sectionHeader}
                   <a
-                    key={link.href}
                     href={link.href}
                     onClick={(e) => {
                       if (e.ctrlKey || e.metaKey) return;
@@ -596,15 +557,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       router.push(link.href);
                       setSidebarOpen(false);
                     }}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors border-s-2 text-sm ${borderClass} ${
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${isActive ? styles.border : styles.borderMuted} ${
                       isActive
-                        ? `${styles.activeBg} text-white font-medium`
-                        : 'text-gray-300 hover:bg-gray-700/60 hover:text-white'
+                        ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
+                        : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
                     <Icon size={18} className="shrink-0" />
                     <span className="font-cairo truncate">{link.label}</span>
                   </a>
+                  </div>
                 );
               })}
               {admin.is_super_admin && (() => {
@@ -612,6 +574,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 const isActive = pathname === '/admin/admin-users';
                 const borderClass = isActive ? styles.border : styles.borderMuted;
                 return (
+                  <div className="space-y-0.5">
+                    <div className="pt-2 pb-1">
+                      <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">النظام</span>
+                    </div>
                   <a
                     href="/admin/admin-users"
                     onClick={(e) => {
@@ -620,20 +586,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       router.push('/admin/admin-users');
                       setSidebarOpen(false);
                     }}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors border-s-2 text-sm ${borderClass} ${
-                      isActive ? `${styles.activeBg} text-white font-medium` : 'text-gray-300 hover:bg-gray-700/60 hover:text-white'
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${borderClass} ${
+                      isActive ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium` : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
                     <Shield size={18} className="shrink-0" />
                     <span className="font-cairo truncate">Admin Users</span>
                   </a>
+                  </div>
                 );
               })()}
             </div>
 
             {/* Footer: الذهاب الى المتجر + Logout — مفصولان عن القائمة */}
-            <div className="mt-auto pt-2.5 border-t border-gray-700/80 space-y-0.5">
-              {/* زر حقيقي: ضغطة عادية = نفس التاب، Ctrl/Cmd+ضغطة = تاب جديد */}
+            <div className="mt-auto pt-3 border-t border-gray-200 space-y-0.5">
               {(() => {
                 const styles = ACCENT_STYLES.neutral;
                 return (
@@ -650,7 +616,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       router.push('/');
                       setSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors border-s-2 text-sm ${styles.borderMuted} text-gray-300 hover:bg-gray-700/60 hover:text-white text-right`}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${styles.borderMuted} text-gray-700 hover:bg-gray-100 text-right`}
                   >
                     <Store size={18} className="shrink-0" />
                     <span className="font-cairo truncate">الذهاب الى المتجر</span>
@@ -662,7 +628,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 return (
                   <button
                     onClick={handleLogout}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors border-s-2 text-sm ${styles.borderMuted} text-gray-300 hover:bg-gray-700/60 hover:text-white text-right`}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${styles.borderMuted} text-gray-700 hover:bg-red-50 hover:text-red-700 text-right`}
                   >
                     <LogOut size={18} className="shrink-0" />
                     <span className="font-cairo truncate">Logout</span>
@@ -676,7 +642,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Main Content */}
       <div 
-        className={pathname === '/admin/pos' ? '' : 'md:mr-52'}
+        className={pathname === '/admin/pos' ? '' : 'md:mr-56'}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
