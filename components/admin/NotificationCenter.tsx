@@ -407,7 +407,7 @@ export default function NotificationCenter() {
     {/* إشعارات عائمة — تظهر فوراً، الأحدث في الأعلى، وتختفي بعد وقت قصير */}
     {toasts.length > 0 && (
       <div
-        className="fixed top-16 right-4 left-4 sm:left-auto z-[200] flex flex-col gap-2 w-full sm:w-[22rem] pointer-events-none"
+        className="fixed top-16 right-4 left-4 sm:left-auto md:right-[14rem] z-[200] flex flex-col gap-2 w-full sm:w-[22rem] pointer-events-none"
         style={{ direction: 'rtl' }}
         aria-live="polite"
       >
