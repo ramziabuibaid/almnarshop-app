@@ -4,11 +4,11 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useShop } from '@/context/ShopContext';
 import { useAdminAuth } from '@/context/AdminAuthContext';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingBag, 
-  Users, 
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingBag,
+  Users,
   Store,
   LogOut,
   Menu,
@@ -32,21 +32,21 @@ interface AdminLayoutProps {
 /** Sidebar accent: thin border + subtle active bg for compact professional look */
 /** Light sidebar — active: blue bg, hover: subtle gray (ResearchCollab-inspired) */
 const ACCENT_STYLES: Record<string, { border: string; borderMuted: string; activeBg: string; activeText?: string }> = {
-  slate:   { border: 'border-s-slate-500',   borderMuted: 'border-s-transparent',   activeBg: 'bg-slate-100' },
-  indigo:  { border: 'border-s-indigo-500',  borderMuted: 'border-s-transparent',  activeBg: 'bg-indigo-50', activeText: 'text-indigo-700' },
-  violet:  { border: 'border-s-violet-500',  borderMuted: 'border-s-transparent',  activeBg: 'bg-violet-50' },
+  slate: { border: 'border-s-slate-500', borderMuted: 'border-s-transparent', activeBg: 'bg-slate-100' },
+  indigo: { border: 'border-s-indigo-500', borderMuted: 'border-s-transparent', activeBg: 'bg-indigo-50', activeText: 'text-indigo-700' },
+  violet: { border: 'border-s-violet-500', borderMuted: 'border-s-transparent', activeBg: 'bg-violet-50' },
   emerald: { border: 'border-s-emerald-500', borderMuted: 'border-s-transparent', activeBg: 'bg-emerald-50' },
-  teal:    { border: 'border-s-teal-500',    borderMuted: 'border-s-transparent',   activeBg: 'bg-teal-50' },
-  cyan:    { border: 'border-s-cyan-500',    borderMuted: 'border-s-transparent',   activeBg: 'bg-cyan-50' },
-  blue:    { border: 'border-s-blue-500',    borderMuted: 'border-s-transparent',   activeBg: 'bg-blue-50', activeText: 'text-blue-700' },
-  amber:   { border: 'border-s-amber-500',   borderMuted: 'border-s-transparent',   activeBg: 'bg-amber-50' },
-  rose:    { border: 'border-s-rose-500',   borderMuted: 'border-s-transparent',    activeBg: 'bg-rose-50' },
-  green:   { border: 'border-s-green-500',   borderMuted: 'border-s-transparent',   activeBg: 'bg-green-50' },
-  orange:  { border: 'border-s-orange-500',  borderMuted: 'border-s-transparent',  activeBg: 'bg-orange-50' },
+  teal: { border: 'border-s-teal-500', borderMuted: 'border-s-transparent', activeBg: 'bg-teal-50' },
+  cyan: { border: 'border-s-cyan-500', borderMuted: 'border-s-transparent', activeBg: 'bg-cyan-50' },
+  blue: { border: 'border-s-blue-500', borderMuted: 'border-s-transparent', activeBg: 'bg-blue-50', activeText: 'text-blue-700' },
+  amber: { border: 'border-s-amber-500', borderMuted: 'border-s-transparent', activeBg: 'bg-amber-50' },
+  rose: { border: 'border-s-rose-500', borderMuted: 'border-s-transparent', activeBg: 'bg-rose-50' },
+  green: { border: 'border-s-green-500', borderMuted: 'border-s-transparent', activeBg: 'bg-green-50' },
+  orange: { border: 'border-s-orange-500', borderMuted: 'border-s-transparent', activeBg: 'bg-orange-50' },
   fuchsia: { border: 'border-s-fuchsia-500', borderMuted: 'border-s-transparent', activeBg: 'bg-fuchsia-50' },
-  sky:     { border: 'border-s-sky-500',     borderMuted: 'border-s-transparent',   activeBg: 'bg-sky-50' },
-  neutral: { border: 'border-s-gray-500',    borderMuted: 'border-s-transparent',   activeBg: 'bg-gray-100' },
-  red:     { border: 'border-s-red-500',    borderMuted: 'border-s-transparent',   activeBg: 'bg-red-50' },
+  sky: { border: 'border-s-sky-500', borderMuted: 'border-s-transparent', activeBg: 'bg-sky-50' },
+  neutral: { border: 'border-s-gray-500', borderMuted: 'border-s-transparent', activeBg: 'bg-gray-100' },
+  red: { border: 'border-s-red-500', borderMuted: 'border-s-transparent', activeBg: 'bg-red-50' },
 };
 
 /** Submenu shown on hover under "المنتجات" */
@@ -144,7 +144,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const onTouchEnd = () => {
     if (!touchStartX.current || !touchEndX.current) return;
-    
+
     const distance = touchStartX.current - touchEndX.current;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
@@ -159,7 +159,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         setSidebarOpen(true);
       }
     }
-    
+
     // Swipe from left to right (closing sidebar) - swipe anywhere on the sidebar
     if (isRightSwipe && sidebarOpen) {
       setSidebarOpen(false);
@@ -178,11 +178,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Sidebar — light, professional (Almnar System / ResearchCollab-inspired) */}
       <aside
-        className={`fixed top-0 right-0 h-full w-56 bg-white text-gray-800 z-[70] transform transition-transform duration-300 shadow-xl border-l border-gray-200 ${
-          pathname === '/admin/pos' 
+        className={`fixed top-0 right-0 h-full w-56 bg-white text-gray-800 z-[70] transform transition-transform duration-300 shadow-xl border-l border-gray-200 ${pathname === '/admin/pos'
             ? (sidebarOpen ? 'translate-x-0' : 'translate-x-full')
             : (sidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0')
-        }`}
+          }`}
       >
         <div className="flex flex-col h-full">
           {/* Header — Almnar System */}
@@ -191,7 +190,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
                 <Store size={18} className="text-white" />
               </div>
-              <h1 className="text-base font-bold text-indigo-600 tracking-tight font-cairo">Almnar System</h1>
+              <h1 className="text-base font-bold text-green-600 tracking-tight font-cairo">Almnar System</h1>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
@@ -229,35 +228,35 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     return null;
                   }
                 }
-                
+
                 if (link.href === '/admin/receipts') {
                   const canAccessReceipts = admin.is_super_admin || admin.permissions?.accessReceipts === true;
                   if (!canAccessReceipts) {
                     return null;
                   }
                 }
-                
+
                 if (link.href === '/admin/payments') {
                   const canAccessPayPage = admin.is_super_admin || admin.permissions?.accessPayPage === true;
                   if (!canAccessPayPage) {
                     return null;
                   }
                 }
-                
+
                 if (link.href === '/admin/shop-finance/cash-box') {
                   const canAccessShopCashBox = admin.is_super_admin || admin.permissions?.accessShopCashBox === true;
                   if (!canAccessShopCashBox) {
                     return null;
                   }
                 }
-                
+
                 if (link.href === '/admin/warehouse-finance/cash-box') {
                   const canAccessWarehouseCashBox = admin.is_super_admin || admin.permissions?.accessWarehouseCashBox === true;
                   if (!canAccessWarehouseCashBox) {
                     return null;
                   }
                 }
-                
+
                 const styles = ACCENT_STYLES[link.accent] ?? ACCENT_STYLES.neutral;
                 const borderClass = isActive ? styles.border : styles.borderMuted;
 
@@ -278,11 +277,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             router.push(link.href);
                             setSidebarOpen(false);
                           }}
-                          className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${borderClass} ${
-                            isActive || submenuActive
+                          className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${borderClass} ${isActive || submenuActive
                               ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
                               : 'text-gray-700 hover:bg-gray-100'
-                          }`}
+                            }`}
                         >
                           <Icon size={18} className="shrink-0" />
                           <span className="font-cairo truncate">{link.label}</span>
@@ -316,9 +314,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                   setSidebarOpen(false);
                                   setProductsSubmenuOpen(false);
                                 }}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${
-                                  subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
-                                }`}
+                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                                  }`}
                               >
                                 <SubIcon size={14} className="shrink-0" />
                                 <span className="font-cairo truncate">{sub.label}</span>
@@ -348,11 +345,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             router.push(link.href);
                             setSidebarOpen(false);
                           }}
-                          className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${(isActive || submenuActive) ? styles.border : styles.borderMuted} ${
-                            isActive || submenuActive
+                          className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${(isActive || submenuActive) ? styles.border : styles.borderMuted} ${isActive || submenuActive
                               ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
                               : 'text-gray-700 hover:bg-gray-100'
-                          }`}
+                            }`}
                         >
                           <Icon size={18} className="shrink-0" />
                           <span className="font-cairo truncate">{link.label}</span>
@@ -388,9 +384,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                   setSidebarOpen(false);
                                   setPosSubmenuOpen(false);
                                 }}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${
-                                  subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
-                                }`}
+                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                                  }`}
                               >
                                 <SubIcon size={14} className="shrink-0" />
                                 <span className="font-cairo truncate">{sub.label}</span>
@@ -421,11 +416,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             router.push(link.href);
                             setSidebarOpen(false);
                           }}
-                          className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${(isActive || invoicesSubmenuActive) ? styles.border : styles.borderMuted} ${
-                            isActive || invoicesSubmenuActive
+                          className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${(isActive || invoicesSubmenuActive) ? styles.border : styles.borderMuted} ${isActive || invoicesSubmenuActive
                               ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
                               : 'text-gray-700 hover:bg-gray-100'
-                          }`}
+                            }`}
                         >
                           <Icon size={18} className="shrink-0" />
                           <span className="font-cairo truncate">{link.label}</span>
@@ -459,9 +453,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                   setSidebarOpen(false);
                                   setInvoicesSubmenuOpen(false);
                                 }}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${
-                                  subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
-                                }`}
+                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                                  }`}
                               >
                                 <SubIcon size={14} className="shrink-0" />
                                 <span className="font-cairo truncate">{sub.label}</span>
@@ -491,11 +484,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             router.push(link.href);
                             setSidebarOpen(false);
                           }}
-                          className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${(isActive || customersSubmenuActive) ? styles.border : styles.borderMuted} ${
-                            isActive || customersSubmenuActive
+                          className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${(isActive || customersSubmenuActive) ? styles.border : styles.borderMuted} ${isActive || customersSubmenuActive
                               ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
                               : 'text-gray-700 hover:bg-gray-100'
-                          }`}
+                            }`}
                         >
                           <Icon size={18} className="shrink-0" />
                           <span className="font-cairo truncate">{link.label}</span>
@@ -531,9 +523,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                   setSidebarOpen(false);
                                   setCustomersSubmenuOpen(false);
                                 }}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${
-                                  subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
-                                }`}
+                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                                  }`}
                               >
                                 <SubIcon size={14} className="shrink-0" />
                                 <span className="font-cairo truncate">{sub.label}</span>
@@ -549,23 +540,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 return (
                   <div key={link.href} className="space-y-0.5">
                     {sectionHeader}
-                  <a
-                    href={link.href}
-                    onClick={(e) => {
-                      if (e.ctrlKey || e.metaKey) return;
-                      e.preventDefault();
-                      router.push(link.href);
-                      setSidebarOpen(false);
-                    }}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${isActive ? styles.border : styles.borderMuted} ${
-                      isActive
-                        ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Icon size={18} className="shrink-0" />
-                    <span className="font-cairo truncate">{link.label}</span>
-                  </a>
+                    <a
+                      href={link.href}
+                      onClick={(e) => {
+                        if (e.ctrlKey || e.metaKey) return;
+                        e.preventDefault();
+                        router.push(link.href);
+                        setSidebarOpen(false);
+                      }}
+                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${isActive ? styles.border : styles.borderMuted} ${isActive
+                          ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
+                          : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                    >
+                      <Icon size={18} className="shrink-0" />
+                      <span className="font-cairo truncate">{link.label}</span>
+                    </a>
                   </div>
                 );
               })}
@@ -578,21 +568,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     <div className="pt-2 pb-1">
                       <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">النظام</span>
                     </div>
-                  <a
-                    href="/admin/admin-users"
-                    onClick={(e) => {
-                      if (e.ctrlKey || e.metaKey) return;
-                      e.preventDefault();
-                      router.push('/admin/admin-users');
-                      setSidebarOpen(false);
-                    }}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${borderClass} ${
-                      isActive ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium` : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Shield size={18} className="shrink-0" />
-                    <span className="font-cairo truncate">Admin Users</span>
-                  </a>
+                    <a
+                      href="/admin/admin-users"
+                      onClick={(e) => {
+                        if (e.ctrlKey || e.metaKey) return;
+                        e.preventDefault();
+                        router.push('/admin/admin-users');
+                        setSidebarOpen(false);
+                      }}
+                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${borderClass} ${isActive ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium` : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                    >
+                      <Shield size={18} className="shrink-0" />
+                      <span className="font-cairo truncate">Admin Users</span>
+                    </a>
                   </div>
                 );
               })()}
@@ -641,7 +630,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <div 
+      <div
         className={pathname === '/admin/pos' ? '' : 'md:mr-56'}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -662,7 +651,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <Menu size={24} className="text-gray-700" />
                 </button>
               </div>
-              
+
               {/* Desktop: Notifications and Menu (for POS page) */}
               {pathname === '/admin/pos' ? (
                 <div className="hidden lg:flex items-center gap-3">
@@ -681,7 +670,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 </div>
               )}
             </div>
-            
+
             {/* Desktop: Admin name in center */}
             <div className="hidden md:flex items-center gap-3 flex-1">
               <span className="text-sm text-gray-600">
@@ -691,9 +680,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 {admin.is_super_admin ? 'Super Admin' : 'Admin'}
               </span>
             </div>
-            
+
             <div className="flex-1 md:hidden" />
-            
+
             {/* Left side (visually right in RTL): Admin Name on Mobile */}
             <div className="flex items-center gap-3 md:hidden">
               <span className="text-sm font-medium text-gray-900">
