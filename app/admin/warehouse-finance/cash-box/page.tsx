@@ -373,9 +373,12 @@ export default function WarehouseCashBoxPage() {
     if (!printOverlaySlip) return;
     const onMessage = (e: MessageEvent) => {
       if (e.data?.type === 'slip-print-ready' && printSlipIframeRef.current?.contentWindow) {
+        const prevTitle = document.title;
+        if (e.data?.title) document.title = e.data.title;
         try {
           printSlipIframeRef.current.contentWindow.print();
         } catch (_) {}
+        setTimeout(() => { document.title = prevTitle; }, 500);
       }
     };
     window.addEventListener('message', onMessage);

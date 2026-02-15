@@ -2137,7 +2137,22 @@ export async function getCustomerData(customerId: string | number): Promise<any>
       console.error('[API] Failed to fetch activities:', activitiesError);
     }
 
-    // Map activities to interactions format
+    // Resolve admin usernames for audit (created_by, updated_by)
+    const adminIds = new Set<string>();
+    (activities || []).forEach((a: any) => {
+      if (a.created_by) adminIds.add(a.created_by);
+      if (a.updated_by) adminIds.add(a.updated_by);
+    });
+    let adminMap = new Map<string, string>();
+    if (adminIds.size > 0) {
+      const { data: adminUsers } = await supabase
+        .from('admin_users')
+        .select('id, username')
+        .in('id', Array.from(adminIds));
+      adminMap = new Map((adminUsers || []).map((u: any) => [u.id, u.username || u.id]));
+    }
+
+    // Map activities to interactions format (include audit: created_by, updated_by, usernames)
     const interactions = (activities || []).map((activity: any) => ({
       InteractionID: activity.activity_id,
       CustomerID: activity.customer_id,
@@ -2150,6 +2165,10 @@ export async function getCustomerData(customerId: string | number): Promise<any>
       PTPStatus: activity.ptp_status || '',
       ptpStatus: activity.ptp_status || '',
       CreatedAt: activity.created_at || '',
+      created_by: activity.created_by || null,
+      updated_by: activity.updated_by || null,
+      CreatedByUsername: activity.created_by ? adminMap.get(activity.created_by) || activity.created_by : '',
+      UpdatedByUsername: activity.updated_by ? adminMap.get(activity.updated_by) || activity.updated_by : '',
       ...activity, // Include all original fields
     }));
 
@@ -2582,6 +2601,7 @@ export async function logActivity(payload: {
   Notes: string;
   PromiseDate?: string; // ISO Date string (YYYY-MM-DD or ISO format)
   PromiseAmount?: number;
+  created_by?: string; // Admin user ID for audit (who logged this interaction)
 }): Promise<any> {
   // Use Supabase implementation
   return logActivityToSupabase(payload);
@@ -2591,9 +2611,9 @@ export async function logActivity(payload: {
  * Update PTP (Promise to Pay) status in CRM_Activity table
  * Now uses Supabase instead of Google Sheets
  */
-export async function updatePTPStatus(activityId: string, newStatus: string): Promise<any> {
-  // Use Supabase implementation
-  return updatePTPStatusInSupabase(activityId, newStatus);
+export async function updatePTPStatus(activityId: string, newStatus: string, updated_by?: string): Promise<any> {
+  // Use Supabase implementation (updated_by = admin user ID for audit)
+  return updatePTPStatusInSupabase(activityId, newStatus, updated_by);
 }
 
 /**
@@ -2623,6 +2643,7 @@ export async function logActivityToSupabase(payload: {
   Notes: string;
   PromiseDate?: string; // ISO Date string (YYYY-MM-DD)
   PromiseAmount?: number;
+  created_by?: string; // Admin user ID for audit (who logged this interaction)
 }): Promise<any> {
   try {
     console.log('[API] Logging activity to Supabase crm_activities:', payload);
@@ -2634,7 +2655,7 @@ export async function logActivityToSupabase(payload: {
 
     const activityId = generateActivityID(count || 0);
 
-    // Prepare data for Supabase (snake_case)
+    // Prepare data for Supabase (snake_case). created_by = who performed the interaction (audit).
     const activityData: any = {
       activity_id: activityId,
       customer_id: payload.CustomerID,
@@ -2646,7 +2667,7 @@ export async function logActivityToSupabase(payload: {
         ? parseFloat(String(payload.PromiseAmount)) 
         : 0,
       ptp_status: payload.PromiseDate ? 'Active' : 'Closed', // Set to Active if there's a promise date
-      created_by: 'Admin',
+      created_by: payload.created_by || null,
     };
 
     const { data, error } = await supabase
@@ -2672,19 +2693,24 @@ export async function logActivityToSupabase(payload: {
  * Update PTP (Promise to Pay) status in crm_activities table in Supabase
  * Replaces the Google Sheets version
  */
-export async function updatePTPStatusInSupabase(activityId: string, newStatus: string): Promise<any> {
+export async function updatePTPStatusInSupabase(activityId: string, newStatus: string, updated_by?: string): Promise<any> {
   try {
-    console.log('[API] Updating PTP status in Supabase:', { activityId, newStatus });
+    console.log('[API] Updating PTP status in Supabase:', { activityId, newStatus, updated_by });
 
     // Map status values (Fulfilled/Archived -> Closed, Active -> Active)
     const ptpStatus = newStatus === 'Fulfilled' || newStatus === 'Archived' ? 'Closed' : 'Active';
 
+    const updatePayload: Record<string, unknown> = {
+      ptp_status: ptpStatus,
+      updated_at: new Date().toISOString(),
+    };
+    if (updated_by !== undefined) {
+      updatePayload.updated_by = updated_by;
+    }
+
     const { data, error } = await supabase
       .from('crm_activities')
-      .update({ 
-        ptp_status: ptpStatus,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('activity_id', activityId)
       .select()
       .single();
@@ -2777,7 +2803,7 @@ export async function getCRMDataFromSupabase(): Promise<any> {
       throw new Error(`Failed to fetch customers: ${customersError.message}`);
     }
 
-    // Fetch all active promises (PTP) with customer info
+    // Fetch all active promises (PTP) with customer info (including audit: created_by, updated_by)
     const { data: activities, error: activitiesError } = await supabase
       .from('crm_activities')
       .select(`
@@ -2790,6 +2816,8 @@ export async function getCRMDataFromSupabase(): Promise<any> {
         promise_amount,
         ptp_status,
         created_at,
+        created_by,
+        updated_by,
         customers:customer_id(customer_id, name, email, phone, balance)
       `)
       .eq('ptp_status', 'Active')
@@ -2809,7 +2837,22 @@ export async function getCRMDataFromSupabase(): Promise<any> {
 
     const customerMap = new Map((customerData || []).map((c: any) => [c.customer_id, c]));
 
-    // Map activities to promises format
+    // Resolve admin usernames for created_by / updated_by (audit)
+    const adminIds = new Set<string>();
+    (activities || []).forEach((a: any) => {
+      if (a.created_by) adminIds.add(a.created_by);
+      if (a.updated_by) adminIds.add(a.updated_by);
+    });
+    let adminMap = new Map<string, string>();
+    if (adminIds.size > 0) {
+      const { data: adminUsers } = await supabase
+        .from('admin_users')
+        .select('id, username')
+        .in('id', Array.from(adminIds));
+      adminMap = new Map((adminUsers || []).map((u: any) => [u.id, u.username || u.id]));
+    }
+
+    // Map activities to promises format (include audit fields for UI)
     const promises = (activities || []).map((activity: any) => {
       const customer = customerMap.get(activity.customer_id) || {};
       return {
@@ -2827,6 +2870,10 @@ export async function getCRMDataFromSupabase(): Promise<any> {
         Outcome: activity.outcome || '',
         PTPStatus: activity.ptp_status || 'Active',
         CreatedAt: activity.created_at || '',
+        created_by: activity.created_by || null,
+        updated_by: activity.updated_by || null,
+        CreatedByUsername: activity.created_by ? adminMap.get(activity.created_by) || activity.created_by : '',
+        UpdatedByUsername: activity.updated_by ? adminMap.get(activity.updated_by) || activity.updated_by : '',
       };
     });
 
@@ -3293,25 +3340,32 @@ export async function searchCashInvoiceById(invoiceId: string): Promise<any | nu
 
 /**
  * Get cash invoices from Supabase (for Invoices History page)
- * Fetches last N invoices with calculated total amounts (default 50 to reduce egress)
+ * Fetches last N invoices with calculated total amounts (default 50 to reduce egress).
+ * When limit > 1000, fetches in chunks to avoid Supabase row limit.
  */
 export async function getCashInvoicesFromSupabase(limit: number = 50): Promise<any[]> {
   try {
     console.log('[API] Fetching cash invoices from Supabase...');
     const startTime = Date.now();
-    
-    // Fetch invoices ordered by date_time descending (server-side pagination)
-    const { data: invoices, error } = await supabase
-      .from('cash_invoices')
-      .select('*')
-      .order('date_time', { ascending: false })
-      .limit(limit);
-    
-    if (error) {
-      console.error('[API] Supabase error:', error);
-      throw new Error(`Failed to fetch cash invoices: ${error.message}`);
+
+    let invoices: any[] = [];
+    if (limit <= CASH_FLOW_PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from('cash_invoices')
+        .select('*')
+        .order('date_time', { ascending: false })
+        .limit(limit);
+      if (error) throw new Error(`Failed to fetch cash invoices: ${error.message}`);
+      invoices = data || [];
+    } else {
+      invoices = await fetchAllSupabaseRows<any>(
+        'cash_invoices',
+        '*',
+        [{ column: 'date_time', ascending: false }]
+      );
+      invoices = invoices.slice(0, limit);
     }
-    
+
     if (!invoices || !Array.isArray(invoices)) {
       console.error('[API] Invalid invoices data:', invoices);
       return [];
@@ -3863,22 +3917,30 @@ export async function submitOnlineOrder(orderData: {
 }
 
 /**
- * Get all online orders from Supabase
+ * Get all online orders from Supabase.
+ * When limit > 1000, fetches in chunks to avoid Supabase row limit.
  */
 export async function getOnlineOrdersFromSupabase(limit: number = 100): Promise<any[]> {
   try {
     console.log('[API] Fetching online orders from Supabase...');
     const startTime = Date.now();
 
-    const { data: orders, error } = await supabase
-      .from('online_orders')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (error) {
-      console.error('[API] Supabase error:', error);
-      throw new Error(`Failed to fetch online orders: ${error.message}`);
+    let orders: any[] = [];
+    if (limit <= CASH_FLOW_PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from('online_orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (error) throw new Error(`Failed to fetch online orders: ${error.message}`);
+      orders = data || [];
+    } else {
+      const all = await fetchAllSupabaseRows<any>(
+        'online_orders',
+        '*',
+        [{ column: 'created_at', ascending: false }]
+      );
+      orders = all.slice(0, limit);
     }
 
     if (!orders || !Array.isArray(orders)) {
@@ -5255,15 +5317,30 @@ export async function getShopSalesInvoices(page: number = 1, pageSize: number = 
 
     const total = count || 0;
 
-    // Fetch invoices with pagination - newest first
-    const { data: invoices, error } = await dataQuery
-      .order('created_at', { ascending: false })
-      .order('date', { ascending: false })
-      .range(from, to);
-
-    if (error) {
-      console.error('[API] Supabase error:', error);
-      throw new Error(`Failed to fetch invoices: ${error.message}`);
+    // Fetch invoices with pagination - when range > 1000, fetch in chunks to avoid Supabase limit
+    const rangeSize = to - from + 1;
+    let invoices: any[] = [];
+    if (rangeSize <= CASH_FLOW_PAGE_SIZE) {
+      const { data, error } = await dataQuery
+        .order('created_at', { ascending: false })
+        .order('date', { ascending: false })
+        .range(from, to);
+      if (error) throw new Error(`Failed to fetch invoices: ${error.message}`);
+      invoices = data || [];
+    } else {
+      const all: any[] = [];
+      for (let offset = 0; offset <= to; offset += CASH_FLOW_PAGE_SIZE) {
+        const chunkTo = Math.min(offset + CASH_FLOW_PAGE_SIZE - 1, to);
+        const { data, error } = await dataQuery
+          .order('created_at', { ascending: false })
+          .order('date', { ascending: false })
+          .range(offset, chunkTo);
+        if (error) throw new Error(`Failed to fetch invoices: ${error.message}`);
+        const list = data || [];
+        all.push(...list);
+        if (list.length < CASH_FLOW_PAGE_SIZE) break;
+      }
+      invoices = all.slice(from, to + 1);
     }
 
     if (!invoices || !Array.isArray(invoices)) {
@@ -6052,15 +6129,30 @@ export async function getWarehouseSalesInvoices(page: number = 1, pageSize: numb
 
     const total = count || 0;
 
-    // Fetch invoices with pagination - newest first
-    const { data: invoices, error } = await dataQuery
-      .order('created_at', { ascending: false })
-      .order('date', { ascending: false })
-      .range(from, to);
-
-    if (error) {
-      console.error('[API] Supabase error:', error);
-      throw new Error(`Failed to fetch invoices: ${error.message}`);
+    // Fetch invoices with pagination - when range > 1000, fetch in chunks to avoid Supabase limit
+    const rangeSize = to - from + 1;
+    let invoices: any[] = [];
+    if (rangeSize <= CASH_FLOW_PAGE_SIZE) {
+      const { data, error } = await dataQuery
+        .order('created_at', { ascending: false })
+        .order('date', { ascending: false })
+        .range(from, to);
+      if (error) throw new Error(`Failed to fetch invoices: ${error.message}`);
+      invoices = data || [];
+    } else {
+      const all: any[] = [];
+      for (let offset = 0; offset <= to; offset += CASH_FLOW_PAGE_SIZE) {
+        const chunkTo = Math.min(offset + CASH_FLOW_PAGE_SIZE - 1, to);
+        const { data, error } = await dataQuery
+          .order('created_at', { ascending: false })
+          .order('date', { ascending: false })
+          .range(offset, chunkTo);
+        if (error) throw new Error(`Failed to fetch invoices: ${error.message}`);
+        const list = data || [];
+        all.push(...list);
+        if (list.length < CASH_FLOW_PAGE_SIZE) break;
+      }
+      invoices = all.slice(from, to + 1);
     }
 
     if (!invoices || !Array.isArray(invoices)) {
@@ -7479,25 +7571,16 @@ export async function getCashSessionReport(sessionId: string): Promise<any> {
     }));
     const CountedCash = denomRows.reduce((sum: number, r: any) => sum + (r.amount || 0), 0);
 
-    // Get receipts for date
-    // Fetch receipts and filter by date in JavaScript to ensure accuracy
+    // Get receipts for date — fetch all receipts with pagination, then filter by date
     console.log('[API] Fetching receipts for date:', normalizedDate);
-    const { data: allReceipts, error: receiptsError } = await supabase
-      .from('shop_receipts')
-      .select(`
-        receipt_id,
-        customer_id,
-        date,
-        cash_amount,
-        cheque_amount,
-        customers:customer_id (
-          name
-        )
-      `)
-      .order('date', { ascending: false })
-      .limit(1000); // Get recent receipts (adjust if needed)
-    
-    if (receiptsError) {
+    let allReceipts: any[] = [];
+    try {
+      allReceipts = await fetchAllSupabaseRows(
+        'shop_receipts',
+        `receipt_id, customer_id, date, cash_amount, cheque_amount, customers:customer_id (name)`,
+        [{ column: 'date', ascending: false }]
+      );
+    } catch (receiptsError: any) {
       console.error('[API] Error fetching receipts:', receiptsError);
     }
     
@@ -7541,10 +7624,6 @@ export async function getCashSessionReport(sessionId: string): Promise<any> {
       })));
     }
 
-    if (receiptsError) {
-      console.error('[API] Error fetching receipts:', receiptsError);
-    }
-
     const receiptsForDate = (receipts || []).map((r: any) => ({
       id: r.receipt_id,
       customerId: r.customer_id,
@@ -7556,25 +7635,16 @@ export async function getCashSessionReport(sessionId: string): Promise<any> {
     const ReceiptsCashTotal = receiptsForDate.reduce((sum: number, r: any) => sum + r.cash, 0);
     const ReceiptsChequeTotal = receiptsForDate.reduce((sum: number, r: any) => sum + r.cheque, 0);
 
-    // Get payments for date
-    // Fetch payments and filter by date in JavaScript to ensure accuracy
+    // Get payments for date — fetch all payments with pagination, then filter by date
     console.log('[API] Fetching payments for date:', normalizedDate);
-    const { data: allPayments, error: paymentsError } = await supabase
-      .from('shop_payments')
-      .select(`
-        pay_id,
-        customer_id,
-        date,
-        cash_amount,
-        notes,
-        customers:customer_id (
-          name
-        )
-      `)
-      .order('date', { ascending: false })
-      .limit(1000); // Get recent payments (adjust if needed)
-    
-    if (paymentsError) {
+    let allPayments: any[] = [];
+    try {
+      allPayments = await fetchAllSupabaseRows(
+        'shop_payments',
+        `pay_id, customer_id, date, cash_amount, cheque_amount, notes, customers:customer_id (name)`,
+        [{ column: 'date', ascending: false }]
+      );
+    } catch (paymentsError: any) {
       console.error('[API] Error fetching payments:', paymentsError);
     }
     
@@ -7617,10 +7687,6 @@ export async function getCashSessionReport(sessionId: string): Promise<any> {
         dateString: String(p.date)
       })));
     } // Direct string comparison should work if date is stored as DATE type
-
-    if (paymentsError) {
-      console.error('[API] Error fetching payments:', paymentsError);
-    }
 
     const paymentsForDate = (payments || []).map((p: any) => ({
       id: p.pay_id,
@@ -7886,16 +7952,31 @@ export async function getQuotationsFromSupabase(page: number = 1, pageSize: numb
     }
 
     const total = count || 0;
-    
-    // Fetch quotations ordered by created_at descending (newest first), then by date
-    const { data: quotations, error } = await dataQuery
-      .order('created_at', { ascending: false })
-      .order('date', { ascending: false })
-      .range(from, to);
-    
-    if (error) {
-      console.error('[API] Supabase error:', error);
-      throw new Error(`Failed to fetch quotations: ${error.message}`);
+
+    // Fetch quotations - when range > 1000, fetch in chunks to avoid Supabase limit
+    const rangeSize = to - from + 1;
+    let quotations: any[] = [];
+    if (rangeSize <= CASH_FLOW_PAGE_SIZE) {
+      const { data, error } = await dataQuery
+        .order('created_at', { ascending: false })
+        .order('date', { ascending: false })
+        .range(from, to);
+      if (error) throw new Error(`Failed to fetch quotations: ${error.message}`);
+      quotations = data || [];
+    } else {
+      const all: any[] = [];
+      for (let offset = 0; offset <= to; offset += CASH_FLOW_PAGE_SIZE) {
+        const chunkTo = Math.min(offset + CASH_FLOW_PAGE_SIZE - 1, to);
+        const { data, error } = await dataQuery
+          .order('created_at', { ascending: false })
+          .order('date', { ascending: false })
+          .range(offset, chunkTo);
+        if (error) throw new Error(`Failed to fetch quotations: ${error.message}`);
+        const list = data || [];
+        all.push(...list);
+        if (list.length < CASH_FLOW_PAGE_SIZE) break;
+      }
+      quotations = all.slice(from, to + 1);
     }
     
     if (!quotations || !Array.isArray(quotations)) {
@@ -8380,6 +8461,35 @@ export async function getCustomerLastPriceForProduct(customerId: string, product
   }
 }
 
+/** Supabase/PostgREST default max rows per request; we paginate to get all rows. */
+const CASH_FLOW_PAGE_SIZE = 1000;
+
+/**
+ * Fetch all rows from a table with pagination (avoids 1000-row limit).
+ */
+async function fetchAllSupabaseRows<T = any>(
+  table: string,
+  select: string,
+  orderBy: { column: string; ascending: boolean }[]
+): Promise<T[]> {
+  const all: T[] = [];
+  let offset = 0;
+  let hasMore = true;
+  while (hasMore) {
+    let q = supabase.from(table).select(select).range(offset, offset + CASH_FLOW_PAGE_SIZE - 1);
+    for (const o of orderBy) {
+      q = q.order(o.column, { ascending: o.ascending });
+    }
+    const { data, error } = await q;
+    if (error) throw error;
+    const list = (data || []) as T[];
+    all.push(...list);
+    hasMore = list.length === CASH_FLOW_PAGE_SIZE;
+    offset += CASH_FLOW_PAGE_SIZE;
+  }
+  return all;
+}
+
 /**
  * Get warehouse cash flow from warehouse_cash_flow view
  * Returns all transactions sorted by date ascending for balance calculation
@@ -8389,40 +8499,40 @@ export async function getWarehouseCashFlow(): Promise<any[]> {
   try {
     console.log('[API] Fetching warehouse cash flow from Supabase...');
 
-    // First try to get from view
-    const { data: viewData, error: viewError } = await supabase
-      .from('warehouse_cash_flow')
-      .select('*')
-      .order('created_at', { ascending: true })
-      .order('date', { ascending: true });
+    // First try to get from view (with pagination to get all rows)
+    try {
+      const viewData = await fetchAllSupabaseRows<any>(
+        'warehouse_cash_flow',
+        '*',
+        [{ column: 'created_at', ascending: true }, { column: 'date', ascending: true }]
+      );
 
-    // If view works and has receipt_id/payment_id, use it
-    if (!viewError && viewData && viewData.length > 0) {
-      const hasIds = viewData.some((item: any) => item.receipt_id || item.payment_id || item.receiptId || item.paymentId);
-      if (hasIds) {
-        console.log(`[API] Warehouse cash flow loaded from view: ${viewData.length} transactions`);
-        return viewData;
+      if (viewData && viewData.length > 0) {
+        const hasIds = viewData.some((item: any) => item.receipt_id || item.payment_id || item.receiptId || item.paymentId);
+        if (hasIds) {
+          console.log(`[API] Warehouse cash flow loaded from view: ${viewData.length} transactions`);
+          return viewData;
+        }
       }
+    } catch (viewErr: any) {
+      console.log('[API] View not available or error, fetching from tables...', viewErr?.message);
     }
 
-    // If view doesn't work or doesn't have IDs, fetch from individual tables
-    console.log('[API] View missing IDs, fetching from individual tables...');
+    // If view doesn't work or doesn't have IDs, fetch from individual tables (with pagination)
+    console.log('[API] Fetching from individual tables...');
     
-    const [receiptsResult, paymentsResult] = await Promise.all([
-      supabase
-        .from('warehouse_receipts')
-        .select('*, receipt_id')
-        .order('created_at', { ascending: true })
-        .order('date', { ascending: true }),
-      supabase
-        .from('warehouse_payments')
-        .select('*, payment_id')
-        .order('created_at', { ascending: true })
-        .order('date', { ascending: true })
+    const [receipts, payments] = await Promise.all([
+      fetchAllSupabaseRows<any>(
+        'warehouse_receipts',
+        '*, receipt_id',
+        [{ column: 'created_at', ascending: true }, { column: 'date', ascending: true }]
+      ),
+      fetchAllSupabaseRows<any>(
+        'warehouse_payments',
+        '*, payment_id',
+        [{ column: 'created_at', ascending: true }, { column: 'date', ascending: true }]
+      )
     ]);
-
-    const receipts = receiptsResult.data || [];
-    const payments = paymentsResult.data || [];
 
     // Transform receipts
     const receiptTransactions = receipts.map((r: any) => ({
@@ -8481,16 +8591,16 @@ export async function getShopCashFlow(): Promise<any[]> {
   try {
     console.log('[API] Fetching shop cash flow from tables...');
 
-    // Try to fetch from view first (if it exists)
+    // Try to fetch from view first (if it exists), with pagination to get all rows
     try {
-      const { data: viewData, error: viewError } = await supabase
-        .from('shop_cash_flow')
-        .select('*')
-        .order('date', { ascending: true })
-        .order('created_at', { ascending: true });
+      const viewData = await fetchAllSupabaseRows<any>(
+        'shop_cash_flow',
+        '*',
+        [{ column: 'date', ascending: true }, { column: 'created_at', ascending: true }]
+      );
 
-      if (!viewError && viewData && Array.isArray(viewData) && viewData.length > 0) {
-        console.log('[API] Shop cash flow loaded from view');
+      if (viewData && Array.isArray(viewData) && viewData.length > 0) {
+        console.log('[API] Shop cash flow loaded from view:', viewData.length, 'rows');
         // Transform view data
         const transformed = viewData.map((item: any) => {
           const receiptId = item.receipt_id || '';
@@ -8537,24 +8647,21 @@ export async function getShopCashFlow(): Promise<any[]> {
       console.log('[API] View not available or empty, fetching from tables...', viewErr?.message);
     }
 
-    // If view doesn't work or doesn't have data, fetch from individual tables
+    // If view doesn't work or doesn't have data, fetch from individual tables (with pagination)
     console.log('[API] Fetching from individual tables...');
     
-    const [receiptsResult, paymentsResult] = await Promise.all([
-      supabase
-        .from('shop_receipts')
-        .select('*, receipt_id')
-        .order('created_at', { ascending: true })
-        .order('date', { ascending: true }),
-      supabase
-        .from('shop_payments')
-        .select('*, pay_id')
-        .order('created_at', { ascending: true })
-        .order('date', { ascending: true })
+    const [receipts, payments] = await Promise.all([
+      fetchAllSupabaseRows<any>(
+        'shop_receipts',
+        '*, receipt_id',
+        [{ column: 'created_at', ascending: true }, { column: 'date', ascending: true }]
+      ),
+      fetchAllSupabaseRows<any>(
+        'shop_payments',
+        '*, pay_id',
+        [{ column: 'created_at', ascending: true }, { column: 'date', ascending: true }]
+      )
     ]);
-
-    const receipts = receiptsResult.data || [];
-    const payments = paymentsResult.data || [];
 
     // Transform receipts
     const receiptTransactions = receipts.map((r: any) => ({
@@ -9119,16 +9226,18 @@ export async function getItemTracking(shamelNo: string): Promise<any[]> {
 
     const trackingHistory: any[] = [];
 
-    // Search in shop_sales invoices
-    const { data: shopInvoices, error: shopError } = await supabase
-      .from('shop_sales')
-      .select('invoice_id, date, customer_id, notes, created_at')
-      .order('date', { ascending: false })
-      .limit(1000);
-
-    if (shopError) {
+    // Search in shop_sales_invoices (fetch all to avoid 1000-row limit)
+    let shopInvoices: any[] = [];
+    try {
+      shopInvoices = await fetchAllSupabaseRows<any>(
+        'shop_sales_invoices',
+        'invoice_id, date, customer_id, notes, created_at',
+        [{ column: 'date', ascending: false }]
+      );
+    } catch (shopError: any) {
       console.error('[API] Error fetching shop invoices:', shopError);
-    } else if (shopInvoices) {
+    }
+    if (shopInvoices.length > 0) {
       // For each shop invoice, check if it contains the shamel number
       for (const invoice of shopInvoices) {
         const { data: details, error: detailsError } = await supabase
@@ -9175,16 +9284,18 @@ export async function getItemTracking(shamelNo: string): Promise<any[]> {
       }
     }
 
-    // Search in warehouse_sales invoices
-    const { data: warehouseInvoices, error: warehouseError } = await supabase
-      .from('warehouse_sales')
-      .select('invoice_id, date, customer_id, notes, created_at')
-      .order('date', { ascending: false })
-      .limit(1000);
-
-    if (warehouseError) {
+    // Search in warehouse_sales_invoices (fetch all to avoid 1000-row limit)
+    let warehouseInvoices: any[] = [];
+    try {
+      warehouseInvoices = await fetchAllSupabaseRows<any>(
+        'warehouse_sales_invoices',
+        'invoice_id, date, customer_id, notes, created_at',
+        [{ column: 'date', ascending: false }]
+      );
+    } catch (warehouseError: any) {
       console.error('[API] Error fetching warehouse invoices:', warehouseError);
-    } else if (warehouseInvoices) {
+    }
+    if (warehouseInvoices.length > 0) {
       // For each warehouse invoice, check if it contains the shamel number
       for (const invoice of warehouseInvoices) {
         const { data: details, error: detailsError } = await supabase

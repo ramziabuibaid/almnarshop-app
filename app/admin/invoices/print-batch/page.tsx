@@ -146,19 +146,23 @@ function InvoicesPrintBatchContent() {
     [idsParam]
   );
 
-  // اسم الملف الافتراضي عند حفظ PDF: الفواتير النقدية + تاريخ اليوم
+  // اسم الملف عند حفظ PDF: الفواتير النقدية - طباعة محددة - تاريخ اليوم
   useEffect(() => {
     if (items.length === 0) return;
     const today = new Date();
     const dateStr = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); // YYYY-MM-DD
-    document.title = `الفواتير النقدية ${dateStr}`;
+    const title = `الفواتير النقدية - طباعة محددة - ${dateStr}`;
+    document.title = title;
   }, [items.length]);
 
-  // عند التضمين (embed): إعلام الصفحة الأم لفتح نافذة الطباعة
+  // عند التضمين (embed): إعلام الصفحة الأم لفتح نافذة الطباعة مع اسم الملف
   useEffect(() => {
     if (isEmbed && items.length > 0 && !loading) {
+      const today = new Date();
+      const dateStr = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+      const title = `الفواتير النقدية - طباعة محددة - ${dateStr}`;
       try {
-        window.parent.postMessage({ type: 'batch-print-ready' }, '*');
+        window.parent.postMessage({ type: 'batch-print-ready', title }, '*');
       } catch (_) {}
     }
   }, [isEmbed, items.length, loading]);

@@ -148,9 +148,12 @@ export default function ShopSalesPage() {
     if (!printOverlayInvoiceId) return;
     const onMessage = (e: MessageEvent) => {
       if (e.data?.type === 'print-ready' && printIframeRef.current?.contentWindow) {
+        const prevTitle = document.title;
+        if (e.data?.title) document.title = e.data.title;
         try {
           printIframeRef.current.contentWindow.print();
         } catch (_) {}
+        setTimeout(() => { document.title = prevTitle; }, 500);
       }
     };
     window.addEventListener('message', onMessage);

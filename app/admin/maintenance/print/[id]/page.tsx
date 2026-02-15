@@ -41,11 +41,12 @@ export default function MaintenancePrintPage() {
   useEffect(() => {
     if (!maintenanceData || loading) return;
     const customerName = maintenanceData.CustomerName || 'عميل';
-    const no = maintenanceData.MaintNo || '';
-    document.title = `${customerName} ${no}`;
+    const docNo = maintenanceData.MaintNo || '';
+    const title = `الصيانة - ${customerName} - ${docNo}`;
+    document.title = title;
     if (isEmbed) {
       try {
-        window.parent.postMessage({ type: 'print-ready' }, '*');
+        window.parent.postMessage({ type: 'print-ready', title }, '*');
       } catch (_) {}
       return;
     }

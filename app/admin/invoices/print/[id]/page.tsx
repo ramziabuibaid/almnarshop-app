@@ -45,14 +45,13 @@ export default function InvoicePrintPage() {
   }, [invoiceId]);
 
   useEffect(() => {
-    // Set document title for PDF filename
+    // اسم الملف: الفواتير النقدية - رقم الفاتورة (لا زبون)
     if (invoiceData && !loading) {
-      document.title = invoiceData.invoiceID;
-      
+      const title = `الفواتير النقدية - ${invoiceData.invoiceID}`;
+      document.title = title;
       if (isEmbed) {
-        // Embedded in iframe: tell parent to open print dialog (no new tab)
         try {
-          window.parent.postMessage({ type: 'invoice-print-ready' }, '*');
+          window.parent.postMessage({ type: 'invoice-print-ready', title }, '*');
         } catch (_) {}
         return;
       }

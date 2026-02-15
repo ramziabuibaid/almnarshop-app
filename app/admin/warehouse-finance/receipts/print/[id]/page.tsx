@@ -37,11 +37,12 @@ export default function WarehouseReceiptPrintPage() {
   useEffect(() => {
     if (!receiptData || loading) return;
     const customerName = receiptData.customer_name || 'عميل';
-    const rid = receiptData.receipt_id || '';
-    document.title = `${customerName} ${rid}`;
+    const docNo = receiptData.receipt_id || '';
+    const title = `سند قبض المستودع - ${customerName} - ${docNo}`;
+    document.title = title;
     if (isEmbed) {
       try {
-        window.parent.postMessage({ type: 'slip-print-ready' }, '*');
+        window.parent.postMessage({ type: 'slip-print-ready', title }, '*');
       } catch (_) {}
       return;
     }

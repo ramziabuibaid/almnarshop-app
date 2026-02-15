@@ -52,12 +52,13 @@ export default function QuotationPrintPage() {
     if (!data || loading) return;
 
     const customerName = data.customer?.name || 'عميل';
-    const qId = data.quotationID || '';
-    document.title = `${customerName} ${qId}`;
+    const docNo = data.quotationID || '';
+    const title = `عروض الاسعار - ${customerName} - ${docNo}`;
+    document.title = title;
 
     if (isEmbed) {
       try {
-        window.parent.postMessage({ type: 'print-ready' }, '*');
+        window.parent.postMessage({ type: 'print-ready', title }, '*');
       } catch (_) {}
       return;
     }

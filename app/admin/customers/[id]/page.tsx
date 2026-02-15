@@ -1111,6 +1111,15 @@ export default function CustomerProfilePage() {
                                 <span>موعد المتابعة: {formatDate(item.nextFollowUpDate)}</span>
                               </div>
                             )}
+
+                            {/* Audit: who created / last updated */}
+                            {(item.CreatedByUsername || item.UpdatedByUsername) && (
+                              <p className="text-xs text-gray-500 mt-2">
+                                {item.CreatedByUsername && <span>أنشأه: {item.CreatedByUsername}</span>}
+                                {item.CreatedByUsername && item.UpdatedByUsername && ' · '}
+                                {item.UpdatedByUsername && <span>آخر تحديث: {item.UpdatedByUsername}</span>}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1600,6 +1609,7 @@ export default function CustomerProfilePage() {
         customer={customer}
         interaction={selectedInteraction}
         onSuccess={handleInteractionSuccess}
+        createdBy={admin?.id}
       />
 
       {/* Receipt Modal */}

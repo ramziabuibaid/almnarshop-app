@@ -10,6 +10,8 @@ interface AddInteractionModalProps {
   customer: any | null;
   onSuccess: () => void;
   interaction?: any | null; // For editing existing interaction
+  /** Admin user ID for audit: who is logging this interaction */
+  createdBy?: string;
 }
 
 export default function AddInteractionModal({
@@ -18,6 +20,7 @@ export default function AddInteractionModal({
   customer,
   onSuccess,
   interaction,
+  createdBy,
 }: AddInteractionModalProps) {
   const isEditing = !!interaction;
   const [formData, setFormData] = useState({
@@ -199,7 +202,7 @@ export default function AddInteractionModal({
           PromiseAmount: formData.PromiseAmount ? parseFloat(String(formData.PromiseAmount)) : undefined,
         });
       } else {
-        // Create new interaction
+        // Create new interaction (createdBy = who performed the interaction, for audit)
         const activityData = {
           CustomerID: customer.CustomerID || customer.id || customer.customerID || '',
           ActionType: actionType,
@@ -207,6 +210,7 @@ export default function AddInteractionModal({
           Notes: formData.Notes.trim(),
           PromiseDate: promiseDate, // ISO format (YYYY-MM-DD)
           PromiseAmount: formData.PromiseAmount ? parseFloat(String(formData.PromiseAmount)) : undefined,
+          created_by: createdBy,
         };
 
         console.log('[AddInteractionModal] Submitting activity to CRM_Activity:', activityData);

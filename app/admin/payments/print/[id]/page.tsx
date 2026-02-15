@@ -35,15 +35,15 @@ export default function PaymentPrintPage() {
   }, [payId]);
 
   useEffect(() => {
-    // Set document title for PDF filename (customer name + payment number)
+    // اسم الملف: سند صرف المحل - اسم الزبون - رقم السند
     if (paymentData && !loading) {
       const customerName = paymentData.CustomerName || 'عميل';
-      const pid = paymentData.PayID || '';
-      document.title = `${customerName} ${pid}`;
-      
+      const docNo = paymentData.PayID || '';
+      const title = `سند صرف المحل - ${customerName} - ${docNo}`;
+      document.title = title;
       if (isEmbed) {
         try {
-          window.parent.postMessage({ type: 'slip-print-ready' }, '*');
+          window.parent.postMessage({ type: 'slip-print-ready', title }, '*');
         } catch (_) {}
         return;
       }

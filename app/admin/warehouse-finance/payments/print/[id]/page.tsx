@@ -37,11 +37,12 @@ export default function WarehousePaymentPrintPage() {
   useEffect(() => {
     if (!paymentData || loading) return;
     const customerName = paymentData.customer_name || 'عميل';
-    const pid = paymentData.payment_id || '';
-    document.title = `${customerName} ${pid}`;
+    const docNo = paymentData.payment_id || '';
+    const title = `سند صرف المستودع - ${customerName} - ${docNo}`;
+    document.title = title;
     if (isEmbed) {
       try {
-        window.parent.postMessage({ type: 'slip-print-ready' }, '*');
+        window.parent.postMessage({ type: 'slip-print-ready', title }, '*');
       } catch (_) {}
       return;
     }

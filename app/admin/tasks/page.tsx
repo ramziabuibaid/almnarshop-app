@@ -40,6 +40,7 @@ interface Task {
 export default function TasksPage() {
   const router = useRouter();
   const { admin } = useAdminAuth();
+  const currentAdminId = admin?.id || undefined;
   const [tasks, setTasks] = useState<{
     overdue: Task[];
     today: Task[];
@@ -259,7 +260,7 @@ export default function TasksPage() {
     setUpdatingIds((prev) => new Set(prev).add(task.InteractionID));
     try {
       console.log('[TasksPage] Marking task as resolved:', task.InteractionID);
-      await updatePTPStatus(task.InteractionID, 'Fulfilled');
+      await updatePTPStatus(task.InteractionID, 'Fulfilled', currentAdminId);
       
       // Optimistically remove from list
       setTasks((prev) => ({
@@ -316,7 +317,7 @@ export default function TasksPage() {
       // First, hide the old appointment by updating its status
       if (task.InteractionID) {
         try {
-          await updatePTPStatus(task.InteractionID, 'Archived');
+          await updatePTPStatus(task.InteractionID, 'Archived', currentAdminId);
           console.log('[TasksPage] Old appointment archived successfully');
         } catch (archiveError) {
           console.warn('[TasksPage] Could not archive old appointment:', archiveError);
@@ -332,6 +333,7 @@ export default function TasksPage() {
         Notes: 'لم يجب',
         PromiseDate: twoDaysLaterStr, // Schedule for 2 days later
         PromiseAmount: originalAmount, // الحفاظ على المبلغ الأصلي
+        created_by: currentAdminId,
       });
       
       showToast('تم تسجيل الإجراء بنجاح', 'success');
@@ -384,7 +386,7 @@ export default function TasksPage() {
       // أولاً، إخفاء الموعد القديم بتحديث حالته إلى Archived
       if (rescheduleModal.task.InteractionID) {
         try {
-          await updatePTPStatus(rescheduleModal.task.InteractionID, 'Archived');
+          await updatePTPStatus(rescheduleModal.task.InteractionID, 'Archived', currentAdminId);
           console.log('[TasksPage] Old appointment archived successfully');
         } catch (archiveError) {
           console.warn('[TasksPage] Could not archive old appointment:', archiveError);
@@ -400,6 +402,7 @@ export default function TasksPage() {
         Notes: rescheduleNote || 'تم إعادة الجدولة',
         PromiseDate: formattedDate,
         PromiseAmount: originalAmount, // استخدام المبلغ الأصلي
+        created_by: currentAdminId,
       });
       
       showToast('تم إعادة الجدولة بنجاح', 'success');
@@ -474,6 +477,7 @@ export default function TasksPage() {
         Notes: copyForm.note || 'تم نسخ التفاعل',
         PromiseDate: formattedDate,
         PromiseAmount: originalAmount,
+        created_by: currentAdminId,
       });
       
       showToast('تم نسخ التفاعل بنجاح', 'success');
@@ -675,6 +679,13 @@ export default function TasksPage() {
                     {task.Notes && (
                       <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.Notes}</p>
                     )}
+                    {(task.CreatedByUsername || task.UpdatedByUsername) && (
+                      <p className="text-xs text-gray-500 mb-2">
+                        {task.CreatedByUsername && <span>أنشأه: {task.CreatedByUsername}</span>}
+                        {task.CreatedByUsername && task.UpdatedByUsername && ' · '}
+                        {task.UpdatedByUsername && <span>آخر تحديث: {task.UpdatedByUsername}</span>}
+                      </p>
+                    )}
                     <div className="flex gap-2 mt-3 flex-wrap">
                       <button
                         onClick={() => handleResolved(task)}
@@ -770,6 +781,13 @@ export default function TasksPage() {
                     {task.Notes && (
                       <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.Notes}</p>
                     )}
+                    {(task.CreatedByUsername || task.UpdatedByUsername) && (
+                      <p className="text-xs text-gray-500 mb-2">
+                        {task.CreatedByUsername && <span>أنشأه: {task.CreatedByUsername}</span>}
+                        {task.CreatedByUsername && task.UpdatedByUsername && ' · '}
+                        {task.UpdatedByUsername && <span>آخر تحديث: {task.UpdatedByUsername}</span>}
+                      </p>
+                    )}
                     <div className="flex gap-2 mt-3 flex-wrap">
                       <button
                         onClick={() => handleResolved(task)}
@@ -864,6 +882,13 @@ export default function TasksPage() {
                     <p className="text-xs text-green-500 mb-2">تاريخ: {formatDate(task.NextDate)}</p>
                     {task.Notes && (
                       <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.Notes}</p>
+                    )}
+                    {(task.CreatedByUsername || task.UpdatedByUsername) && (
+                      <p className="text-xs text-gray-500 mb-2">
+                        {task.CreatedByUsername && <span>أنشأه: {task.CreatedByUsername}</span>}
+                        {task.CreatedByUsername && task.UpdatedByUsername && ' · '}
+                        {task.UpdatedByUsername && <span>آخر تحديث: {task.UpdatedByUsername}</span>}
+                      </p>
                     )}
                     <div className="flex gap-2 mt-3 flex-wrap">
                       <button

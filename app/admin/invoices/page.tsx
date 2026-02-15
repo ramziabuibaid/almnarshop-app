@@ -88,28 +88,34 @@ export default function InvoicesPage() {
     loadUsers();
   }, []);
 
-  // When invoice print iframe signals ready, open print dialog for iframe (no new tab)
+  // When invoice print iframe signals ready, open print dialog (اسم الملف من title المرسل)
   useEffect(() => {
     if (!printOverlayInvoiceId) return;
     const onMessage = (e: MessageEvent) => {
       if (e.data?.type === 'invoice-print-ready' && printIframeRef.current?.contentWindow) {
+        const prevTitle = document.title;
+        if (e.data?.title) document.title = e.data.title;
         try {
           printIframeRef.current.contentWindow.print();
         } catch (_) {}
+        setTimeout(() => { document.title = prevTitle; }, 500);
       }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, [printOverlayInvoiceId]);
 
-  // When batch print iframe signals ready, open print dialog (no new tab)
+  // When batch print iframe signals ready, open print dialog (اسم الملف: فواتير نقدية - طباعة محددة - تاريخ اليوم)
   useEffect(() => {
     if (!printOverlayBatchIds || printOverlayBatchIds.length === 0) return;
     const onMessage = (e: MessageEvent) => {
       if (e.data?.type === 'batch-print-ready' && printBatchIframeRef.current?.contentWindow) {
+        const prevTitle = document.title;
+        if (e.data?.title) document.title = e.data.title;
         try {
           printBatchIframeRef.current.contentWindow.print();
         } catch (_) {}
+        setTimeout(() => { document.title = prevTitle; }, 500);
       }
     };
     window.addEventListener('message', onMessage);

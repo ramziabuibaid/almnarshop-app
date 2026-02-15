@@ -378,28 +378,34 @@ export default function ShopCashBoxPage() {
     setCurrentPage(1);
   }, [searchQuery]);
 
-  // When slip print iframe signals ready, open print dialog (no new tab)
+  // When slip print iframe signals ready, open print dialog (اسم الملف من title المرسل)
   useEffect(() => {
     if (!printOverlaySlip) return;
     const onMessage = (e: MessageEvent) => {
       if (e.data?.type === 'slip-print-ready' && printSlipIframeRef.current?.contentWindow) {
+        const prevTitle = document.title;
+        if (e.data?.title) document.title = e.data.title;
         try {
           printSlipIframeRef.current.contentWindow.print();
         } catch (_) {}
+        setTimeout(() => { document.title = prevTitle; }, 500);
       }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, [printOverlaySlip]);
 
-  // When batch print iframe signals ready, open print dialog (no new tab)
+  // When batch print iframe signals ready, open print dialog (اسم الملف: صندوق المحل - سندات محددة - تاريخ اليوم)
   useEffect(() => {
     if (!printOverlayBatchIds || printOverlayBatchIds.length === 0) return;
     const onMessage = (e: MessageEvent) => {
       if (e.data?.type === 'batch-print-ready' && printBatchIframeRef.current?.contentWindow) {
+        const prevTitle = document.title;
+        if (e.data?.title) document.title = e.data.title;
         try {
           printBatchIframeRef.current.contentWindow.print();
         } catch (_) {}
+        setTimeout(() => { document.title = prevTitle; }, 500);
       }
     };
     window.addEventListener('message', onMessage);

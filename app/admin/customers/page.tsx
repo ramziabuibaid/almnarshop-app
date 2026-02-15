@@ -768,7 +768,7 @@ export default function CustomersPage() {
     }
     setUpdatingIds((prev) => new Set(prev).add(interactionId));
     try {
-      await updatePTPStatus(interactionId, 'Fulfilled');
+      await updatePTPStatus(interactionId, 'Fulfilled', admin?.id);
       setDashboardData((prev: any) => ({
         ...prev,
         overdue: (prev.overdue || []).filter((i: any) => (i.InteractionID || i.id) !== interactionId),
@@ -808,7 +808,7 @@ export default function CustomersPage() {
       const customerId = item.CustomerID || item.customerID;
       if (interactionId) {
         try {
-          await updatePTPStatus(interactionId, 'Archived');
+          await updatePTPStatus(interactionId, 'Archived', admin?.id);
         } catch {}
       }
       await logActivity({
@@ -818,6 +818,7 @@ export default function CustomersPage() {
         Notes: rescheduleNote || 'تم إعادة الجدولة',
         PromiseDate: formattedDate,
         PromiseAmount: originalAmount,
+        created_by: admin?.id,
       });
       showToast('تم إعادة الجدولة بنجاح', 'success');
       setRescheduleModal({ isOpen: false, item: null });
@@ -874,6 +875,7 @@ export default function CustomersPage() {
         Notes: copyForm.note || 'تم نسخ التفاعل',
         PromiseDate: formattedDate,
         PromiseAmount: originalAmount,
+        created_by: admin?.id,
       });
       showToast('تم نسخ التفاعل بنجاح', 'success');
       setCopyModal({ isOpen: false, item: null });
@@ -1888,6 +1890,7 @@ export default function CustomersPage() {
         customer={selectedCustomer}
         interaction={selectedInteraction}
         onSuccess={handleInteractionSuccess}
+        createdBy={admin?.id}
       />
 
       {/* Customer Form Modal */}

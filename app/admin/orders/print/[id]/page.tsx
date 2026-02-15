@@ -46,11 +46,12 @@ export default function OrderPrintPage() {
   useEffect(() => {
     if (!orderData || loading) return;
     const customerName = orderData.customerName || 'عميل';
-    const id = orderData.orderID || '';
-    document.title = `${customerName} ${id}`;
+    const docNo = orderData.orderID || '';
+    const title = `طلبيات اون لاين - ${customerName} - ${docNo}`;
+    document.title = title;
     if (isEmbed) {
       try {
-        window.parent.postMessage({ type: 'print-ready' }, '*');
+        window.parent.postMessage({ type: 'print-ready', title }, '*');
       } catch (_) {}
       return;
     }

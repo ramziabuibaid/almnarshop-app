@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useState, useRef, Suspense } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Product } from '@/types';
 import QRCode from '@/components/admin/QRCode';
@@ -56,22 +56,25 @@ function LabelsPrintContent() {
     return fallback;
   };
 
-  // Force document title = date + time (English numerals 0-9) so saved PDF has a unique filename
-  useLayoutEffect(() => {
+  // اسم الملف عند كل طباعة: طباعة الملصقات - تاريخ اليوم - الوقت الفعلي (اسم فريد في كل مرة)
+  const setPrintTitle = () => {
     const now = new Date();
-    const y = now.getFullYear();
-    const m = (now.getMonth() + 1).toString().padStart(2, '0');
-    const d = now.getDate().toString().padStart(2, '0');
-    const h = now.getHours().toString().padStart(2, '0');
-    const min = now.getMinutes().toString().padStart(2, '0');
-    const s = now.getSeconds().toString().padStart(2, '0');
-    document.title = `${y}-${m}-${d}_${h}-${min}-${s}`;
-  }, []);
+    const dateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); // YYYY-MM-DD
+    const timeStr = now.toLocaleTimeString('en-GB', {
+      timeZone: 'Asia/Jerusalem',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).replace(/:/g, '-'); // HH-mm-ss
+    document.title = `طباعة الملصقات - ${dateStr} - ${timeStr}`;
+  };
 
   // Auto print when products are loaded
   useEffect(() => {
     if (!loading && products.length > 0 && !error) {
       const timer = setTimeout(() => {
+        setPrintTitle();
         window.print();
       }, 500);
       return () => clearTimeout(timer);

@@ -37,15 +37,15 @@ export default function ReceiptPrintPage() {
   }, [receiptId]);
 
   useEffect(() => {
-    // Set document title for PDF filename (customer name + receipt number)
+    // اسم الملف: سند قبض المحل - اسم الزبون - رقم السند
     if (receiptData && !loading) {
       const customerName = receiptData.CustomerName || 'عميل';
-      const rid = receiptData.ReceiptID || '';
-      document.title = `${customerName} ${rid}`;
-      
+      const docNo = receiptData.ReceiptID || '';
+      const title = `سند قبض المحل - ${customerName} - ${docNo}`;
+      document.title = title;
       if (isEmbed) {
         try {
-          window.parent.postMessage({ type: 'slip-print-ready' }, '*');
+          window.parent.postMessage({ type: 'slip-print-ready', title }, '*');
         } catch (_) {}
         return;
       }

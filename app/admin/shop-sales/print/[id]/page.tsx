@@ -54,11 +54,12 @@ export default function ShopSalesInvoicePrintPage() {
   useEffect(() => {
     if (!invoiceData || loading) return;
     const customerName = invoiceData.CustomerName || 'عميل';
-    const id = invoiceData.InvoiceID || '';
-    document.title = `${customerName} ${id}`;
+    const docNo = invoiceData.InvoiceID || '';
+    const title = `فواتير المحل - ${customerName} - ${docNo}`;
+    document.title = title;
     if (isEmbed) {
       try {
-        window.parent.postMessage({ type: 'print-ready' }, '*');
+        window.parent.postMessage({ type: 'print-ready', title }, '*');
       } catch (_) {}
       return;
     }

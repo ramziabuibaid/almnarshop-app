@@ -281,19 +281,23 @@ function ShopCashBoxPrintBatchContent() {
     return result;
   }, [idList]);
 
-  // اسم الملف الافتراضي عند حفظ PDF: صندوق المحل سندات قبض وصرف + تاريخ اليوم
+  // اسم الملف عند حفظ PDF: صندوق المحل - سندات محددة - تاريخ اليوم
   useEffect(() => {
     if (items.length === 0) return;
     const today = new Date();
     const dateStr = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); // YYYY-MM-DD
-    document.title = `صندوق المحل سندات قبض وصرف ${dateStr}`;
+    const title = `صندوق المحل - سندات محددة - ${dateStr}`;
+    document.title = title;
   }, [items.length]);
 
-  // عند التضمين (embed): إعلام الصفحة الأم لفتح نافذة الطباعة
+  // عند التضمين (embed): إعلام الصفحة الأم لفتح نافذة الطباعة مع اسم الملف
   useEffect(() => {
     if (isEmbed && items.length > 0 && !loading) {
+      const today = new Date();
+      const dateStr = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+      const title = `صندوق المحل - سندات محددة - ${dateStr}`;
       try {
-        window.parent.postMessage({ type: 'batch-print-ready' }, '*');
+        window.parent.postMessage({ type: 'batch-print-ready', title }, '*');
       } catch (_) {}
     }
   }, [isEmbed, items.length, loading]);
