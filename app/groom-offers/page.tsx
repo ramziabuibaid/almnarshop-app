@@ -1,6 +1,6 @@
 import { getGroomOffers } from '@/lib/api';
-import Navbar from '@/components/store/Navbar';
-import Footer from '@/components/store/Footer';
+import StoreHeader from '@/components/store/StoreHeader';
+import NewsletterSection from '@/components/store/NewsletterSection';
 import { Package, Check, Gift } from 'lucide-react';
 
 export const revalidate = 0; // Disable static caching for this page to get fresh offers
@@ -10,7 +10,7 @@ export default async function GroomOffersPage() {
 
     return (
         <main className="min-h-screen bg-gray-50 font-cairo" dir="rtl">
-            <Navbar />
+            <StoreHeader />
 
             {/* Hero Section */}
             <div className="bg-gradient-to-r from-purple-800 to-indigo-900 text-white py-16 md:py-24 relative overflow-hidden">
@@ -101,7 +101,7 @@ export default async function GroomOffersPage() {
                 )}
             </div>
 
-            <Footer />
+            <NewsletterSection />
         </main>
     );
 }
