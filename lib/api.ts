@@ -25,7 +25,7 @@ export function convertDriveImageUrl(imageUrl: string | null | undefined): strin
   if (fileViewMatch && fileViewMatch[1]) {
     fileId = fileViewMatch[1];
   }
-  
+
   // Format 2: https://drive.google.com/open?id=FILE_ID
   if (!fileId) {
     const openIdMatch = trimmedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
@@ -135,12 +135,12 @@ export async function login(username: string, password: string): Promise<any> {
     return normalizedUser;
   } catch (error: any) {
     console.error('[API] Login error:', error);
-    
+
     // If error already has a message, use it
     if (error?.message) {
       throw error;
     }
-    
+
     // Generic error
     throw new Error('فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.');
   }
@@ -176,24 +176,24 @@ async function getImageCache(): Promise<Map<string, string>> {
   imageCachePromise = (async () => {
     try {
       console.log('[API] Fetching image cache from Supabase...');
-      
+
       // Fetch all image_cache entries using pagination
       let allData: any[] = [];
       let page = 0;
       const pageSize = 1000; // Supabase default limit
       let hasMore = true;
-      
+
       while (hasMore) {
         const { data, error } = await supabase
           .from('image_cache')
           .select('file_name, file_id')
           .range(page * pageSize, (page + 1) * pageSize - 1);
-        
+
         if (error) {
           console.error('[API] Error fetching image cache:', error);
           return new Map<string, string>();
         }
-        
+
         if (!data || !Array.isArray(data)) {
           console.warn('[API] No data received from image_cache table or data is not an array');
           hasMore = false;
@@ -215,17 +215,17 @@ async function getImageCache(): Promise<Map<string, string>> {
         console.log(`[API] Received ${allData.length} rows from image_cache table (across ${page + 1} pages)`);
         let validCount = 0;
         let invalidCount = 0;
-        
+
         allData.forEach((row: any, index: number) => {
           if (row.file_name && row.file_id) {
             // Trim file_name to remove any extra spaces
             const cleanFileName = String(row.file_name).trim();
             const cleanFileId = String(row.file_id).trim();
-            
+
             if (cleanFileName && cleanFileId) {
               map.set(cleanFileName, cleanFileId);
               validCount++;
-              
+
               // Log first few entries for verification
               if (index < 3) {
                 console.log(`[API] Cache entry ${index + 1}: "${cleanFileName}" -> ${cleanFileId}`);
@@ -243,7 +243,7 @@ async function getImageCache(): Promise<Map<string, string>> {
             }
           }
         });
-        
+
         console.log(`[API] Image cache: ${validCount} valid entries, ${invalidCount} invalid entries`);
       } else {
         console.warn('[API] No data received from image_cache table or data is not an array');
@@ -282,28 +282,28 @@ async function convertImagePathToUrl(imagePath: string | null | undefined): Prom
   const trimmedPath = imagePath.trim();
 
   // If it's already a direct URL or Google Drive ID, use convertDriveImageUrl
-  if (trimmedPath.startsWith('http://') || trimmedPath.startsWith('https://') || 
-      trimmedPath.includes('drive.google.com') || trimmedPath.includes('googleusercontent.com')) {
+  if (trimmedPath.startsWith('http://') || trimmedPath.startsWith('https://') ||
+    trimmedPath.includes('drive.google.com') || trimmedPath.includes('googleusercontent.com')) {
     return convertDriveImageUrl(trimmedPath);
   }
 
   // Extract file name from path (e.g., "Products_Images/PRD-0017.Image.081721.png" -> "PRD-0017.Image.081721.png")
   const fileName = trimmedPath.split('/').pop() || trimmedPath;
   const cleanFileName = fileName.trim(); // Remove any extra spaces
-  
+
   console.log(`[API] Converting image path: "${trimmedPath}" -> fileName: "${cleanFileName}"`);
 
   try {
     const imageCache = await getImageCache();
-    
+
     if (imageCache.size === 0) {
       console.warn('[API] Image cache is empty! Check if image_cache table has data.');
       return convertDriveImageUrl(trimmedPath);
     }
-    
+
     // Try exact match first
     let fileId = imageCache.get(cleanFileName);
-    
+
     // If not found, try case-insensitive search
     if (!fileId) {
       console.log(`[API] Exact match not found for "${cleanFileName}", trying case-insensitive search...`);
@@ -315,13 +315,13 @@ async function convertImagePathToUrl(imagePath: string | null | undefined): Prom
         }
       }
     }
-    
+
     // Log for debugging
     if (!fileId) {
       console.warn(`[API] Image not found in cache. Looking for: "${cleanFileName}"`);
       console.log(`[API] Cache size: ${imageCache.size}`);
       // Check if similar file names exist
-      const similarNames = Array.from(imageCache.keys()).filter(key => 
+      const similarNames = Array.from(imageCache.keys()).filter(key =>
         key.toLowerCase().includes(cleanFileName.toLowerCase().substring(0, 10)) ||
         cleanFileName.toLowerCase().includes(key.toLowerCase().substring(0, 10))
       );
@@ -358,46 +358,46 @@ async function convertImagePathToUrl(imagePath: string | null | undefined): Prom
  */
 function mapProductFromSupabase(product: any): any {
   console.log(`[API] Mapping product: ${product.product_id || product.id}`);
-  
+
   // Get image URLs directly from Supabase Storage fields
   // No conversion needed - these are already full URLs from Supabase Storage
   const imageUrl = product.image_url ? product.image_url.trim() : '';
   const image2Url = product.image_url_2 ? product.image_url_2.trim() : '';
   const image3Url = product.image_url_3 ? product.image_url_3.trim() : '';
-  
+
   console.log(`[API] Product ${product.product_id || product.id} - Image URL: "${imageUrl ? imageUrl.substring(0, 80) + '...' : 'No image'}"`);
 
   return {
     // Keep all original fields first
     ...product,
-    
+
     // Identifiers (override with mapped values)
     ProductID: product.product_id || '',
     'Shamel No': product.shamel_no || '',
     Barcode: product.barcode || '',
-    
+
     // Basic Info (override with mapped values)
     Name: product.name || '',
     Type: product.type || '',
     Brand: product.brand || '',
     Origin: product.origin || '',
     Warranty: product.warranty || '',
-    
+
     // Specs (override with mapped values)
     Size: product.size || '',
     Color: product.color || '',
     Dimention: product.dimention || '',
-    
+
     // Stock (override with mapped values)
     CS_War: parseFloat(String(product.cs_war || 0)) || 0,
     CS_Shop: parseFloat(String(product.cs_shop || 0)) || 0,
-    
+
     // Pricing (override with mapped values)
     CostPrice: parseFloat(String(product.cost_price || 0)) || 0,
     SalePrice: parseFloat(String(product.sale_price || 0)) || 0,
     T1Price: parseFloat(String(product.t1_price || 0)) || 0,
     T2Price: parseFloat(String(product.t2_price || 0)) || 0,
-    
+
     // Images - Use Supabase Storage URLs directly (MUST be after ...product to override)
     Image: imageUrl,
     'Image 2': image2Url,
@@ -405,7 +405,7 @@ function mapProductFromSupabase(product: any): any {
     image: imageUrl, // Legacy field
     image2: image2Url, // Legacy field
     image3: image3Url, // Legacy field
-    
+
     // Serial Number Support
     is_serialized: product.is_serialized || false,
     IsSerialized: product.is_serialized || false,
@@ -413,7 +413,7 @@ function mapProductFromSupabase(product: any): any {
     // Store Visibility (default true for backward compatibility)
     is_visible: product.is_visible !== false,
     isVisible: product.is_visible !== false,
-    
+
     // Restock tracking (for "new" badge and sorting)
     last_restocked_at: product.last_restocked_at || null,
     LastRestockedAt: product.last_restocked_at || null,
@@ -454,7 +454,7 @@ function mapCustomerFromSupabase(customer: any): any {
   return {
     // Identifier
     CustomerID: customer.customer_id || '',
-    
+
     // Basic Info
     Name: customer.name || '',
     Email: customer.email || '',
@@ -470,7 +470,7 @@ function mapCustomerFromSupabase(customer: any): any {
     'Last Payment Date': formatDateToDDMMYYYY(customer.last_pay_date),
     LastInvoiceDate: formatDateToDDMMYYYY(customer.last_inv_date),
     'Last Invoice Date': formatDateToDDMMYYYY(customer.last_inv_date),
-    
+
     // Legacy fields (for backward compatibility)
     id: customer.customer_id || '',
     name: customer.name || '',
@@ -484,7 +484,7 @@ function mapCustomerFromSupabase(customer: any): any {
     postalCode: customer.postal_code || '',
     lastPaymentDate: formatDateToDDMMYYYY(customer.last_pay_date),
     lastInvoiceDate: formatDateToDDMMYYYY(customer.last_inv_date),
-    
+
     // Keep all original fields
     ...customer,
   };
@@ -502,19 +502,19 @@ export async function getProductById(productId: string): Promise<any | null> {
     }
 
     console.log('[API] Fetching product by ID from Supabase:', productId);
-    
+
     // Fetch product by product_id (the primary key in Supabase)
     const { data: product, error } = await supabase
       .from('products')
       .select('*')
       .eq('product_id', productId.trim())
       .single();
-    
+
     if (error) {
       if (error.code === 'PGRST116') {
         // No rows returned - try to find by other fields as fallback
         console.log('[API] Product not found by product_id, trying alternative lookup:', productId);
-        
+
         // Try to find by name or other identifier as fallback
         const { data: fallbackProduct, error: fallbackError } = await supabase
           .from('products')
@@ -522,12 +522,12 @@ export async function getProductById(productId: string): Promise<any | null> {
           .or(`name.ilike.%${productId}%,product_id.eq.${productId}`)
           .limit(1)
           .maybeSingle();
-        
+
         if (fallbackError || !fallbackProduct) {
           console.log('[API] Product not found with fallback lookup:', productId);
           return null;
         }
-        
+
         const mappedFallback = mapProductFromSupabase(fallbackProduct);
         console.log('[API] Product loaded via fallback:', mappedFallback.id);
         return mappedFallback;
@@ -535,14 +535,14 @@ export async function getProductById(productId: string): Promise<any | null> {
       console.error('[API] Supabase error:', error);
       throw new Error(`Failed to fetch product: ${error.message}`);
     }
-    
+
     if (!product) {
       return null;
     }
-    
+
     // Map snake_case to PascalCase
     const mappedProduct = mapProductFromSupabase(product);
-    
+
     console.log('[API] Product loaded:', mappedProduct.id);
     return mappedProduct;
   } catch (error: any) {
@@ -710,12 +710,12 @@ export async function getProducts(options?: { forStore?: boolean; force?: boolea
 
     console.log(`[API] Fetching products from Supabase${forStore ? ' (store only)' : ''}${force ? ' (force refresh)' : ''}...`);
     const startTime = Date.now();
-    
+
     let allProducts: any[] = [];
     let page = 0;
     const pageSize = 1000;
     let hasMore = true;
-    
+
     const productColumns =
       'product_id, shamel_no, barcode, name, cost_price, sale_price, cs_shop, cs_war, image_url, image_url_2, image_url_3, type, brand, last_restocked_at, is_visible, created_at';
     while (hasMore) {
@@ -724,17 +724,17 @@ export async function getProducts(options?: { forStore?: boolean; force?: boolea
         .select(productColumns)
         .order('created_at', { ascending: false })
         .range(page * pageSize, (page + 1) * pageSize - 1);
-      
+
       if (error) {
         console.error('[API] Supabase error:', error);
         throw new Error(`Failed to fetch products: ${error.message}`);
       }
-      
+
       if (!products || !Array.isArray(products)) {
         console.error('[API] Invalid products data:', products);
         throw new Error('Invalid response format: No products array found');
       }
-      
+
       if (products.length === 0) {
         hasMore = false;
       } else {
@@ -746,13 +746,13 @@ export async function getProducts(options?: { forStore?: boolean; force?: boolea
         }
       }
     }
-    
+
     const filteredProducts = allProducts.filter((product: any) => {
       const hasId = !!(product.product_id);
       const hasName = !!(product.name);
       return hasId && hasName;
     });
-    
+
     let mappedProducts = filteredProducts.map((product: any) => mapProductFromSupabase(product));
 
     setCache(CACHE_PRODUCTS_DATA, CACHE_PRODUCTS_TIMESTAMP, mappedProducts);
@@ -784,10 +784,10 @@ export async function getProducts(options?: { forStore?: boolean; force?: boolea
       });
       console.log(`[API] Store products (visible only, sorted by latest add/restock): ${mappedProducts.length}`);
     }
-    
+
     const totalTime = Date.now() - startTime;
     console.log(`[API] Products loaded from Supabase: ${mappedProducts.length} in ${totalTime}ms`);
-    
+
     if (mappedProducts.length > 0) {
       const sampleProducts = mappedProducts.slice(0, 3);
       sampleProducts.forEach((p, idx) => {
@@ -797,7 +797,7 @@ export async function getProducts(options?: { forStore?: boolean; force?: boolea
         });
       });
     }
-    
+
     return mappedProducts;
   } catch (error: any) {
     console.error('[API] GetProducts error:', error?.message || error);
@@ -816,7 +816,7 @@ export async function getCustomerHistory(customerId: string): Promise<any> {
     // Fetch invoices and receipts from Supabase
     // Note: Assuming invoices table has customer_id field
     // If not, we may need to check the schema
-    
+
     // For now, return empty structure as invoices might not have customer_id
     // This depends on your schema design
     const result = {
@@ -855,14 +855,14 @@ export async function saveProduct(productData: any): Promise<any> {
   try {
     console.log('[API] SaveProduct - Preparing Supabase request...');
     console.log('[API] Product data:', JSON.stringify(productData, null, 2));
-    
+
     // Convert PascalCase to snake_case for Supabase
     const supabaseData: any = {
       product_id: productData.ProductID || productData.product_id || null,
       // Explicitly handle empty strings for shamel_no - convert to null to allow clearing
-      shamel_no: productData['Shamel No'] !== undefined 
+      shamel_no: productData['Shamel No'] !== undefined
         ? (productData['Shamel No'] === '' ? null : productData['Shamel No'])
-        : (productData.shamel_no !== undefined 
+        : (productData.shamel_no !== undefined
           ? (productData.shamel_no === '' ? null : productData.shamel_no)
           : null),
       barcode: productData.Barcode || productData.barcode || null,
@@ -954,7 +954,7 @@ export async function saveProduct(productData: any): Promise<any> {
 
       result = data;
       console.log('[API] Product updated successfully:', result);
-      
+
       // Create notification for product update
       try {
         const { createNotification } = await import('./notifications');
@@ -971,10 +971,10 @@ export async function saveProduct(productData: any): Promise<any> {
         console.error('[API] Failed to create notification for product update:', notifError);
         // Don't throw - notification is non-critical
       }
-            } else {
+    } else {
       // Insert new product
       console.log('[API] Inserting new product');
-      
+
       // Ensure product_id is set for new products
       if (!supabaseData.product_id) {
         throw new Error('ProductID is required for new products');
@@ -996,7 +996,7 @@ export async function saveProduct(productData: any): Promise<any> {
 
       result = data;
       console.log('[API] Product created successfully:', result);
-      
+
       // Create notification for product creation
       try {
         const { createNotification } = await import('./notifications');
@@ -1025,12 +1025,12 @@ export async function saveProduct(productData: any): Promise<any> {
     console.error('[API] SaveProduct error:', error);
     console.error('[API] Error name:', error?.name);
     console.error('[API] Error message:', error?.message);
-    
+
     // If error already has a message, use it
     if (error?.message) {
       throw error;
     }
-    
+
     // Generic error
     throw new Error(`Failed to save product: ${error?.message || 'Unknown error'}. Please check the browser console for more details.`);
   }
@@ -1205,7 +1205,7 @@ export async function uploadImage(imageData: {
   // TODO: Implement Supabase Storage version
   // For now, this still uses Google Sheets for image uploads
   const API_URL = 'https://script.google.com/macros/s/AKfycbybgr2ZAxRJESgZ1Eeuw2U9oqPm5zLnrVeOO6qr29R3I6fU1hs0xLWGjSNDuISYjiHLag/exec';
-  
+
   try {
     const requestUrl = `${API_URL}?action=uploadImage`;
     console.log('[API] Uploading image:', imageData.name);
@@ -1254,22 +1254,22 @@ export async function uploadImage(imageData: {
     }
   } catch (error: any) {
     console.error('[API] UploadImage error:', error);
-    
+
     // Handle network errors
     if (error?.name === 'TypeError' && (error?.message?.includes('fetch') || error?.message?.includes('Failed to fetch'))) {
       throw new Error(`Network error: Failed to connect to server. Please check your internet connection.`);
     }
-    
+
     // Handle CORS errors
     if (error?.message && (error.message.includes('CORS') || error.message.includes('cors'))) {
       throw new Error('CORS error. Please check API configuration.');
     }
-    
+
     // If error already has a message, use it
     if (error?.message && error.message !== 'Failed to fetch') {
       throw error;
     }
-    
+
     // Generic error
     throw new Error(`Failed to upload image: ${error?.message || 'Unknown error'}. Please check the browser console for more details.`);
   }
@@ -1299,29 +1299,29 @@ export async function getAllCustomers(options?: { force?: boolean }): Promise<an
 
     console.log(`[API] Fetching all customers from Supabase${force ? ' (force refresh)' : ''}...`);
     const startTime = Date.now();
-    
+
     let allCustomers: any[] = [];
     let page = 0;
     const pageSize = 1000;
     let hasMore = true;
-    
+
     const customerColumns = 'customer_id, name, phone, balance, shamel_no, type, last_pay_date, last_inv_date';
     while (hasMore) {
       const { data: customers, error } = await supabase
         .from('customers')
         .select(customerColumns)
         .range(page * pageSize, (page + 1) * pageSize - 1);
-      
+
       if (error) {
         console.error('[API] Supabase error:', error);
         throw new Error(`Failed to fetch customers: ${error.message}`);
       }
-      
+
       if (!customers || !Array.isArray(customers)) {
         console.error('[API] Invalid customers data:', customers);
         throw new Error('Invalid response format: No customers array found');
       }
-      
+
       if (customers.length === 0) {
         hasMore = false;
       } else {
@@ -1333,7 +1333,7 @@ export async function getAllCustomers(options?: { force?: boolean }): Promise<an
         }
       }
     }
-    
+
     const mappedCustomers = allCustomers.map((customer: any) => mapCustomerFromSupabase(customer));
     setCache(CACHE_CUSTOMERS_DATA, CACHE_CUSTOMERS_TIMESTAMP, mappedCustomers);
     const invalidationAt = await getCustomersCacheInvalidatedAt();
@@ -1347,12 +1347,12 @@ export async function getAllCustomers(options?: { force?: boolean }): Promise<an
 
     const totalTime = Date.now() - startTime;
     console.log(`[API] Customers loaded from Supabase: ${mappedCustomers.length} in ${totalTime}ms`);
-    
+
     if (mappedCustomers.length > 0) {
       console.log('[API] Sample customer from Supabase:', mappedCustomers[0]);
       console.log('[API] Sample customer keys:', Object.keys(mappedCustomers[0]));
     }
-    
+
     return mappedCustomers;
   } catch (error: any) {
     console.error('[API] getAllCustomers error:', error?.message || error);
@@ -1381,7 +1381,7 @@ export async function saveInteraction(interactionData: {
     'In Shop': 'Visit',
     'Email': 'Email',
   };
-  
+
   const outcomeMapping: Record<string, string> = {
     'تم اعطاء وقت': 'Promised',
     'لا يوجد رد': 'No Answer',
@@ -1522,7 +1522,7 @@ export async function saveCustomer(customerData: {
       // Update existing customer
       // Remove customer_id from payload when updating (don't update primary key)
       const { customer_id, ...updatePayload } = customerPayload;
-      
+
       const { data, error } = await supabase
         .from('customers')
         .update(updatePayload)
@@ -1537,7 +1537,7 @@ export async function saveCustomer(customerData: {
 
       result = data;
       console.log('[API] Customer updated successfully');
-      
+
       // Create notification for customer update
       try {
         const { createNotification } = await import('./notifications');
@@ -1571,7 +1571,7 @@ export async function saveCustomer(customerData: {
 
       result = data;
       console.log('[API] Customer created successfully');
-      
+
       // Create notification for customer creation
       try {
         const { createNotification } = await import('./notifications');
@@ -1610,22 +1610,22 @@ export async function generateCustomerID(): Promise<string> {
     const { count, error: countError } = await supabase
       .from('customers')
       .select('*', { count: 'exact', head: true });
-    
+
     if (countError) {
       console.error('[API] Failed to get customer count:', countError);
       throw new Error(`Failed to get customer count: ${countError.message}`);
     }
-    
+
     const customerCount = count || 0;
     console.log('[API] Current customer count:', customerCount);
-    
+
     // Generate new customer ID: CUS-XXXX-YYY
     // Format: CUS-XXXX-YYY where XXXX is (count + 1) padded to 4 digits
     const nextRowNumber = customerCount + 1;
     const paddedCount = String(nextRowNumber).padStart(4, '0');
     const randomNumber = Math.floor(Math.random() * (999 - 10 + 1)) + 10; // Random between 10 and 999
     const customerId = `CUS-${paddedCount}-${randomNumber}`;
-    
+
     console.log('[API] Generated customer ID:', customerId, '(next row number:', nextRowNumber, ')');
     return customerId;
   } catch (error: any) {
@@ -1768,7 +1768,7 @@ export async function deleteCustomer(customerID: string, userName?: string): Pro
   }
 
   console.log('[API] Customer deleted successfully');
-  
+
   // Create notification for customer deletion
   try {
     const { createNotification } = await import('./notifications');
@@ -1783,7 +1783,7 @@ export async function deleteCustomer(customerID: string, userName?: string): Pro
     console.error('[API] Failed to create notification for customer deletion:', notifError);
     // Don't throw - notification is non-critical
   }
-  
+
   return { status: 'deleted' };
 }
 
@@ -2038,17 +2038,59 @@ export async function getDashboardData(): Promise<any> {
     console.log('[API] Fetching dashboard data from Supabase...');
     const startTime = Date.now();
 
-    // Get CRM data from Supabase
-    const crmData = await getCRMDataFromSupabase();
-    const promises = crmData.promises || [];
+    // 1. Get CRM data from Supabase
+    const crmDataPromise = getCRMDataFromSupabase();
 
-    // Categorize promises by date
+    // 2. Get Promissory Note Installments (Pending/Late/Partially Paid)
+    // We purposefully exclude "Paid"
+    const installmentsPromise = supabase
+      .from('promissory_note_installments')
+      .select('*, promissory_notes!inner(customer_id, notes, customers!inner(name, phone))')
+      .in('status', ['Pending', 'Late', 'Partially Paid'])
+      .order('due_date', { ascending: true });
+
+    const [crmData, installmentsResult] = await Promise.all([crmDataPromise, installmentsPromise]);
+
+    const promises = crmData.promises || [];
+    const installments = installmentsResult.data || [];
+
+    if (installmentsResult.error) {
+      console.error('[API] Failed to fetch installments for dashboard:', installmentsResult.error);
+    }
+
+    // Map installments to Task format
+    const installmentTasks = installments.map((inst: any) => {
+      const note = inst.promissory_notes;
+      const customer = note?.customers;
+
+      return {
+        InteractionID: `INST-${inst.id}`, // Unique ID prefixed to distinguish
+        CustomerID: note?.customer_id || '',
+        CustomerName: customer?.name || 'Unknown Customer',
+        CustomerPhone: customer?.phone || '',
+        ActionType: 'Installment',
+        Outcome: inst.status, // Pending, Late, etc.
+        Notes: `كمبيالة: ${note?.notes || ''} - قسط: ${inst.notes || ''}`.trim(),
+        PromiseDate: inst.due_date,
+        PromiseAmount: inst.amount,
+        NextDate: inst.due_date,
+        created_at: inst.created_at,
+        isInstallment: true, // Flag to identify in UI if needed
+        installmentId: inst.id,
+        noteId: inst.promissory_note_id
+      };
+    });
+
+    // Combine both lists
+    const allTasks = [...promises, ...installmentTasks];
+
+    // Categorize by date
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const overdue: any[] = promises
+    const overdue: any[] = allTasks
       .filter((p: any) => {
         if (!p.PromiseDate) return false;
         const promiseDate = new Date(p.PromiseDate);
@@ -2061,7 +2103,7 @@ export async function getDashboardData(): Promise<any> {
         NextDate: p.PromiseDate || '',
       }));
 
-    const todayTasks: any[] = promises
+    const todayTasks: any[] = allTasks
       .filter((p: any) => {
         if (!p.PromiseDate) return false;
         const promiseDate = new Date(p.PromiseDate);
@@ -2074,7 +2116,7 @@ export async function getDashboardData(): Promise<any> {
         NextDate: p.PromiseDate || '',
       }));
 
-    const upcoming: any[] = promises
+    const upcoming: any[] = allTasks
       .filter((p: any) => {
         if (!p.PromiseDate) return false;
         const promiseDate = new Date(p.PromiseDate);
@@ -2093,6 +2135,8 @@ export async function getDashboardData(): Promise<any> {
       overdueCount: overdue.length,
       todayCount: todayTasks.length,
       upcomingCount: upcoming.length,
+      crmCount: promises.length,
+      installmentCount: installmentTasks.length
     });
 
     return {
@@ -2115,15 +2159,15 @@ export async function getCustomerData(customerId: string | number): Promise<any>
   try {
     // Convert ID to string explicitly to handle number vs string issues
     const idString = String(customerId || '').trim();
-    
+
     if (!idString || idString === '') {
       throw new Error('Customer ID is required');
     }
-    
+
     console.log('[API] Fetching customer data for ID:', idString);
     console.log('[API] ID type:', typeof customerId, 'converted to:', typeof idString);
     const startTime = Date.now();
-    
+
     console.log('[API] Fetching customer data from Supabase for ID:', idString);
 
     // Fetch customer CRM activities (interactions)
@@ -2574,7 +2618,7 @@ export async function updateInteraction(payload: {
   if (payload.status) {
     return updatePTPStatusInSupabase(payload.interactionId, payload.status);
   }
-  
+
   // If only note or nextDate is being updated, we'd need a different function
   // For now, just update the PTP status if provided
   return { status: 'success', message: 'Interaction update not fully implemented in Supabase yet' };
@@ -2663,8 +2707,8 @@ export async function logActivityToSupabase(payload: {
       outcome: payload.Outcome || null,
       notes: payload.Notes || null,
       promise_date: payload.PromiseDate || null,
-      promise_amount: payload.PromiseAmount !== undefined && payload.PromiseAmount !== null 
-        ? parseFloat(String(payload.PromiseAmount)) 
+      promise_amount: payload.PromiseAmount !== undefined && payload.PromiseAmount !== null
+        ? parseFloat(String(payload.PromiseAmount))
         : 0,
       ptp_status: payload.PromiseDate ? 'Active' : 'Closed', // Set to Active if there's a promise date
       created_by: payload.created_by || null,
@@ -3046,7 +3090,7 @@ export async function saveCashInvoice(payload: {
       discount: payload.discount || 0,
       created_by: payload.created_by || null, // Admin user ID
     };
-    
+
     // Add is_synced if column exists in schema
     // Note: If this column doesn't exist, you may need to add it:
     // ALTER TABLE cash_invoices ADD COLUMN is_synced BOOLEAN DEFAULT false;
@@ -3073,7 +3117,7 @@ export async function saveCashInvoice(payload: {
       const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
       // Generate detail_id (cash_invoice_details uses TEXT format: DET-XXXXX)
       const detailId = generateDetailID();
-      
+
       return {
         detail: {
           detail_id: detailId, // TEXT format: DET-XXXXX
@@ -3176,12 +3220,12 @@ export async function saveCashInvoice(payload: {
     return result;
   } catch (error: any) {
     console.error('[API] saveCashInvoice error:', error);
-    
+
     // Re-throw if it's already a formatted error
     if (error?.message && error.message.startsWith('Failed to')) {
       throw error;
     }
-    
+
     // Format generic errors
     throw new Error(`Failed to save cash invoice: ${error?.message || 'Unknown error'}`);
   }
@@ -3203,7 +3247,7 @@ export async function getCashInvoices(): Promise<any[]> {
 export async function getCashInvoice(invoiceID: string): Promise<any> {
   try {
     console.log('[API] Fetching cash invoice from Supabase:', invoiceID);
-    
+
     // Fetch invoice header
     const { data: invoiceHeader, error: headerError } = await supabase
       .from('cash_invoices')
@@ -3237,7 +3281,7 @@ export async function getCashInvoice(invoiceID: string): Promise<any> {
 
     // Map to app format (pass total)
     const mappedInvoice = mapCashInvoiceFromSupabase(invoiceHeader, totalFromDetails);
-    const mappedDetails = (invoiceDetails || []).map((detail: any) => 
+    const mappedDetails = (invoiceDetails || []).map((detail: any) =>
       mapCashInvoiceDetailFromSupabase(detail, detail.products)
     );
 
@@ -3274,13 +3318,13 @@ function mapCashInvoiceFromSupabase(invoice: any, totalAmount?: number): any {
  */
 function mapCashInvoiceDetailFromSupabase(detail: any, product?: any): any {
   // Extract product name from various possible sources
-  const productName = 
-    product?.name || 
-    product?.Name || 
+  const productName =
+    product?.name ||
+    product?.Name ||
     (typeof product === 'object' && product !== null && 'name' in product ? product.name : null) ||
-    detail.product_name || 
+    detail.product_name ||
     '';
-  
+
   console.log('[API] Mapping detail:', {
     detail_id: detail.detail_id,
     product_id: detail.product_id,
@@ -3370,7 +3414,7 @@ export async function getCashInvoicesFromSupabase(limit: number = 50): Promise<a
       console.error('[API] Invalid invoices data:', invoices);
       return [];
     }
-    
+
     // Fetch details for all invoices to calculate totals.
     // Supabase/PostgREST returns at most 1000 rows by default, so we paginate to get
     // ALL detail rows (otherwise the newest invoices' details are missing and show as 0).
@@ -3409,7 +3453,7 @@ export async function getCashInvoicesFromSupabase(limit: number = 50): Promise<a
       const currentTotal = totalsMap.get(invoiceId) || 0;
       totalsMap.set(invoiceId, currentTotal + itemTotal);
     });
-    
+
     // Map invoices with totals
     const mappedInvoices = invoices.map((invoice: any) => {
       const subtotal = totalsMap.get(invoice.invoice_id) || 0;
@@ -3417,10 +3461,10 @@ export async function getCashInvoicesFromSupabase(limit: number = 50): Promise<a
       const totalAmount = subtotal - discount;
       return mapCashInvoiceFromSupabase(invoice, totalAmount);
     });
-    
+
     const totalTime = Date.now() - startTime;
     console.log(`[API] Cash invoices loaded from Supabase: ${mappedInvoices.length} in ${totalTime}ms`);
-    
+
     return mappedInvoices;
   } catch (error: any) {
     console.error('[API] getCashInvoicesFromSupabase error:', error?.message || error);
@@ -3499,7 +3543,7 @@ export async function updateCashInvoice(
     payload.items.forEach((item) => {
       // Filter out empty serial numbers and convert to JSONB array
       const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
-      
+
       if (item.detailID && existingDetailIds.has(item.detailID)) {
         // Update existing detail
         itemsToUpdate.push({
@@ -3699,7 +3743,7 @@ export async function deleteCashInvoice(invoiceId: string, userName?: string): P
     }
 
     console.log('[API] Invoice deleted successfully');
-    
+
     // Create notification for invoice deletion
     try {
       const { createNotification } = await import('./notifications');
@@ -3714,7 +3758,7 @@ export async function deleteCashInvoice(invoiceId: string, userName?: string): P
       console.error('[API] Failed to create notification for invoice deletion:', notifError);
       // Don't throw - notification is non-critical
     }
-    
+
     return { status: 'success', invoiceID: invoiceId };
   } catch (error: any) {
     console.error('[API] deleteCashInvoice error:', error);
@@ -3754,50 +3798,50 @@ export async function getCashInvoiceDetailsFromSupabase(invoiceId: string): Prom
   try {
     console.log('[API] Fetching cash invoice details from Supabase:', invoiceId);
     const startTime = Date.now();
-    
+
     // Fetch invoice details
     const { data: details, error } = await supabase
       .from('cash_invoice_details')
       .select('*')
       .eq('invoice_id', invoiceId)
       .order('created_at', { ascending: true });
-    
+
     if (error) {
       console.error('[API] Supabase error:', error);
       throw new Error(`Failed to fetch invoice details: ${error.message}`);
     }
-    
+
     if (!details || !Array.isArray(details)) {
       console.error('[API] Invalid details data:', details);
       return [];
     }
-    
+
     // Fetch product information for all product IDs
     const productIds = details.map((detail: any) => detail.product_id).filter(Boolean);
-    
+
     let productsMap = new Map<string, any>();
     if (productIds.length > 0) {
       const { data: products, error: productsError } = await supabase
         .from('products')
         .select('product_id, name, barcode, shamel_no')
         .in('product_id', productIds);
-      
+
       if (!productsError && products && Array.isArray(products)) {
         products.forEach((product: any) => {
           productsMap.set(product.product_id, product);
         });
       }
     }
-    
+
     // Map details with product information
     const mappedDetails = details.map((detail: any) => {
       const product = productsMap.get(detail.product_id);
       return mapCashInvoiceDetailFromSupabase(detail, product);
     });
-    
+
     const totalTime = Date.now() - startTime;
     console.log(`[API] Invoice details loaded from Supabase: ${mappedDetails.length} in ${totalTime}ms`);
-    
+
     return mappedDetails;
   } catch (error: any) {
     console.error('[API] getCashInvoiceDetailsFromSupabase error:', error?.message || error);
@@ -3977,14 +4021,14 @@ export async function getOnlineOrdersFromSupabase(limit: number = 100): Promise<
 export async function getCustomerFromSupabase(customerIdOrEmail: string): Promise<any | null> {
   try {
     console.log('[API] Fetching customer from Supabase...', customerIdOrEmail);
-    
+
     // Try to find by customer_id first
     let { data: customer, error } = await supabase
       .from('customers')
       .select('*')
       .eq('customer_id', customerIdOrEmail)
       .single();
-    
+
     // If not found by ID, try by email
     if (error || !customer) {
       const { data: customerByEmail, error: emailError } = await supabase
@@ -3992,18 +4036,18 @@ export async function getCustomerFromSupabase(customerIdOrEmail: string): Promis
         .select('*')
         .eq('email', customerIdOrEmail)
         .single();
-      
+
       if (!emailError && customerByEmail) {
         customer = customerByEmail;
         error = null;
       }
     }
-    
+
     if (error || !customer) {
       console.log('[API] Customer not found in Supabase:', customerIdOrEmail);
       return null;
     }
-    
+
     console.log('[API] Customer found in Supabase:', customer);
     return {
       customer_id: customer.customer_id,
@@ -4059,7 +4103,7 @@ export async function getOnlineOrderDetailsFromSupabase(orderId: string): Promis
         .select('order_id')
         .eq('order_id', orderId)
         .single();
-      
+
       if (orderError) {
         console.error('[API] Order not found:', orderError);
       } else {
@@ -4426,7 +4470,7 @@ export async function getShopReceipts(page: number = 1, pageSize: number = 20): 
 
     // Get unique customer IDs
     const customerIds = [...new Set(receipts.map(r => r.customer_id).filter(Boolean))];
-    
+
     // Fetch all customer names in one query
     let customerMap = new Map<string, string>();
     if (customerIds.length > 0) {
@@ -4434,7 +4478,7 @@ export async function getShopReceipts(page: number = 1, pageSize: number = 20): 
         .from('customers')
         .select('customer_id, name')
         .in('customer_id', customerIds);
-      
+
       if (customers) {
         customers.forEach((c: any) => {
           customerMap.set(c.customer_id, c.name || '');
@@ -4445,7 +4489,7 @@ export async function getShopReceipts(page: number = 1, pageSize: number = 20): 
     // Map receipts with customer names
     const mappedReceipts = receipts.map((receipt: any) => {
       const customerName = customerMap.get(receipt.customer_id) || '';
-      
+
       return {
         ReceiptID: receipt.receipt_id,
         CustomerID: receipt.customer_id,
@@ -4548,7 +4592,7 @@ export async function updateShopReceipt(receiptId: string, payload: {
       cheque_amount: payload.chequeAmount || 0,
       notes: payload.notes || null,
     };
-    
+
     // Only update created_by if provided (usually preserve original creator)
     if (payload.created_by !== undefined) {
       receiptData.created_by = payload.created_by;
@@ -4750,7 +4794,7 @@ export async function getShopPayments(page: number = 1, pageSize: number = 20): 
 
     // Get unique customer IDs
     const customerIds = [...new Set(payments.map(p => p.customer_id).filter(Boolean))];
-    
+
     // Fetch all customer names in one query
     let customerMap = new Map<string, string>();
     if (customerIds.length > 0) {
@@ -4758,7 +4802,7 @@ export async function getShopPayments(page: number = 1, pageSize: number = 20): 
         .from('customers')
         .select('customer_id, name')
         .in('customer_id', customerIds);
-      
+
       if (customers) {
         customers.forEach((c: any) => {
           customerMap.set(c.customer_id, c.name || '');
@@ -4769,7 +4813,7 @@ export async function getShopPayments(page: number = 1, pageSize: number = 20): 
     // Map payments with customer names
     const mappedPayments = payments.map((payment: any) => {
       const customerName = customerMap.get(payment.customer_id) || '';
-      
+
       return {
         PayID: payment.pay_id,
         CustomerID: payment.customer_id,
@@ -4861,7 +4905,7 @@ export async function updateShopPayment(payId: string, payload: {
       cheque_amount: payload.chequeAmount || 0,
       notes: payload.notes || null,
     };
-    
+
     // Only update created_by if provided (usually preserve original creator)
     if (payload.created_by !== undefined) {
       paymentData.created_by = payload.created_by;
@@ -5055,7 +5099,7 @@ export async function saveShopSalesInvoice(payload: {
     const invoiceDetailsWithSerials = payload.items.map((item) => {
       // Filter out empty serial numbers and convert to JSONB array
       const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
-      
+
       return {
         detail: {
           invoice_id: invoiceID,
@@ -5138,7 +5182,7 @@ export async function saveShopSalesInvoice(payload: {
     }
 
     console.log('[API] Shop sales invoice saved successfully');
-    
+
     // Create notification for shop invoice creation
     try {
       const { createNotification, getCustomerName } = await import('./notifications');
@@ -5169,7 +5213,7 @@ export async function saveShopSalesInvoice(payload: {
       console.error('[API] Failed to create notification for shop invoice creation:', notifError);
       // Don't throw - notification is non-critical
     }
-    
+
     return { status: 'success', invoiceID, data: { invoiceID, ...invoiceHeader } };
   } catch (error: any) {
     console.error('[API] saveShopSalesInvoice error:', error);
@@ -5251,7 +5295,7 @@ export async function getShopSalesInvoices(page: number = 1, pageSize: number = 
         .from('customers')
         .select('customer_id')
         .or(`name.ilike.%${search}%,customer_id.ilike.%${search}%`);
-      
+
       if (matchingCustomers) {
         customerIdsToSearch = matchingCustomers.map(c => c.customer_id);
       }
@@ -5269,7 +5313,7 @@ export async function getShopSalesInvoices(page: number = 1, pageSize: number = 
     // Apply search filters
     if (searchQuery && searchQuery.trim()) {
       const search = searchQuery.trim();
-      
+
       if (customerIdsToSearch.length > 0) {
         // Search in invoice_id OR customer_id (direct match) OR customer_id in matching list
         // We'll fetch both sets and combine them
@@ -5278,20 +5322,20 @@ export async function getShopSalesInvoices(page: number = 1, pageSize: number = 
           .from('shop_sales_invoices')
           .select('invoice_id')
           .or(`invoice_id.ilike.%${search}%,customer_id.ilike.%${search}%`);
-        
+
         const directMatchIds = directMatches?.map(i => i.invoice_id) || [];
-        
+
         // Then get invoices matching customer IDs
         const { data: customerMatches } = await supabase
           .from('shop_sales_invoices')
           .select('invoice_id')
           .in('customer_id', customerIdsToSearch);
-        
+
         const customerMatchIds = customerMatches?.map(i => i.invoice_id) || [];
-        
+
         // Combine and get unique IDs
         const allMatchIds = [...new Set([...directMatchIds, ...customerMatchIds])];
-        
+
         if (allMatchIds.length > 0) {
           countQuery = countQuery.in('invoice_id', allMatchIds);
           dataQuery = dataQuery.in('invoice_id', allMatchIds);
@@ -5350,7 +5394,7 @@ export async function getShopSalesInvoices(page: number = 1, pageSize: number = 
 
     // Get unique customer IDs
     const customerIds = [...new Set(invoices.map(i => i.customer_id).filter(Boolean))];
-    
+
     // Fetch all customer names and shamel_no in one query
     let customerMap = new Map<string, { name: string; shamelNo: string }>();
     if (customerIds.length > 0) {
@@ -5358,7 +5402,7 @@ export async function getShopSalesInvoices(page: number = 1, pageSize: number = 
         .from('customers')
         .select('customer_id, name, shamel_no')
         .in('customer_id', customerIds);
-      
+
       if (customers) {
         customers.forEach((c: any) => {
           customerMap.set(c.customer_id, {
@@ -5372,27 +5416,27 @@ export async function getShopSalesInvoices(page: number = 1, pageSize: number = 
     // Fetch details for each invoice individually (same method as quotations - more reliable)
     const mappedInvoices = await Promise.all(invoices.map(async (invoice: any) => {
       const invoiceId = invoice.invoice_id;
-      
+
       // Fetch details for this invoice
       const { data: details, error: detailsError } = await supabase
         .from('shop_sales_details')
         .select('quantity, unit_price')
         .eq('invoice_id', invoiceId);
-      
+
       if (detailsError) {
         console.error(`[API] Error fetching details for invoice ${invoiceId}:`, detailsError);
       }
-      
+
       // Calculate subtotal from details
       const subtotal = (details || []).reduce((sum: number, detail: any) => {
         const quantity = parseFloat(String(detail.quantity || 0));
         const unitPrice = parseFloat(String(detail.unit_price || 0));
         return sum + (quantity * unitPrice);
       }, 0);
-      
+
       const discount = parseFloat(String(invoice.discount || 0));
       const total = Math.max(0, subtotal - discount);
-      
+
       const customer = customerMap.get(invoice.customer_id) || { name: '', shamelNo: '' };
 
       return {
@@ -5472,7 +5516,7 @@ export async function getShopSalesInvoice(invoiceId: string): Promise<any> {
         .from('products')
         .select('product_id, name, barcode, shamel_no')
         .in('product_id', productIds);
-      
+
       if (products) {
         products.forEach((p: any) => {
           productsMap.set(p.product_id, p);
@@ -5640,7 +5684,7 @@ export async function updateShopSalesInvoice(
       for (const item of payload.itemsToUpdate) {
         // Filter out empty serial numbers and convert to JSONB array
         const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
-        
+
         const { error: updateError } = await supabase
           .from('shop_sales_details')
           .update({
@@ -5695,7 +5739,7 @@ export async function updateShopSalesInvoice(
       const itemsWithSerials = payload.itemsToAdd.map((item) => {
         // Filter out empty serial numbers and convert to JSONB array
         const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
-        
+
         return {
           detail: {
             invoice_id: invoiceId,
@@ -5800,7 +5844,7 @@ export async function deleteShopSalesInvoice(invoiceId: string, userName?: strin
     }
 
     console.log('[API] Shop sales invoice deleted successfully');
-    
+
     // Create notification for shop invoice deletion
     try {
       const { createNotification } = await import('./notifications');
@@ -5815,7 +5859,7 @@ export async function deleteShopSalesInvoice(invoiceId: string, userName?: strin
       console.error('[API] Failed to create notification for shop invoice deletion:', notifError);
       // Don't throw - notification is non-critical
     }
-    
+
     return { status: 'success' };
   } catch (error: any) {
     console.error('[API] deleteShopSalesInvoice error:', error);
@@ -5893,7 +5937,7 @@ export async function saveWarehouseSalesInvoice(payload: {
     const invoiceDetailsWithSerials = payload.items.map((item) => {
       // Filter out empty serial numbers and convert to JSONB array
       const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
-      
+
       return {
         detail: {
           invoice_id: invoiceID,
@@ -5951,7 +5995,7 @@ export async function saveWarehouseSalesInvoice(payload: {
     }
 
     console.log('[API] Warehouse sales invoice saved successfully');
-    
+
     // Create notification for warehouse invoice creation
     try {
       const { createNotification, getCustomerName } = await import('./notifications');
@@ -5982,7 +6026,7 @@ export async function saveWarehouseSalesInvoice(payload: {
       console.error('[API] Failed to create notification for warehouse invoice creation:', notifError);
       // Don't throw - notification is non-critical
     }
-    
+
     return { status: 'success', invoiceID, data: { invoiceID, ...invoiceHeader } };
   } catch (error: any) {
     console.error('[API] saveWarehouseSalesInvoice error:', error);
@@ -6064,7 +6108,7 @@ export async function getWarehouseSalesInvoices(page: number = 1, pageSize: numb
         .from('customers')
         .select('customer_id')
         .or(`name.ilike.%${search}%,customer_id.ilike.%${search}%`);
-      
+
       if (matchingCustomers) {
         customerIdsToSearch = matchingCustomers.map(c => c.customer_id);
       }
@@ -6082,7 +6126,7 @@ export async function getWarehouseSalesInvoices(page: number = 1, pageSize: numb
     // Apply search filters
     if (searchQuery && searchQuery.trim()) {
       const search = searchQuery.trim();
-      
+
       if (customerIdsToSearch.length > 0) {
         // Search in invoice_id OR customer_id (direct match) OR customer_id in matching list
         // First, get invoices matching invoice_id or customer_id directly
@@ -6090,20 +6134,20 @@ export async function getWarehouseSalesInvoices(page: number = 1, pageSize: numb
           .from('warehouse_sales_invoices')
           .select('invoice_id')
           .or(`invoice_id.ilike.%${search}%,customer_id.ilike.%${search}%`);
-        
+
         const directMatchIds = directMatches?.map(i => i.invoice_id) || [];
-        
+
         // Then get invoices matching customer IDs
         const { data: customerMatches } = await supabase
           .from('warehouse_sales_invoices')
           .select('invoice_id')
           .in('customer_id', customerIdsToSearch);
-        
+
         const customerMatchIds = customerMatches?.map(i => i.invoice_id) || [];
-        
+
         // Combine and get unique IDs
         const allMatchIds = [...new Set([...directMatchIds, ...customerMatchIds])];
-        
+
         if (allMatchIds.length > 0) {
           countQuery = countQuery.in('invoice_id', allMatchIds);
           dataQuery = dataQuery.in('invoice_id', allMatchIds);
@@ -6162,7 +6206,7 @@ export async function getWarehouseSalesInvoices(page: number = 1, pageSize: numb
 
     // Get unique customer IDs
     const customerIds = [...new Set(invoices.map(i => i.customer_id).filter(Boolean))];
-    
+
     // Fetch all customer names and shamel_no in one query
     let customerMap = new Map<string, { name: string; shamelNo: string }>();
     if (customerIds.length > 0) {
@@ -6170,7 +6214,7 @@ export async function getWarehouseSalesInvoices(page: number = 1, pageSize: numb
         .from('customers')
         .select('customer_id, name, shamel_no')
         .in('customer_id', customerIds);
-      
+
       if (customers) {
         customers.forEach((c: any) => {
           customerMap.set(c.customer_id, {
@@ -6184,27 +6228,27 @@ export async function getWarehouseSalesInvoices(page: number = 1, pageSize: numb
     // Fetch details for each invoice individually (same method as quotations - more reliable)
     const mappedInvoices = await Promise.all(invoices.map(async (invoice: any) => {
       const invoiceId = invoice.invoice_id;
-      
+
       // Fetch details for this invoice
       const { data: details, error: detailsError } = await supabase
         .from('warehouse_sales_details')
         .select('quantity, unit_price')
         .eq('invoice_id', invoiceId);
-      
+
       if (detailsError) {
         console.error(`[API] Error fetching details for invoice ${invoiceId}:`, detailsError);
       }
-      
+
       // Calculate subtotal from details
       const subtotal = (details || []).reduce((sum: number, detail: any) => {
         const quantity = parseFloat(String(detail.quantity || 0));
         const unitPrice = parseFloat(String(detail.unit_price || 0));
         return sum + (quantity * unitPrice);
       }, 0);
-      
+
       const discount = parseFloat(String(invoice.discount || 0));
       const total = Math.max(0, subtotal - discount);
-      
+
       const customer = customerMap.get(invoice.customer_id) || { name: '', shamelNo: '' };
 
       return {
@@ -6284,7 +6328,7 @@ export async function getWarehouseSalesInvoice(invoiceId: string): Promise<any> 
         .from('products')
         .select('product_id, name, barcode, shamel_no')
         .in('product_id', productIds);
-      
+
       if (products) {
         products.forEach((p: any) => {
           productsMap.set(p.product_id, p);
@@ -6452,7 +6496,7 @@ export async function updateWarehouseSalesInvoice(
       for (const item of payload.itemsToUpdate) {
         // Filter out empty serial numbers and convert to JSONB array
         const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
-        
+
         const { error: updateError } = await supabase
           .from('warehouse_sales_details')
           .update({
@@ -6507,7 +6551,7 @@ export async function updateWarehouseSalesInvoice(
       const itemsWithSerials = payload.itemsToAdd.map((item) => {
         // Filter out empty serial numbers and convert to JSONB array
         const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
-        
+
         return {
           detail: {
             invoice_id: invoiceId,
@@ -6612,7 +6656,7 @@ export async function deleteWarehouseSalesInvoice(invoiceId: string, userName?: 
     }
 
     console.log('[API] Warehouse sales invoice deleted successfully');
-    
+
     // Create notification for warehouse invoice deletion
     try {
       const { createNotification } = await import('./notifications');
@@ -6627,7 +6671,7 @@ export async function deleteWarehouseSalesInvoice(invoiceId: string, userName?: 
       console.error('[API] Failed to create notification for warehouse invoice deletion:', notifError);
       // Don't throw - notification is non-critical
     }
-    
+
     return { status: 'success' };
   } catch (error: any) {
     console.error('[API] deleteWarehouseSalesInvoice error:', error);
@@ -6705,7 +6749,7 @@ export async function saveMaintenance(payload: {
     }
 
     console.log('[API] Maintenance record saved successfully');
-    
+
     // Create notification for maintenance creation
     try {
       const { createNotification, getCustomerName } = await import('./notifications');
@@ -6736,7 +6780,7 @@ export async function saveMaintenance(payload: {
       console.error('[API] Failed to create notification for maintenance creation:', notifError);
       // Don't throw - notification is non-critical
     }
-    
+
     return data;
   } catch (error: any) {
     console.error('[API] saveMaintenance error:', error);
@@ -7045,7 +7089,7 @@ export async function updateMaintenance(
         console.error('[API] Error creating history entry:', historyErr);
         // Don't throw - the main update succeeded
       }
-      
+
       // Create notification for maintenance status change
       try {
         const { createNotification, getCustomerName } = await import('./notifications');
@@ -7105,7 +7149,7 @@ export async function deleteMaintenance(maintNo: string, userName?: string): Pro
     }
 
     console.log('[API] Maintenance record deleted successfully');
-    
+
     // Create notification for maintenance deletion
     try {
       const { createNotification } = await import('./notifications');
@@ -7120,7 +7164,7 @@ export async function deleteMaintenance(maintNo: string, userName?: string): Pro
       console.error('[API] Failed to create notification for maintenance deletion:', notifError);
       // Don't throw - notification is non-critical
     }
-    
+
     return { status: 'success' };
   } catch (error: any) {
     console.error('[API] deleteMaintenance error:', error);
@@ -7524,7 +7568,7 @@ export async function getCashSessionReport(sessionId: string): Promise<any> {
     // Get session
     const session = await getCashSession(sessionId);
     const sessionDate = session.Date;
-    
+
     // Normalize date to YYYY-MM-DD format for comparison
     // Important: Use local date, not UTC, to avoid timezone issues
     let normalizedDate = sessionDate;
@@ -7555,7 +7599,7 @@ export async function getCashSessionReport(sessionId: string): Promise<any> {
     }
 
     console.log('[API] Cash session report - Session Date:', sessionDate, 'Normalized:', normalizedDate);
-    
+
     // Calculate date range for filtering (start and end of day in UTC)
     // This ensures we get all records for the date regardless of timezone
     const dateStart = new Date(normalizedDate + 'T00:00:00.000Z');
@@ -7583,11 +7627,11 @@ export async function getCashSessionReport(sessionId: string): Promise<any> {
     } catch (receiptsError: any) {
       console.error('[API] Error fetching receipts:', receiptsError);
     }
-    
+
     // Filter receipts by date in JavaScript
     const receipts = (allReceipts || []).filter((r: any) => {
       if (!r.date) return false;
-      
+
       // Normalize receipt date to YYYY-MM-DD
       let receiptDateStr = '';
       if (r.date instanceof Date) {
@@ -7611,10 +7655,10 @@ export async function getCashSessionReport(sessionId: string): Promise<any> {
           }
         }
       }
-      
+
       return receiptDateStr === normalizedDate;
     });
-    
+
     console.log('[API] Receipts found:', receipts.length, 'out of', allReceipts?.length || 0, 'total');
     if (receipts.length > 0) {
       console.log('[API] Sample receipt dates:', receipts.slice(0, 3).map((r: any) => ({
@@ -7647,11 +7691,11 @@ export async function getCashSessionReport(sessionId: string): Promise<any> {
     } catch (paymentsError: any) {
       console.error('[API] Error fetching payments:', paymentsError);
     }
-    
+
     // Filter payments by date in JavaScript
     const payments = (allPayments || []).filter((p: any) => {
       if (!p.date) return false;
-      
+
       // Normalize payment date to YYYY-MM-DD
       let paymentDateStr = '';
       if (p.date instanceof Date) {
@@ -7675,10 +7719,10 @@ export async function getCashSessionReport(sessionId: string): Promise<any> {
           }
         }
       }
-      
+
       return paymentDateStr === normalizedDate;
     });
-    
+
     console.log('[API] Payments found:', payments.length, 'out of', allPayments?.length || 0, 'total');
     if (payments.length > 0) {
       console.log('[API] Sample payment dates:', payments.slice(0, 3).map((p: any) => ({
@@ -7710,7 +7754,7 @@ export async function getCashSessionReport(sessionId: string): Promise<any> {
       .select('invoice_id, date_time, discount, status')
       .gte('date_time', dateStart.toISOString())
       .lte('date_time', dateEnd.toISOString());
-    
+
     console.log('[API] Cash invoices found:', cashInvoices?.length || 0);
 
     if (invoicesError) {
@@ -7821,6 +7865,8 @@ function mapQuotationFromSupabase(quotation: any, totalAmount: number = 0): any 
     Status: quotation.status || 'مسودة',
     SpecialDiscountAmount: parseFloat(String(quotation.special_discount_amount || 0)) || 0,
     GiftDiscountAmount: parseFloat(String(quotation.gift_discount_amount || 0)) || 0,
+    is_groom_offer: quotation.is_groom_offer || false,
+    groom_offer_title: quotation.groom_offer_title || '',
     totalAmount: totalAmount,
     CreatedAt: quotation.created_at || '',
     CreatedBy: quotation.created_by || quotation.user_id || '',
@@ -7829,11 +7875,11 @@ function mapQuotationFromSupabase(quotation: any, totalAmount: number = 0): any 
     user_id: quotation.created_by || null,
     customer: customer
       ? {
-          name: customer.name || '',
-          phone: customer.phone || '',
-          address: customer.address || '',
-          shamelNo: customer.shamel_no || '',
-        }
+        name: customer.name || '',
+        phone: customer.phone || '',
+        address: customer.address || '',
+        shamelNo: customer.shamel_no || '',
+      }
       : undefined,
   };
 }
@@ -7875,7 +7921,7 @@ export async function getQuotationsFromSupabase(page: number = 1, pageSize: numb
   try {
     console.log('[API] Fetching quotations from Supabase...', { page, pageSize, searchQuery });
     const startTime = Date.now();
-    
+
     // Calculate pagination
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
@@ -7888,7 +7934,7 @@ export async function getQuotationsFromSupabase(page: number = 1, pageSize: numb
         .from('customers')
         .select('customer_id')
         .or(`name.ilike.%${search}%,customer_id.ilike.%${search}%`);
-      
+
       if (matchingCustomers) {
         customerIdsToSearch = matchingCustomers.map(c => c.customer_id);
       }
@@ -7906,7 +7952,7 @@ export async function getQuotationsFromSupabase(page: number = 1, pageSize: numb
     // Apply search filters
     if (searchQuery && searchQuery.trim()) {
       const search = searchQuery.trim();
-      
+
       if (customerIdsToSearch.length > 0) {
         // Search in quotation_id OR notes OR customer_id (direct match) OR customer_id in matching list
         // First, get quotations matching quotation_id, notes, or customer_id directly
@@ -7914,20 +7960,20 @@ export async function getQuotationsFromSupabase(page: number = 1, pageSize: numb
           .from('quotations')
           .select('quotation_id')
           .or(`quotation_id.ilike.%${search}%,customer_id.ilike.%${search}%,notes.ilike.%${search}%`);
-        
+
         const directMatchIds = directMatches?.map(q => q.quotation_id) || [];
-        
+
         // Then get quotations matching customer IDs
         const { data: customerMatches } = await supabase
           .from('quotations')
           .select('quotation_id')
           .in('customer_id', customerIdsToSearch);
-        
+
         const customerMatchIds = customerMatches?.map(q => q.quotation_id) || [];
-        
+
         // Combine and get unique IDs
         const allMatchIds = [...new Set([...directMatchIds, ...customerMatchIds])];
-        
+
         if (allMatchIds.length > 0) {
           countQuery = countQuery.in('quotation_id', allMatchIds);
           dataQuery = dataQuery.in('quotation_id', allMatchIds);
@@ -7978,46 +8024,46 @@ export async function getQuotationsFromSupabase(page: number = 1, pageSize: numb
       }
       quotations = all.slice(from, to + 1);
     }
-    
+
     if (!quotations || !Array.isArray(quotations)) {
       console.error('[API] Invalid quotations data:', quotations);
       throw new Error('Invalid response format: No quotations array found');
     }
-    
+
     // Fetch details for each quotation individually (old method - more reliable)
     // This ensures we get the correct totals even if it's a bit slower
     const mappedQuotations = await Promise.all(quotations.map(async (quotation: any) => {
       const quotationId = quotation.quotation_id;
-      
+
       // Fetch details for this quotation
       const { data: details, error: detailsError } = await supabase
         .from('quotation_details')
         .select('quantity, unit_price')
         .eq('quotation_id', quotationId);
-      
+
       if (detailsError) {
         console.error(`[API] Error fetching details for quotation ${quotationId}:`, detailsError);
       }
-      
+
       // Calculate subtotal from details
       const subtotal = (details || []).reduce((sum: number, detail: any) => {
         const quantity = parseFloat(String(detail.quantity || 0));
         const unitPrice = parseFloat(String(detail.unit_price || 0));
         return sum + (quantity * unitPrice);
       }, 0);
-      
+
       const specialDiscount = parseFloat(String(quotation.special_discount_amount || 0)) || 0;
       const giftDiscount = parseFloat(String(quotation.gift_discount_amount || 0)) || 0;
-      
+
       // Calculate total from details
       const totalAmount = Math.max(0, subtotal - specialDiscount - giftDiscount);
-      
+
       return mapQuotationFromSupabase(quotation, totalAmount);
     }));
-    
+
     const totalTime = Date.now() - startTime;
     console.log(`[API] Quotations loaded from Supabase: ${mappedQuotations.length} of ${total} in ${totalTime}ms`);
-    
+
     // Debug: Check final mapped quotations
     if (mappedQuotations.length > 0) {
       const sampleMapped = mappedQuotations.slice(0, 3).map(q => ({
@@ -8026,7 +8072,7 @@ export async function getQuotationsFromSupabase(page: number = 1, pageSize: numb
       }));
       console.log('[API] Sample final mapped quotations:', sampleMapped);
     }
-    
+
     return { quotations: mappedQuotations, total };
   } catch (error: any) {
     console.error('[API] getQuotationsFromSupabase error:', error);
@@ -8040,7 +8086,7 @@ export async function getQuotationsFromSupabase(page: number = 1, pageSize: numb
 export async function getQuotationDetailsFromSupabase(quotationId: string): Promise<any[]> {
   try {
     console.log('[API] Fetching quotation details from Supabase:', quotationId);
-    
+
     const { data: details, error } = await supabase
       .from('quotation_details')
       .select(`
@@ -8062,16 +8108,16 @@ export async function getQuotationDetailsFromSupabase(quotationId: string): Prom
       `)
       .eq('quotation_id', quotationId)
       .order('created_at', { ascending: true });
-    
+
     if (error) {
       console.error('[API] Supabase error:', error);
       throw new Error(`Failed to fetch quotation details: ${error.message}`);
     }
-    
+
     if (!details || !Array.isArray(details)) {
       return [];
     }
-    
+
     // Map details with product info
     return details.map((detail: any) => {
       const product = detail.products || {};
@@ -8106,25 +8152,25 @@ export async function getQuotationDetailsFromSupabase(quotationId: string): Prom
 export async function getQuotationFromSupabase(quotationId: string): Promise<any> {
   try {
     console.log('[API] Fetching quotation from Supabase:', quotationId);
-    
+
     const { data: quotation, error } = await supabase
       .from('quotations')
       .select('*, customers:customer_id(name, phone, address, shamel_no)')
       .eq('quotation_id', quotationId)
       .single();
-    
+
     if (error) {
       console.error('[API] Supabase error:', error);
       throw new Error(`Failed to fetch quotation: ${error.message}`);
     }
-    
+
     if (!quotation) {
       throw new Error('Quotation not found');
     }
-    
+
     // Get details
     const details = await getQuotationDetailsFromSupabase(quotationId);
-    
+
     // Calculate total
     const subtotal = details.reduce((sum: number, detail: any) => {
       return sum + (detail.Quantity * detail.UnitPrice);
@@ -8132,7 +8178,7 @@ export async function getQuotationFromSupabase(quotationId: string): Promise<any
     const specialDiscount = parseFloat(String(quotation.special_discount_amount || 0)) || 0;
     const giftDiscount = parseFloat(String(quotation.gift_discount_amount || 0)) || 0;
     const totalAmount = subtotal - specialDiscount - giftDiscount;
-    
+
     return {
       ...mapQuotationFromSupabase(quotation, totalAmount),
       details: details,
@@ -8156,6 +8202,8 @@ export async function saveQuotation(
     specialDiscountAmount?: number;
     giftDiscountAmount?: number;
     created_by?: string; // Admin user ID (UUID)
+    isGroomOffer?: boolean;
+    groomOfferTitle?: string;
     items: Array<{
       detailID?: string;
       productID: string;
@@ -8169,14 +8217,14 @@ export async function saveQuotation(
 ): Promise<any> {
   try {
     console.log('[API] Saving quotation in Supabase:', quotationId, payload);
-    
+
     const isNew = !quotationId;
-    
+
     if (isNew) {
       // Generate new quotation ID in format: Qut-0001-XYZ
       quotationId = await generateQuotationId();
     }
-    
+
     // Step 1: Save quotation header
     const quotationData: any = {
       quotation_id: quotationId,
@@ -8187,17 +8235,19 @@ export async function saveQuotation(
       special_discount_amount: payload.specialDiscountAmount || 0,
       gift_discount_amount: payload.giftDiscountAmount || 0,
       created_by: payload.created_by || null, // Admin user ID
+      is_groom_offer: payload.isGroomOffer || false,
+      groom_offer_title: payload.groomOfferTitle || null,
     };
-    
+
     const { error: quotationError } = await supabase
       .from('quotations')
       .upsert(quotationData, { onConflict: 'quotation_id' });
-    
+
     if (quotationError) {
       console.error('[API] Error saving quotation:', quotationError);
       throw new Error(`Failed to save quotation: ${quotationError.message}`);
     }
-    
+
     // Step 2: Delete existing details if updating
     if (!isNew) {
       // First, delete existing serial numbers for this quotation
@@ -8208,25 +8258,25 @@ export async function saveQuotation(
         console.error('[API] Error deleting old serial numbers (non-critical):', serialDeleteError);
         // Continue even if serial deletion fails
       }
-      
+
       // Then delete the details (which will cascade if needed)
       const { error: deleteError } = await supabase
         .from('quotation_details')
         .delete()
         .eq('quotation_id', quotationId);
-      
+
       if (deleteError) {
         console.error('[API] Error deleting old details:', deleteError);
         throw new Error(`Failed to update quotation details: ${deleteError.message}`);
       }
     }
-    
+
     // Step 3: Insert new details
     if (payload.items && payload.items.length > 0) {
       const detailsToInsert = payload.items.map((item) => {
         // Filter out empty serial numbers and convert to JSONB array
         const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
-        
+
         return {
           quotation_detail_id: item.detailID || `QD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           quotation_id: quotationId,
@@ -8238,12 +8288,12 @@ export async function saveQuotation(
           serial_no: serialNos.length > 0 ? serialNos : null, // Store as JSONB array (for backward compatibility)
         };
       });
-      
+
       const { data: insertedDetails, error: detailsError } = await supabase
         .from('quotation_details')
         .insert(detailsToInsert)
         .select('quotation_detail_id');
-      
+
       if (detailsError) {
         console.error('[API] Error saving quotation details:', detailsError);
         throw new Error(`Failed to save quotation details: ${detailsError.message}`);
@@ -8275,7 +8325,7 @@ export async function saveQuotation(
         }
       }
     }
-    
+
     // Step 4: Fetch and return the complete quotation
     return await getQuotationFromSupabase(quotationId!);
   } catch (error: any) {
@@ -8309,17 +8359,17 @@ async function generateQuotationId(): Promise<string> {
 export async function updateQuotationStatus(quotationId: string, status: string): Promise<void> {
   try {
     console.log('[API] Updating quotation status in Supabase:', quotationId, status);
-    
+
     const { error } = await supabase
       .from('quotations')
       .update({ status })
       .eq('quotation_id', quotationId);
-    
+
     if (error) {
       console.error('[API] Error updating quotation status:', error);
       throw new Error(`Failed to update quotation status: ${error.message}`);
     }
-    
+
     console.log('[API] Quotation status updated successfully');
   } catch (error: any) {
     console.error('[API] updateQuotationStatus error:', error);
@@ -8333,13 +8383,13 @@ export async function updateQuotationStatus(quotationId: string, status: string)
 export async function deleteQuotation(quotationId: string): Promise<void> {
   try {
     console.log('[API] Deleting quotation from Supabase:', quotationId);
-    
+
     // Details will be deleted automatically due to CASCADE
     const { error } = await supabase
       .from('quotations')
       .delete()
       .eq('quotation_id', quotationId);
-    
+
     if (error) {
       console.error('[API] Error deleting quotation:', error);
       throw new Error(`Failed to delete quotation: ${error.message}`);
@@ -8347,6 +8397,59 @@ export async function deleteQuotation(quotationId: string): Promise<void> {
   } catch (error: any) {
     console.error('[API] deleteQuotation error:', error);
     throw error;
+  }
+}
+
+/**
+ * Get public Groom Offers for the storefront
+ */
+export async function getGroomOffers(): Promise<any[]> {
+  try {
+    console.log('[API] Fetching Grom Offers...');
+
+    // Fetch quotations marked as is_groom_offer = true
+    const { data: quotations, error } = await supabase
+      .from('quotations')
+      .select('*, customers:customer_id(name, phone, address, shamel_no)')
+      .eq('is_groom_offer', true)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[API] Error fetching groom offers:', error);
+      throw new Error(`Failed to fetch groom offers: ${error.message}`);
+    }
+
+    if (!quotations || !Array.isArray(quotations)) {
+      return [];
+    }
+
+    // Process each offer to calculate totals and get details
+    const offers = await Promise.all(quotations.map(async (quotation: any) => {
+      // Get details
+      const details = await getQuotationDetailsFromSupabase(quotation.quotation_id);
+
+      // Calculate total
+      const subtotal = details.reduce((sum: number, detail: any) => {
+        return sum + (detail.Quantity * detail.UnitPrice);
+      }, 0);
+      const specialDiscount = parseFloat(String(quotation.special_discount_amount || 0)) || 0;
+      const giftDiscount = parseFloat(String(quotation.gift_discount_amount || 0)) || 0;
+      const totalAmount = subtotal - specialDiscount - giftDiscount;
+
+      // Map using existing function
+      const mapped = mapQuotationFromSupabase(quotation, totalAmount);
+
+      return {
+        ...mapped,
+        details: details, // Include details for display
+        TotalPrice: totalAmount, // Explicit field for UI
+      };
+    }));
+
+    return offers;
+  } catch (error: any) {
+    console.error('[API] getGroomOffers error:', error);
+    return [];
   }
 }
 
@@ -8380,7 +8483,7 @@ export async function getCustomerLastPriceForProduct(customerId: string, product
     } else if (shopInvoices && shopInvoices.length > 0) {
       const invoiceIds = shopInvoices.map((inv: any) => inv.invoice_id);
       console.log('[API] getCustomerLastPriceForProduct: Found shop invoices', shopInvoices.length, 'invoiceIds:', invoiceIds.slice(0, 5));
-      
+
       const { data: shopDetails, error: shopDetailsError } = await supabase
         .from('shop_sales_details')
         .select('invoice_id, unit_price, created_at')
@@ -8394,7 +8497,7 @@ export async function getCustomerLastPriceForProduct(customerId: string, product
         console.log('[API] getCustomerLastPriceForProduct: Found shop details', shopDetails.length);
         // Create a map for quick invoice lookup
         const invoiceMap = new Map(shopInvoices.map((inv: any) => [inv.invoice_id, inv]));
-        
+
         for (const detail of shopDetails) {
           const invoice = invoiceMap.get(detail.invoice_id);
           if (invoice && invoice.date) {
@@ -8422,7 +8525,7 @@ export async function getCustomerLastPriceForProduct(customerId: string, product
     } else if (warehouseInvoices && warehouseInvoices.length > 0) {
       const invoiceIds = warehouseInvoices.map((inv: any) => inv.invoice_id);
       console.log('[API] getCustomerLastPriceForProduct: Found warehouse invoices', warehouseInvoices.length);
-      
+
       const { data: warehouseDetails, error: warehouseDetailsError } = await supabase
         .from('warehouse_sales_details')
         .select('invoice_id, unit_price, created_at')
@@ -8435,7 +8538,7 @@ export async function getCustomerLastPriceForProduct(customerId: string, product
       } else if (warehouseDetails && warehouseDetails.length > 0) {
         console.log('[API] getCustomerLastPriceForProduct: Found warehouse details', warehouseDetails.length);
         const invoiceMap = new Map(warehouseInvoices.map((inv: any) => [inv.invoice_id, inv]));
-        
+
         for (const detail of warehouseDetails) {
           const invoice = invoiceMap.get(detail.invoice_id);
           if (invoice && invoice.date) {
@@ -8520,7 +8623,7 @@ export async function getWarehouseCashFlow(): Promise<any[]> {
 
     // If view doesn't work or doesn't have IDs, fetch from individual tables (with pagination)
     console.log('[API] Fetching from individual tables...');
-    
+
     const [receipts, payments] = await Promise.all([
       fetchAllSupabaseRows<any>(
         'warehouse_receipts',
@@ -8607,7 +8710,7 @@ export async function getShopCashFlow(): Promise<any[]> {
           const paymentId = item.payment_id || item.pay_id || '';
           const isReceipt = !!receiptId;
           const isPayment = !!paymentId;
-          
+
           let direction: 'in' | 'out' = 'in';
           if (item.direction) {
             direction = item.direction.toLowerCase() === 'out' ? 'out' : 'in';
@@ -8649,7 +8752,7 @@ export async function getShopCashFlow(): Promise<any[]> {
 
     // If view doesn't work or doesn't have data, fetch from individual tables (with pagination)
     console.log('[API] Fetching from individual tables...');
-    
+
     const [receipts, payments] = await Promise.all([
       fetchAllSupabaseRows<any>(
         'shop_receipts',
@@ -8904,7 +9007,7 @@ export async function createWarehousePayment(data: {
         savedCustomerId,
         fullResult: result
       });
-      
+
       if (!savedCustomerId) {
         console.warn('[API] Warning: customer_id was not saved in payment. Result:', result);
       }
@@ -9488,7 +9591,7 @@ export async function getCampaignWithProductsBySlug(slug: string): Promise<any |
               const mappedProduct = mapProductFromSupabase(product);
               // Store original price before overriding
               const originalPrice = mappedProduct.SalePrice || mappedProduct.price || 0;
-              
+
               // Override price with campaign offer_price if available
               if (cp.offer_price) {
                 mappedProduct.originalPrice = originalPrice;
@@ -9565,7 +9668,7 @@ export async function getCampaignWithProducts(campaignId: string): Promise<any |
               const mappedProduct = mapProductFromSupabase(product);
               // Store original price before overriding
               const originalPrice = mappedProduct.SalePrice || mappedProduct.price || 0;
-              
+
               // Override price with campaign offer_price if available
               if (cp.offer_price) {
                 mappedProduct.originalPrice = originalPrice;
@@ -9931,42 +10034,42 @@ export async function deleteCampaign(campaignId: string): Promise<void> {
 export async function getShopSalesInvoicesByProduct(productId: string): Promise<any[]> {
   try {
     console.log('[API] Fetching shop sales invoices by product ID:', productId);
-    
+
     // Get invoice IDs from shop_sales_details
     const { data: details, error: detailsError } = await supabase
       .from('shop_sales_details')
       .select('invoice_id, quantity, unit_price, created_at')
       .eq('product_id', productId)
       .order('created_at', { ascending: false });
-    
+
     if (detailsError) {
       console.error('[API] Failed to fetch shop sales details:', detailsError);
       throw new Error(`Failed to fetch shop sales details: ${detailsError.message}`);
     }
-    
+
     if (!details || details.length === 0) {
       return [];
     }
-    
+
     // Get unique invoice IDs
     const invoiceIds = Array.from(new Set(details.map((d: any) => d.invoice_id)));
-    
+
     // Fetch invoices
     const { data: invoices, error: invoicesError } = await supabase
       .from('shop_sales_invoices')
       .select('*')
       .in('invoice_id', invoiceIds)
       .order('created_at', { ascending: false });
-    
+
     if (invoicesError) {
       console.error('[API] Failed to fetch shop sales invoices:', invoicesError);
       throw new Error(`Failed to fetch shop sales invoices: ${invoicesError.message}`);
     }
-    
+
     // Map invoices with product details
     const invoicesMap = new Map(invoices.map((inv: any) => [inv.invoice_id, inv]));
     const detailsMap = new Map<string, any[]>();
-    
+
     // Group details by invoice_id
     details.forEach((detail: any) => {
       if (!detailsMap.has(detail.invoice_id)) {
@@ -9974,10 +10077,10 @@ export async function getShopSalesInvoicesByProduct(productId: string): Promise<
       }
       detailsMap.get(detail.invoice_id)!.push(detail);
     });
-    
+
     // Get all customer IDs
     const customerIds = Array.from(new Set(invoices.map((inv: any) => inv.customer_id).filter(Boolean)));
-    
+
     // Fetch customer information
     const customersMap = new Map<string, any>();
     if (customerIds.length > 0) {
@@ -9985,23 +10088,23 @@ export async function getShopSalesInvoicesByProduct(productId: string): Promise<
         .from('customers')
         .select('customer_id, name, phone')
         .in('customer_id', customerIds);
-      
+
       if (customers) {
         customers.forEach((c: any) => {
           customersMap.set(c.customer_id, c);
         });
       }
     }
-    
+
     // Get all invoice details to calculate totals and get all items
     const { data: allDetails, error: allDetailsError } = await supabase
       .from('shop_sales_details')
       .select('invoice_id, product_id, quantity, unit_price')
       .in('invoice_id', invoiceIds);
-    
+
     // Get all product IDs from invoice details
     const allProductIds = Array.from(new Set((allDetails || []).map((d: any) => d.product_id).filter(Boolean)));
-    
+
     // Fetch product information
     const productsMap = new Map<string, any>();
     if (allProductIds.length > 0) {
@@ -10009,32 +10112,32 @@ export async function getShopSalesInvoicesByProduct(productId: string): Promise<
         .from('products')
         .select('product_id, name, barcode, shamel_no')
         .in('product_id', allProductIds);
-      
+
       if (products) {
         products.forEach((p: any) => {
           productsMap.set(p.product_id, p);
         });
       }
     }
-    
+
     // Calculate totals and group items by invoice
     const invoiceTotalsMap = new Map<string, { subtotal: number; total: number; items: any[] }>();
     if (allDetails) {
       const totalsByInvoice = new Map<string, number>();
       const itemsByInvoice = new Map<string, any[]>();
-      
+
       allDetails.forEach((detail: any) => {
         const invoiceId = detail.invoice_id;
-        
+
         // Calculate totals
         const current = totalsByInvoice.get(invoiceId) || 0;
         totalsByInvoice.set(invoiceId, current + (parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0))));
-        
+
         // Group items
         if (!itemsByInvoice.has(invoiceId)) {
           itemsByInvoice.set(invoiceId, []);
         }
-        
+
         const product = productsMap.get(detail.product_id);
         itemsByInvoice.get(invoiceId)!.push({
           ProductID: detail.product_id,
@@ -10044,7 +10147,7 @@ export async function getShopSalesInvoicesByProduct(productId: string): Promise<
           TotalPrice: parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0)),
         });
       });
-      
+
       invoices.forEach((invoice: any) => {
         const subtotal = totalsByInvoice.get(invoice.invoice_id) || 0;
         const discount = parseFloat(String(invoice.discount || 0));
@@ -10053,14 +10156,14 @@ export async function getShopSalesInvoicesByProduct(productId: string): Promise<
         invoiceTotalsMap.set(invoice.invoice_id, { subtotal, total, items });
       });
     }
-    
+
     // Combine invoices with their product details
     const result = invoices.map((invoice: any) => {
       const invoiceDetails = detailsMap.get(invoice.invoice_id) || [];
       const productDetail = invoiceDetails.find((d: any) => d.product_id === productId);
       const customer = invoice.customer_id ? customersMap.get(invoice.customer_id) : null;
       const totals = invoiceTotalsMap.get(invoice.invoice_id) || { subtotal: 0, total: 0, items: [] };
-      
+
       return {
         InvoiceID: invoice.invoice_id,
         CustomerID: invoice.customer_id,
@@ -10081,7 +10184,7 @@ export async function getShopSalesInvoicesByProduct(productId: string): Promise<
         ProductTotal: productDetail ? parseFloat(String(productDetail.quantity || 0)) * parseFloat(String(productDetail.unit_price || 0)) : 0,
       };
     });
-    
+
     return result;
   } catch (error: any) {
     console.error('[API] getShopSalesInvoicesByProduct error:', error);
@@ -10095,42 +10198,42 @@ export async function getShopSalesInvoicesByProduct(productId: string): Promise<
 export async function getWarehouseSalesInvoicesByProduct(productId: string): Promise<any[]> {
   try {
     console.log('[API] Fetching warehouse sales invoices by product ID:', productId);
-    
+
     // Get invoice IDs from warehouse_sales_details
     const { data: details, error: detailsError } = await supabase
       .from('warehouse_sales_details')
       .select('invoice_id, quantity, unit_price, created_at')
       .eq('product_id', productId)
       .order('created_at', { ascending: false });
-    
+
     if (detailsError) {
       console.error('[API] Failed to fetch warehouse sales details:', detailsError);
       throw new Error(`Failed to fetch warehouse sales details: ${detailsError.message}`);
     }
-    
+
     if (!details || details.length === 0) {
       return [];
     }
-    
+
     // Get unique invoice IDs
     const invoiceIds = Array.from(new Set(details.map((d: any) => d.invoice_id)));
-    
+
     // Fetch invoices
     const { data: invoices, error: invoicesError } = await supabase
       .from('warehouse_sales_invoices')
       .select('*')
       .in('invoice_id', invoiceIds)
       .order('created_at', { ascending: false });
-    
+
     if (invoicesError) {
       console.error('[API] Failed to fetch warehouse sales invoices:', invoicesError);
       throw new Error(`Failed to fetch warehouse sales invoices: ${invoicesError.message}`);
     }
-    
+
     // Map invoices with product details
     const invoicesMap = new Map(invoices.map((inv: any) => [inv.invoice_id, inv]));
     const detailsMap = new Map<string, any[]>();
-    
+
     // Group details by invoice_id
     details.forEach((detail: any) => {
       if (!detailsMap.has(detail.invoice_id)) {
@@ -10138,10 +10241,10 @@ export async function getWarehouseSalesInvoicesByProduct(productId: string): Pro
       }
       detailsMap.get(detail.invoice_id)!.push(detail);
     });
-    
+
     // Get all customer IDs
     const customerIds = Array.from(new Set(invoices.map((inv: any) => inv.customer_id).filter(Boolean)));
-    
+
     // Fetch customer information
     const customersMap = new Map<string, any>();
     if (customerIds.length > 0) {
@@ -10149,23 +10252,23 @@ export async function getWarehouseSalesInvoicesByProduct(productId: string): Pro
         .from('customers')
         .select('customer_id, name, phone')
         .in('customer_id', customerIds);
-      
+
       if (customers) {
         customers.forEach((c: any) => {
           customersMap.set(c.customer_id, c);
         });
       }
     }
-    
+
     // Get all invoice details to calculate totals and get all items
     const { data: allDetails, error: allDetailsError } = await supabase
       .from('warehouse_sales_details')
       .select('invoice_id, product_id, quantity, unit_price')
       .in('invoice_id', invoiceIds);
-    
+
     // Get all product IDs from invoice details
     const allProductIds = Array.from(new Set((allDetails || []).map((d: any) => d.product_id).filter(Boolean)));
-    
+
     // Fetch product information
     const productsMap = new Map<string, any>();
     if (allProductIds.length > 0) {
@@ -10173,32 +10276,32 @@ export async function getWarehouseSalesInvoicesByProduct(productId: string): Pro
         .from('products')
         .select('product_id, name, barcode, shamel_no')
         .in('product_id', allProductIds);
-      
+
       if (products) {
         products.forEach((p: any) => {
           productsMap.set(p.product_id, p);
         });
       }
     }
-    
+
     // Calculate totals and group items by invoice
     const invoiceTotalsMap = new Map<string, { subtotal: number; total: number; items: any[] }>();
     if (allDetails) {
       const totalsByInvoice = new Map<string, number>();
       const itemsByInvoice = new Map<string, any[]>();
-      
+
       allDetails.forEach((detail: any) => {
         const invoiceId = detail.invoice_id;
-        
+
         // Calculate totals
         const current = totalsByInvoice.get(invoiceId) || 0;
         totalsByInvoice.set(invoiceId, current + (parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0))));
-        
+
         // Group items
         if (!itemsByInvoice.has(invoiceId)) {
           itemsByInvoice.set(invoiceId, []);
         }
-        
+
         const product = productsMap.get(detail.product_id);
         itemsByInvoice.get(invoiceId)!.push({
           ProductID: detail.product_id,
@@ -10208,7 +10311,7 @@ export async function getWarehouseSalesInvoicesByProduct(productId: string): Pro
           TotalPrice: parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0)),
         });
       });
-      
+
       invoices.forEach((invoice: any) => {
         const subtotal = totalsByInvoice.get(invoice.invoice_id) || 0;
         const discount = parseFloat(String(invoice.discount || 0));
@@ -10217,14 +10320,14 @@ export async function getWarehouseSalesInvoicesByProduct(productId: string): Pro
         invoiceTotalsMap.set(invoice.invoice_id, { subtotal, total, items });
       });
     }
-    
+
     // Combine invoices with their product details
     const result = invoices.map((invoice: any) => {
       const invoiceDetails = detailsMap.get(invoice.invoice_id) || [];
       const productDetail = invoiceDetails.find((d: any) => d.product_id === productId);
       const customer = invoice.customer_id ? customersMap.get(invoice.customer_id) : null;
       const totals = invoiceTotalsMap.get(invoice.invoice_id) || { subtotal: 0, total: 0, items: [] };
-      
+
       return {
         InvoiceID: invoice.invoice_id,
         CustomerID: invoice.customer_id,
@@ -10245,7 +10348,7 @@ export async function getWarehouseSalesInvoicesByProduct(productId: string): Pro
         ProductTotal: productDetail ? parseFloat(String(productDetail.quantity || 0)) * parseFloat(String(productDetail.unit_price || 0)) : 0,
       };
     });
-    
+
     return result;
   } catch (error: any) {
     console.error('[API] getWarehouseSalesInvoicesByProduct error:', error);
@@ -10259,42 +10362,42 @@ export async function getWarehouseSalesInvoicesByProduct(productId: string): Pro
 export async function getQuotationsByProduct(productId: string): Promise<any[]> {
   try {
     console.log('[API] Fetching quotations by product ID:', productId);
-    
+
     // Get quotation IDs from quotation_details
     const { data: details, error: detailsError } = await supabase
       .from('quotation_details')
       .select('quotation_id, quantity, unit_price, created_at')
       .eq('product_id', productId)
       .order('created_at', { ascending: false });
-    
+
     if (detailsError) {
       console.error('[API] Failed to fetch quotation details:', detailsError);
       throw new Error(`Failed to fetch quotation details: ${detailsError.message}`);
     }
-    
+
     if (!details || details.length === 0) {
       return [];
     }
-    
+
     // Get unique quotation IDs
     const quotationIds = Array.from(new Set(details.map((d: any) => d.quotation_id)));
-    
+
     // Fetch quotations
     const { data: quotations, error: quotationsError } = await supabase
       .from('quotations')
       .select('*')
       .in('quotation_id', quotationIds)
       .order('created_at', { ascending: false });
-    
+
     if (quotationsError) {
       console.error('[API] Failed to fetch quotations:', quotationsError);
       throw new Error(`Failed to fetch quotations: ${quotationsError.message}`);
     }
-    
+
     // Map quotations with product details
     const quotationsMap = new Map(quotations.map((q: any) => [q.quotation_id, q]));
     const detailsMap = new Map<string, any[]>();
-    
+
     // Group details by quotation_id (for finding the specific product)
     details.forEach((detail: any) => {
       if (!detailsMap.has(detail.quotation_id)) {
@@ -10302,16 +10405,16 @@ export async function getQuotationsByProduct(productId: string): Promise<any[]> 
       }
       detailsMap.get(detail.quotation_id)!.push(detail);
     });
-    
+
     // Get all quotation details to get all items FIRST
     const { data: allDetails, error: allDetailsError } = await supabase
       .from('quotation_details')
       .select('quotation_id, product_id, quantity, unit_price')
       .in('quotation_id', quotationIds);
-    
+
     // Get all product IDs from ALL quotation details (not just the specific product)
     const allProductIds = Array.from(new Set((allDetails || []).map((d: any) => d.product_id).filter(Boolean)));
-    
+
     // Fetch product information for ALL products in quotations
     const productsMap = new Map<string, any>();
     if (allProductIds.length > 0) {
@@ -10319,31 +10422,31 @@ export async function getQuotationsByProduct(productId: string): Promise<any[]> 
         .from('products')
         .select('product_id, name, barcode, shamel_no')
         .in('product_id', allProductIds);
-      
+
       if (products) {
         products.forEach((p: any) => {
           productsMap.set(p.product_id, p);
         });
       }
     }
-    
+
     // Group items by quotation_id and calculate totals
     const quotationItemsMap = new Map<string, { items: any[]; subtotal: number; total: number }>();
     if (allDetails) {
       const itemsByQuotation = new Map<string, any[]>();
       const subtotalsByQuotation = new Map<string, number>();
-      
+
       allDetails.forEach((detail: any) => {
         const quotationId = detail.quotation_id;
-        
+
         // Group items
         if (!itemsByQuotation.has(quotationId)) {
           itemsByQuotation.set(quotationId, []);
         }
-        
+
         const product = productsMap.get(detail.product_id);
         const itemTotal = parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0));
-        
+
         itemsByQuotation.get(quotationId)!.push({
           ProductID: detail.product_id,
           Name: product?.name || '',
@@ -10351,12 +10454,12 @@ export async function getQuotationsByProduct(productId: string): Promise<any[]> 
           Price: parseFloat(String(detail.unit_price || 0)),
           TotalPrice: itemTotal,
         });
-        
+
         // Calculate subtotal
         const currentSubtotal = subtotalsByQuotation.get(quotationId) || 0;
         subtotalsByQuotation.set(quotationId, currentSubtotal + itemTotal);
       });
-      
+
       quotations.forEach((quotation: any) => {
         const items = itemsByQuotation.get(quotation.quotation_id) || [];
         const subtotal = subtotalsByQuotation.get(quotation.quotation_id) || 0;
@@ -10366,13 +10469,13 @@ export async function getQuotationsByProduct(productId: string): Promise<any[]> 
         quotationItemsMap.set(quotation.quotation_id, { items, subtotal, total });
       });
     }
-    
+
     // Combine quotations with their product details
     const result = quotations.map((quotation: any) => {
       const quotationDetails = detailsMap.get(quotation.quotation_id) || [];
       const productDetail = quotationDetails.find((d: any) => d.product_id === productId);
       const quotationData = quotationItemsMap.get(quotation.quotation_id) || { items: [], subtotal: 0, total: 0 };
-      
+
       return {
         QuotationID: quotation.quotation_id,
         CustomerID: quotation.customer_id,
@@ -10390,7 +10493,7 @@ export async function getQuotationsByProduct(productId: string): Promise<any[]> 
         ProductTotal: productDetail ? parseFloat(String(productDetail.quantity || 0)) * parseFloat(String(productDetail.unit_price || 0)) : 0,
       };
     });
-    
+
     return result;
   } catch (error: any) {
     console.error('[API] getQuotationsByProduct error:', error);
@@ -10404,42 +10507,42 @@ export async function getQuotationsByProduct(productId: string): Promise<any[]> 
 export async function getCashInvoicesByProduct(productId: string): Promise<any[]> {
   try {
     console.log('[API] Fetching cash invoices by product ID:', productId);
-    
+
     // Get invoice IDs from cash_invoice_details
     const { data: details, error: detailsError } = await supabase
       .from('cash_invoice_details')
       .select('invoice_id, quantity, unit_price, created_at')
       .eq('product_id', productId)
       .order('created_at', { ascending: false });
-    
+
     if (detailsError) {
       console.error('[API] Failed to fetch cash invoice details:', detailsError);
       throw new Error(`Failed to fetch cash invoice details: ${detailsError.message}`);
     }
-    
+
     if (!details || details.length === 0) {
       return [];
     }
-    
+
     // Get unique invoice IDs
     const invoiceIds = Array.from(new Set(details.map((d: any) => d.invoice_id)));
-    
+
     // Fetch invoices
     const { data: invoices, error: invoicesError } = await supabase
       .from('cash_invoices')
       .select('*')
       .in('invoice_id', invoiceIds)
       .order('date_time', { ascending: false });
-    
+
     if (invoicesError) {
       console.error('[API] Failed to fetch cash invoices:', invoicesError);
       throw new Error(`Failed to fetch cash invoices: ${invoicesError.message}`);
     }
-    
+
     // Map invoices with product details
     const invoicesMap = new Map(invoices.map((inv: any) => [inv.invoice_id, inv]));
     const detailsMap = new Map<string, any[]>();
-    
+
     // Group details by invoice_id
     details.forEach((detail: any) => {
       if (!detailsMap.has(detail.invoice_id)) {
@@ -10447,16 +10550,16 @@ export async function getCashInvoicesByProduct(productId: string): Promise<any[]
       }
       detailsMap.get(detail.invoice_id)!.push(detail);
     });
-    
+
     // Get all invoice details to get all items
     const { data: allDetails, error: allDetailsError } = await supabase
       .from('cash_invoice_details')
       .select('invoice_id, product_id, quantity, unit_price')
       .in('invoice_id', invoiceIds);
-    
+
     // Get all product IDs from invoice details
     const allProductIds = Array.from(new Set((allDetails || []).map((d: any) => d.product_id).filter(Boolean)));
-    
+
     // Fetch product information
     const productsMap = new Map<string, any>();
     if (allProductIds.length > 0) {
@@ -10464,32 +10567,32 @@ export async function getCashInvoicesByProduct(productId: string): Promise<any[]
         .from('products')
         .select('product_id, name, barcode, shamel_no')
         .in('product_id', allProductIds);
-      
+
       if (products) {
         products.forEach((p: any) => {
           productsMap.set(p.product_id, p);
         });
       }
     }
-    
+
     // Calculate totals and group items by invoice
     const invoiceTotalsMap = new Map<string, { subtotal: number; total: number; items: any[] }>();
     if (allDetails) {
       const totalsByInvoice = new Map<string, number>();
       const itemsByInvoice = new Map<string, any[]>();
-      
+
       allDetails.forEach((detail: any) => {
         const invoiceId = detail.invoice_id;
-        
+
         // Calculate totals
         const current = totalsByInvoice.get(invoiceId) || 0;
         totalsByInvoice.set(invoiceId, current + (parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0))));
-        
+
         // Group items
         if (!itemsByInvoice.has(invoiceId)) {
           itemsByInvoice.set(invoiceId, []);
         }
-        
+
         const product = productsMap.get(detail.product_id);
         itemsByInvoice.get(invoiceId)!.push({
           ProductID: detail.product_id,
@@ -10499,7 +10602,7 @@ export async function getCashInvoicesByProduct(productId: string): Promise<any[]
           TotalPrice: parseFloat(String(detail.quantity || 0)) * parseFloat(String(detail.unit_price || 0)),
         });
       });
-      
+
       invoices.forEach((invoice: any) => {
         const subtotal = totalsByInvoice.get(invoice.invoice_id) || 0;
         const discount = parseFloat(String(invoice.discount || 0));
@@ -10508,13 +10611,13 @@ export async function getCashInvoicesByProduct(productId: string): Promise<any[]
         invoiceTotalsMap.set(invoice.invoice_id, { subtotal, total, items });
       });
     }
-    
+
     // Combine invoices with their product details
     const result = invoices.map((invoice: any) => {
       const invoiceDetails = detailsMap.get(invoice.invoice_id) || [];
       const productDetail = invoiceDetails.find((d: any) => d.product_id === productId);
       const totals = invoiceTotalsMap.get(invoice.invoice_id) || { subtotal: 0, total: 0, items: [] };
-      
+
       return {
         InvoiceID: invoice.invoice_id,
         InvoiceNumber: invoice.invoice_id, // Cash invoices use invoice_id as number
@@ -10533,10 +10636,343 @@ export async function getCashInvoicesByProduct(productId: string): Promise<any[]
         ProductTotal: productDetail ? parseFloat(String(productDetail.quantity || 0)) * parseFloat(String(productDetail.unit_price || 0)) : 0,
       };
     });
-    
+
     return result;
   } catch (error: any) {
     console.error('[API] getCashInvoicesByProduct error:', error);
+    throw error;
+  }
+}
+
+/**
+ * ==========================================
+ * PROMISSORY NOTES (الكمبيالات)
+ * ==========================================
+ */
+
+export type PromissoryNoteStatus = 'Active' | 'Completed' | 'Defaulted';
+export type InstallmentStatus = 'Pending' | 'Paid' | 'Late' | 'Partially Paid';
+export type Installment = {
+  id: string;
+  promissory_note_id: string;
+  amount: number;
+  due_date: string;
+  status: InstallmentStatus;
+  payment_date?: string | null;
+  notes?: string | null;
+  created_at?: string;
+};
+
+export interface PromissoryNote {
+  id: string;
+  customer_id: string;
+  total_amount: number;
+  issue_date: string;
+  notes?: string | null;
+  status: PromissoryNoteStatus;
+  image_url?: string | null;
+  created_by?: string | null;
+  created_at?: string;
+  customers?: {
+    name?: string | null;
+    phone?: string | null;
+  } | null;
+  installments?: Installment[];
+}
+
+/**
+ * Get promissory notes with optional filtering
+ */
+export async function getPromissoryNotes(params?: {
+  status?: PromissoryNoteStatus | '';
+  customerId?: string;
+  search?: string;
+}): Promise<PromissoryNote[]> {
+  try {
+    let query = supabase
+      .from('promissory_notes')
+      .select('*, customers(name, phone), installments:promissory_note_installments(*)')
+      .order('created_at', { ascending: false });
+
+    if (params?.status) {
+      query = query.eq('status', params.status);
+    }
+
+    if (params?.customerId) {
+      query = query.eq('customer_id', params.customerId);
+    }
+
+    if (params?.search?.trim()) {
+      const q = params.search.trim();
+      const { data: searchResults, error: searchError } = await supabase
+        .from('promissory_notes')
+        .select('id, notes')
+        .or(`notes.ilike.%${q}%,id.ilike.%${q}%`);
+
+      if (!searchError && searchResults) {
+        const ids = searchResults.map(r => r.id);
+        if (ids.length > 0) {
+          query = query.in('id', ids);
+        } else {
+          return [];
+        }
+      }
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('[API] getPromissoryNotes error:', error);
+      throw new Error(`Failed to load promissory notes: ${error.message}`);
+    }
+
+    // Sort installments by due date for each note
+    const result = (data || []).map((note: any) => ({
+      ...note,
+      installments: (note.installments || []).sort((a: any, b: any) =>
+        new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+      )
+    }));
+
+    return result;
+  } catch (error: any) {
+    console.error('[API] getPromissoryNotes catch error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get a single promissory note by ID with details
+ */
+export async function getPromissoryNoteDetails(id: string): Promise<PromissoryNote | null> {
+  try {
+    const { data, error } = await supabase
+      .from('promissory_notes')
+      .select('*, customers(name, phone), installments:promissory_note_installments(*)')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('[API] getPromissoryNoteDetails error:', error);
+      throw new Error(`Failed to load promissory note details: ${error.message}`);
+    }
+
+    if (data && data.installments) {
+      data.installments.sort((a: any, b: any) =>
+        new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+      );
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('[API] getPromissoryNoteDetails catch error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate a sequential Promissory Note ID
+ * Format: PN-0001
+ */
+function generatePromissoryNoteID(existingCount: number): string {
+  const padded = String(existingCount + 1).padStart(4, '0');
+  return `PN-${padded}`;
+}
+
+/**
+ * Create a new promissory note with installments
+ */
+export async function createPromissoryNote(payload: {
+  customerId: string;
+  totalAmount: number;
+  issueDate: string;
+  notes?: string;
+  imageUrl?: string;
+  createdBy?: string;
+  installments: {
+    amount: number;
+    dueDate: string;
+    notes?: string;
+  }[];
+}): Promise<string> {
+  try {
+    // 1. Get count for ID generation
+    const { count, error: countError } = await supabase
+      .from('promissory_notes')
+      .select('*', { count: 'exact', head: true });
+
+    if (countError) {
+      console.error('[API] createPromissoryNote count error:', countError);
+      throw new Error('Failed to generate Promissory Note ID');
+    }
+
+    const noteId = generatePromissoryNoteID(count || 0);
+
+    // 2. Create the note
+    const { data: note, error: noteError } = await supabase
+      .from('promissory_notes')
+      .insert({
+        id: noteId, // Manually set ID
+        customer_id: payload.customerId,
+        total_amount: payload.totalAmount,
+        issue_date: payload.issueDate,
+        notes: payload.notes,
+        status: 'Active',
+        image_url: payload.imageUrl,
+        created_by: payload.createdBy
+      })
+      .select('id')
+      .single();
+
+    if (noteError) {
+      console.error('[API] createPromissoryNote error (note):', noteError);
+      throw new Error(`Failed to create promissory note: ${noteError.message}`);
+    }
+
+    // 3. Create installments
+    const installmentsData = payload.installments.map(inst => ({
+      promissory_note_id: noteId,
+      amount: inst.amount,
+      due_date: inst.dueDate,
+      status: 'Pending',
+      notes: inst.notes
+    }));
+
+    const { error: instError } = await supabase
+      .from('promissory_note_installments')
+      .insert(installmentsData);
+
+    if (instError) {
+      console.error('[API] createPromissoryNote error (installments):', instError);
+      // Try to cleanup
+      await supabase.from('promissory_notes').delete().eq('id', noteId);
+      throw new Error(`Failed to create installments: ${instError.message}`);
+    }
+
+    return noteId;
+  } catch (error: any) {
+    console.error('[API] createPromissoryNote catch error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update installment status
+ */
+export async function updateInstallmentStatus(
+  installmentId: string,
+  status: InstallmentStatus,
+  paymentDate?: string
+): Promise<void> {
+  try {
+    const updateData: any = { status };
+    if (status === 'Paid' || status === 'Partially Paid') {
+      updateData.payment_date = paymentDate || new Date().toISOString().split('T')[0];
+    } else {
+      updateData.payment_date = null;
+    }
+
+    const { error } = await supabase
+      .from('promissory_note_installments')
+      .update(updateData)
+      .eq('id', installmentId);
+
+    if (error) {
+      console.error('[API] updateInstallmentStatus error:', error);
+      throw new Error(`Failed to update installment: ${error.message}`);
+    }
+
+    // Check if all installments are paid to update main note status?
+    // For now, we leave the main note status manual or handle it later
+  } catch (error: any) {
+    console.error('[API] updateInstallmentStatus catch error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a promissory note
+ */
+export async function deletePromissoryNote(id: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('promissory_notes')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('[API] deletePromissoryNote error:', error);
+      throw new Error(`Failed to delete promissory note: ${error.message}`);
+    }
+  } catch (error: any) {
+    console.error('[API] deletePromissoryNote catch error:', error);
+    throw error;
+  }
+}
+
+
+/**
+ * Delete an activity from crm_activities table
+ */
+export async function deleteActivity(activityId: string): Promise<void> {
+  try {
+    console.log('[API] Deleting activity:', activityId);
+
+    const { error } = await supabase
+      .from('crm_activities')
+      .delete()
+      .eq('activity_id', activityId);
+
+    if (error) {
+      console.error('[API] Failed to delete activity:', error);
+      throw new Error(`Failed to delete activity: ${error.message}`);
+    }
+
+    console.log('[API] Activity deleted successfully');
+  } catch (error: any) {
+    console.error('[API] deleteActivity error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update activity details (Notes, Amount, Date)
+ */
+export async function updateActivity(activityId: string, updates: {
+  Notes?: string;
+  PromiseAmount?: number;
+  PromiseDate?: string;
+  updated_by?: string;
+}): Promise<any> {
+  try {
+    console.log('[API] Updating activity:', { activityId, updates });
+
+    const updatePayload: any = {};
+    if (updates.Notes !== undefined) updatePayload.notes = updates.Notes;
+    if (updates.PromiseAmount !== undefined) updatePayload.promise_amount = updates.PromiseAmount;
+    if (updates.PromiseDate !== undefined) {
+      updatePayload.promise_date = updates.PromiseDate;
+      // If date is set, ensure ptp_status is Active
+      if (updates.PromiseDate) updatePayload.ptp_status = 'Active';
+    }
+
+    // Add updated_at timestamp
+    updatePayload.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('crm_activities')
+      .update(updatePayload)
+      .eq('activity_id', activityId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[API] Failed to update activity:', error);
+      throw new Error(`Failed to update activity: ${error.message}`);
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('[API] updateActivity error:', error);
     throw error;
   }
 }

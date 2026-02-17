@@ -2,23 +2,41 @@
 
 import { useMemo } from 'react';
 import { useShop } from '@/context/ShopContext';
-import { Refrigerator, WashingMachine, Tv, Smartphone, Laptop, Home } from 'lucide-react';
+import { Refrigerator, WashingMachine, Tv, Smartphone, Laptop, Home, ArrowLeft } from 'lucide-react';
 
 interface CategoryHighlightsProps {
   onCategoryClick?: (category: string) => void;
 }
 
-// Icon mapping for common categories
-const categoryIcons: Record<string, any> = {
-  'ثلاجة': Refrigerator,
-  'غسالة': WashingMachine,
-  'تلفزيون': Tv,
-  'هاتف': Smartphone,
-  'لابتوب': Laptop,
-  'default': Home,
+// Icon mapping and color themes for categories
+const categoryConfig: Record<string, { icon: any, gradient: string, image?: string }> = {
+  'ثلاجة': {
+    icon: Refrigerator,
+    gradient: 'from-blue-500 to-cyan-400',
+  },
+  'غسالة': {
+    icon: WashingMachine,
+    gradient: 'from-indigo-500 to-purple-500',
+  },
+  'تلفزيون': {
+    icon: Tv,
+    gradient: 'from-rose-500 to-pink-500',
+  },
+  'هاتف': {
+    icon: Smartphone,
+    gradient: 'from-amber-500 to-orange-500',
+  },
+  'لابتوب': {
+    icon: Laptop,
+    gradient: 'from-emerald-500 to-teal-500',
+  },
+  'default': {
+    icon: Home,
+    gradient: 'from-gray-600 to-gray-800',
+  },
 };
 
-// Popular categories to show (can be customized)
+// Popular categories to show
 const popularCategories = [
   'ثلاجة',
   'غسالة',
@@ -30,10 +48,9 @@ const popularCategories = [
 export default function CategoryHighlights({ onCategoryClick }: CategoryHighlightsProps) {
   const { products } = useShop();
 
-  // Get distinct product types with counts
   const categories = useMemo(() => {
     const typeMap = new Map<string, number>();
-    
+
     products.forEach((product) => {
       const type = product.type || product.Type || '';
       if (type && type.trim() !== '') {
@@ -42,20 +59,18 @@ export default function CategoryHighlights({ onCategoryClick }: CategoryHighligh
       }
     });
 
-    // Sort by count (most products first), then alphabetically
     const sorted = Array.from(typeMap.entries())
       .sort((a, b) => {
-        if (b[1] !== a[1]) return b[1] - a[1]; // Sort by count
-        return a[0].localeCompare(b[0], 'ar'); // Then alphabetically
+        if (b[1] !== a[1]) return b[1] - a[1];
+        return a[0].localeCompare(b[0], 'ar');
       })
-      .slice(0, 8) // Limit to top 8 categories
+      .slice(0, 8)
       .map(([type, count]) => ({ type, count }));
 
-    // Prioritize popular categories if they exist
+    // Prioritize popular categories
     const prioritized: Array<{ type: string; count: number }> = [];
     const added = new Set<string>();
 
-    // Add popular categories first if they exist
     popularCategories.forEach((popularType) => {
       const found = sorted.find((c) => c.type === popularType);
       if (found) {
@@ -64,21 +79,19 @@ export default function CategoryHighlights({ onCategoryClick }: CategoryHighligh
       }
     });
 
-    // Add remaining categories
     sorted.forEach((cat) => {
       if (!added.has(cat.type)) {
         prioritized.push(cat);
       }
     });
 
-    return prioritized.slice(0, 8);
+    return prioritized.slice(0, 6); // Limit to top 6 for better layout
   }, [products]);
 
   const handleCategoryClick = (category: string) => {
     if (onCategoryClick) {
       onCategoryClick(category);
     } else {
-      // Default behavior: scroll to products and filter by category
       const productsSection = document.getElementById('products-section');
       if (productsSection) {
         productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -86,37 +99,58 @@ export default function CategoryHighlights({ onCategoryClick }: CategoryHighligh
     }
   };
 
-  if (categories.length === 0) {
-    return null;
-  }
+  if (categories.length === 0) return null;
 
   return (
-    <section className="py-8 sm:py-12 md:py-16 bg-white border-b border-gray-200" dir="rtl">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4">
-        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-6 sm:mb-8 text-center">
-          تصفح حسب الفئة
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2.5 sm:gap-3 md:gap-4">
+    <section className="py-16 bg-gray-50" dir="rtl">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+
+        <div className="flex justify-between items-end mb-10">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">تسوق حسب الفئة</h2>
+            <p className="text-gray-500">اختر من مجموعتنا الواسعة من الأجهزة</p>
+          </div>
+          <button
+            onClick={() => {
+              const productsSection = document.getElementById('products-section');
+              if (productsSection) productsSection.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="hidden sm:flex items-center text-[#D4AF37] font-medium hover:gap-2 transition-all gap-1"
+          >
+            عرض الكل <ArrowLeft size={18} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {categories.map(({ type, count }) => {
-            const IconComponent = categoryIcons[type] || categoryIcons['default'];
+            const config = categoryConfig[type] || categoryConfig['default'];
+            const Icon = config.icon;
+
             return (
               <button
                 key={type}
                 onClick={() => handleCategoryClick(type)}
-                className="group flex flex-col items-center justify-center p-3 sm:p-4 md:p-6 bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-200 hover:border-[#D4AF37]"
+                className="group relative h-48 rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-xl transition-all duration-300"
               >
-                <div className="mb-2 sm:mb-3 p-2 sm:p-3 md:p-4 bg-white rounded-full group-hover:bg-[#D4AF37] transition-all duration-300 shadow-sm group-hover:shadow-md">
-                  <IconComponent 
-                    size={24} 
-                    className="text-gray-700 group-hover:text-white transition-colors duration-300 sm:w-7 sm:h-7 md:w-8 md:h-8" 
-                  />
+                {/* Background Gradient */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${config.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 z-10">
+                  <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-white/20 backdrop-blur-sm flex items-center justify-center mb-4 transition-colors duration-300">
+                    <Icon
+                      size={32}
+                      className="text-gray-600 group-hover:text-white transition-colors duration-300"
+                    />
+                  </div>
+
+                  <h3 className="font-bold text-gray-900 group-hover:text-white text-lg mb-1 transition-colors duration-300">
+                    {type}
+                  </h3>
+
+                  <span className="text-xs text-gray-500 group-hover:text-white/80 transition-colors duration-300">
+                    {count} منتجات
+                  </span>
                 </div>
-                <span className="font-semibold text-gray-900 text-[10px] sm:text-xs md:text-sm text-center mb-0.5 sm:mb-1 line-clamp-2 group-hover:text-[#D4AF37] transition-colors">
-                  {type}
-                </span>
-                <span className="text-[10px] sm:text-xs text-gray-500 group-hover:text-gray-700">
-                  {count} منتج
-                </span>
               </button>
             );
           })}

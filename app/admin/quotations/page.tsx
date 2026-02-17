@@ -41,6 +41,9 @@ interface Quotation {
   created_by?: string;
   createdBy?: string;
   user_id?: string;
+  // Groom Offer Fields
+  is_groom_offer?: boolean;
+  groom_offer_title?: string;
 }
 
 const STATUS_OPTIONS = [
@@ -95,7 +98,7 @@ export default function QuotationsPage() {
         if (e.data?.title) document.title = e.data.title;
         try {
           printIframeRef.current.contentWindow.print();
-        } catch (_) {}
+        } catch (_) { }
         setTimeout(() => { document.title = prevTitle; }, 500);
       }
     };
@@ -192,7 +195,7 @@ export default function QuotationsPage() {
     try {
       await updateQuotationStatus(quotationId, newStatus);
       // Update local state immediately (optimistic update like maintenance page)
-      setAllQuotations(prev => prev.map(q => 
+      setAllQuotations(prev => prev.map(q =>
         q.QuotationID === quotationId ? { ...q, Status: newStatus } : q
       ));
     } catch (err: any) {
@@ -282,19 +285,19 @@ export default function QuotationsPage() {
         .trim()
         .split(/\s+/)
         .filter(word => word.length > 0);
-      
+
       filtered = filtered.filter((quotation) => {
         const quotationId = String(quotation.QuotationID || '').toLowerCase();
         const customerName = String(quotation.customer?.name || '').toLowerCase();
         const customerId = String(quotation.CustomerID || '').toLowerCase();
         const notes = String(quotation.Notes || '').toLowerCase();
-        
+
         const searchableText = `${quotationId} ${customerName} ${customerId} ${notes}`;
-        
+
         return searchWords.every(word => searchableText.includes(word));
       });
     }
-    
+
     // Apply status filter
     if (statusFilter && statusFilter !== 'الكل') {
       filtered = filtered.filter((quotation) => quotation.Status === statusFilter);
@@ -304,7 +307,7 @@ export default function QuotationsPage() {
     if (searchByIdResult && !filtered.some((q) => q.QuotationID === searchByIdResult.QuotationID)) {
       return [searchByIdResult, ...filtered];
     }
-    
+
     return filtered;
   }, [allQuotations, searchQuery, statusFilter, searchByIdResult]);
 
@@ -336,7 +339,7 @@ export default function QuotationsPage() {
             <p className="text-red-600 text-lg mb-4 font-cairo">{error}</p>
             <button
               onClick={() => {
-                loadQuotations().catch((err) => {
+                loadFirstPage().catch((err) => {
                   setError(err?.message || 'فشل تحميل العروض السعرية');
                 });
               }}
@@ -460,8 +463,13 @@ export default function QuotationsPage() {
                     {paginatedQuotations.map((quotation, index) => (
                       <tr key={quotation.QuotationID || `quotation-${index}`} className="hover:bg-gray-200 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900 font-cairo">
+                          <div className="text-sm font-medium text-gray-900 font-cairo flex items-center gap-2">
                             {quotation.QuotationID}
+                            {quotation.is_groom_offer && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800" title={quotation.groom_offer_title || 'عرض عرسان مميز'}>
+                                👑 عرض عرسان
+                              </span>
+                            )}
                           </div>
                           {(() => {
                             const userId = quotation.created_by || quotation.createdBy || quotation.user_id || quotation.CreatedBy || '';
@@ -479,7 +487,7 @@ export default function QuotationsPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-600 font-cairo">
                             <div>{formatDate(quotation.Date)}</div>
-                          {quotation.CreatedAt && (
+                            {quotation.CreatedAt && (
                               <div className="text-xs text-gray-500 mt-0.5">{formatTime(quotation.CreatedAt)}</div>
                             )}
                           </div>
@@ -621,27 +629,34 @@ export default function QuotationsPage() {
                   <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-base font-bold text-gray-900 font-cairo">#{quotation.QuotationID}</h3>
-                        <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-lg font-cairo ${getStatusColor(quotation.Status)}`}>
-                          {quotation.Status}
-                        </span>
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <h3 className="text-base font-bold text-gray-900 font-cairo">#{quotation.QuotationID}</h3>
+                          {quotation.is_groom_offer && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800" title={quotation.groom_offer_title || 'عرض عرسان مميز'}>
+                              👑 عرض عرسان
+                            </span>
+                          )}
+                          <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-lg font-cairo ${getStatusColor(quotation.Status)}`}>
+                            {quotation.Status}
+                          </span>
+                        </div>
+                        {(() => {
+                          const userId = quotation.created_by || quotation.createdBy || quotation.user_id || quotation.CreatedBy || '';
+                          if (userId && userMap.has(userId)) {
+                            const username = userMap.get(userId);
+                            return (
+                              <div className="text-xs text-gray-500 font-cairo">
+                                {username}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
-                      {(() => {
-                        const userId = quotation.created_by || quotation.createdBy || quotation.user_id || quotation.CreatedBy || '';
-                        if (userId && userMap.has(userId)) {
-                          const username = userMap.get(userId);
-                          return (
-                            <div className="text-xs text-gray-500 font-cairo">
-                              {username}
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-lg font-bold text-gray-900 font-cairo mb-1">
-                        {formatCurrency(quotation.totalAmount || 0)}
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-lg font-bold text-gray-900 font-cairo mb-1">
+                          {formatCurrency(quotation.totalAmount || 0)}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -802,16 +817,15 @@ export default function QuotationsPage() {
                   } else {
                     pageNum = currentPage - 2 + i;
                   }
-                  
+
                   return (
                     <button
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
-                      className={`px-3 py-1 rounded-lg transition-colors text-sm font-cairo ${
-                        currentPage === pageNum
-                          ? 'bg-gray-900 text-white'
-                          : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
-                      }`}
+                      className={`px-3 py-1 rounded-lg transition-colors text-sm font-cairo ${currentPage === pageNum
+                        ? 'bg-gray-900 text-white'
+                        : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
+                        }`}
                     >
                       {pageNum}
                     </button>

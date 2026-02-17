@@ -149,7 +149,7 @@ function SortableTableRow({
       style={style}
       className={`bg-white ${isDragging ? 'shadow-lg opacity-50' : ''}`}
     >
-      <td 
+      <td
         {...listeners}
         className="px-2 py-3 w-8 cursor-grab active:cursor-grabbing"
         title="اسحب لإعادة الترتيب"
@@ -188,7 +188,7 @@ function SortableTableRow({
                     const serialNo = serialNos[serialIndex] || '';
                     const isEmpty = !serialNo.trim();
                     const isRequired = item.isSerialized && isEmpty;
-                    
+
                     return (
                       <div key={serialIndex} className="flex items-center gap-1">
                         <input
@@ -213,11 +213,10 @@ function SortableTableRow({
                           data-serial-index={serialIndex}
                           data-detail-id={item.QuotationDetailID}
                           placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                          className={`w-full px-2 py-1 border rounded text-gray-900 font-mono text-xs ${
-                            isRequired
+                          className={`w-full px-2 py-1 border rounded text-gray-900 font-mono text-xs ${isRequired
                               ? 'border-yellow-400 bg-yellow-50'
                               : 'border-gray-300'
-                          }`}
+                            }`}
                         />
                         <SerialNumberScanner
                           onScan={(scannedData) => {
@@ -226,9 +225,9 @@ function SortableTableRow({
                               .split(/[,\n\r]+|\s{2,}/)
                               .map(s => s.trim())
                               .filter(s => s.length > 0);
-                            
+
                             if (serials.length === 0) return;
-                            
+
                             // Update serials one by one using onUpdateSerialNo
                             let currentIndex = serialIndex;
                             for (const serial of serials) {
@@ -237,7 +236,7 @@ function SortableTableRow({
                                 currentIndex++;
                               }
                             }
-                            
+
                             setTimeout(() => {
                               const nextIndex = Math.min(serialIndex + serials.length, item.Quantity - 1);
                               if (nextIndex < item.Quantity) {
@@ -292,9 +291,8 @@ function SortableTableRow({
           ₪{(item.product?.costPrice || 0).toFixed(2)}
         </td>
       )}
-      <td className={`px-3 py-3 text-sm font-semibold font-cairo text-center align-top ${
-        item.isGift ? 'text-green-600' : 'text-gray-900'
-      }`}>
+      <td className={`px-3 py-3 text-sm font-semibold font-cairo text-center align-top ${item.isGift ? 'text-green-600' : 'text-gray-900'
+        }`}>
         ₪{(item.Quantity * item.UnitPrice).toFixed(2)}
         {item.isGift && (
           <span className="text-xs text-green-600 mr-1 block">(هدية)</span>
@@ -303,11 +301,10 @@ function SortableTableRow({
       <td className="px-3 py-3 text-center align-top">
         <button
           onClick={() => onToggleGift(item.QuotationDetailID)}
-          className={`p-1.5 rounded-lg transition-colors ${
-            item.isGift
+          className={`p-1.5 rounded-lg transition-colors ${item.isGift
               ? 'bg-green-100 text-green-700 hover:bg-green-200'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
+            }`}
           title={item.isGift ? 'إلغاء تحديد كهدية' : 'تحديد كهدية'}
         >
           <Gift size={16} />
@@ -376,9 +373,8 @@ function CardRow({
         )}
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-gray-900 font-cairo mb-1">{productName}</h3>
-          <div className={`text-lg font-bold font-cairo mb-2 ${
-            item.isGift ? 'text-green-600' : 'text-gray-900'
-          }`}>
+          <div className={`text-lg font-bold font-cairo mb-2 ${item.isGift ? 'text-green-600' : 'text-gray-900'
+            }`}>
             ₪{(item.Quantity * item.UnitPrice).toFixed(2)}
             {item.isGift && (
               <span className="text-xs text-green-600 mr-1">(هدية)</span>
@@ -395,7 +391,7 @@ function CardRow({
                 const serialNo = serialNos[serialIndex] || '';
                 const isEmpty = !serialNo.trim();
                 const isRequired = item.isSerialized && isEmpty;
-                
+
                 return (
                   <div key={serialIndex} className="flex items-center gap-1">
                     <ScannerLatinInput
@@ -421,11 +417,10 @@ function CardRow({
                       data-detail-id={item.QuotationDetailID}
                       data-mobile="true"
                       placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                      className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm ${
-                        isRequired
+                      className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm ${isRequired
                           ? 'border-yellow-400 bg-yellow-50'
                           : 'border-gray-300'
-                      }`}
+                        }`}
                     />
                     <SerialNumberScanner
                       onScan={(scannedData) => {
@@ -434,9 +429,9 @@ function CardRow({
                           .split(/[,\n\r]+|\s{2,}/)
                           .map(s => s.trim())
                           .filter(s => s.length > 0);
-                        
+
                         if (serials.length === 0) return;
-                        
+
                         // Update serials one by one
                         let currentIndex = serialIndex;
                         for (const serial of serials) {
@@ -445,7 +440,7 @@ function CardRow({
                             currentIndex++;
                           }
                         }
-                        
+
                         setTimeout(() => {
                           const nextIndex = Math.min(serialIndex + serials.length, item.Quantity - 1);
                           if (nextIndex < item.Quantity) {
@@ -516,11 +511,10 @@ function CardRow({
       <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-200">
         <button
           onClick={() => onToggleGift(item.QuotationDetailID)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-cairo ${
-            item.isGift
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-cairo ${item.isGift
               ? 'bg-green-100 text-green-700 hover:bg-green-200'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
+            }`}
         >
           <Gift size={16} />
           <span>{item.isGift ? 'إلغاء الهدية' : 'تحديد كهدية'}</span>
@@ -542,10 +536,10 @@ export default function EditQuotationPage() {
   const params = useParams();
   const quotationId = params.id as string;
   const { admin } = useAdminAuth();
-  
+
   // Check if user has accountant permission (for delete)
   const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
-  
+
   // Check if user can view customer balances
   const canViewBalances = admin?.is_super_admin || admin?.permissions?.viewBalances === true;
 
@@ -558,15 +552,17 @@ export default function EditQuotationPage() {
   const [status, setStatus] = useState('مسودة');
   const [specialDiscountAmount, setSpecialDiscountAmount] = useState(0);
   const [giftDiscountAmount, setGiftDiscountAmount] = useState(0);
+  const [isGroomOffer, setIsGroomOffer] = useState(false);
+  const [groomOfferTitle, setGroomOfferTitle] = useState('');
   const [details, setDetails] = useState<QuotationDetail[]>([]);
-  
+
   // Calculate gift discount automatically from items marked as gifts
   const calculatedGiftDiscount = useMemo(() => {
     return details
       .filter(item => item.isGift)
       .reduce((sum, item) => sum + (item.Quantity * item.UnitPrice), 0);
   }, [details]);
-  
+
   // Update giftDiscountAmount when calculatedGiftDiscount changes
   useEffect(() => {
     setGiftDiscountAmount(calculatedGiftDiscount);
@@ -624,7 +620,7 @@ export default function EditQuotationPage() {
         if (e.data?.title) document.title = e.data.title;
         try {
           printIframeRef.current.contentWindow.print();
-        } catch (_) {}
+        } catch (_) { }
         setTimeout(() => { document.title = prevTitle; }, 500);
       }
     };
@@ -645,13 +641,15 @@ export default function EditQuotationPage() {
       setStatus(data.Status || 'مسودة');
       setSpecialDiscountAmount(data.SpecialDiscountAmount || 0);
       setGiftDiscountAmount(data.GiftDiscountAmount || 0);
-      
+      setIsGroomOffer(data.isGroomOffer || false);
+      setGroomOfferTitle(data.groomOfferTitle || '');
+
       // First, get raw details from Supabase to access serial_no field
       const { data: rawDetails, error: rawDetailsError } = await supabase
         .from('quotation_details')
         .select('quotation_detail_id, serial_no')
         .eq('quotation_id', quotationId);
-      
+
       const serialNosMap = new Map<string, string[]>();
       if (!rawDetailsError && rawDetails) {
         rawDetails.forEach((detail: any) => {
@@ -660,7 +658,7 @@ export default function EditQuotationPage() {
           }
         });
       }
-      
+
       // Load serial numbers for each detail
       const detailsWithSerials: QuotationDetail[] = await Promise.all(
         (data.details || []).map(async (item: any) => {
@@ -671,7 +669,7 @@ export default function EditQuotationPage() {
               // First try to load from serial_numbers table
               serialNos = await getSerialNumbersByDetailId(item.QuotationDetailID, 'quotation');
               console.log('[EditQuotationPage] Loaded serial numbers from serial_numbers table for detail', item.QuotationDetailID, ':', serialNos);
-              
+
               // If no serials found in dedicated table, try to load from details table (fallback)
               if (serialNos.length === 0 && serialNosMap.has(item.QuotationDetailID)) {
                 serialNos = serialNosMap.get(item.QuotationDetailID) || [];
@@ -686,13 +684,13 @@ export default function EditQuotationPage() {
               }
             }
           }
-          
+
           // Ensure serialNos array matches quantity
           while (serialNos.length < (item.Quantity || 0)) {
             serialNos.push('');
           }
           serialNos = serialNos.slice(0, item.Quantity || 0);
-          
+
           return {
             ...item,
             serialNos: serialNos,
@@ -700,7 +698,7 @@ export default function EditQuotationPage() {
           };
         })
       );
-      
+
       setDetails(detailsWithSerials);
       // Note: selectedCustomer will be set by useEffect when customers are loaded
     } catch (err: any) {
@@ -715,7 +713,7 @@ export default function EditQuotationPage() {
     try {
       const productsData = await getProducts();
       setProducts(productsData);
-      
+
       // Update isSerialized for existing quotation items after products are loaded
       setDetails((prevDetails) => {
         return prevDetails.map((detail) => {
@@ -723,10 +721,10 @@ export default function EditQuotationPage() {
           const product = productsData.find(
             (p) => (p.ProductID || p.id || p.product_id) === detail.ProductID
           );
-          
+
           if (product) {
             const isSerialized = product.is_serialized || product.IsSerialized || false;
-            
+
             // Ensure serialNos array matches quantity, but preserve existing serial numbers
             let serialNos = detail.serialNos || [];
             // Only pad if we need more slots, don't truncate existing serials
@@ -737,7 +735,7 @@ export default function EditQuotationPage() {
             if (serialNos.length > detail.Quantity) {
               serialNos = serialNos.slice(0, detail.Quantity);
             }
-            
+
             return {
               ...detail,
               isSerialized: isSerialized,
@@ -891,7 +889,7 @@ export default function EditQuotationPage() {
       if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
         return arrayMove(items, oldIndex, newIndex);
       }
-      
+
       return items;
     });
   };
@@ -905,7 +903,7 @@ export default function EditQuotationPage() {
   const handleAddProduct = (productParam?: any, quantityParam?: number, priceParam?: number) => {
     // If product is provided directly (from barcode scanner), use it
     let productToAdd = productParam;
-    
+
     // Otherwise, use selectedProduct (from manual selection) - this preserves all product data
     if (!productToAdd) {
       // Priority 1: Use the selected product object directly if available (preserves all data including Name)
@@ -920,7 +918,7 @@ export default function EditQuotationPage() {
       } else if (selectedProductId) {
         // Priority 2: Fallback - find product by selectedProductId
         const selectedId = String(selectedProductId || '').trim();
-        
+
         productToAdd = products.find((p) => {
           const possibleIds = [
             p.ProductID,
@@ -930,10 +928,10 @@ export default function EditQuotationPage() {
             p['id'],
             p['product_id']
           ].filter(id => id != null).map(id => String(id).trim());
-          
+
           return possibleIds.includes(selectedId);
         });
-        
+
         if (!productToAdd) {
           alert('المنتج غير موجود');
           return;
@@ -947,18 +945,18 @@ export default function EditQuotationPage() {
     const quantity = quantityParam != null ? quantityParam : newProductQuantity;
 
     const detailId = `temp-${Date.now()}`;
-    
+
     // Extract product ID first - productToAdd should have ID fields now
     // Since we ensured productToAdd has ID in previous steps, extract it directly
     const productIdForSearch = String(
-      productToAdd.ProductID || 
-      productToAdd.id || 
-      productToAdd.product_id || 
+      productToAdd.ProductID ||
+      productToAdd.id ||
+      productToAdd.product_id ||
       (productParam ? (productParam.ProductID || productParam.id || productParam.product_id) : null) ||
-      selectedProductId || 
+      selectedProductId ||
       ''
     ).trim();
-    
+
     if (!productIdForSearch) {
       console.error('[Quotations] CRITICAL: Product ID is still undefined!', {
         productToAdd: {
@@ -982,9 +980,9 @@ export default function EditQuotationPage() {
       alert('خطأ فني: المنتج لا يحتوي على معرف صالح. يرجى المحاولة مرة أخرى أو اختيار منتج آخر.');
       return;
     }
-    
+
     console.log('[Quotations] Final product ID extracted:', productIdForSearch);
-    
+
     // Use provided price, manually entered price, or default sale price
     // Priority: priceParam > newProductPrice (if > 0) > productToAdd.SalePrice > selectedProduct > products array
     let unitPrice = productToAdd.SalePrice || productToAdd.sale_price || productToAdd.price || 0;
@@ -1011,7 +1009,7 @@ export default function EditQuotationPage() {
 
     // Extract product name and image - check multiple possible fields
     let productName = '';
-    
+
     // Try all possible name fields
     if (productToAdd.Name && String(productToAdd.Name).trim()) {
       productName = String(productToAdd.Name).trim();
@@ -1020,7 +1018,7 @@ export default function EditQuotationPage() {
     } else if (productToAdd.product_name && String(productToAdd.product_name).trim()) {
       productName = String(productToAdd.product_name).trim();
     }
-    
+
     // If still no name, try to get it from selectedProduct (for manual selection)
     if (!productName && selectedProduct) {
       productName = selectedProduct.Name || selectedProduct.name || '';
@@ -1028,7 +1026,7 @@ export default function EditQuotationPage() {
         productName = String(productName).trim();
       }
     }
-    
+
     // Final fallback - search in products array
     if (!productName && productIdForSearch) {
       const originalProduct = products.find(p => {
@@ -1042,15 +1040,15 @@ export default function EditQuotationPage() {
         }
       }
     }
-    
+
     // Last resort
     if (!productName) {
       productName = 'غير معروف';
     }
-    
+
     // Extract product image - check multiple possible fields
     let productImage = '';
-    
+
     // Try all possible image fields from productToAdd
     if (productToAdd.Image && String(productToAdd.Image).trim()) {
       productImage = String(productToAdd.Image).trim();
@@ -1061,7 +1059,7 @@ export default function EditQuotationPage() {
     } else if (productToAdd['image'] && String(productToAdd['image']).trim()) {
       productImage = String(productToAdd['image']).trim();
     }
-    
+
     // If still no image, try to get it from selectedProduct (for manual selection)
     if (!productImage && selectedProduct) {
       productImage = selectedProduct.Image || selectedProduct.image || selectedProduct['Image'] || selectedProduct['image'] || '';
@@ -1069,7 +1067,7 @@ export default function EditQuotationPage() {
         productImage = String(productImage).trim();
       }
     }
-    
+
     // Final fallback - search in products array
     if (!productImage && productIdForSearch) {
       const originalProduct = products.find(p => {
@@ -1086,7 +1084,7 @@ export default function EditQuotationPage() {
 
     // Extract product cost price - check multiple possible fields
     let costPrice = 0;
-    
+
     // Try all possible cost price fields from productToAdd
     if (productToAdd.CostPrice != null && productToAdd.CostPrice !== undefined) {
       costPrice = parseFloat(String(productToAdd.CostPrice)) || 0;
@@ -1095,7 +1093,7 @@ export default function EditQuotationPage() {
     } else if (productToAdd.costPrice != null && productToAdd.costPrice !== undefined) {
       costPrice = parseFloat(String(productToAdd.costPrice)) || 0;
     }
-    
+
     // If still no cost price, try to get it from selectedProduct (for manual selection)
     if (costPrice === 0 && selectedProduct) {
       if (selectedProduct.CostPrice != null && selectedProduct.CostPrice !== undefined) {
@@ -1106,7 +1104,7 @@ export default function EditQuotationPage() {
         costPrice = parseFloat(String(selectedProduct.costPrice)) || 0;
       }
     }
-    
+
     // Final fallback - search in products array
     if (costPrice === 0 && productIdForSearch) {
       const originalProduct = products.find(p => {
@@ -1123,7 +1121,7 @@ export default function EditQuotationPage() {
         }
       }
     }
-    
+
     // Check if product already exists in details
     const existingDetailIndex = details.findIndex((item) => {
       const itemProductId = String(item.ProductID || '').trim();
@@ -1139,7 +1137,7 @@ export default function EditQuotationPage() {
             : item
         )
       );
-      
+
       // Clear form and close
       setSelectedProductId('');
       setSelectedProduct(null);
@@ -1147,7 +1145,7 @@ export default function EditQuotationPage() {
       setNewProductPrice(0);
       setShowAddProduct(false);
       setProductSearchQuery('');
-      
+
       // Don't fetch last price as product already exists
       return;
     }
@@ -1164,7 +1162,7 @@ export default function EditQuotationPage() {
         isSerialized = originalProduct.is_serialized || originalProduct.IsSerialized || false;
       }
     }
-    
+
     // Initialize serial numbers array with empty strings for each quantity
     const serialNos: string[] = Array(quantity).fill('');
 
@@ -1206,7 +1204,7 @@ export default function EditQuotationPage() {
             customerId,
             productIdForSearch
           );
-          
+
           if (lastPrice && lastPrice > 0) {
             // Update the price for this specific detail
             setDetails((prev) =>
@@ -1331,8 +1329,11 @@ export default function EditQuotationPage() {
           unitPrice: item.UnitPrice,
           notes: item.notes || '',
           isGift: item.isGift || false,
+          isGift: item.isGift || false,
           serialNos: item.serialNos || [],
         })),
+        isGroomOffer,
+        groomOfferTitle: isGroomOffer ? groomOfferTitle : null,
       });
       router.push('/admin/quotations');
     } catch (err: any) {
@@ -1489,6 +1490,34 @@ export default function EditQuotationPage() {
         <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+            {/* Groom Offer Controls */}
+            <div className="md:col-span-2 bg-purple-50 p-4 rounded-lg border border-purple-100">
+              <div className="flex items-center gap-3 mb-2">
+                <input
+                  type="checkbox"
+                  id="isGroomOffer"
+                  checked={isGroomOffer}
+                  onChange={(e) => setIsGroomOffer(e.target.checked)}
+                  className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500 border-gray-300"
+                />
+                <label htmlFor="isGroomOffer" className="text-sm font-bold text-purple-900 font-cairo cursor-pointer select-none">
+                  حفظ كعرض عرسان مميز (يظهر في صفحة العروض)
+                </label>
+              </div>
+
+              {isGroomOffer && (
+                <div className="mr-8">
+                  <label className="block text-sm font-medium text-purple-800 mb-1 font-cairo">عنوان العرض *</label>
+                  <input
+                    type="text"
+                    value={groomOfferTitle}
+                    onChange={(e) => setGroomOfferTitle(e.target.value)}
+                    placeholder="مثال: الباقة الذهبية للعرسان"
+                    className="w-full px-4 py-2 border border-purple-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 font-bold"
+                  />
+                </div>
+              )}
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">التاريخ</label>
               <input
@@ -1626,9 +1655,8 @@ export default function EditQuotationPage() {
                 onChange={(e) => setGiftDiscountAmount(parseFloat(e.target.value) || 0)}
                 onWheel={(e) => e.currentTarget.blur()}
                 disabled={calculatedGiftDiscount > 0}
-                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold ${
-                  calculatedGiftDiscount > 0 ? 'bg-gray-100 cursor-not-allowed' : ''
-                }`}
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold ${calculatedGiftDiscount > 0 ? 'bg-gray-100 cursor-not-allowed' : ''
+                  }`}
                 title={calculatedGiftDiscount > 0 ? 'يتم الحساب تلقائياً من الأصناف المحددة كهدايا' : ''}
               />
               {calculatedGiftDiscount > 0 && (
@@ -1652,7 +1680,7 @@ export default function EditQuotationPage() {
           {/* Products */}
           <div>
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 font-cairo mb-4">المنتجات</h2>
-            
+
             {/* Barcode Scanner - Always visible */}
             <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
@@ -1665,7 +1693,7 @@ export default function EditQuotationPage() {
                 className="w-full"
               />
             </div>
-            
+
             {/* Add Product Button */}
             <div className="mb-4">
               <button
@@ -1679,7 +1707,7 @@ export default function EditQuotationPage() {
 
             {showAddProduct && (
               <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
-                
+
                 <div className="relative mb-4" ref={productDropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
                   <div className="relative">
@@ -1699,53 +1727,53 @@ export default function EditQuotationPage() {
                         {filteredProducts.map((product) => {
                           const imageUrl = product.Image || product.image || '';
                           return (
-                          <button
-                            key={product.ProductID || product.id || product.product_id}
-                            type="button"
-                            onClick={() => {
-                              const productId = String(product.ProductID || product.id || product.product_id || '').trim();
-                              const productName = product.Name || product.name || '';
-                              
-                              if (productId) {
-                                // Store the full product object to preserve all data including Name and Image
-                                setSelectedProduct(product);
-                                setSelectedProductId(productId);
-                                // Set default price from product
-                                const defaultPrice = product.SalePrice || product.sale_price || product.price || 0;
-                                setNewProductPrice(defaultPrice);
-                                setIsProductDropdownOpen(false);
-                                setProductSearchQuery(productName || product.Name || product.name || '');
-                              } else {
-                                alert('خطأ: المنتج لا يحتوي على معرف صالح');
-                              }
-                            }}
-                            className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
-                          >
-                            <div className="flex items-center gap-3">
-                              {imageUrl ? (
-                                <img
-                                  src={imageUrl}
-                                  alt={product.Name || product.name}
-                                  className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                  }}
-                                />
-                              ) : (
-                                <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                  <span className="text-gray-400 text-xs">—</span>
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-col gap-1">
-                                  <span className="text-right text-sm font-medium">{product.Name || product.name}</span>
-                                  <span className="text-right text-xs text-gray-600 font-light" dir="rtl">
-                                    ₪{product.SalePrice || product.sale_price || product.price || 0} • محل: {product.CS_Shop || product.cs_shop || 0} • مخزن: {product.CS_War || product.cs_war || 0}
-                                  </span>
+                            <button
+                              key={product.ProductID || product.id || product.product_id}
+                              type="button"
+                              onClick={() => {
+                                const productId = String(product.ProductID || product.id || product.product_id || '').trim();
+                                const productName = product.Name || product.name || '';
+
+                                if (productId) {
+                                  // Store the full product object to preserve all data including Name and Image
+                                  setSelectedProduct(product);
+                                  setSelectedProductId(productId);
+                                  // Set default price from product
+                                  const defaultPrice = product.SalePrice || product.sale_price || product.price || 0;
+                                  setNewProductPrice(defaultPrice);
+                                  setIsProductDropdownOpen(false);
+                                  setProductSearchQuery(productName || product.Name || product.name || '');
+                                } else {
+                                  alert('خطأ: المنتج لا يحتوي على معرف صالح');
+                                }
+                              }}
+                              className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
+                            >
+                              <div className="flex items-center gap-3">
+                                {imageUrl ? (
+                                  <img
+                                    src={imageUrl}
+                                    alt={product.Name || product.name}
+                                    className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-gray-400 text-xs">—</span>
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-right text-sm font-medium">{product.Name || product.name}</span>
+                                    <span className="text-right text-xs text-gray-600 font-light" dir="rtl">
+                                      ₪{product.SalePrice || product.sale_price || product.price || 0} • محل: {product.CS_Shop || product.cs_shop || 0} • مخزن: {product.CS_War || product.cs_war || 0}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </button>
+                            </button>
                           );
                         })}
                       </div>

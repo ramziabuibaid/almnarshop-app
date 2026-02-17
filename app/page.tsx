@@ -12,8 +12,12 @@ import ActiveFiltersBar from '@/components/store/ActiveFiltersBar';
 import ProductGridHeader from '@/components/store/ProductGridHeader';
 import CartDrawer from '@/components/CartDrawer';
 import HeroBanner from '@/components/store/HeroBanner';
+import TrustFeatures from '@/components/store/TrustFeatures';
 import CategoryHighlights from '@/components/store/CategoryHighlights';
 import FlashSaleSection from '@/components/store/FlashSaleSection';
+import ShowroomSection from '@/components/store/ShowroomSection';
+import NewsletterSection from '@/components/store/NewsletterSection';
+import AnnouncementBar from '@/components/store/AnnouncementBar';
 import { FilterState, SortOption } from '@/components/store/types';
 
 const PRODUCTS_PER_PAGE = 20;
@@ -213,26 +217,26 @@ function HomeContent() {
   // Build active filters for ActiveFiltersBar
   const activeFilters = useMemo(() => {
     const active: Array<{ key: string; label: string; value: string }> = [];
-    
+
     filters.selectedTypes.forEach((type) => {
       active.push({ key: `type_${type}`, label: 'النوع', value: type });
     });
-    
+
     filters.selectedBrands.forEach((brand) => {
       active.push({ key: `brand_${brand}`, label: 'العلامة التجارية', value: brand });
     });
-    
+
     filters.selectedSizes.forEach((size) => {
       active.push({ key: `size_${size}`, label: 'الحجم', value: size });
     });
-    
+
     filters.selectedColors.forEach((color) => {
       active.push({ key: `color_${color}`, label: 'اللون', value: color });
     });
 
     // Price filter (only show if not at full range)
-    const isPriceFiltered = 
-      filters.priceRange.min > priceRange.min || 
+    const isPriceFiltered =
+      filters.priceRange.min > priceRange.min ||
       filters.priceRange.max < priceRange.max;
     if (isPriceFiltered) {
       active.push({
@@ -295,7 +299,6 @@ function HomeContent() {
       selectedTypes: [category],
     }));
     // Only scroll on desktop, on mobile let user scroll naturally
-    // Check isMounted to avoid hydration issues
     if (isMounted && !isMobile) {
       setTimeout(() => {
         const productsSection = document.getElementById('products-section');
@@ -309,14 +312,14 @@ function HomeContent() {
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl" suppressHydrationWarning>
+      <AnnouncementBar />
       {/* Header - Fixed at top on mobile, sticky on desktop */}
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm" suppressHydrationWarning>
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3" suppressHydrationWarning>
           <div className="flex items-center gap-2 sm:gap-3" suppressHydrationWarning>
             {/* Company Logo (Just Name) - Hidden when search is expanded on mobile */}
-            <div className={`flex-shrink-0 transition-all duration-300 md:block ${
-              isSearchExpanded ? 'hidden md:block' : 'block'
-            }`}>
+            <div className={`flex-shrink-0 transition-all duration-300 md:block ${isSearchExpanded ? 'hidden md:block' : 'block'
+              }`}>
               <button
                 onClick={() => router.push('/')}
                 className="cursor-pointer"
@@ -428,10 +431,10 @@ function HomeContent() {
                 filters.selectedSizes.length > 0 ||
                 filters.selectedColors.length > 0 ||
                 (filters.priceRange.min > priceRange.min || filters.priceRange.max < priceRange.max)) && (
-                <span className="absolute -top-0.5 -right-0.5 bg-gray-900 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none" suppressHydrationWarning>
-                  {activeFilters.length > 9 ? '9+' : activeFilters.length}
-                </span>
-              )}
+                  <span className="absolute -top-0.5 -right-0.5 bg-gray-900 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none" suppressHydrationWarning>
+                    {activeFilters.length > 9 ? '9+' : activeFilters.length}
+                  </span>
+                )}
             </button>
 
             {/* Cart Button */}
@@ -476,6 +479,9 @@ function HomeContent() {
 
       {/* Hero Banner */}
       <HeroBanner />
+
+      {/* Trust Features */}
+      <TrustFeatures />
 
       {/* Category Highlights */}
       <CategoryHighlights onCategoryClick={handleCategoryClick} />
@@ -575,11 +581,10 @@ function HomeContent() {
                             <button
                               key={pageNum}
                               onClick={() => setCurrentPage(pageNum)}
-                              className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-sm sm:text-base ${
-                                currentPage === pageNum
-                                  ? 'bg-gray-900 text-white'
-                                  : 'border border-gray-300 hover:bg-gray-50 text-gray-900'
-                              }`}
+                              className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-sm sm:text-base ${currentPage === pageNum
+                                ? 'bg-gray-900 text-white'
+                                : 'border border-gray-300 hover:bg-gray-50 text-gray-900'
+                                }`}
                             >
                               {pageNum}
                             </button>
@@ -603,6 +608,12 @@ function HomeContent() {
           </div>
         )}
       </main>
+
+      {/* Showroom Section */}
+      <ShowroomSection />
+
+      {/* Newsletter Section */}
+      <NewsletterSection />
 
       {/* Mobile Filter Drawer */}
       <FilterDrawer

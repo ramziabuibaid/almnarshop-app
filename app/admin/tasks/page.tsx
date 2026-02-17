@@ -6,7 +6,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import CustomerSelect from '@/components/admin/CustomerSelect';
 import PhoneActions from '@/components/admin/PhoneActions';
-import { getDashboardData, logActivity, updatePTPStatus, getAllCustomers } from '@/lib/api';
+import { getDashboardData, logActivity, updatePTPStatus, getAllCustomers, deleteActivity, updateActivity } from '@/lib/api';
 import {
   Loader2,
   Phone,
@@ -23,7 +23,12 @@ import {
   MessageSquare,
   MapPin,
   Mail,
+  Edit,
+  Trash2,
+  Save,
 } from 'lucide-react';
+
+
 
 // Backend returns PascalCase keys from CRM_Activity table
 interface Task {
@@ -110,7 +115,7 @@ export default function TasksPage() {
       console.log('[TasksPage] Loading tasks from dashboard...');
       const data = await getDashboardData();
       console.log('[TasksPage] RAW API DATA:', JSON.stringify(data, null, 2));
-      
+
       // Normalize data structure - backend returns overdue, today, upcoming arrays
       let overdue: Task[] = [];
       let today: Task[] = [];
@@ -135,7 +140,7 @@ export default function TasksPage() {
         today: today.length,
         upcoming: upcoming.length,
       });
-      
+
       // Log sample items to verify structure
       if (overdue.length > 0) {
         console.log('[TasksPage] Sample overdue task:', overdue[0]);
@@ -149,7 +154,7 @@ export default function TasksPage() {
         console.log('[TasksPage] Sample upcoming task:', upcoming[0]);
         console.log('[TasksPage] Upcoming task keys:', Object.keys(upcoming[0]));
       }
-      
+
       setTasks({
         overdue,
         today,
@@ -187,14 +192,14 @@ export default function TasksPage() {
       if (ddMMyyyyMatch) {
         return dateString; // Already in DD-MM-YYYY format
       }
-      
+
       // Handle YYYY-MM-DD format
       const yyyyMMddMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
       if (yyyyMMddMatch) {
         const [, year, month, day] = yyyyMMddMatch;
         return `${day}-${month}-${year}`;
       }
-      
+
       // Try to parse as Date
       const date = new Date(dateString);
       if (!isNaN(date.getTime())) {
@@ -203,7 +208,7 @@ export default function TasksPage() {
         const year = date.getFullYear();
         return `${day}-${month}-${year}`;
       }
-      
+
       return '—';
     } catch {
       return '—';
@@ -213,19 +218,19 @@ export default function TasksPage() {
   // Convert date to YYYY-MM-DD for API
   const formatDateToYYYYMMDD = (dateString: string): string => {
     if (!dateString) return '';
-    
+
     // If already in YYYY-MM-DD format, return as is
     if (/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
       return dateString.split('T')[0];
     }
-    
+
     // If in DD-MM-YYYY format, convert to YYYY-MM-DD
     const ddMMyyyyMatch = dateString.match(/^(\d{2})-(\d{2})-(\d{4})/);
     if (ddMMyyyyMatch) {
       const [, day, month, year] = ddMMyyyyMatch;
       return `${year}-${month}-${day}`;
     }
-    
+
     // Try to parse as Date
     try {
       const date = new Date(dateString);
@@ -238,7 +243,7 @@ export default function TasksPage() {
     } catch (error) {
       console.warn('[TasksPage] Error formatting date:', dateString, error);
     }
-    
+
     return '';
   };
 
@@ -261,14 +266,14 @@ export default function TasksPage() {
     try {
       console.log('[TasksPage] Marking task as resolved:', task.InteractionID);
       await updatePTPStatus(task.InteractionID, 'Fulfilled', currentAdminId);
-      
+
       // Optimistically remove from list
       setTasks((prev) => ({
         overdue: prev.overdue.filter((t) => t.InteractionID !== task.InteractionID),
         today: prev.today.filter((t) => t.InteractionID !== task.InteractionID),
         upcoming: prev.upcoming.filter((t) => t.InteractionID !== task.InteractionID),
       }));
-      
+
       showToast('تم تحديث الحالة بنجاح', 'success');
     } catch (error: any) {
       console.error('[TasksPage] Error updating status:', error);
@@ -303,17 +308,17 @@ export default function TasksPage() {
       const twoDaysLaterStr = `${year}-${month}-${day}`;
 
       // الحفاظ على المبلغ الأصلي من الموعد القديم
-      const originalAmount = task.PromiseAmount 
-        ? parseFloat(String(task.PromiseAmount)) 
+      const originalAmount = task.PromiseAmount
+        ? parseFloat(String(task.PromiseAmount))
         : 0;
-      
+
       console.log('[TasksPage] Logging No Answer for 2 days later:', {
         today: today.toISOString().split('T')[0],
         twoDaysLater: twoDaysLaterStr,
         customerID: task.CustomerID,
         originalAmount: originalAmount
       });
-      
+
       // First, hide the old appointment by updating its status
       if (task.InteractionID) {
         try {
@@ -324,7 +329,7 @@ export default function TasksPage() {
           // Continue anyway - create new appointment
         }
       }
-      
+
       // Create new appointment for 2 days later with original amount
       await logActivity({
         CustomerID: task.CustomerID,
@@ -335,7 +340,7 @@ export default function TasksPage() {
         PromiseAmount: originalAmount, // الحفاظ على المبلغ الأصلي
         created_by: currentAdminId,
       });
-      
+
       showToast('تم تسجيل الإجراء بنجاح', 'success');
       await loadTasks(); // Refresh data
     } catch (error: any) {
@@ -372,17 +377,17 @@ export default function TasksPage() {
     try {
       const formattedDate = formatDateToYYYYMMDD(rescheduleDate);
       // الحفاظ على المبلغ الأصلي من المهمة القديمة
-      const originalAmount = rescheduleModal.task.PromiseAmount 
-        ? parseFloat(String(rescheduleModal.task.PromiseAmount)) 
+      const originalAmount = rescheduleModal.task.PromiseAmount
+        ? parseFloat(String(rescheduleModal.task.PromiseAmount))
         : 0;
-      
+
       console.log('[TasksPage] Rescheduling task:', {
         taskId: rescheduleModal.task.InteractionID,
         date: formattedDate,
         originalAmount: originalAmount,
         customerID: rescheduleModal.task.CustomerID
       });
-      
+
       // أولاً، إخفاء الموعد القديم بتحديث حالته إلى Archived
       if (rescheduleModal.task.InteractionID) {
         try {
@@ -393,7 +398,7 @@ export default function TasksPage() {
           // Continue anyway - create new appointment
         }
       }
-      
+
       // إنشاء الموعد الجديد
       await logActivity({
         CustomerID: rescheduleModal.task.CustomerID,
@@ -404,7 +409,7 @@ export default function TasksPage() {
         PromiseAmount: originalAmount, // استخدام المبلغ الأصلي
         created_by: currentAdminId,
       });
-      
+
       showToast('تم إعادة الجدولة بنجاح', 'success');
       setRescheduleModal({ isOpen: false, task: null });
       setRescheduleDate('');
@@ -448,10 +453,10 @@ export default function TasksPage() {
     try {
       const formattedDate = formatDateToYYYYMMDD(copyForm.date);
       // الحفاظ على المبلغ الأصلي من المهمة القديمة
-      const originalAmount = copyModal.task.PromiseAmount 
-        ? parseFloat(String(copyModal.task.PromiseAmount)) 
+      const originalAmount = copyModal.task.PromiseAmount
+        ? parseFloat(String(copyModal.task.PromiseAmount))
         : 0;
-      
+
       // Map channel to ActionType
       const channelMapping: Record<string, string> = {
         'Phone': 'Call',
@@ -460,7 +465,7 @@ export default function TasksPage() {
         'Email': 'Email',
       };
       const actionType = channelMapping[copyForm.channel] || 'Call';
-      
+
       console.log('[TasksPage] Copying interaction:', {
         originalTaskId: copyModal.task.InteractionID,
         newCustomerID: copyForm.customerID,
@@ -468,7 +473,7 @@ export default function TasksPage() {
         originalAmount: originalAmount,
         channel: actionType
       });
-      
+
       // إنشاء التفاعل الجديد (بدون إخفاء القديم)
       await logActivity({
         CustomerID: copyForm.customerID,
@@ -479,7 +484,7 @@ export default function TasksPage() {
         PromiseAmount: originalAmount,
         created_by: currentAdminId,
       });
-      
+
       showToast('تم نسخ التفاعل بنجاح', 'success');
       setCopyModal({ isOpen: false, task: null });
       setCopyForm({
@@ -560,11 +565,10 @@ export default function TasksPage() {
       {/* Toast Notification */}
       {toast.message && (
         <div
-          className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 font-cairo transition-all duration-300 ${
-            toast.type === 'success'
-              ? 'bg-green-500 text-white'
-              : 'bg-red-500 text-white'
-          }`}
+          className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 font-cairo transition-all duration-300 ${toast.type === 'success'
+            ? 'bg-green-500 text-white'
+            : 'bg-red-500 text-white'
+            }`}
           style={{ animation: 'slideDown 0.3s ease-out' }}
         >
           <span>{toast.message}</span>
@@ -653,82 +657,82 @@ export default function TasksPage() {
                 tasks.overdue.map((task) => {
                   const customerPhone = task.CustomerPhone || task.Customerphone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.Phone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.phone || '';
                   return (
-                  <div
-                    key={task.InteractionID}
-                    className="bg-white rounded-lg border-2 border-red-400 p-4 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <a
-                      href={`/admin/customers/${task.CustomerID}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
+                    <div
+                      key={task.InteractionID}
+                      className="bg-white rounded-lg border-2 border-red-400 p-4 shadow-sm hover:shadow-md transition-shadow"
                     >
-                      {task.CustomerName}
-                    </a>
-                    {customerPhone && (
-                      <div className="mb-2">
-                        <PhoneActions phone={customerPhone} />
+                      <a
+                        href={`/admin/customers/${task.CustomerID}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
+                      >
+                        {task.CustomerName}
+                      </a>
+                      {customerPhone && (
+                        <div className="mb-2">
+                          <PhoneActions phone={customerPhone} />
+                        </div>
+                      )}
+                      {task.PromiseAmount && (
+                        <p className="text-sm font-semibold text-red-600 mb-1">
+                          المبلغ: {formatCurrency(task.PromiseAmount)}
+                        </p>
+                      )}
+                      <p className="text-xs text-red-500 mb-2">تاريخ فائت: {formatDate(task.NextDate)}</p>
+                      {task.Notes && (
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.Notes}</p>
+                      )}
+                      {(task.CreatedByUsername || task.UpdatedByUsername) && (
+                        <p className="text-xs text-gray-500 mb-2">
+                          {task.CreatedByUsername && <span>أنشأه: {task.CreatedByUsername}</span>}
+                          {task.CreatedByUsername && task.UpdatedByUsername && ' · '}
+                          {task.UpdatedByUsername && <span>آخر تحديث: {task.UpdatedByUsername}</span>}
+                        </p>
+                      )}
+                      <div className="flex gap-2 mt-3 flex-wrap">
+                        <button
+                          onClick={() => handleResolved(task)}
+                          disabled={updatingIds.has(task.InteractionID)}
+                          className="flex-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                        >
+                          {updatingIds.has(task.InteractionID) ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <CheckCircle2 size={14} />
+                          )}
+                          تم الدفع
+                        </button>
+                        <button
+                          onClick={() => handleNoAnswer(task)}
+                          disabled={updatingIds.has(task.InteractionID)}
+                          className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                        >
+                          {updatingIds.has(task.InteractionID) ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Phone size={14} />
+                          )}
+                          لم يجب
+                        </button>
+                        <button
+                          onClick={() => handleRescheduleClick(task)}
+                          disabled={updatingIds.has(task.InteractionID)}
+                          className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                        >
+                          <Calendar size={14} />
+                          إعادة جدولة
+                        </button>
+                        <button
+                          onClick={() => handleCopyClick(task)}
+                          disabled={updatingIds.has(task.InteractionID)}
+                          className="flex-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                        >
+                          <Copy size={14} />
+                          نسخ تفاعل
+                        </button>
                       </div>
-                    )}
-                    {task.PromiseAmount && (
-                      <p className="text-sm font-semibold text-red-600 mb-1">
-                        المبلغ: {formatCurrency(task.PromiseAmount)}
-                      </p>
-                    )}
-                    <p className="text-xs text-red-500 mb-2">تاريخ فائت: {formatDate(task.NextDate)}</p>
-                    {task.Notes && (
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.Notes}</p>
-                    )}
-                    {(task.CreatedByUsername || task.UpdatedByUsername) && (
-                      <p className="text-xs text-gray-500 mb-2">
-                        {task.CreatedByUsername && <span>أنشأه: {task.CreatedByUsername}</span>}
-                        {task.CreatedByUsername && task.UpdatedByUsername && ' · '}
-                        {task.UpdatedByUsername && <span>آخر تحديث: {task.UpdatedByUsername}</span>}
-                      </p>
-                    )}
-                    <div className="flex gap-2 mt-3 flex-wrap">
-                      <button
-                        onClick={() => handleResolved(task)}
-                        disabled={updatingIds.has(task.InteractionID)}
-                        className="flex-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                      >
-                        {updatingIds.has(task.InteractionID) ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <CheckCircle2 size={14} />
-                        )}
-                        تم الدفع
-                      </button>
-                      <button
-                        onClick={() => handleNoAnswer(task)}
-                        disabled={updatingIds.has(task.InteractionID)}
-                        className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                      >
-                        {updatingIds.has(task.InteractionID) ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <Phone size={14} />
-                        )}
-                        لم يجب
-                      </button>
-                      <button
-                        onClick={() => handleRescheduleClick(task)}
-                        disabled={updatingIds.has(task.InteractionID)}
-                        className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                      >
-                        <Calendar size={14} />
-                        إعادة جدولة
-                      </button>
-                      <button
-                        onClick={() => handleCopyClick(task)}
-                        disabled={updatingIds.has(task.InteractionID)}
-                        className="flex-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                      >
-                        <Copy size={14} />
-                        نسخ تفاعل
-                      </button>
                     </div>
-                  </div>
                   );
                 })
               )}
@@ -755,82 +759,82 @@ export default function TasksPage() {
                 tasks.today.map((task) => {
                   const customerPhone = task.CustomerPhone || task.Customerphone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.Phone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.phone || '';
                   return (
-                  <div
-                    key={task.InteractionID}
-                    className="bg-white rounded-lg border-2 border-blue-200 p-4 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <a
-                      href={`/admin/customers/${task.CustomerID}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
+                    <div
+                      key={task.InteractionID}
+                      className="bg-white rounded-lg border-2 border-blue-200 p-4 shadow-sm hover:shadow-md transition-shadow"
                     >
-                      {task.CustomerName}
-                    </a>
-                    {customerPhone && (
-                      <div className="mb-2">
-                        <PhoneActions phone={customerPhone} />
+                      <a
+                        href={`/admin/customers/${task.CustomerID}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
+                      >
+                        {task.CustomerName}
+                      </a>
+                      {customerPhone && (
+                        <div className="mb-2">
+                          <PhoneActions phone={customerPhone} />
+                        </div>
+                      )}
+                      {task.PromiseAmount && (
+                        <p className="text-sm font-semibold text-blue-600 mb-1">
+                          المبلغ: {formatCurrency(task.PromiseAmount)}
+                        </p>
+                      )}
+                      <p className="text-xs text-blue-500 mb-2">تاريخ: {formatDate(task.NextDate)}</p>
+                      {task.Notes && (
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.Notes}</p>
+                      )}
+                      {(task.CreatedByUsername || task.UpdatedByUsername) && (
+                        <p className="text-xs text-gray-500 mb-2">
+                          {task.CreatedByUsername && <span>أنشأه: {task.CreatedByUsername}</span>}
+                          {task.CreatedByUsername && task.UpdatedByUsername && ' · '}
+                          {task.UpdatedByUsername && <span>آخر تحديث: {task.UpdatedByUsername}</span>}
+                        </p>
+                      )}
+                      <div className="flex gap-2 mt-3 flex-wrap">
+                        <button
+                          onClick={() => handleResolved(task)}
+                          disabled={updatingIds.has(task.InteractionID)}
+                          className="flex-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                        >
+                          {updatingIds.has(task.InteractionID) ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <CheckCircle2 size={14} />
+                          )}
+                          تم الدفع
+                        </button>
+                        <button
+                          onClick={() => handleNoAnswer(task)}
+                          disabled={updatingIds.has(task.InteractionID)}
+                          className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                        >
+                          {updatingIds.has(task.InteractionID) ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Phone size={14} />
+                          )}
+                          لم يجب
+                        </button>
+                        <button
+                          onClick={() => handleRescheduleClick(task)}
+                          disabled={updatingIds.has(task.InteractionID)}
+                          className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                        >
+                          <Calendar size={14} />
+                          إعادة جدولة
+                        </button>
+                        <button
+                          onClick={() => handleCopyClick(task)}
+                          disabled={updatingIds.has(task.InteractionID)}
+                          className="flex-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                        >
+                          <Copy size={14} />
+                          نسخ تفاعل
+                        </button>
                       </div>
-                    )}
-                    {task.PromiseAmount && (
-                      <p className="text-sm font-semibold text-blue-600 mb-1">
-                        المبلغ: {formatCurrency(task.PromiseAmount)}
-                      </p>
-                    )}
-                    <p className="text-xs text-blue-500 mb-2">تاريخ: {formatDate(task.NextDate)}</p>
-                    {task.Notes && (
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.Notes}</p>
-                    )}
-                    {(task.CreatedByUsername || task.UpdatedByUsername) && (
-                      <p className="text-xs text-gray-500 mb-2">
-                        {task.CreatedByUsername && <span>أنشأه: {task.CreatedByUsername}</span>}
-                        {task.CreatedByUsername && task.UpdatedByUsername && ' · '}
-                        {task.UpdatedByUsername && <span>آخر تحديث: {task.UpdatedByUsername}</span>}
-                      </p>
-                    )}
-                    <div className="flex gap-2 mt-3 flex-wrap">
-                      <button
-                        onClick={() => handleResolved(task)}
-                        disabled={updatingIds.has(task.InteractionID)}
-                        className="flex-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                      >
-                        {updatingIds.has(task.InteractionID) ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <CheckCircle2 size={14} />
-                        )}
-                        تم الدفع
-                      </button>
-                      <button
-                        onClick={() => handleNoAnswer(task)}
-                        disabled={updatingIds.has(task.InteractionID)}
-                        className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                      >
-                        {updatingIds.has(task.InteractionID) ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <Phone size={14} />
-                        )}
-                        لم يجب
-                      </button>
-                      <button
-                        onClick={() => handleRescheduleClick(task)}
-                        disabled={updatingIds.has(task.InteractionID)}
-                        className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                      >
-                        <Calendar size={14} />
-                        إعادة جدولة
-                      </button>
-                      <button
-                        onClick={() => handleCopyClick(task)}
-                        disabled={updatingIds.has(task.InteractionID)}
-                        className="flex-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                      >
-                        <Copy size={14} />
-                        نسخ تفاعل
-                      </button>
                     </div>
-                  </div>
                   );
                 })
               )}
@@ -857,82 +861,82 @@ export default function TasksPage() {
                 tasks.upcoming.map((task) => {
                   const customerPhone = task.CustomerPhone || task.Customerphone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.Phone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.phone || '';
                   return (
-                  <div
-                    key={task.InteractionID}
-                    className="bg-white rounded-lg border-2 border-green-200 p-4 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <a
-                      href={`/admin/customers/${task.CustomerID}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
+                    <div
+                      key={task.InteractionID}
+                      className="bg-white rounded-lg border-2 border-green-200 p-4 shadow-sm hover:shadow-md transition-shadow"
                     >
-                      {task.CustomerName}
-                    </a>
-                    {customerPhone && (
-                      <div className="mb-2">
-                        <PhoneActions phone={customerPhone} />
+                      <a
+                        href={`/admin/customers/${task.CustomerID}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
+                      >
+                        {task.CustomerName}
+                      </a>
+                      {customerPhone && (
+                        <div className="mb-2">
+                          <PhoneActions phone={customerPhone} />
+                        </div>
+                      )}
+                      {task.PromiseAmount && (
+                        <p className="text-sm font-semibold text-green-600 mb-1">
+                          المبلغ: {formatCurrency(task.PromiseAmount)}
+                        </p>
+                      )}
+                      <p className="text-xs text-green-500 mb-2">تاريخ: {formatDate(task.NextDate)}</p>
+                      {task.Notes && (
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.Notes}</p>
+                      )}
+                      {(task.CreatedByUsername || task.UpdatedByUsername) && (
+                        <p className="text-xs text-gray-500 mb-2">
+                          {task.CreatedByUsername && <span>أنشأه: {task.CreatedByUsername}</span>}
+                          {task.CreatedByUsername && task.UpdatedByUsername && ' · '}
+                          {task.UpdatedByUsername && <span>آخر تحديث: {task.UpdatedByUsername}</span>}
+                        </p>
+                      )}
+                      <div className="flex gap-2 mt-3 flex-wrap">
+                        <button
+                          onClick={() => handleResolved(task)}
+                          disabled={updatingIds.has(task.InteractionID)}
+                          className="flex-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                        >
+                          {updatingIds.has(task.InteractionID) ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <CheckCircle2 size={14} />
+                          )}
+                          تم الدفع
+                        </button>
+                        <button
+                          onClick={() => handleNoAnswer(task)}
+                          disabled={updatingIds.has(task.InteractionID)}
+                          className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                        >
+                          {updatingIds.has(task.InteractionID) ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Phone size={14} />
+                          )}
+                          لم يجب
+                        </button>
+                        <button
+                          onClick={() => handleRescheduleClick(task)}
+                          disabled={updatingIds.has(task.InteractionID)}
+                          className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                        >
+                          <Calendar size={14} />
+                          إعادة جدولة
+                        </button>
+                        <button
+                          onClick={() => handleCopyClick(task)}
+                          disabled={updatingIds.has(task.InteractionID)}
+                          className="flex-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                        >
+                          <Copy size={14} />
+                          نسخ تفاعل
+                        </button>
                       </div>
-                    )}
-                    {task.PromiseAmount && (
-                      <p className="text-sm font-semibold text-green-600 mb-1">
-                        المبلغ: {formatCurrency(task.PromiseAmount)}
-                      </p>
-                    )}
-                    <p className="text-xs text-green-500 mb-2">تاريخ: {formatDate(task.NextDate)}</p>
-                    {task.Notes && (
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.Notes}</p>
-                    )}
-                    {(task.CreatedByUsername || task.UpdatedByUsername) && (
-                      <p className="text-xs text-gray-500 mb-2">
-                        {task.CreatedByUsername && <span>أنشأه: {task.CreatedByUsername}</span>}
-                        {task.CreatedByUsername && task.UpdatedByUsername && ' · '}
-                        {task.UpdatedByUsername && <span>آخر تحديث: {task.UpdatedByUsername}</span>}
-                      </p>
-                    )}
-                    <div className="flex gap-2 mt-3 flex-wrap">
-                      <button
-                        onClick={() => handleResolved(task)}
-                        disabled={updatingIds.has(task.InteractionID)}
-                        className="flex-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                      >
-                        {updatingIds.has(task.InteractionID) ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <CheckCircle2 size={14} />
-                        )}
-                        تم الدفع
-                      </button>
-                      <button
-                        onClick={() => handleNoAnswer(task)}
-                        disabled={updatingIds.has(task.InteractionID)}
-                        className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                      >
-                        {updatingIds.has(task.InteractionID) ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <Phone size={14} />
-                        )}
-                        لم يجب
-                      </button>
-                      <button
-                        onClick={() => handleRescheduleClick(task)}
-                        disabled={updatingIds.has(task.InteractionID)}
-                        className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                      >
-                        <Calendar size={14} />
-                        إعادة جدولة
-                      </button>
-                      <button
-                        onClick={() => handleCopyClick(task)}
-                        disabled={updatingIds.has(task.InteractionID)}
-                        className="flex-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                      >
-                        <Copy size={14} />
-                        نسخ تفاعل
-                      </button>
                     </div>
-                  </div>
                   );
                 })
               )}
@@ -943,8 +947,8 @@ export default function TasksPage() {
 
       {/* Reschedule Modal */}
       {rescheduleModal.isOpen && rescheduleModal.task && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           dir="rtl"
           onClick={(e) => {
             // Close modal when clicking on backdrop
@@ -956,8 +960,8 @@ export default function TasksPage() {
           }}
           style={{ backdropFilter: 'blur(2px)' }}
         >
-          <div 
-            className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" 
+          <div
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
             style={{ fontFamily: 'Cairo, Arial, sans-serif' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1038,8 +1042,8 @@ export default function TasksPage() {
 
       {/* Copy Interaction Modal */}
       {copyModal.isOpen && copyModal.task && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           dir="rtl"
           onClick={(e) => {
             // Close modal when clicking on backdrop
@@ -1055,8 +1059,8 @@ export default function TasksPage() {
           }}
           style={{ backdropFilter: 'blur(2px)' }}
         >
-          <div 
-            className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto" 
+          <div
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto"
             style={{ fontFamily: 'Cairo, Arial, sans-serif' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1106,11 +1110,10 @@ export default function TasksPage() {
                         key={channel.value}
                         type="button"
                         onClick={() => setCopyForm({ ...copyForm, channel: channel.value })}
-                        className={`flex flex-col items-center gap-2 px-3 py-3 border-2 rounded-lg transition-colors ${
-                          copyForm.channel === channel.value
-                            ? 'border-gray-900 bg-gray-50 text-gray-900'
-                            : 'border-gray-200 hover:border-gray-300 text-gray-600'
-                        }`}
+                        className={`flex flex-col items-center gap-2 px-3 py-3 border-2 rounded-lg transition-colors ${copyForm.channel === channel.value
+                          ? 'border-gray-900 bg-gray-50 text-gray-900'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                          }`}
                       >
                         <Icon size={20} />
                         <span className="text-xs font-medium text-center">{channel.label}</span>

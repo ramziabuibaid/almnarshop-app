@@ -58,16 +58,16 @@ export default function CustomerSelect({
         .trim()
         .split(/\s+/)
         .filter(word => word.length > 0);
-      
+
       filtered = filtered.filter((c) => {
         // Safely convert all values to strings and create searchable text
         const name = String(c.Name || c.name || '').toLowerCase();
         const phone = String(c.Phone || c.phone || '').toLowerCase();
         const customerID = String(c.CustomerID || c.id || '').toLowerCase();
-        
+
         // Combine all searchable fields into one text
         const searchableText = `${name} ${phone} ${customerID}`;
-        
+
         // Check if ALL search words are found in the searchable text
         return searchWords.every(word => searchableText.includes(word));
       });
@@ -140,7 +140,7 @@ export default function CustomerSelect({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
-                  className="w-full pr-8 pl-2 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900 placeholder:text-gray-500"
+                  className="w-full pr-8 pl-2 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900 placeholder:text-gray-500 font-medium"
                   autoFocus
                   dir="rtl"
                 />
@@ -175,9 +175,8 @@ export default function CustomerSelect({
                         key={customerID}
                         type="button"
                         onClick={() => handleSelect(customerID)}
-                        className={`w-full text-right px-4 py-2 hover:bg-gray-50 transition-colors ${
-                          isSelected ? 'bg-gray-100 font-medium' : ''
-                        }`}
+                        className={`w-full text-right px-4 py-2 hover:bg-gray-50 transition-colors ${isSelected ? 'bg-gray-100 font-medium' : ''
+                          }`}
                       >
                         <div className="text-sm text-gray-900">
                           {customer.Name || customer.name || 'بدون اسم'}

@@ -21,7 +21,8 @@ import {
   Wallet,
   Shield,
   Tag,
-  Megaphone
+  Megaphone,
+  Settings
 } from 'lucide-react';
 import NotificationCenter from './NotificationCenter';
 
@@ -73,6 +74,7 @@ const invoicesSubmenu = [
 const customersSubmenu = [
   { href: '/admin/tasks', label: 'المهام والمتابعات', icon: ClipboardList, permission: 'viewTasks' as const },
   { href: '/admin/checks', label: 'الشيكات الراجعة', icon: FileText, permission: 'accessChecks' as const },
+  { href: '/admin/promissory-notes', label: 'الكمبيالات', icon: FileText, permission: 'accessChecks' as const },
 ];
 
 const sidebarLinks = [
@@ -84,6 +86,7 @@ const sidebarLinks = [
   { href: '/admin/warehouse-finance/cash-box', label: 'صندوق المستودع', icon: Wallet, accent: 'teal' as const, section: 'finance' as const },
   { href: '/admin/maintenance', label: 'الصيانة', icon: Wrench, accent: 'amber' as const, section: 'admin' as const },
   { href: '/admin/customers', label: 'الزبائن', icon: Users, accent: 'indigo' as const, hasSubmenu: true as const, section: 'admin' as const },
+  { href: '/admin/settings', label: 'الإعدادات', icon: Settings, accent: 'neutral' as const, section: 'admin' as const },
 ];
 
 const SECTION_LABELS: Record<string, string> = {
@@ -112,6 +115,27 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       router.push('/admin/login');
     }
   }, [admin, adminLoading, router]);
+
+  // Auto-expand sidebar submenus based on current path
+  useEffect(() => {
+    if (!pathname) return;
+
+    if (productsSubmenu.some(item => pathname.startsWith(item.href))) {
+      setProductsSubmenuOpen(true);
+    }
+
+    if (posSubmenu.some(item => pathname.startsWith(item.href))) {
+      setPosSubmenuOpen(true);
+    }
+
+    if (invoicesSubmenu.some(item => pathname.startsWith(item.href))) {
+      setInvoicesSubmenuOpen(true);
+    }
+
+    if (customersSubmenu.some(item => pathname.startsWith(item.href))) {
+      setCustomersSubmenuOpen(true);
+    }
+  }, [pathname]);
 
   if (adminLoading) {
     return (
@@ -179,8 +203,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Sidebar — light, professional (Almnar System / ResearchCollab-inspired) */}
       <aside
         className={`fixed top-0 right-0 h-full w-56 bg-white text-gray-800 z-[70] transform transition-transform duration-300 shadow-xl border-l border-gray-200 ${pathname === '/admin/pos'
-            ? (sidebarOpen ? 'translate-x-0' : 'translate-x-full')
-            : (sidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0')
+          ? (sidebarOpen ? 'translate-x-0' : 'translate-x-full')
+          : (sidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0')
           }`}
       >
         <div className="flex flex-col h-full">
@@ -278,8 +302,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             setSidebarOpen(false);
                           }}
                           className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${borderClass} ${isActive || submenuActive
-                              ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
-                              : 'text-gray-700 hover:bg-gray-100'
+                            ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
+                            : 'text-gray-700 hover:bg-gray-100'
                             }`}
                         >
                           <Icon size={18} className="shrink-0" />
@@ -346,8 +370,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             setSidebarOpen(false);
                           }}
                           className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${(isActive || submenuActive) ? styles.border : styles.borderMuted} ${isActive || submenuActive
-                              ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
-                              : 'text-gray-700 hover:bg-gray-100'
+                            ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
+                            : 'text-gray-700 hover:bg-gray-100'
                             }`}
                         >
                           <Icon size={18} className="shrink-0" />
@@ -417,8 +441,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             setSidebarOpen(false);
                           }}
                           className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${(isActive || invoicesSubmenuActive) ? styles.border : styles.borderMuted} ${isActive || invoicesSubmenuActive
-                              ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
-                              : 'text-gray-700 hover:bg-gray-100'
+                            ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
+                            : 'text-gray-700 hover:bg-gray-100'
                             }`}
                         >
                           <Icon size={18} className="shrink-0" />
@@ -485,8 +509,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             setSidebarOpen(false);
                           }}
                           className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${(isActive || customersSubmenuActive) ? styles.border : styles.borderMuted} ${isActive || customersSubmenuActive
-                              ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
-                              : 'text-gray-700 hover:bg-gray-100'
+                            ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
+                            : 'text-gray-700 hover:bg-gray-100'
                             }`}
                         >
                           <Icon size={18} className="shrink-0" />
@@ -549,8 +573,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         setSidebarOpen(false);
                       }}
                       className={`flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${isActive ? styles.border : styles.borderMuted} ${isActive
-                          ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
-                          : 'text-gray-700 hover:bg-gray-100'
+                        ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
+                        : 'text-gray-700 hover:bg-gray-100'
                         }`}
                     >
                       <Icon size={18} className="shrink-0" />
