@@ -74,7 +74,7 @@ const invoicesSubmenu = [
 const customersSubmenu = [
   { href: '/admin/tasks', label: 'المهام والمتابعات', icon: ClipboardList, permission: 'viewTasks' as const },
   { href: '/admin/checks', label: 'الشيكات الراجعة', icon: FileText, permission: 'accessChecks' as const },
-  { href: '/admin/promissory-notes', label: 'الكمبيالات', icon: FileText, permission: 'accessChecks' as const },
+  { href: '/admin/promissory-notes', label: 'الكمبيالات', icon: FileText, permission: 'any' as const }, // Permission handled in logic
 ];
 
 const sidebarLinks = [
@@ -494,8 +494,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 // الزبائن: قائمة منبثقة مع سهم وتبعيات مضمنة
                 if (isCustomersWithSubmenu) {
                   const hasPerm = (p: string) => admin.is_super_admin || (admin.permissions as Record<string, boolean>)?.[p] === true;
-                  const filteredCustomersSubmenu = customersSubmenu.filter((s) => !('permission' in s && s.permission) || hasPerm(s.permission));
-                  const customersSubmenuActive = pathname?.startsWith('/admin/tasks') || pathname?.startsWith('/admin/checks');
+                  const filteredCustomersSubmenu = customersSubmenu.filter((s) => {
+                    // Custom logic for Promissory Notes: Allow if accessChecks OR accountant
+                    if (s.href === '/admin/promissory-notes') {
+                      return admin.is_super_admin || admin.permissions?.accessChecks || admin.permissions?.accountant;
+                    }
+                    return !('permission' in s && s.permission) || s.permission === 'any' || hasPerm(s.permission);
+                  });
+                  const customersSubmenuActive = pathname?.startsWith('/admin/tasks') || pathname?.startsWith('/admin/checks') || pathname?.startsWith('/admin/promissory-notes');
                   return (
                     <div key={link.href} className="space-y-0.5">
                       {sectionHeader}

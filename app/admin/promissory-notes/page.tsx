@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import AdminLayout from '@/components/admin/AdminLayout';
 import {
     getPromissoryNotes,
@@ -21,17 +23,28 @@ import {
     Clock,
     AlertCircle,
     Trash2,
-    Calendar
+    Calendar,
+    Printer,
+    X
 } from 'lucide-react';
 
+import { useAdminAuth } from '@/context/AdminAuthContext';
+
 export default function PromissoryNotesPage() {
+    const { admin } = useAdminAuth();
+    const router = useRouter();
     const [notes, setNotes] = useState<PromissoryNote[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedNote, setSelectedNote] = useState<PromissoryNote | null>(null);
     const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
     const [updatingInstallment, setUpdatingInstallment] = useState<string | null>(null);
+
+    const [printOverlayNoteId, setPrintOverlayNoteId] = useState<string | null>(null);
+    const printIframeRef = useRef<HTMLIFrameElement>(null);
+    const isMobilePrint = () => typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     useLayoutEffect(() => {
         document.title = 'الكمبيالات';
@@ -40,6 +53,51 @@ export default function PromissoryNotesPage() {
     useEffect(() => {
         loadNotes();
     }, [statusFilter]);
+
+    useEffect(() => {
+        if (!printOverlayNoteId) return;
+        const onMessage = (e: MessageEvent) => {
+            if (e.data?.type === 'print-ready' && printIframeRef.current?.contentWindow) {
+                const prevTitle = document.title;
+                if (e.data?.title) document.title = e.data.title;
+                try {
+                    printIframeRef.current.contentWindow.print();
+                } catch (_) { }
+                setTimeout(() => { document.title = prevTitle; }, 500);
+            }
+        };
+        window.addEventListener('message', onMessage);
+        return () => window.removeEventListener('message', onMessage);
+    }, [printOverlayNoteId]);
+
+    // Permission check
+    const canManage = admin?.is_super_admin || admin?.permissions?.accountant;
+
+    // ...
+
+    const handleEdit = (note: PromissoryNote) => {
+        // Allow editing for everyone as requested? Or restrict?
+        // User said: "make editing available to everyone"
+        setSelectedNote(note);
+        setIsModalOpen(true);
+    };
+
+    const handleCreate = () => {
+        if (!canManage) {
+            alert('ليس لديك صلاحية لإنشاء كمبيالة جديدة');
+            return;
+        }
+        setSelectedNote(null);
+        setIsModalOpen(true);
+    };
+
+    const handlePrintNote = (noteId: string) => {
+        if (isMobilePrint()) {
+            window.open(`/admin/promissory-notes/print/${noteId}`, '_blank');
+            return;
+        }
+        setPrintOverlayNoteId(noteId);
+    };
 
     const loadNotes = async () => {
         setLoading(true);
@@ -65,6 +123,10 @@ export default function PromissoryNotesPage() {
     };
 
     const handleInstallmentStatus = async (instId: string, currentStatus: InstallmentStatus) => {
+        if (!canManage) {
+            alert('ليس لديك صلاحية لتعديل حالة الأقساط');
+            return;
+        }
         if (updatingInstallment) return;
 
         // Toggle logic: Pending -> Paid -> Pending
@@ -84,6 +146,10 @@ export default function PromissoryNotesPage() {
     };
 
     const handleDelete = async (id: string) => {
+        if (!admin?.is_super_admin) {
+            alert('فقط المشرف العام يمكنه حذف الكمبيالات');
+            return;
+        }
         if (!confirm('هل أنت متأكد من حذف هذه الكمبيالة وجميع أقساطها؟')) return;
         try {
             await deletePromissoryNote(id);
@@ -120,13 +186,17 @@ export default function PromissoryNotesPage() {
                         <h1 className="text-2xl font-bold text-gray-900">إدارة الكمبيالات</h1>
                         <p className="text-gray-500 mt-1">متابعة الأقساط والذمم المالية</p>
                     </div>
-                    <button
-                        onClick={() => setIsModalOpen(true)}
-                        className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
-                    >
-                        <Plus size={20} />
-                        إنشاء كمبيالة جديدة
-                    </button>
+                    <div className="flex gap-2">
+                        {canManage && (
+                            <button
+                                onClick={handleCreate}
+                                className="bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-800 transition-colors"
+                            >
+                                <Plus size={20} />
+                                <span>إضافة كمبيالة جديدة</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Stats */}
@@ -202,7 +272,17 @@ export default function PromissoryNotesPage() {
                                                 <Calendar size={20} />
                                             </div>
                                             <div>
-                                                <div className="font-bold text-gray-900">{note.customers?.name || 'زبون عام'}</div>
+                                                {note.customer_id ? (
+                                                    <Link
+                                                        href={`/admin/customers/${note.customer_id}`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="font-bold text-gray-900 hover:text-blue-600 hover:underline transition-colors block"
+                                                    >
+                                                        {note.customers?.name || 'زبون عام'}
+                                                    </Link>
+                                                ) : (
+                                                    <div className="font-bold text-gray-900">{note.customers?.name || 'زبون عام'}</div>
+                                                )}
                                                 <div className="text-sm text-gray-500">{note.customers?.phone}</div>
                                             </div>
                                         </div>
@@ -214,7 +294,14 @@ export default function PromissoryNotesPage() {
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="text-gray-900 text-xs font-medium">المبلغ الإجمالي</span>
-                                                <span className="font-bold text-gray-900">₪{note.total_amount.toLocaleString()}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-gray-900">₪{note.total_amount.toLocaleString()}</span>
+                                                    {note.is_legacy && note.remaining_amount != null && (
+                                                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
+                                                            متبقي: ₪{note.remaining_amount.toLocaleString()}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="text-gray-900 text-xs font-medium">تاريخ الاصدار</span>
@@ -235,6 +322,26 @@ export default function PromissoryNotesPage() {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
+                                                    handlePrintNote(note.id);
+                                                }}
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                title="طباعة الكمبيالة"
+                                            >
+                                                <Printer size={18} />
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleEdit(note);
+                                                }}
+                                                className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                                                title="تعديل الكمبيالة"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
                                                     handleDelete(note.id);
                                                 }}
                                                 className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
@@ -242,7 +349,7 @@ export default function PromissoryNotesPage() {
                                             >
                                                 <Trash2 size={18} />
                                             </button>
-                                            <button className="text-gray-400">
+                                            <button className="text-gray-400 hover:text-gray-700 transition-colors p-2">
                                                 {expandedNoteId === note.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                             </button>
                                         </div>
@@ -312,7 +419,54 @@ export default function PromissoryNotesPage() {
                 onSuccess={() => {
                     loadNotes();
                 }}
+                initialData={selectedNote}
             />
-        </AdminLayout>
+
+            {/* Print Overlay */}
+            {printOverlayNoteId && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+                    dir="rtl"
+                    onClick={() => setPrintOverlayNoteId(null)}
+                >
+                    <div
+                        className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+                        style={{ minWidth: '120mm', maxHeight: '95vh' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                            <span className="text-sm font-cairo text-gray-700">معاينة الطباعة — كمبيالة</span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => printIframeRef.current?.contentWindow?.print()}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                                >
+                                    <Printer size={16} />
+                                    طباعة مرة أخرى
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setPrintOverlayNoteId(null)}
+                                    className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                                    aria-label="إغلاق"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-auto bg-white min-h-0">
+                            <iframe
+                                ref={printIframeRef}
+                                src={`/admin/promissory-notes/print/${printOverlayNoteId}?embed=1`}
+                                title="طباعة الكمبيالة"
+                                className="w-full border-0 bg-white"
+                                style={{ minHeight: '70vh', height: '70vh' }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+        </AdminLayout >
     );
 }

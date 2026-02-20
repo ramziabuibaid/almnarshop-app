@@ -10673,9 +10673,16 @@ export interface PromissoryNote {
   image_url?: string | null;
   created_by?: string | null;
   created_at?: string;
+  debtor_id_number?: string | null;
+  debtor_address?: string | null;
+  is_legacy?: boolean | null;
+  paid_amount?: number | null;
+  remaining_amount?: number | null;
   customers?: {
     name?: string | null;
     phone?: string | null;
+    id_number?: string | null;
+    address?: string | null;
   } | null;
   installments?: Installment[];
 }
@@ -10787,71 +10794,138 @@ export async function createPromissoryNote(payload: {
   issueDate: string;
   notes?: string;
   imageUrl?: string;
+  debtorIdNumber?: string;
+  debtorAddress?: string;
+  isLegacy?: boolean;
+  paidAmount?: number;
+  remainingAmount?: number;
   createdBy?: string;
   installments: {
     amount: number;
     dueDate: string;
     notes?: string;
   }[];
-}): Promise<string> {
-  try {
-    // 1. Get count for ID generation
-    const { count, error: countError } = await supabase
+}): Promise<void> {
+  // Use provided createdBy (from AdminAuthContext on the client)
+  // or default to an empty string/null if not available, rather than failing the whole request
+  const createdBy = payload.createdBy || null;
+
+  // Get current count for ID generation
+  const { count, error: countError } = await supabase
+    .from('promissory_notes')
+    .select('*', { count: 'exact', head: true });
+
+  if (countError) throw countError;
+  const newId = generatePromissoryNoteID(count || 0);
+
+  // Insert Note
+  const { data: note, error: noteError } = await supabase
+    .from('promissory_notes')
+    .insert({
+      id: newId,
+      customer_id: payload.customerId,
+      total_amount: payload.totalAmount,
+      issue_date: payload.issueDate,
+      status: 'Active',
+      notes: payload.notes,
+      image_url: payload.imageUrl,
+      created_by: createdBy,
+      debtor_id_number: payload.debtorIdNumber,
+      debtor_address: payload.debtorAddress,
+      is_legacy: payload.isLegacy,
+      paid_amount: payload.paidAmount
+    })
+    .select('id')
+    .single();
+
+  if (noteError) throw noteError;
+
+  // Insert Installments
+  const installments = payload.installments.map(inst => ({
+    promissory_note_id: note.id,
+    amount: inst.amount,
+    due_date: inst.dueDate,
+    status: 'Pending',
+    notes: inst.notes
+  }));
+
+  const { error: instError } = await supabase
+    .from('promissory_note_installments')
+    .insert(installments);
+
+  if (instError) throw instError;
+}
+
+/**
+ * Update an existing promissory note
+ * If installments are provided, they will REPLACE the existing ones.
+ */
+export async function updatePromissoryNote(
+  noteId: string,
+  payload: {
+    customerId?: string;
+    totalAmount?: number;
+    issueDate?: string;
+    notes?: string;
+    imageUrl?: string;
+    debtorIdNumber?: string;
+    debtorAddress?: string;
+    isLegacy?: boolean;
+    paidAmount?: number;
+    remainingAmount?: number;
+    installments?: {
+      amount: number;
+      dueDate: string;
+      notes?: string;
+      status?: InstallmentStatus;
+    }[];
+  }
+): Promise<void> {
+  const noteUpdate: any = {};
+  if (payload.customerId !== undefined) noteUpdate.customer_id = payload.customerId;
+  if (payload.totalAmount !== undefined) noteUpdate.total_amount = payload.totalAmount;
+  if (payload.issueDate !== undefined) noteUpdate.issue_date = payload.issueDate;
+  if (payload.notes !== undefined) noteUpdate.notes = payload.notes;
+  if (payload.imageUrl !== undefined) noteUpdate.image_url = payload.imageUrl;
+  if (payload.debtorIdNumber !== undefined) noteUpdate.debtor_id_number = payload.debtorIdNumber;
+  if (payload.debtorAddress !== undefined) noteUpdate.debtor_address = payload.debtorAddress;
+  if (payload.isLegacy !== undefined) noteUpdate.is_legacy = payload.isLegacy;
+  if (payload.paidAmount !== undefined) noteUpdate.paid_amount = payload.paidAmount;
+
+  if (Object.keys(noteUpdate).length > 0) {
+    const { error } = await supabase
       .from('promissory_notes')
-      .select('*', { count: 'exact', head: true });
+      .update(noteUpdate)
+      .eq('id', noteId);
+    if (error) throw error;
+  }
 
-    if (countError) {
-      console.error('[API] createPromissoryNote count error:', countError);
-      throw new Error('Failed to generate Promissory Note ID');
-    }
+  // Handle installments if provided
+  if (payload.installments && payload.installments.length > 0) {
+    // Delete existing pending/late installments?
+    // Or just clear all and insert new? (Simpler but resets status)
+    // For now, let's delete all existing installments and replace them.
+    // In a real app, you might want to only update pending ones or maintain a history.
+    const { error: deleteError } = await supabase
+      .from('promissory_note_installments')
+      .delete()
+      .eq('promissory_note_id', noteId);
 
-    const noteId = generatePromissoryNoteID(count || 0);
+    if (deleteError) throw deleteError;
 
-    // 2. Create the note
-    const { data: note, error: noteError } = await supabase
-      .from('promissory_notes')
-      .insert({
-        id: noteId, // Manually set ID
-        customer_id: payload.customerId,
-        total_amount: payload.totalAmount,
-        issue_date: payload.issueDate,
-        notes: payload.notes,
-        status: 'Active',
-        image_url: payload.imageUrl,
-        created_by: payload.createdBy
-      })
-      .select('id')
-      .single();
-
-    if (noteError) {
-      console.error('[API] createPromissoryNote error (note):', noteError);
-      throw new Error(`Failed to create promissory note: ${noteError.message}`);
-    }
-
-    // 3. Create installments
-    const installmentsData = payload.installments.map(inst => ({
+    const installmentsToInsert = payload.installments.map(inst => ({
       promissory_note_id: noteId,
       amount: inst.amount,
       due_date: inst.dueDate,
-      status: 'Pending',
+      status: inst.status || 'Pending',
       notes: inst.notes
     }));
 
-    const { error: instError } = await supabase
+    const { error: insertError } = await supabase
       .from('promissory_note_installments')
-      .insert(installmentsData);
+      .insert(installmentsToInsert);
 
-    if (instError) {
-      console.error('[API] createPromissoryNote error (installments):', instError);
-      // Try to cleanup
-      await supabase.from('promissory_notes').delete().eq('id', noteId);
-      throw new Error(`Failed to create installments: ${instError.message}`);
-    }
-
-    return noteId;
-  } catch (error: any) {
-    console.error('[API] createPromissoryNote catch error:', error);
-    throw error;
+    if (insertError) throw insertError;
   }
 }
 
@@ -10909,7 +10983,44 @@ export async function deletePromissoryNote(id: string): Promise<void> {
   }
 }
 
+/**
+ * Get a single promissory note by ID with installments
+ */
+export async function getPromissoryNoteById(id: string): Promise<any> {
+  try {
+    const { data: note, error: noteError } = await supabase
+      .from('promissory_notes')
+      .select(`
+                *,
+                customers:customer_id (
+                    name,
+                    phone
+                ),
+                installments:promissory_note_installments (
+                    *
+                )
+            `)
+      .eq('id', id)
+      .single();
 
+    if (noteError) {
+      console.error('[API] getPromissoryNoteById error:', noteError);
+      throw new Error(`Failed to fetch promissory note: ${noteError.message}`);
+    }
+
+    // Sort installments by due date
+    if (note.installments) {
+      note.installments.sort((a: any, b: any) =>
+        new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+      );
+    }
+
+    return note;
+  } catch (error: any) {
+    console.error('[API] getPromissoryNoteById catch error:', error);
+    throw error;
+  }
+}
 /**
  * Delete an activity from crm_activities table
  */
