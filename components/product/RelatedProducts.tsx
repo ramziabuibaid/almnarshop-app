@@ -35,9 +35,11 @@ export default function RelatedProducts({ currentProductId, currentProductType, 
   }
 
   return (
-    <div className="mt-8">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6 text-right">منتجات مشابهة</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+    <div className="mt-12 sm:mt-16 mb-8 border-t border-gray-100 pt-8 sm:pt-12">
+      <div className="flex items-center justify-between mb-8" dir="rtl">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">قد يعجبك أيضاً</h2>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6" dir="rtl">
         {relatedProducts.map((product) => (
           <ProductCard key={product.id || product.ProductID} product={product} />
         ))}

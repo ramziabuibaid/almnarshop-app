@@ -3,8 +3,10 @@
 import { ChevronDown, ShoppingBag, ArrowLeft, Star, TrendingUp, Store } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function HeroBanner() {
+  const router = useRouter();
   const [isVisible, setIsVisible] = useState(false);
   const [settings, setSettings] = useState({
     title: 'التميز في عالم الأجهزة',
@@ -30,11 +32,8 @@ export default function HeroBanner() {
       .catch(err => console.error('Failed to fetch hero settings:', err));
   }, []);
 
-  const scrollToProducts = () => {
-    const productsSection = document.getElementById('products-section');
-    if (productsSection) {
-      productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+  const navigateToShop = () => {
+    router.push('/shop');
   };
 
   return (
@@ -81,7 +80,7 @@ export default function HeroBanner() {
             {/* CTAs */}
             <div className="flex flex-wrap gap-4 pt-4">
               <button
-                onClick={scrollToProducts}
+                onClick={navigateToShop}
                 className="group relative px-8 py-4 bg-[#D4AF37] text-black font-bold text-lg rounded-xl overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-[0_0_40px_-10px_rgba(212,175,55,0.5)]"
               >
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
@@ -190,7 +189,7 @@ export default function HeroBanner() {
       </div>
 
       {/* Scroll Down Indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2 cursor-pointer opacity-50 hover:opacity-100 transition-opacity" onClick={scrollToProducts}>
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2 cursor-pointer opacity-50 hover:opacity-100 transition-opacity" onClick={navigateToShop}>
         <span className="text-xs text-white tracking-widest uppercase">تصفح المنتجات</span>
         <ChevronDown className="text-[#D4AF37] animate-bounce" />
       </div>

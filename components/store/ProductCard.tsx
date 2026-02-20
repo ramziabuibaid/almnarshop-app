@@ -33,26 +33,26 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [imageLoading, setImageLoading] = useState(true);
   const [isInView, setIsInView] = useState(false);
   const imgRef = useRef<HTMLDivElement>(null);
-  
+
   const productId = product.id || product.ProductID || product.product_id || '';
   const productUrl = productId ? `/product/${encodeURIComponent(productId)}` : '#';
-  
+
   // Convert image URL to direct image link
   const rawImageUrl = product.image && product.image.trim() !== '' ? product.image.trim() : '';
   const imageUrl = getDirectImageUrl(rawImageUrl);
   const hasValidImage = imageUrl && !imageError;
-  
+
   // Check if product is available
   const warehouseStock = product.CS_War || product.cs_war || 0;
   const shopStock = product.CS_Shop || product.cs_shop || 0;
   const totalStock = warehouseStock + shopStock;
   const isAvailable = totalStock > 0;
-  
+
   // Check if product is "new" (recently restocked or added within last 15 days)
   // Uses last_restocked_at when stock increased, otherwise created_at for new products
   // Use useState to prevent hydration mismatch (Date.now() differs between server and client)
   const [isNew, setIsNew] = useState(false);
-  
+
   useEffect(() => {
     const referenceDate = product.last_restocked_at || product.LastRestockedAt || product.created_at;
     if (referenceDate) {
@@ -99,6 +99,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   }, [hasValidImage]);
 
   const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (isAvailable) {
       addToCart(product);
@@ -109,7 +110,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     <>
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 group">
         {/* Image Container */}
-        <Link 
+        <Link
           href={productUrl}
           className="relative w-full aspect-square bg-gray-50 flex items-center justify-center cursor-pointer overflow-hidden block"
         >
@@ -141,9 +142,8 @@ export default function ProductCard({ product }: ProductCardProps) {
                 src={imageUrl}
                 alt={product.name}
                 loading="lazy"
-                className={`object-contain w-full h-full p-2 transition-transform duration-300 group-hover:scale-105 ${
-                  imageLoading ? 'opacity-0' : 'opacity-100'
-                } ${!isAvailable ? 'opacity-50 grayscale' : ''}`}
+                className={`object-contain w-full h-full p-2 transition-transform duration-300 group-hover:scale-105 ${imageLoading ? 'opacity-0' : 'opacity-100'
+                  } ${!isAvailable ? 'opacity-50 grayscale' : ''}`}
                 onLoad={() => setImageLoading(false)}
                 onError={() => {
                   setImageError(true);
@@ -168,11 +168,10 @@ export default function ProductCard({ product }: ProductCardProps) {
             <button
               onClick={handleAddToCart}
               disabled={!isAvailable}
-              className={`w-full flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors font-medium text-xs sm:text-sm ${
-                isAvailable
+              className={`w-full flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors font-medium text-xs sm:text-sm ${isAvailable
                   ? 'bg-gray-900 text-white hover:bg-gray-800'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
+                }`}
             >
               <ShoppingCart size={14} className="sm:w-4 sm:h-4" />
               {isAvailable ? 'إضافة إلى السلة' : 'غير متوفر'}
@@ -187,7 +186,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               {product.name}
             </h3>
           </Link>
-          
+
           {/* Price */}
           <div className="mb-2 sm:mb-3">
             {product.isCampaignMode && product.originalPrice && product.originalPrice > product.price ? (
@@ -210,11 +209,10 @@ export default function ProductCard({ product }: ProductCardProps) {
           <button
             onClick={handleAddToCart}
             disabled={!isAvailable}
-            className={`w-full md:hidden flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg transition-colors font-medium text-xs sm:text-sm ${
-              isAvailable
+            className={`w-full md:hidden flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg transition-colors font-medium text-xs sm:text-sm ${isAvailable
                 ? 'bg-gray-900 text-white hover:bg-gray-800'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
+              }`}
           >
             <ShoppingCart size={16} className="sm:w-[18px] sm:h-[18px]" />
             <span className="hidden xs:inline">{isAvailable ? 'إضافة إلى السلة' : 'غير متوفر'}</span>

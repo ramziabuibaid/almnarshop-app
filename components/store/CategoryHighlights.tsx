@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { useShop } from '@/context/ShopContext';
+import { useRouter } from 'next/navigation';
 import { Refrigerator, WashingMachine, Tv, Smartphone, Laptop, Home, ArrowLeft } from 'lucide-react';
 
 interface CategoryHighlightsProps {
@@ -47,6 +48,7 @@ const popularCategories = [
 
 export default function CategoryHighlights({ onCategoryClick }: CategoryHighlightsProps) {
   const { products } = useShop();
+  const router = useRouter();
 
   const categories = useMemo(() => {
     const typeMap = new Map<string, number>();
@@ -92,10 +94,7 @@ export default function CategoryHighlights({ onCategoryClick }: CategoryHighligh
     if (onCategoryClick) {
       onCategoryClick(category);
     } else {
-      const productsSection = document.getElementById('products-section');
-      if (productsSection) {
-        productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+      router.push('/shop');
     }
   };
 
@@ -111,10 +110,7 @@ export default function CategoryHighlights({ onCategoryClick }: CategoryHighligh
             <p className="text-gray-500">اختر من مجموعتنا الواسعة من الأجهزة</p>
           </div>
           <button
-            onClick={() => {
-              const productsSection = document.getElementById('products-section');
-              if (productsSection) productsSection.scrollIntoView({ behavior: 'smooth' });
-            }}
+            onClick={() => router.push('/shop')}
             className="hidden sm:flex items-center text-[#D4AF37] font-medium hover:gap-2 transition-all gap-1"
           >
             عرض الكل <ArrowLeft size={18} />

@@ -43,53 +43,74 @@ export default function FilterDrawer({ isOpen, onClose, filters, onFilterChange 
     const prices: number[] = [];
 
     filtered.forEach((p) => {
-      if (p.type) typesSet.add(p.type);
-      if (p.brand) brandsSet.add(p.brand);
-      if (p.size) sizesSet.add(p.size);
-      if (p.color) colorsSet.add(p.color);
+      const type = p.type || p.Type;
+      const brand = p.brand || p.Brand;
+      const size = p.size || p.Size;
+      const color = p.color || p.Color;
+
+      if (type) typesSet.add(type);
+      if (brand) brandsSet.add(brand);
+      if (size) sizesSet.add(size);
+      if (color) colorsSet.add(color);
       if (p.price) prices.push(p.price);
     });
 
     const baseForTypes = products.filter((p) => {
-      if (filters.selectedBrands.length && !filters.selectedBrands.includes(p.brand || '')) return false;
-      if (filters.selectedSizes.length && !filters.selectedSizes.includes(p.size || '')) return false;
-      if (filters.selectedColors.length && !filters.selectedColors.includes(p.color || '')) return false;
+      const brand = p.brand || p.Brand || '';
+      const size = p.size || p.Size || '';
+      const color = p.color || p.Color || '';
+      if (filters.selectedBrands.length && !filters.selectedBrands.includes(brand)) return false;
+      if (filters.selectedSizes.length && !filters.selectedSizes.includes(size)) return false;
+      if (filters.selectedColors.length && !filters.selectedColors.includes(color)) return false;
       return true;
     });
     const baseForBrands = products.filter((p) => {
-      if (filters.selectedTypes.length && !filters.selectedTypes.includes(p.type || '')) return false;
-      if (filters.selectedSizes.length && !filters.selectedSizes.includes(p.size || '')) return false;
-      if (filters.selectedColors.length && !filters.selectedColors.includes(p.color || '')) return false;
+      const type = p.type || p.Type || '';
+      const size = p.size || p.Size || '';
+      const color = p.color || p.Color || '';
+      if (filters.selectedTypes.length && !filters.selectedTypes.includes(type)) return false;
+      if (filters.selectedSizes.length && !filters.selectedSizes.includes(size)) return false;
+      if (filters.selectedColors.length && !filters.selectedColors.includes(color)) return false;
       return true;
     });
     const baseForSizes = products.filter((p) => {
-      if (filters.selectedTypes.length && !filters.selectedTypes.includes(p.type || '')) return false;
-      if (filters.selectedBrands.length && !filters.selectedBrands.includes(p.brand || '')) return false;
-      if (filters.selectedColors.length && !filters.selectedColors.includes(p.color || '')) return false;
+      const type = p.type || p.Type || '';
+      const brand = p.brand || p.Brand || '';
+      const color = p.color || p.Color || '';
+      if (filters.selectedTypes.length && !filters.selectedTypes.includes(type)) return false;
+      if (filters.selectedBrands.length && !filters.selectedBrands.includes(brand)) return false;
+      if (filters.selectedColors.length && !filters.selectedColors.includes(color)) return false;
       return true;
     });
     const baseForColors = products.filter((p) => {
-      if (filters.selectedTypes.length && !filters.selectedTypes.includes(p.type || '')) return false;
-      if (filters.selectedBrands.length && !filters.selectedBrands.includes(p.brand || '')) return false;
-      if (filters.selectedSizes.length && !filters.selectedSizes.includes(p.size || '')) return false;
+      const type = p.type || p.Type || '';
+      const brand = p.brand || p.Brand || '';
+      const size = p.size || p.Size || '';
+      if (filters.selectedTypes.length && !filters.selectedTypes.includes(type)) return false;
+      if (filters.selectedBrands.length && !filters.selectedBrands.includes(brand)) return false;
+      if (filters.selectedSizes.length && !filters.selectedSizes.includes(size)) return false;
       return true;
     });
 
     const typeCnt: Record<string, number> = {};
     baseForTypes.forEach((p) => {
-      if (p.type) typeCnt[`type_${p.type}`] = (typeCnt[`type_${p.type}`] || 0) + 1;
+      const type = p.type || p.Type;
+      if (type) typeCnt[`type_${type}`] = (typeCnt[`type_${type}`] || 0) + 1;
     });
     const brandCnt: Record<string, number> = {};
     baseForBrands.forEach((p) => {
-      if (p.brand) brandCnt[p.brand] = (brandCnt[p.brand] || 0) + 1;
+      const brand = p.brand || p.Brand;
+      if (brand) brandCnt[brand] = (brandCnt[brand] || 0) + 1;
     });
     const sizeCnt: Record<string, number> = {};
     baseForSizes.forEach((p) => {
-      if (p.size) sizeCnt[p.size] = (sizeCnt[p.size] || 0) + 1;
+      const size = p.size || p.Size;
+      if (size) sizeCnt[size] = (sizeCnt[size] || 0) + 1;
     });
     const colorCnt: Record<string, number> = {};
     baseForColors.forEach((p) => {
-      if (p.color) colorCnt[p.color] = (colorCnt[p.color] || 0) + 1;
+      const color = p.color || p.Color;
+      if (color) colorCnt[color] = (colorCnt[color] || 0) + 1;
     });
 
     const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
@@ -165,7 +186,7 @@ export default function FilterDrawer({ isOpen, onClose, filters, onFilterChange 
         className="fixed inset-0 bg-black/50 z-40 md:hidden"
         onClick={onClose}
       />
-      
+
       {/* Drawer */}
       <div className="fixed top-0 right-0 h-full w-80 bg-white shadow-xl z-50 overflow-y-auto md:hidden" dir="rtl">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10">
@@ -272,21 +293,21 @@ export default function FilterDrawer({ isOpen, onClose, filters, onFilterChange 
             filters.selectedColors.length > 0 ||
             filters.priceRange.min > priceRange.min ||
             filters.priceRange.max < priceRange.max) && (
-            <button
-              onClick={() => {
-                onFilterChange({
-                  selectedTypes: [],
-                  selectedBrands: [],
-                  selectedSizes: [],
-                  selectedColors: [],
-                  priceRange: { min: priceRange.min, max: priceRange.max },
-                });
-              }}
-              className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors text-sm"
-            >
-              إعادة تعيين الكل
-            </button>
-          )}
+              <button
+                onClick={() => {
+                  onFilterChange({
+                    selectedTypes: [],
+                    selectedBrands: [],
+                    selectedSizes: [],
+                    selectedColors: [],
+                    priceRange: { min: priceRange.min, max: priceRange.max },
+                  });
+                }}
+                className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors text-sm"
+              >
+                إعادة تعيين الكل
+              </button>
+            )}
         </div>
       </div>
     </>

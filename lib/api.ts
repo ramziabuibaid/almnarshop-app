@@ -717,7 +717,7 @@ export async function getProducts(options?: { forStore?: boolean; force?: boolea
     let hasMore = true;
 
     const productColumns =
-      'product_id, shamel_no, barcode, name, cost_price, sale_price, cs_shop, cs_war, image_url, image_url_2, image_url_3, type, brand, last_restocked_at, is_visible, created_at';
+      'product_id, shamel_no, barcode, name, cost_price, sale_price, cs_shop, cs_war, image_url, image_url_2, image_url_3, type, brand, size, color, last_restocked_at, is_visible, created_at';
     while (hasMore) {
       const { data: products, error } = await supabase
         .from('products')
