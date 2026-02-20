@@ -421,9 +421,7 @@ function mapProductFromSupabase(product: any): any {
     // Legacy fields (for backward compatibility)
     id: product.product_id || '',
     name: product.name || '',
-    price: parseFloat(String(product.sale_price || 0)) || 0,
-    is_visible: product.is_visible !== false,
-    isVisible: product.is_visible !== false,
+    price: parseFloat(String(product.price || 0)) || parseFloat(String(product.sale_price || 0)) || 0,
     type: product.type || '',
     brand: product.brand || '',
     size: product.size || '',

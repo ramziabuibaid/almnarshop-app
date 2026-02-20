@@ -9,6 +9,7 @@ import ProductCard from '@/components/store/ProductCard';
 import FilterSidebar from '@/components/store/FilterSidebar';
 import FilterDrawer from '@/components/store/FilterDrawer';
 import ActiveFiltersBar from '@/components/store/ActiveFiltersBar';
+import StoreFooter from '@/components/store/StoreFooter';
 import ProductGridHeader from '@/components/store/ProductGridHeader';
 import CartDrawer from '@/components/CartDrawer';
 import AnnouncementBar from '@/components/store/AnnouncementBar';
@@ -80,7 +81,7 @@ function ShopContent() {
 
     const priceRange = useMemo(() => {
         if (products.length === 0) return { min: 0, max: 10000 };
-        const prices = products.map((p) => p.price || 0).filter((p) => p > 0);
+        const prices = products.map((p) => Number(p.sale_price || p.SalePrice || p.price || 0)).filter((p) => p > 0);
         if (prices.length === 0) return { min: 0, max: 10000 };
         return {
             min: Math.min(...prices),
@@ -150,8 +151,8 @@ function ShopContent() {
         }
 
         filtered = filtered.filter((p) => {
-            const price = p.price || 0;
-            return price >= filters.priceRange.min && price <= filters.priceRange.max;
+            const effectivePrice = Number(p.sale_price || p.SalePrice || p.price || 0);
+            return effectivePrice >= filters.priceRange.min && effectivePrice <= filters.priceRange.max;
         });
 
         const sorted = [...filtered];
@@ -163,10 +164,18 @@ function ShopContent() {
                 sorted.sort((a, b) => (b.name || '').localeCompare(a.name || '', 'en', { sensitivity: 'base' }));
                 break;
             case 'price-asc':
-                sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
+                sorted.sort((a, b) => {
+                    const priceA = Number(a.sale_price || a.SalePrice || a.price || 0);
+                    const priceB = Number(b.sale_price || b.SalePrice || b.price || 0);
+                    return priceA - priceB;
+                });
                 break;
             case 'price-desc':
-                sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
+                sorted.sort((a, b) => {
+                    const priceA = Number(a.sale_price || a.SalePrice || a.price || 0);
+                    const priceB = Number(b.sale_price || b.SalePrice || b.price || 0);
+                    return priceB - priceA;
+                });
                 break;
             case 'date-desc':
                 sorted.sort((a, b) => {
@@ -549,6 +558,8 @@ function ShopContent() {
                 filters={filters}
                 onFilterChange={setFilters}
             />
+
+            <StoreFooter />
 
             <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
 

@@ -10,21 +10,21 @@ import { Plus, Edit, Edit2, Image as ImageIcon, Loader2, Package, Sparkles, Chec
 import { useRouter } from 'next/navigation';
 import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
-import { deleteProduct, getProducts, saveProduct, updateProductVisibility, setProductsCacheInvalidated, clearProductsCache } from '@/lib/api';
+import { deleteProduct, getProducts, saveProduct, updateProductVisibility, setProductsCacheInvalidated, clearProductsCache, getActiveCampaignWithProducts } from '@/lib/api';
 import { ColumnDef } from '@tanstack/react-table';
 import ScannerLatinInput from '@/components/admin/ScannerLatinInput';
 import React from 'react';
 
 // Optimized Mobile Product Card Component
-const MobileProductCard = React.memo(({ 
-  product, 
-  imageErrors, 
-  canViewCost, 
-  canAccountant, 
-  router, 
-  handleEdit, 
-  handleGenerateAd, 
-  handleDeleteClick, 
+const MobileProductCard = React.memo(({
+  product,
+  imageErrors,
+  canViewCost,
+  canAccountant,
+  router,
+  handleEdit,
+  handleGenerateAd,
+  handleDeleteClick,
   handleImageError,
   handleToggleVisibility,
   togglingVisibility,
@@ -50,9 +50,13 @@ const MobileProductCard = React.memo(({
   const warehouseStock = product.CS_War !== undefined && product.CS_War !== null ? (product.CS_War || 0) : null;
   const shopStock = product.CS_Shop !== undefined && product.CS_Shop !== null ? (product.CS_Shop || 0) : null;
   const totalStock = (warehouseStock || 0) + (shopStock || 0);
-  const price = product.price || product.SalePrice || 0;
+  const originalParsed = parseFloat(String(product.originalPrice || 0));
+  const campaignParsed = parseFloat(String(product.campaignPrice || 0));
+  const hasDiscount = Boolean(campaignParsed > 0 && originalParsed > 0 && campaignParsed < originalParsed);
+
+  const price = hasDiscount ? campaignParsed : (product.price || product.SalePrice || 0);
   const costPrice = canViewCost ? (product.CostPrice || null) : null;
-  
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
       {/* Header with Image and Basic Info */}
@@ -77,7 +81,7 @@ const MobileProductCard = React.memo(({
             />
           )}
         </button>
-        
+
         {/* Product Info */}
         <div className="flex-1 min-w-0">
           <div className="flex flex-col gap-1 mb-1">
@@ -96,10 +100,20 @@ const MobileProductCard = React.memo(({
                   </div>
                 )}
               </div>
-              <div className="flex-shrink-0 mr-2">
-                <span className="text-lg font-bold text-gray-900 whitespace-nowrap">
+              <div className="flex-shrink-0 mr-2 flex flex-col items-end">
+                {hasDiscount && (
+                  <span className="text-xs text-gray-400 line-through">
+                    ₪{originalParsed.toFixed(2)}
+                  </span>
+                )}
+                <span className={`text-lg font-bold whitespace-nowrap ${hasDiscount ? 'text-red-600' : 'text-gray-900'}`}>
                   ₪{parseFloat(String(price)).toFixed(2)}
                 </span>
+                {hasDiscount && (
+                  <span className="text-[10px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded mt-0.5">
+                    في العرض
+                  </span>
+                )}
               </div>
             </div>
             {product.brand || product.Brand ? (
@@ -108,7 +122,7 @@ const MobileProductCard = React.memo(({
               </div>
             ) : null}
           </div>
-          
+
           {/* Product ID and Barcode */}
           <div className="flex flex-wrap items-center gap-2 mt-2">
             {productId && (
@@ -194,9 +208,8 @@ const MobileProductCard = React.memo(({
             <button
               onClick={() => handleToggleVisibility(product)}
               disabled={isToggling}
-              className={`px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm ${
-                isVisible ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-amber-600 bg-amber-50 hover:bg-amber-100'
-              } disabled:opacity-50`}
+              className={`px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm ${isVisible ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-amber-600 bg-amber-50 hover:bg-amber-100'
+                } disabled:opacity-50`}
               title={isVisible ? 'إخفاء من المتجر' : 'إظهار في المتجر'}
             >
               {isToggling ? <Loader2 size={16} className="animate-spin" /> : isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
@@ -307,12 +320,12 @@ export default function ProductsManagerPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [lightboxProduct, lightboxProductImages.length, closeImageLightbox]);
-  
+
   // Check if user has permission to view cost
   const canViewCost = admin?.is_super_admin || admin?.permissions?.viewCost === true;
   // Permission to refresh products cache (invalidates cache for all store visitors)
   const canRefreshProductsCache = admin?.is_super_admin || admin?.permissions?.refreshProductsCache === true;
-  
+
   // Load column visibility from localStorage
   const getInitialColumnVisibility = (): Record<string, boolean> => {
     const baseVisibility = {
@@ -323,11 +336,11 @@ export default function ProductsManagerPage() {
       // Hide CostPrice by default if user doesn't have permission
       CostPrice: canViewCost ? true : false,
     };
-    
+
     if (typeof window === 'undefined') {
       return baseVisibility;
     }
-    
+
     try {
       const saved = localStorage.getItem('products-table-column-visibility');
       if (saved) {
@@ -342,7 +355,7 @@ export default function ProductsManagerPage() {
     } catch (error) {
       console.error('[ProductsPage] Error loading column visibility:', error);
     }
-    
+
     return baseVisibility;
   };
 
@@ -350,23 +363,23 @@ export default function ProductsManagerPage() {
   const [isColumnVisibilityOpen, setIsColumnVisibilityOpen] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(false);
   const columnVisibilityButtonRef = useRef<HTMLButtonElement>(null);
-  
+
   // Mobile pagination state
   const [mobilePage, setMobilePage] = useState(1);
   const MOBILE_PAGE_SIZE = 20;
-  
+
   // Debounce hook for search
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Debounced search handler
   const handleSearchChange = useCallback((value: string) => {
     setSearchInput(value); // Update input immediately
-    
+
     // Clear previous timeout
     if (searchDebounceRef.current) {
       clearTimeout(searchDebounceRef.current);
     }
-    
+
     // Set new timeout for debounced search
     searchDebounceRef.current = setTimeout(() => {
       startTransition(() => {
@@ -375,7 +388,7 @@ export default function ProductsManagerPage() {
       });
     }, 300); // 300ms debounce delay
   }, [startTransition]);
-  
+
   // Cleanup debounce on unmount
   useEffect(() => {
     return () => {
@@ -384,7 +397,7 @@ export default function ProductsManagerPage() {
       }
     };
   }, []);
-  
+
   // Save column visibility to localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -399,7 +412,7 @@ export default function ProductsManagerPage() {
       console.error('[ProductsPage] Error saving column visibility:', error);
     }
   }, [columnVisibility, canViewCost]);
-  
+
   // Ensure CostPrice is always hidden if user doesn't have permission
   useEffect(() => {
     if (!canViewCost && columnVisibility.CostPrice !== false) {
@@ -409,7 +422,7 @@ export default function ProductsManagerPage() {
       }));
     }
   }, [canViewCost, columnVisibility.CostPrice]);
-  
+
   const [deleteState, setDeleteState] = useState<{
     loading: boolean;
     error: string;
@@ -429,13 +442,13 @@ export default function ProductsManagerPage() {
   });
   // Check if user has accountant permission (for delete)
   const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
-  
+
   // Inline barcode editing (table)
   const [editingBarcode, setEditingBarcode] = useState<string | null>(null);
   const [editingBarcodeValue, setEditingBarcodeValue] = useState('');
   const [savingBarcode, setSavingBarcode] = useState<string | null>(null);
   const [togglingVisibility, setTogglingVisibility] = useState<string | null>(null);
-  
+
   const enableGlobalSearch = true;
 
   useLayoutEffect(() => {
@@ -450,22 +463,22 @@ export default function ProductsManagerPage() {
   // Handle scroll to hide/show header and check if near bottom
   useEffect(() => {
     let ticking = false;
-    
+
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
           const currentScrollY = window.scrollY || window.pageYOffset;
           const windowHeight = window.innerHeight;
           const documentHeight = document.documentElement.scrollHeight;
-          
+
           // Check if within 200px of bottom for pagination
           const distanceFromBottom = documentHeight - (currentScrollY + windowHeight);
           setIsNearBottom(distanceFromBottom < 200);
-          
+
           // Show/hide header when scrolling with threshold to prevent jitter
           const scrollDelta = currentScrollY - lastScrollY.current;
           const threshold = 10; // Minimum scroll delta to trigger hide/show (increased to reduce jitter)
-          
+
           if (currentScrollY < 80) {
             // Always show header when near top
             setIsHeaderHidden(false);
@@ -476,7 +489,7 @@ export default function ProductsManagerPage() {
             // Show header when scrolling up (but not at top)
             setIsHeaderHidden(false);
           }
-          
+
           lastScrollY.current = currentScrollY;
           ticking = false;
         });
@@ -491,13 +504,35 @@ export default function ProductsManagerPage() {
     };
   }, []);
 
+  // Helper to merge campaigns
+  const mergeCampaigns = (data: any[], campaign: any) => {
+    let mergedProducts = data || [];
+    if (campaign && campaign.products && campaign.products.length > 0) {
+      mergedProducts = mergedProducts.map((p: any) => {
+        const cp = campaign.products.find((c: any) => String(c.id || c.ProductID) === String(p.id) || String(c.id || c.ProductID) === String(p.ProductID));
+        if (cp) {
+          return {
+            ...p,
+            originalPrice: parseFloat(String(p.SalePrice || p.sale_price || p.price || 0)),
+            campaignPrice: parseFloat(String(cp.offer_price || 0)),
+          };
+        }
+        return p;
+      });
+    }
+    return mergedProducts;
+  };
+
   // Load products on mount
   useEffect(() => {
     const loadProducts = async () => {
       try {
         setLoading(true);
-        const data = await getProducts();
-        setProducts(data || []);
+        const [data, campaign] = await Promise.all([
+          getProducts(),
+          getActiveCampaignWithProducts()
+        ]);
+        setProducts(mergeCampaigns(data || [], campaign));
       } catch (error) {
         console.error('[ProductsPage] Error loading products:', error);
         setProducts([]);
@@ -512,8 +547,11 @@ export default function ProductsManagerPage() {
   // Reload products (from cache if available)
   const reloadProducts = async () => {
     try {
-      const data = await getProducts();
-      setProducts(data || []);
+      const [data, campaign] = await Promise.all([
+        getProducts(),
+        getActiveCampaignWithProducts()
+      ]);
+      setProducts(mergeCampaigns(data || [], campaign));
     } catch (error) {
       console.error('[ProductsPage] Error reloading products:', error);
     }
@@ -525,8 +563,11 @@ export default function ProductsManagerPage() {
       setLoading(true);
       await setProductsCacheInvalidated();
       clearProductsCache();
-      const data = await getProducts({ force: true });
-      setProducts(data || []);
+      const [data, campaign] = await Promise.all([
+        getProducts({ force: true }),
+        getActiveCampaignWithProducts()
+      ]);
+      setProducts(mergeCampaigns(data || [], campaign));
     } catch (error) {
       console.error('[ProductsPage] Error refreshing from database:', error);
     } finally {
@@ -839,15 +880,15 @@ export default function ProductsManagerPage() {
           const shamelNo = product['Shamel No'] || '';
           return (
             <div className="flex flex-col gap-1">
-                          <div className="text-sm text-gray-900 font-mono">
+              <div className="text-sm text-gray-900 font-mono">
                 {productId}
-                          </div>
+              </div>
               {shamelNo && (
                 <div className="text-xs text-gray-500">
                   شامل: {shamelNo}
-                            </div>
-                          )}
-                          </div>
+                </div>
+              )}
+            </div>
           );
         },
       },
@@ -970,11 +1011,23 @@ export default function ProductsManagerPage() {
         minSize: 120,
         cell: ({ row }) => {
           const product = row.original;
-          const price = product.price || product.SalePrice || 0;
+          const originalParsed = parseFloat(String(product.originalPrice || 0));
+          const campaignParsed = parseFloat(String(product.campaignPrice || 0));
+          const hasDiscount = Boolean(campaignParsed > 0 && originalParsed > 0 && campaignParsed < originalParsed);
+          const price = hasDiscount ? campaignParsed : (product.price || product.SalePrice || 0);
+
           return (
-                          <div className="text-sm font-semibold text-gray-900">
-              ₪{parseFloat(String(price)).toFixed(2)}
-                            </div>
+            <div className="flex flex-col">
+              {hasDiscount && (
+                <span className="text-[10px] text-gray-400 line-through">
+                  ₪{originalParsed.toFixed(2)}
+                </span>
+              )}
+              <div className={`text-sm font-semibold ${hasDiscount ? 'text-red-600' : 'text-gray-900'}`}>
+                ₪{parseFloat(String(price)).toFixed(2)}
+                {hasDiscount && <span className="mr-1 text-[9px] bg-red-100 text-red-800 px-1 rounded">عرض</span>}
+              </div>
+            </div>
           );
         },
       },
@@ -1040,41 +1093,38 @@ export default function ProductsManagerPage() {
           const warehouseStock = product.CS_War !== undefined && product.CS_War !== null ? (product.CS_War || 0) : null;
           const shopStock = product.CS_Shop !== undefined && product.CS_Shop !== null ? (product.CS_Shop || 0) : null;
           const total = (warehouseStock || 0) + (shopStock || 0);
-          
+
           if (warehouseStock === null && shopStock === null) {
             return <span className="text-gray-400 text-sm">—</span>;
           }
-          
+
           return (
-                          <div className="text-sm text-gray-600">
-                              <div className="flex flex-col gap-1">
+            <div className="text-sm text-gray-600">
+              <div className="flex flex-col gap-1">
                 {warehouseStock !== null && (
-                                  <span className="text-xs text-gray-500">
-                                    م: <span className={`font-medium ${
-                      warehouseStock > 0 ? 'text-green-700' : 'text-red-700'
-                    }`}>{warehouseStock}</span>
-                                  </span>
-                                )}
+                  <span className="text-xs text-gray-500">
+                    م: <span className={`font-medium ${warehouseStock > 0 ? 'text-green-700' : 'text-red-700'
+                      }`}>{warehouseStock}</span>
+                  </span>
+                )}
                 {shopStock !== null && (
-                                  <span className="text-xs text-gray-500">
-                                    مح: <span className={`font-medium ${
-                      shopStock > 0 ? 'text-green-700' : 'text-red-700'
-                    }`}>{shopStock}</span>
-                                  </span>
-                                )}
+                  <span className="text-xs text-gray-500">
+                    مح: <span className={`font-medium ${shopStock > 0 ? 'text-green-700' : 'text-red-700'
+                      }`}>{shopStock}</span>
+                  </span>
+                )}
                 {(warehouseStock || 0) + (shopStock || 0) > 0 && (
-                                  <span
-                                    className={`px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                      total > 0
-                                        ? 'bg-green-100 text-green-800'
-                                        : 'bg-red-100 text-red-800'
-                                    }`}
-                                  >
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium mt-1 ${total > 0
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                      }`}
+                  >
                     المجموع: {total}
-                                  </span>
-                                )}
-                              </div>
-                          </div>
+                  </span>
+                )}
+              </div>
+            </div>
           );
         },
       },
@@ -1237,49 +1287,48 @@ export default function ProductsManagerPage() {
           const isVisible = product.is_visible !== false && product.isVisible !== false;
           const isToggling = togglingVisibility === productId;
           return (
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleToggleVisibility(product); }}
-                              disabled={isToggling}
-                              className={`p-2 rounded-lg transition-colors ${
-                                isVisible
-                                  ? 'text-green-600 hover:bg-green-50'
-                                  : 'text-amber-600 hover:bg-amber-50'
-                              } disabled:opacity-50`}
-                              title={isVisible ? 'إخفاء من المتجر' : 'إظهار في المتجر'}
-                            >
-                              {isToggling ? (
-                                <Loader2 size={18} className="animate-spin" />
-                              ) : isVisible ? (
-                                <Eye size={18} />
-                              ) : (
-                                <EyeOff size={18} />
-                              )}
-                            </button>
-                            <button
-                              onClick={() => handleEdit(product)}
-                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                              title="Edit Product"
-                            >
-                              <Edit size={18} />
-                            </button>
-                            <button
-                              onClick={() => handleGenerateAd(product)}
-                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                              title="Generate Marketing Ad"
-                            >
-                              <Sparkles size={18} />
-                            </button>
-                          {canAccountant && (
-                            <button
-                              onClick={() => handleDeleteClick(product)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Delete Product"
-                            >
-                              <Trash size={18} />
-                            </button>
-                          )}
-                          </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); handleToggleVisibility(product); }}
+                disabled={isToggling}
+                className={`p-2 rounded-lg transition-colors ${isVisible
+                  ? 'text-green-600 hover:bg-green-50'
+                  : 'text-amber-600 hover:bg-amber-50'
+                  } disabled:opacity-50`}
+                title={isVisible ? 'إخفاء من المتجر' : 'إظهار في المتجر'}
+              >
+                {isToggling ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : isVisible ? (
+                  <Eye size={18} />
+                ) : (
+                  <EyeOff size={18} />
+                )}
+              </button>
+              <button
+                onClick={() => handleEdit(product)}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Edit Product"
+              >
+                <Edit size={18} />
+              </button>
+              <button
+                onClick={() => handleGenerateAd(product)}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Generate Marketing Ad"
+              >
+                <Sparkles size={18} />
+              </button>
+              {canAccountant && (
+                <button
+                  onClick={() => handleDeleteClick(product)}
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Delete Product"
+                >
+                  <Trash size={18} />
+                </button>
+              )}
+            </div>
           );
         },
       },
@@ -1331,24 +1380,24 @@ export default function ProductsManagerPage() {
       return bTime - aTime;
     });
   }, [products, searchQuery]);
-  
+
   // Paginated products for mobile view
   const paginatedMobileProducts = useMemo(() => {
     const startIndex = (mobilePage - 1) * MOBILE_PAGE_SIZE;
     const endIndex = startIndex + MOBILE_PAGE_SIZE;
     return filteredProducts.slice(startIndex, endIndex);
   }, [filteredProducts, mobilePage]);
-  
+
   const totalMobilePages = Math.ceil(filteredProducts.length / MOBILE_PAGE_SIZE);
-  
+
   // Reset mobile page when filtered products change significantly
   useEffect(() => {
     if (mobilePage > totalMobilePages && totalMobilePages > 0) {
       setMobilePage(1);
     }
   }, [totalMobilePages, mobilePage]);
-                  
-                  return (
+
+  return (
     <AdminLayout>
       <div className="space-y-6" dir="rtl">
         {/* Header */}
@@ -1395,126 +1444,126 @@ export default function ProductsManagerPage() {
                 </button>
               </div>
             </div>
-          
-          {/* Global Search and Column Visibility */}
-          {enableGlobalSearch && (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <div className="flex-1 relative">
-                <Search
-                  size={18}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                />
-                <input
-                  type="text"
-                  placeholder="البحث بالاسم، الرمز، الباركود، أو العلامة التجارية..."
-                  value={searchInput}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 text-sm sm:text-base"
-                  dir="rtl"
-                />
-                {searchInput && (
-                  <button
-                    onClick={() => handleSearchChange('')}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X size={18} />
-                  </button>
-                )}
-              </div>
-              
-              {/* Column Visibility Toggle - Desktop Only */}
-              {!loading && filteredProducts.length > 0 && (
-                <div className="relative hidden md:block">
-                    <button
-                    ref={columnVisibilityButtonRef}
-                    type="button"
-                    onClick={() => {
-                      setIsColumnVisibilityOpen(!isColumnVisibilityOpen);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors text-sm font-medium text-gray-700 whitespace-nowrap cursor-pointer"
-                  >
-                    <Eye size={16} />
-                    <span>الأعمدة</span>
-                    {Object.values(columnVisibility).some((v) => !v) && (
-                      <span className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full text-xs">
-                        {Object.values(columnVisibility).filter((v) => !v).length}
-                      </span>
-                    )}
-                    </button>
 
-                  {isColumnVisibilityOpen && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-[90]"
-                        onClick={() => setIsColumnVisibilityOpen(false)}
-                      />
-                      <div 
-                        className="absolute left-0 top-full mt-2 w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-[100] p-3 max-h-96 overflow-y-auto" 
-                        dir="rtl"
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ position: 'absolute' }}
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-semibold text-gray-900 text-sm">إظهار/إخفاء الأعمدة</h3>
-              <button
-                            onClick={() => setIsColumnVisibilityOpen(false)}
-                            className="p-1 hover:bg-gray-100 rounded"
-              >
-                            <X size={16} />
-              </button>
-            </div>
-                        <div className="space-y-2">
-                          {columns
-                            .filter((col: any) => {
-                              // Filter out columns that should not be shown in the visibility list
-                              if (col.id === 'Actions' || col.id === 'Image') return false;
-                              // Hide CostPrice column from visibility list if user doesn't have permission
-                              if (col.id === 'CostPrice' && !canViewCost) return false;
-                              // Only show columns that can be hidden/shown
-                              return col.enableHiding !== false;
-                            })
-                            .map((col: any) => {
-                              const columnId = col.id || col.accessorKey || col.accessorFn?.toString();
-                              const headerText = typeof col.header === 'string' ? col.header : columnId;
-                              const isVisible = columnVisibility[columnId] !== false;
-                              return (
-                                <label
-                                  key={columnId}
-                                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={isVisible}
-                                    onChange={(e) => {
-                                      setColumnVisibility((prev) => ({
-                                        ...prev,
-                                        [columnId]: e.target.checked,
-                                      }));
-                                      // Update table if available
-                                      if (tableRef.current) {
-                                        const tableColumn = tableRef.current.getAllColumns().find((c: any) => c.id === columnId);
-                                        if (tableColumn) {
-                                          tableColumn.toggleVisibility(e.target.checked);
-                                        }
-                                      }
-                                    }}
-                                    className="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
-                                  />
-                                  <span className="text-sm text-gray-700 flex-1">
-                                    {headerText}
-                                  </span>
-                                  {isVisible && <Check size={14} className="text-gray-600" />}
-                                </label>
-                              );
-                            })}
-            </div>
-          </div>
-                    </>
+            {/* Global Search and Column Visibility */}
+            {enableGlobalSearch && (
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="flex-1 relative">
+                  <Search
+                    size={18}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                  <input
+                    type="text"
+                    placeholder="البحث بالاسم، الرمز، الباركود، أو العلامة التجارية..."
+                    value={searchInput}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 text-sm sm:text-base"
+                    dir="rtl"
+                  />
+                  {searchInput && (
+                    <button
+                      onClick={() => handleSearchChange('')}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X size={18} />
+                    </button>
                   )}
                 </div>
-              )}
-            </div>
-          )}
+
+                {/* Column Visibility Toggle - Desktop Only */}
+                {!loading && filteredProducts.length > 0 && (
+                  <div className="relative hidden md:block">
+                    <button
+                      ref={columnVisibilityButtonRef}
+                      type="button"
+                      onClick={() => {
+                        setIsColumnVisibilityOpen(!isColumnVisibilityOpen);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors text-sm font-medium text-gray-700 whitespace-nowrap cursor-pointer"
+                    >
+                      <Eye size={16} />
+                      <span>الأعمدة</span>
+                      {Object.values(columnVisibility).some((v) => !v) && (
+                        <span className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full text-xs">
+                          {Object.values(columnVisibility).filter((v) => !v).length}
+                        </span>
+                      )}
+                    </button>
+
+                    {isColumnVisibilityOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-[90]"
+                          onClick={() => setIsColumnVisibilityOpen(false)}
+                        />
+                        <div
+                          className="absolute left-0 top-full mt-2 w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-[100] p-3 max-h-96 overflow-y-auto"
+                          dir="rtl"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ position: 'absolute' }}
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-semibold text-gray-900 text-sm">إظهار/إخفاء الأعمدة</h3>
+                            <button
+                              onClick={() => setIsColumnVisibilityOpen(false)}
+                              className="p-1 hover:bg-gray-100 rounded"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            {columns
+                              .filter((col: any) => {
+                                // Filter out columns that should not be shown in the visibility list
+                                if (col.id === 'Actions' || col.id === 'Image') return false;
+                                // Hide CostPrice column from visibility list if user doesn't have permission
+                                if (col.id === 'CostPrice' && !canViewCost) return false;
+                                // Only show columns that can be hidden/shown
+                                return col.enableHiding !== false;
+                              })
+                              .map((col: any) => {
+                                const columnId = col.id || col.accessorKey || col.accessorFn?.toString();
+                                const headerText = typeof col.header === 'string' ? col.header : columnId;
+                                const isVisible = columnVisibility[columnId] !== false;
+                                return (
+                                  <label
+                                    key={columnId}
+                                    className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isVisible}
+                                      onChange={(e) => {
+                                        setColumnVisibility((prev) => ({
+                                          ...prev,
+                                          [columnId]: e.target.checked,
+                                        }));
+                                        // Update table if available
+                                        if (tableRef.current) {
+                                          const tableColumn = tableRef.current.getAllColumns().find((c: any) => c.id === columnId);
+                                          if (tableColumn) {
+                                            tableColumn.toggleVisibility(e.target.checked);
+                                          }
+                                        }
+                                      }}
+                                      className="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
+                                    />
+                                    <span className="text-sm text-gray-700 flex-1">
+                                      {headerText}
+                                    </span>
+                                    {isVisible && <Check size={14} className="text-gray-600" />}
+                                  </label>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1592,7 +1641,7 @@ export default function ProductsManagerPage() {
                   />
                 );
               })}
-              
+
               {/* Mobile Pagination */}
               {totalMobilePages > 1 && (
                 <div className="flex items-center justify-between gap-4 pt-4 pb-2 border-t border-gray-200 bg-white sticky bottom-0 z-10">
@@ -1604,7 +1653,7 @@ export default function ProductsManagerPage() {
                     <ChevronRight size={16} />
                     السابق
                   </button>
-                  
+
                   <div className="flex items-center gap-2 text-sm text-gray-700">
                     <span className="font-medium">
                       صفحة {mobilePage} من {totalMobilePages}
@@ -1613,7 +1662,7 @@ export default function ProductsManagerPage() {
                       ({filteredProducts.length} منتج)
                     </span>
                   </div>
-                  
+
                   <button
                     onClick={() => setMobilePage((prev) => Math.min(totalMobilePages, prev + 1))}
                     disabled={mobilePage === totalMobilePages}
@@ -1715,11 +1764,10 @@ export default function ProductsManagerPage() {
       {toast.type && (
         <div className="fixed bottom-4 left-4 z-[100] animate-in slide-in-from-bottom-5 fade-in duration-300" dir="rtl">
           <div
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-xl min-w-[200px] ${
-              toast.type === 'saving'
-                ? 'bg-blue-600 text-white'
-                : 'bg-green-600 text-white'
-            }`}
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-xl min-w-[200px] ${toast.type === 'saving'
+              ? 'bg-blue-600 text-white'
+              : 'bg-green-600 text-white'
+              }`}
           >
             {toast.type === 'saving' ? (
               <Loader2 size={20} className="animate-spin flex-shrink-0" />
@@ -1795,9 +1843,8 @@ export default function ProductsManagerPage() {
                 <button
                   key={idx}
                   onClick={() => setLightboxImageIndex(idx)}
-                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all hover:opacity-100 bg-white ${
-                    lightboxImageIndex === idx ? 'border-white shadow-lg opacity-100' : 'border-white/50 opacity-70'
-                  }`}
+                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all hover:opacity-100 bg-white ${lightboxImageIndex === idx ? 'border-white shadow-lg opacity-100' : 'border-white/50 opacity-70'
+                    }`}
                 >
                   <img src={img} alt="" className="w-full h-full object-contain" />
                 </button>

@@ -4,7 +4,7 @@ import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } fr
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import InvoicePrint from '@/components/admin/InvoicePrint';
-import { saveCashInvoice, getProducts } from '@/lib/api';
+import { saveCashInvoice, getProducts, getActiveCampaignWithProducts } from '@/lib/api';
 import { validateSerialNumbers } from '@/lib/validation';
 import { Lock } from 'lucide-react';
 import {
@@ -83,7 +83,7 @@ export default function POSPage() {
   const [scanSuccess, setScanSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isScanProcessing, setIsScanProcessing] = useState(false);
-  const [availableCameras, setAvailableCameras] = useState<{deviceId: string; label: string}[]>([]);
+  const [availableCameras, setAvailableCameras] = useState<{ deviceId: string; label: string }[]>([]);
   const [currentCameraId, setCurrentCameraId] = useState<string | undefined>(undefined);
   // Load catalog width from localStorage or use default
   const [catalogWidth, setCatalogWidth] = useState<number>(() => {
@@ -103,7 +103,7 @@ export default function POSPage() {
   const [printOverlayInvoiceId, setPrintOverlayInvoiceId] = useState<string | null>(null);
   const printIframeRef = useRef<HTMLIFrameElement>(null);
   const isMobilePrint = () => typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  
+
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const barcodeBufferRef = useRef(''); // uncontrolled: no re-render per keystroke
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -159,7 +159,7 @@ export default function POSPage() {
           </span>
           <ChevronDown size={16} className={`text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
-        
+
         {isOpen && (
           <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden" dir="rtl">
             <div className="p-2 border-b border-gray-200">
@@ -184,9 +184,8 @@ export default function POSPage() {
                   setIsOpen(false);
                   setSearchQuery('');
                 }}
-                className={`w-full text-right px-3 py-2 hover:bg-gray-100 transition-colors text-gray-900 ${
-                  !value ? 'bg-gray-100 font-medium' : ''
-                }`}
+                className={`w-full text-right px-3 py-2 hover:bg-gray-100 transition-colors text-gray-900 ${!value ? 'bg-gray-100 font-medium' : ''
+                  }`}
               >
                 {placeholder}
               </button>
@@ -202,9 +201,8 @@ export default function POSPage() {
                       setIsOpen(false);
                       setSearchQuery('');
                     }}
-                    className={`w-full text-right px-3 py-2 hover:bg-gray-100 transition-colors text-gray-900 ${
-                      value === option ? 'bg-gray-100 font-medium' : ''
-                    }`}
+                    className={`w-full text-right px-3 py-2 hover:bg-gray-100 transition-colors text-gray-900 ${value === option ? 'bg-gray-100 font-medium' : ''
+                      }`}
                   >
                     {option}
                   </button>
@@ -330,8 +328,28 @@ export default function POSPage() {
     const loadProducts = async () => {
       try {
         setIsLoadingProducts(true);
-        const data = await getProducts();
-        setProducts(data || []);
+        const [data, campaign] = await Promise.all([
+          getProducts(),
+          getActiveCampaignWithProducts()
+        ]);
+
+        let mergedProducts = data || [];
+
+        if (campaign && campaign.products && campaign.products.length > 0) {
+          mergedProducts = mergedProducts.map((p: any) => {
+            const cp = campaign.products.find((c: any) => String(c.id || c.ProductID) === String(p.id) || String(c.id || c.ProductID) === String(p.ProductID));
+            if (cp) {
+              return {
+                ...p,
+                originalPrice: parseFloat(String(p.SalePrice || p.sale_price || p.price || 0)),
+                campaignPrice: parseFloat(String(cp.offer_price || 0)),
+              };
+            }
+            return p;
+          });
+        }
+
+        setProducts(mergedProducts);
       } catch (error) {
         console.error('[POS] Error loading products:', error);
         setProducts([]);
@@ -355,10 +373,10 @@ export default function POSPage() {
         return prev.map((item) =>
           item.productID === productID
             ? {
-                ...item,
-                quantity: item.quantity + 1,
-                total: (item.quantity + 1) * item.unitPrice,
-              }
+              ...item,
+              quantity: item.quantity + 1,
+              total: (item.quantity + 1) * item.unitPrice,
+            }
             : item
         );
       } else {
@@ -372,8 +390,8 @@ export default function POSPage() {
           size: product.Size || product.size,
           color: product.Color || product.color,
           quantity: 1,
-          unitPrice: product.SalePrice || product.salePrice || product.price || 0,
-          total: product.SalePrice || product.salePrice || product.price || 0,
+          unitPrice: product.campaignPrice || product.SalePrice || product.salePrice || product.price || 0,
+          total: product.campaignPrice || product.SalePrice || product.salePrice || product.price || 0,
           mode,
           scannedBarcode,
           serialNos: [''], // Initialize with one empty string
@@ -498,16 +516,16 @@ export default function POSPage() {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
-      
+
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
-      
+
       oscillator.frequency.value = 800;
       oscillator.type = 'sine';
-      
+
       gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-      
+
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.3);
     } catch (e) {
@@ -521,16 +539,16 @@ export default function POSPage() {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
-      
+
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
-      
+
       oscillator.frequency.value = 400;
       oscillator.type = 'sine';
-      
+
       gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-      
+
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.2);
     } catch (e) {
@@ -594,7 +612,7 @@ export default function POSPage() {
     // Check if scanned value is a URL and extract product ID
     const productIdFromUrl = extractProductIdFromUrl(normalizedBarcode);
     const searchValue = productIdFromUrl || normalizedBarcode;
-    
+
     // First, try to find by ProductID if we extracted it from URL
     let product: any = null;
     if (productIdFromUrl) {
@@ -619,20 +637,20 @@ export default function POSPage() {
 
     if (product) {
       lastScannedRef.current = normalizedBarcode;
-      
+
       // Show success feedback
       setScanSuccess(true);
       playSuccessSound();
-      
+
       // Add to cart
       addToCart(product, 'Scan', normalizedBarcode);
-      
+
       // Close camera after short delay to show success feedback
       setTimeout(() => {
         stopScanning();
         setScanSuccess(false);
         setIsScanProcessing(false);
-        
+
         // Reset last scanned after a delay
         setTimeout(() => {
           lastScannedRef.current = '';
@@ -643,7 +661,7 @@ export default function POSPage() {
       if (!errorMessage) {
         setErrorMessage(`المنتج غير موجود: ${normalizedBarcode}`);
         playErrorSound();
-        
+
         // Clear error message after 3 seconds
         if (errorTimeoutRef.current) {
           clearTimeout(errorTimeoutRef.current);
@@ -661,17 +679,17 @@ export default function POSPage() {
     if (typeof window === 'undefined' || typeof navigator === 'undefined') {
       return false;
     }
-    
+
     // Check for MediaDevices API
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       // Fallback for older browsers
-      const getUserMedia = navigator.getUserMedia || 
-                          (navigator as any).webkitGetUserMedia || 
-                          (navigator as any).mozGetUserMedia || 
-                          (navigator as any).msGetUserMedia;
+      const getUserMedia = navigator.getUserMedia ||
+        (navigator as any).webkitGetUserMedia ||
+        (navigator as any).mozGetUserMedia ||
+        (navigator as any).msGetUserMedia;
       return !!getUserMedia;
     }
-    
+
     return true;
   }, []);
 
@@ -685,10 +703,10 @@ export default function POSPage() {
 
       // Basic check
       const hasMediaDevices = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-      const hasLegacyGetUserMedia = !!(navigator.getUserMedia || 
-                                       (navigator as any).webkitGetUserMedia || 
-                                       (navigator as any).mozGetUserMedia || 
-                                       (navigator as any).msGetUserMedia);
+      const hasLegacyGetUserMedia = !!(navigator.getUserMedia ||
+        (navigator as any).webkitGetUserMedia ||
+        (navigator as any).mozGetUserMedia ||
+        (navigator as any).msGetUserMedia);
 
       if (hasMediaDevices || hasLegacyGetUserMedia) {
         // Try to enumerate devices to confirm camera is actually available
@@ -715,7 +733,7 @@ export default function POSPage() {
 
     // Also check after a short delay (for mobile browsers that load APIs asynchronously)
     const timeout = setTimeout(checkCameraSupport, 500);
-    
+
     return () => clearTimeout(timeout);
   }, []);
 
@@ -728,10 +746,10 @@ export default function POSPage() {
       }
 
       setIsScanning(true);
-      
+
       // Wait a bit to ensure the DOM element is ready
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Check if element exists
       const element = document.getElementById('barcode-scanner');
       if (!element) {
@@ -767,37 +785,37 @@ export default function POSPage() {
         const videoInputDevices = await codeReader.listVideoInputDevices();
         if (videoInputDevices && videoInputDevices.length > 0) {
           console.log('[POS] Available cameras:', videoInputDevices.map(c => c.label));
-          
+
           // Save available cameras
           setAvailableCameras(videoInputDevices.map(device => ({
             deviceId: device.deviceId,
             label: device.label
           })));
-          
+
           // Prefer back camera
           const backCamera = videoInputDevices.find(device => {
             const label = device.label.toLowerCase();
-            return label.includes('back') || 
-                   label.includes('rear') ||
-                   label.includes('environment') ||
-                   label.includes('facing back');
+            return label.includes('back') ||
+              label.includes('rear') ||
+              label.includes('environment') ||
+              label.includes('facing back');
           });
-          
+
           if (!backCamera) {
             // Avoid front camera
             const frontCamera = videoInputDevices.find(device => {
               const label = device.label.toLowerCase();
-              return label.includes('front') || 
-                     label.includes('user') ||
-                     label.includes('facing user');
+              return label.includes('front') ||
+                label.includes('user') ||
+                label.includes('facing user');
             });
-            
+
             const nonFrontCamera = videoInputDevices.find(device => device.deviceId !== frontCamera?.deviceId);
             deviceId = nonFrontCamera?.deviceId || videoInputDevices[videoInputDevices.length - 1].deviceId;
           } else {
             deviceId = backCamera.deviceId;
           }
-          
+
           setCurrentCameraId(deviceId);
           const selectedCamera = videoInputDevices.find(device => device.deviceId === deviceId);
           console.log('[POS] Using camera:', selectedCamera?.label || 'Unknown');
@@ -825,7 +843,7 @@ export default function POSPage() {
                 handleBarcodeScanned(text);
               }
             }
-            
+
             if (error && !(error instanceof NotFoundException)) {
               // Ignore NotFoundException - it's normal when no barcode is detected
               console.debug('[POS] Scan error:', error);
@@ -853,11 +871,11 @@ export default function POSPage() {
     } catch (error: any) {
       console.error('[POS] Error starting camera:', error);
       setIsScanning(false);
-      
+
       // Better error messages
       let errorMsg = 'فشل فتح الكاميرا';
       const errorStr = String(error?.message || '').toLowerCase();
-      
+
       if (errorStr.includes('streaming not supported') || errorStr.includes('not supported by the browser')) {
         errorMsg = 'المتصفح لا يدعم بث الكاميرا. يرجى:\n1. استخدام متصفح حديث (Chrome، Safari، Firefox)\n2. التأكد من أن الموقع يعمل على HTTPS\n3. تحديث المتصفح إلى آخر إصدار';
       } else if (errorStr.includes('permission') || errorStr.includes('notallowed')) {
@@ -873,9 +891,9 @@ export default function POSPage() {
       } else if (error?.message) {
         errorMsg = `فشل فتح الكاميرا: ${error.message}`;
       }
-      
+
       alert(errorMsg);
-      
+
       // Cleanup on error
       if (scannerRef.current) {
         try {
@@ -885,7 +903,7 @@ export default function POSPage() {
         }
         scannerRef.current = null;
       }
-      
+
       if (videoRef.current) {
         const stream = videoRef.current.srcObject as MediaStream;
         if (stream) {
@@ -936,7 +954,7 @@ export default function POSPage() {
               handleBarcodeScanned(text);
             }
           }
-          
+
           if (error && !(error instanceof NotFoundException)) {
             console.debug('[POS] Scan error:', error);
           }
@@ -951,10 +969,10 @@ export default function POSPage() {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing || !resizeContainerRef.current) return;
-      
+
       const container = resizeContainerRef.current;
       const containerRect = container.getBoundingClientRect();
-      
+
       // In RTL layout:
       // - Catalog is on the right side (visually right)
       // - Cart is on the left side (visually left)
@@ -976,7 +994,7 @@ export default function POSPage() {
       // So catalogWidth should be proportional to distance from LEFT edge
       const distanceFromLeft = e.clientX - containerRect.left;
       const newWidth = (distanceFromLeft / containerRect.width) * 100;
-      
+
       // Limit between 20% and 80%
       const clampedWidth = Math.max(20, Math.min(80, newWidth));
       setCatalogWidth(clampedWidth);
@@ -1047,12 +1065,12 @@ export default function POSPage() {
         if (item.productID === productID) {
           const currentSerialNos = item.serialNos || [];
           let newSerialNos: string[];
-          
+
           // Use absolute value for serial numbers count (same number whether positive or negative)
           // Zero quantity = no serials needed (empty array)
           const absNewQuantity = Math.abs(newQuantity);
           const absCurrentQuantity = Math.abs(item.quantity);
-          
+
           if (absNewQuantity === 0) {
             // Zero quantity - no serials needed
             newSerialNos = [];
@@ -1063,7 +1081,7 @@ export default function POSPage() {
             // Decrease quantity - keep first N serials
             newSerialNos = currentSerialNos.slice(0, absNewQuantity);
           }
-          
+
           return {
             ...item,
             quantity: newQuantity,
@@ -1082,10 +1100,10 @@ export default function POSPage() {
       prev.map((item) =>
         item.productID === productID
           ? {
-              ...item,
-              unitPrice: newPrice,
-              total: item.quantity * newPrice,
-            }
+            ...item,
+            unitPrice: newPrice,
+            total: item.quantity * newPrice,
+          }
           : item
       )
     );
@@ -1103,17 +1121,17 @@ export default function POSPage() {
         .trim()
         .split(/\s+/)
         .filter(word => word.length > 0);
-      
+
       filtered = filtered.filter((p) => {
         // Safely convert all values to strings and create searchable text
         const name = String(p.Name || p.name || '').toLowerCase();
         const brand = String(p.Brand || p.brand || '').toLowerCase();
         const type = String(p.Type || p.type || '').toLowerCase();
         const productID = String(p.ProductID || p.id || '').toLowerCase();
-        
+
         // Combine all searchable fields into one text
         const searchableText = `${name} ${brand} ${type} ${productID}`;
-        
+
         // Check if ALL search words are found in the searchable text
         return searchWords.every(word => searchableText.includes(word));
       });
@@ -1139,7 +1157,7 @@ export default function POSPage() {
   // Calculate available filter options based on other selected filters (Cascading Filters)
   const availableTypes = useMemo(() => {
     let filtered = products;
-    
+
     // Apply other filters (excluding type)
     if (filters.brand) {
       filtered = filtered.filter((p) => (p.Brand || p.brand) === filters.brand);
@@ -1150,7 +1168,7 @@ export default function POSPage() {
     if (filters.color) {
       filtered = filtered.filter((p) => (p.Color || p.color) === filters.color);
     }
-    
+
     const types = new Set<string>();
     filtered.forEach((p) => {
       const type = p.Type || p.type;
@@ -1161,7 +1179,7 @@ export default function POSPage() {
 
   const availableBrands = useMemo(() => {
     let filtered = products;
-    
+
     // Apply other filters (excluding brand)
     if (filters.type) {
       filtered = filtered.filter((p) => (p.Type || p.type) === filters.type);
@@ -1172,7 +1190,7 @@ export default function POSPage() {
     if (filters.color) {
       filtered = filtered.filter((p) => (p.Color || p.color) === filters.color);
     }
-    
+
     const brands = new Set<string>();
     filtered.forEach((p) => {
       const brand = p.Brand || p.brand;
@@ -1183,7 +1201,7 @@ export default function POSPage() {
 
   const availableSizes = useMemo(() => {
     let filtered = products;
-    
+
     // Apply other filters (excluding size)
     if (filters.type) {
       filtered = filtered.filter((p) => (p.Type || p.type) === filters.type);
@@ -1194,7 +1212,7 @@ export default function POSPage() {
     if (filters.color) {
       filtered = filtered.filter((p) => (p.Color || p.color) === filters.color);
     }
-    
+
     const sizes = new Set<string>();
     filtered.forEach((p) => {
       const size = p.Size || p.size;
@@ -1205,7 +1223,7 @@ export default function POSPage() {
 
   const availableColors = useMemo(() => {
     let filtered = products;
-    
+
     // Apply other filters (excluding color)
     if (filters.type) {
       filtered = filtered.filter((p) => (p.Type || p.type) === filters.type);
@@ -1216,7 +1234,7 @@ export default function POSPage() {
     if (filters.size) {
       filtered = filtered.filter((p) => (p.Size || p.size) === filters.size);
     }
-    
+
     const colors = new Set<string>();
     filtered.forEach((p) => {
       const color = p.Color || p.color;
@@ -1272,7 +1290,7 @@ export default function POSPage() {
         if (e.data?.title) document.title = e.data.title;
         try {
           printIframeRef.current.contentWindow.print();
-        } catch (_) {}
+        } catch (_) { }
         setTimeout(() => { document.title = prevTitle; }, 500);
       }
     };
@@ -1319,10 +1337,10 @@ export default function POSPage() {
 
       // Save invoice directly
       const result = await saveCashInvoice(payload);
-      
+
       // Set current invoice ID
       setCurrentInvoiceID(result.invoiceID);
-      
+
       // Prepare invoice data for printing
       // Use current time (will be formatted with Palestine timezone in InvoicePrint)
       setInvoiceData({
@@ -1388,9 +1406,9 @@ export default function POSPage() {
         {/* Main Content - Responsive Layout */}
         <div ref={resizeContainerRef} className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0 relative">
           {/* Right Side - Catalog */}
-          <div 
+          <div
             className={`${showCartOnMobile ? 'hidden' : 'flex'} lg:flex flex-col bg-white min-h-0`}
-            style={isDesktop ? { 
+            style={isDesktop ? {
               width: `${catalogWidth}%`,
               minWidth: '20%',
               maxWidth: '80%'
@@ -1426,25 +1444,24 @@ export default function POSPage() {
                     type="button"
                     onClick={isScanning ? stopScanning : startScanning}
                     disabled={cameraSupported === false}
-                    className={`absolute left-2 top-1/2 transform -translate-y-1/2 p-2 rounded-lg transition-all shadow-sm ${
-                      isScanning
-                        ? 'bg-red-500 text-white hover:bg-red-600 hover:shadow-md'
-                        : cameraSupported === false
+                    className={`absolute left-2 top-1/2 transform -translate-y-1/2 p-2 rounded-lg transition-all shadow-sm ${isScanning
+                      ? 'bg-red-500 text-white hover:bg-red-600 hover:shadow-md'
+                      : cameraSupported === false
                         ? 'bg-gray-400 text-white cursor-not-allowed'
                         : 'bg-blue-500 text-white hover:bg-blue-600 hover:shadow-md'
-                    }`}
+                      }`}
                     title={
-                      isScanning 
-                        ? 'إيقاف الكاميرا' 
+                      isScanning
+                        ? 'إيقاف الكاميرا'
                         : cameraSupported === false
-                        ? 'الكاميرا غير مدعومة في هذا المتصفح'
-                        : 'فتح الكاميرا لمسح الباركود'
+                          ? 'الكاميرا غير مدعومة في هذا المتصفح'
+                          : 'فتح الكاميرا لمسح الباركود'
                     }
                   >
                     <Camera size={18} />
                   </button>
                 </div>
-                
+
                 {/* Search Input (Text only, no barcode) */}
                 <div className="flex-1 relative">
                   <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -1646,72 +1663,88 @@ export default function POSPage() {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                   {filteredProducts.map((product, index) => {
-                  const imageUrl = product.ImageUrl || product.imageUrl || product.Image || product.image || '';
-                  const productKey = product.ProductID || product.id || `product-${index}`;
-                  return (
-                    <div
-                      key={productKey}
-                      onClick={() => {
-                        addToCart(product, 'Pick');
-                        // On mobile, show cart after adding item
-                        if (window.innerWidth < 768) {
-                          setShowCartOnMobile(true);
-                        }
-                      }}
-                      className="group bg-white rounded-xl border border-gray-200 p-2 sm:p-3 cursor-pointer hover:shadow-xl hover:border-blue-400 hover:-translate-y-1 active:scale-[0.98] transition-all duration-200 font-cairo"
-                    >
-                      <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg mb-2 flex items-center justify-center overflow-hidden border border-gray-200 group-hover:border-blue-300 transition-colors">
-                        {imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt={product.Name || product.name}
-                            className="w-full h-full object-contain p-1"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
-                              if (placeholder) placeholder.style.display = 'flex';
-                            }}
-                          />
-                        ) : null}
-                        {imageUrl ? (
-                          <div className="w-full h-full bg-gray-100 flex items-center justify-center hidden">
+                    const imageUrl = product.ImageUrl || product.imageUrl || product.Image || product.image || '';
+                    const productKey = product.ProductID || product.id || `product-${index}`;
+                    return (
+                      <div
+                        key={productKey}
+                        onClick={() => {
+                          addToCart(product, 'Pick');
+                          // On mobile, show cart after adding item
+                          if (window.innerWidth < 768) {
+                            setShowCartOnMobile(true);
+                          }
+                        }}
+                        className="group bg-white rounded-xl border border-gray-200 p-2 sm:p-3 cursor-pointer hover:shadow-xl hover:border-blue-400 hover:-translate-y-1 active:scale-[0.98] transition-all duration-200 font-cairo"
+                      >
+                        <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg mb-2 flex items-center justify-center overflow-hidden border border-gray-200 group-hover:border-blue-300 transition-colors">
+                          {imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt={product.Name || product.name}
+                              className="w-full h-full object-contain p-1"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (placeholder) placeholder.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          {imageUrl ? (
+                            <div className="w-full h-full bg-gray-100 flex items-center justify-center hidden">
+                              <ShoppingCart size={24} className="text-gray-400" />
+                            </div>
+                          ) : (
                             <ShoppingCart size={24} className="text-gray-400" />
+                          )}
+                        </div>
+                        <h3 className="font-medium text-xs lg:text-sm text-gray-900 mb-1.5 line-clamp-3 font-cairo min-h-[3rem] leading-tight">
+                          {product.Name || product.name || 'غير معروف'}
+                        </h3>
+                        {/* Stock Information */}
+                        <div className="flex items-center gap-2 mb-1.5 text-xs font-cairo">
+                          {(product.CS_Shop !== undefined && product.CS_Shop !== null) && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-500">المحل:</span>
+                              <span className={`font-bold px-1.5 py-0.5 rounded text-xs ${(product.CS_Shop || 0) > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+                                }`}>{product.CS_Shop || 0}</span>
+                            </div>
+                          )}
+                          {(product.CS_War !== undefined && product.CS_War !== null) && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-500">المخزن:</span>
+                              <span className={`font-bold px-1.5 py-0.5 rounded text-xs ${(product.CS_War || 0) > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+                                }`}>{product.CS_War || 0}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between pt-1.5 border-t border-gray-200">
+                          <div className="flex flex-col items-start">
+                            {(() => {
+                              const originalParsed = parseFloat(String(product.originalPrice || 0));
+                              const campaignParsed = parseFloat(String(product.campaignPrice || 0));
+                              const hasDiscount = Boolean(campaignParsed > 0 && originalParsed > 0 && campaignParsed < originalParsed);
+                              const priceToDisplay = hasDiscount ? campaignParsed : parseFloat(product.SalePrice || product.salePrice || 0);
+
+                              return (
+                                <>
+                                  {hasDiscount && (
+                                    <span className="text-[10px] text-gray-400 line-through">
+                                      ₪{originalParsed.toFixed(2)}
+                                    </span>
+                                  )}
+                                  <p className={`text-sm lg:text-base font-bold font-cairo ${hasDiscount ? 'text-red-600' : 'text-blue-600'}`}>
+                                    ₪{priceToDisplay.toFixed(2)}
+                                  </p>
+                                </>
+                              );
+                            })()}
                           </div>
-                        ) : (
-                          <ShoppingCart size={24} className="text-gray-400" />
-                        )}
+                          <div className="w-2 h-2 rounded-full bg-green-400 shrink-0"></div>
+                        </div>
                       </div>
-                      <h3 className="font-medium text-xs lg:text-sm text-gray-900 mb-1.5 line-clamp-3 font-cairo min-h-[3rem] leading-tight">
-                        {product.Name || product.name || 'غير معروف'}
-                      </h3>
-                      {/* Stock Information */}
-                      <div className="flex items-center gap-2 mb-1.5 text-xs font-cairo">
-                        {(product.CS_Shop !== undefined && product.CS_Shop !== null) && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-gray-500">المحل:</span>
-                            <span className={`font-bold px-1.5 py-0.5 rounded text-xs ${
-                              (product.CS_Shop || 0) > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
-                            }`}>{product.CS_Shop || 0}</span>
-                          </div>
-                        )}
-                        {(product.CS_War !== undefined && product.CS_War !== null) && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-gray-500">المخزن:</span>
-                            <span className={`font-bold px-1.5 py-0.5 rounded text-xs ${
-                              (product.CS_War || 0) > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
-                            }`}>{product.CS_War || 0}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between pt-1.5 border-t border-gray-200">
-                        <p className="text-sm lg:text-base font-bold text-blue-600 font-cairo">
-                          ₪{parseFloat(product.SalePrice || product.salePrice || 0).toFixed(2)}
-                        </p>
-                        <div className="w-2 h-2 rounded-full bg-green-400"></div>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1719,10 +1752,9 @@ export default function POSPage() {
 
           {/* Resize Handle - Desktop Only */}
           <div
-            className={`hidden lg:block absolute top-0 bottom-0 w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize transition-colors z-10 ${
-              isResizing ? 'bg-blue-500' : ''
-            }`}
-            style={{ 
+            className={`hidden lg:block absolute top-0 bottom-0 w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize transition-colors z-10 ${isResizing ? 'bg-blue-500' : ''
+              }`}
+            style={{
               right: `${catalogWidth}%`,
               transform: 'translateX(50%)'
             }}
@@ -1737,9 +1769,9 @@ export default function POSPage() {
           </div>
 
           {/* Left Side - Invoice/Cart */}
-          <div 
+          <div
             className={`${showCartOnMobile ? 'flex' : 'hidden'} lg:flex flex-col bg-white min-h-0 border-r border-gray-300 shadow-xl`}
-            style={isDesktop ? { 
+            style={isDesktop ? {
               width: `${100 - catalogWidth}%`,
               minWidth: '20%',
               maxWidth: '80%'
@@ -1773,260 +1805,274 @@ export default function POSPage() {
                     const product = products.find(p => (p.ProductID || p.id || p.product_id) === item.productID);
                     const imageUrl = product?.Image || product?.image || '';
                     return (
-                    <div
-                      key={item.productID}
-                      className="bg-white rounded-lg p-3 sm:p-4 border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
-                    >
-                      {/* Desktop View */}
-                      <div className="hidden lg:block">
-                        <div className="flex items-start gap-3 mb-3">
-                          {imageUrl ? (
-                            <img
-                              src={imageUrl}
-                              alt={item.name}
-                              className="w-16 h-16 object-contain rounded-lg border border-gray-200 flex-shrink-0"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
-                                if (placeholder) placeholder.style.display = 'flex';
-                              }}
-                            />
-                          ) : (
-                            <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center flex-shrink-0">
-                              <span className="text-gray-400 text-xs">—</span>
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-semibold text-gray-900 font-cairo mb-1">{item.name}</h3>
-                            <p className="text-xs text-gray-500 font-cairo mb-2">#{item.productID}</p>
-                            {/* Serial Numbers Display - Show if product is serialized OR if there are existing serials */}
-                            {(item.isSerialized === true || (item.serialNos && item.serialNos.length > 0)) && (
-                              <div className="mt-2 space-y-1.5">
-                                {Array.from({ length: Math.abs(item.quantity) }, (_, serialIndex) => {
-                                  const serialNos = item.serialNos || [];
-                                  while (serialNos.length < Math.abs(item.quantity)) {
-                                    serialNos.push('');
-                                  }
-                                  const serialNo = serialNos[serialIndex] || '';
-                                  return (
-                                    <SerialInputCell
-                                      key={serialIndex}
-                                      value={serialNo}
-                                      onCommit={(v) => {
-                                        const newSerialNos = [...(item.serialNos || [])];
-                                        while (newSerialNos.length < Math.abs(item.quantity)) newSerialNos.push('');
-                                        newSerialNos[serialIndex] = v;
-                                        setCart((prev) =>
-                                          prev.map((cartItem) =>
-                                            cartItem.productID === item.productID
-                                              ? { ...cartItem, serialNos: newSerialNos }
-                                              : cartItem
-                                          )
-                                        );
-                                      }}
-                                      productID={item.productID}
-                                      serialIndex={serialIndex}
-                                      quantity={Math.abs(item.quantity)}
-                                      currentSerialNos={serialNos}
-                                      onScanUpdate={(newSerialNos) =>
-                                        setCart((prev) =>
-                                          prev.map((cartItem) =>
-                                            cartItem.productID === item.productID
-                                              ? { ...cartItem, serialNos: newSerialNos }
-                                              : cartItem
-                                          )
-                                        )
-                                      }
-                                      placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                                      className="flex-1 px-2 py-1.5 border rounded text-xs text-gray-900 font-mono border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
-                                      isRequired={item.isSerialized}
-                                    />
-                                  );
-                                })}
+                      <div
+                        key={item.productID}
+                        className="bg-white rounded-lg p-3 sm:p-4 border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
+                      >
+                        {/* Desktop View */}
+                        <div className="hidden lg:block">
+                          <div className="flex items-start gap-3 mb-3">
+                            {imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt={item.name}
+                                className="w-16 h-16 object-contain rounded-lg border border-gray-200 flex-shrink-0"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                  if (placeholder) placeholder.style.display = 'flex';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center flex-shrink-0">
+                                <span className="text-gray-400 text-xs">—</span>
                               </div>
                             )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="text-sm font-semibold text-gray-900 font-cairo">{item.name}</h3>
+                                {product?.campaignPrice && parseFloat(String(product.campaignPrice)) < parseFloat(String(product.originalPrice)) && (
+                                  <span className="text-[10px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded border border-red-200">
+                                    عرض
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500 font-cairo mb-2">#{item.productID}</p>
+                              {/* Serial Numbers Display - Show if product is serialized OR if there are existing serials */}
+                              {(item.isSerialized === true || (item.serialNos && item.serialNos.length > 0)) && (
+                                <div className="mt-2 space-y-1.5">
+                                  {Array.from({ length: Math.abs(item.quantity) }, (_, serialIndex) => {
+                                    const serialNos = item.serialNos || [];
+                                    while (serialNos.length < Math.abs(item.quantity)) {
+                                      serialNos.push('');
+                                    }
+                                    const serialNo = serialNos[serialIndex] || '';
+                                    return (
+                                      <SerialInputCell
+                                        key={serialIndex}
+                                        value={serialNo}
+                                        onCommit={(v) => {
+                                          const newSerialNos = [...(item.serialNos || [])];
+                                          while (newSerialNos.length < Math.abs(item.quantity)) newSerialNos.push('');
+                                          newSerialNos[serialIndex] = v;
+                                          setCart((prev) =>
+                                            prev.map((cartItem) =>
+                                              cartItem.productID === item.productID
+                                                ? { ...cartItem, serialNos: newSerialNos }
+                                                : cartItem
+                                            )
+                                          );
+                                        }}
+                                        productID={item.productID}
+                                        serialIndex={serialIndex}
+                                        quantity={Math.abs(item.quantity)}
+                                        currentSerialNos={serialNos}
+                                        onScanUpdate={(newSerialNos) =>
+                                          setCart((prev) =>
+                                            prev.map((cartItem) =>
+                                              cartItem.productID === item.productID
+                                                ? { ...cartItem, serialNos: newSerialNos }
+                                                : cartItem
+                                            )
+                                          )
+                                        }
+                                        placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
+                                        className="flex-1 px-2 py-1.5 border rounded text-xs text-gray-900 font-mono border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+                                        isRequired={item.isSerialized}
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => removeFromCart(item.productID)}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition-colors flex-shrink-0"
+                              title="حذف"
+                            >
+                              <Trash2 size={18} />
+                            </button>
                           </div>
-                          <button
-                            onClick={() => removeFromCart(item.productID)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition-colors flex-shrink-0"
-                            title="حذف"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                        
-                        <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-200">
-                          {/* Quantity Controls */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs text-gray-600 font-cairo whitespace-nowrap">الكمية:</label>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => updateQuantity(item.productID, item.quantity - 1)}
-                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
-                              >
-                                <Minus size={14} />
-                              </button>
+
+                          <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-200">
+                            {/* Quantity Controls */}
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs text-gray-600 font-cairo whitespace-nowrap">الكمية:</label>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => updateQuantity(item.productID, item.quantity - 1)}
+                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                                >
+                                  <Minus size={14} />
+                                </button>
+                                <input
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => updateQuantity(item.productID, parseFloat(e.target.value) || 0)}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-16 text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                />
+                                <button
+                                  onClick={() => updateQuantity(item.productID, item.quantity + 1)}
+                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                                >
+                                  <Plus size={14} />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Price Input */}
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs text-gray-600 font-cairo whitespace-nowrap">السعر:</label>
                               <input
                                 type="number"
-                                value={item.quantity}
-                                onChange={(e) => updateQuantity(item.productID, parseFloat(e.target.value) || 0)}
-                                onFocus={(e) => e.target.select()}
-                                className="w-16 text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                value={item.unitPrice}
+                                onChange={(e) => updatePrice(item.productID, parseFloat(e.target.value) || 0)}
+                                step="0.01"
+                                min="0"
+                                className="w-24 text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                placeholder="السعر"
                               />
-                              <button
-                                onClick={() => updateQuantity(item.productID, item.quantity + 1)}
-                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
-                              >
-                                <Plus size={14} />
-                              </button>
+                            </div>
+
+                            {/* Total */}
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs text-gray-600 font-cairo whitespace-nowrap">الإجمالي:</label>
+                              <p className="text-base font-bold text-gray-900 font-cairo min-w-[80px] text-left">₪{item.total.toFixed(2)}</p>
                             </div>
                           </div>
-                          
-                          {/* Price Input */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs text-gray-600 font-cairo whitespace-nowrap">السعر:</label>
-                            <input
-                              type="number"
-                              value={item.unitPrice}
-                              onChange={(e) => updatePrice(item.productID, parseFloat(e.target.value) || 0)}
-                              step="0.01"
-                              min="0"
-                              className="w-24 text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
-                              placeholder="السعر"
-                            />
+                        </div>
+
+                        {/* Mobile View */}
+                        <div className="md:hidden space-y-2">
+                          <div className="flex items-start gap-3">
+                            {imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt={item.name}
+                                className="w-16 h-16 object-contain rounded border border-gray-200 flex-shrink-0"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                  if (placeholder) placeholder.style.display = 'flex';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-16 h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                                <span className="text-gray-400 text-xs">—</span>
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <h3 className="text-sm font-semibold text-gray-900 font-cairo line-clamp-2">{item.name}</h3>
+                                {product?.campaignPrice && parseFloat(String(product.campaignPrice)) < parseFloat(String(product.originalPrice)) && (
+                                  <span className="text-[10px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded border border-red-200 whitespace-nowrap">
+                                    عرض
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500 font-cairo mb-1">#{item.productID}</p>
+                              <div className="text-lg font-bold text-gray-900 font-cairo mb-2">
+                                ₪{item.total.toFixed(2)}
+                              </div>
+                              {/* Serial Numbers Display */}
+                              {(item.isSerialized === true || (item.serialNos && item.serialNos.length > 0)) && (
+                                <div className="mt-2 space-y-1">
+                                  {Array.from({ length: Math.abs(item.quantity) }, (_, serialIndex) => {
+                                    const serialNos = item.serialNos || [];
+                                    while (serialNos.length < Math.abs(item.quantity)) {
+                                      serialNos.push('');
+                                    }
+                                    const serialNo = serialNos[serialIndex] || '';
+                                    return (
+                                      <SerialInputCell
+                                        key={serialIndex}
+                                        value={serialNo}
+                                        onCommit={(v) => {
+                                          const newSerialNos = [...(item.serialNos || [])];
+                                          while (newSerialNos.length < Math.abs(item.quantity)) newSerialNos.push('');
+                                          newSerialNos[serialIndex] = v;
+                                          setCart((prev) =>
+                                            prev.map((cartItem) =>
+                                              cartItem.productID === item.productID
+                                                ? { ...cartItem, serialNos: newSerialNos }
+                                                : cartItem
+                                            )
+                                          );
+                                        }}
+                                        productID={item.productID}
+                                        serialIndex={serialIndex}
+                                        quantity={Math.abs(item.quantity)}
+                                        currentSerialNos={serialNos}
+                                        onScanUpdate={(newSerialNos) =>
+                                          setCart((prev) =>
+                                            prev.map((cartItem) =>
+                                              cartItem.productID === item.productID
+                                                ? { ...cartItem, serialNos: newSerialNos }
+                                                : cartItem
+                                            )
+                                          )
+                                        }
+                                        placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
+                                        className="flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm border-gray-300"
+                                        isRequired={item.isSerialized}
+                                        dataMobile
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => removeFromCart(item.productID)}
+                              className="text-red-500 hover:text-red-700 transition-colors flex-shrink-0 p-1"
+                              title="حذف"
+                            >
+                              <Trash2 size={18} />
+                            </button>
                           </div>
-                          
-                          {/* Total */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs text-gray-600 font-cairo whitespace-nowrap">الإجمالي:</label>
-                            <p className="text-base font-bold text-gray-900 font-cairo min-w-[80px] text-left">₪{item.total.toFixed(2)}</p>
+
+                          <div className="grid grid-cols-2 gap-2 mb-2">
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1 font-cairo">الكمية</label>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => updateQuantity(item.productID, item.quantity - 1)}
+                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+                                >
+                                  <Minus size={14} />
+                                </button>
+                                <input
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => updateQuantity(item.productID, parseFloat(e.target.value) || 0)}
+                                  onFocus={(e) => e.target.select()}
+                                  className="flex-1 text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold"
+                                />
+                                <button
+                                  onClick={() => updateQuantity(item.productID, item.quantity + 1)}
+                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+                                >
+                                  <Plus size={14} />
+                                </button>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1 font-cairo">سعر الوحدة</label>
+                              <input
+                                type="number"
+                                value={item.unitPrice}
+                                onChange={(e) => updatePrice(item.productID, parseFloat(e.target.value) || 0)}
+                                onFocus={(e) => e.target.select()}
+                                step="0.01"
+                                min="0"
+                                className="w-full text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold"
+                                placeholder="السعر"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
-
-                      {/* Mobile View */}
-                      <div className="md:hidden space-y-2">
-                        <div className="flex items-start gap-3">
-                          {imageUrl ? (
-                            <img
-                              src={imageUrl}
-                              alt={item.name}
-                              className="w-16 h-16 object-contain rounded border border-gray-200 flex-shrink-0"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
-                                if (placeholder) placeholder.style.display = 'flex';
-                              }}
-                            />
-                          ) : (
-                            <div className="w-16 h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                              <span className="text-gray-400 text-xs">—</span>
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-semibold text-gray-900 font-cairo mb-1 line-clamp-2">{item.name}</h3>
-                            <p className="text-xs text-gray-500 font-cairo mb-1">#{item.productID}</p>
-                            <div className="text-lg font-bold text-gray-900 font-cairo mb-2">
-                              ₪{item.total.toFixed(2)}
-                            </div>
-                            {/* Serial Numbers Display */}
-                            {(item.isSerialized === true || (item.serialNos && item.serialNos.length > 0)) && (
-                              <div className="mt-2 space-y-1">
-                                {Array.from({ length: Math.abs(item.quantity) }, (_, serialIndex) => {
-                                  const serialNos = item.serialNos || [];
-                                  while (serialNos.length < Math.abs(item.quantity)) {
-                                    serialNos.push('');
-                                  }
-                                  const serialNo = serialNos[serialIndex] || '';
-                                  return (
-                                    <SerialInputCell
-                                      key={serialIndex}
-                                      value={serialNo}
-                                      onCommit={(v) => {
-                                        const newSerialNos = [...(item.serialNos || [])];
-                                        while (newSerialNos.length < Math.abs(item.quantity)) newSerialNos.push('');
-                                        newSerialNos[serialIndex] = v;
-                                        setCart((prev) =>
-                                          prev.map((cartItem) =>
-                                            cartItem.productID === item.productID
-                                              ? { ...cartItem, serialNos: newSerialNos }
-                                              : cartItem
-                                          )
-                                        );
-                                      }}
-                                      productID={item.productID}
-                                      serialIndex={serialIndex}
-                                      quantity={Math.abs(item.quantity)}
-                                      currentSerialNos={serialNos}
-                                      onScanUpdate={(newSerialNos) =>
-                                        setCart((prev) =>
-                                          prev.map((cartItem) =>
-                                            cartItem.productID === item.productID
-                                              ? { ...cartItem, serialNos: newSerialNos }
-                                              : cartItem
-                                          )
-                                        )
-                                      }
-                                      placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                                      className="flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm border-gray-300"
-                                      isRequired={item.isSerialized}
-                                      dataMobile
-                                    />
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => removeFromCart(item.productID)}
-                            className="text-red-500 hover:text-red-700 transition-colors flex-shrink-0 p-1"
-                            title="حذف"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 mb-2">
-                          <div>
-                            <label className="block text-xs text-gray-600 mb-1 font-cairo">الكمية</label>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => updateQuantity(item.productID, item.quantity - 1)}
-                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
-                              >
-                                <Minus size={14} />
-                              </button>
-                              <input
-                                type="number"
-                                value={item.quantity}
-                                onChange={(e) => updateQuantity(item.productID, parseFloat(e.target.value) || 0)}
-                                onFocus={(e) => e.target.select()}
-                                className="flex-1 text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold"
-                              />
-                              <button
-                                onClick={() => updateQuantity(item.productID, item.quantity + 1)}
-                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
-                              >
-                                <Plus size={14} />
-                              </button>
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-xs text-gray-600 mb-1 font-cairo">سعر الوحدة</label>
-                            <input
-                              type="number"
-                              value={item.unitPrice}
-                              onChange={(e) => updatePrice(item.productID, parseFloat(e.target.value) || 0)}
-                              onFocus={(e) => e.target.select()}
-                              step="0.01"
-                              min="0"
-                              className="w-full text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold"
-                              placeholder="السعر"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
                     );
                   })}
                 </div>
@@ -2113,7 +2159,7 @@ export default function POSPage() {
                   </div>
                   <span className="font-bold text-gray-900">₪{subtotal.toFixed(2)}</span>
                 </div>
-                
+
                 {/* Discount Input - Inline */}
                 <div className="flex justify-between items-center text-sm font-cairo border-t border-gray-200 pt-2">
                   <div className="flex items-center gap-2">
@@ -2150,11 +2196,10 @@ export default function POSPage() {
                     ) : (
                       <button
                         onClick={() => setShowDiscountInput(true)}
-                        className={`text-xs px-2 py-0.5 rounded ${
-                          discount > 0
-                            ? 'text-red-600 bg-red-50 hover:bg-red-100'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                        } transition-colors font-cairo`}
+                        className={`text-xs px-2 py-0.5 rounded ${discount > 0
+                          ? 'text-red-600 bg-red-50 hover:bg-red-100'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                          } transition-colors font-cairo`}
                       >
                         {discount > 0 ? `-₪${discount.toFixed(2)}` : '+ إضافة خصم'}
                       </button>
@@ -2164,7 +2209,7 @@ export default function POSPage() {
                     <span className="font-bold text-red-600">-₪{discount.toFixed(2)}</span>
                   )}
                 </div>
-                
+
                 <div className="flex justify-between items-center text-lg lg:text-xl font-bold border-t-2 border-gray-300 pt-3 font-cairo">
                   <span className="text-gray-900">الصافي للدفع:</span>
                   <span className="text-green-600">₪{netTotal.toFixed(2)}</span>

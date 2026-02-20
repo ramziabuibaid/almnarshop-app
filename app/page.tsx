@@ -10,9 +10,8 @@ import HeroBanner from '@/components/store/HeroBanner';
 import TrustFeatures from '@/components/store/TrustFeatures';
 import CategoryHighlights from '@/components/store/CategoryHighlights';
 import FlashSaleSection from '@/components/store/FlashSaleSection';
-import ShowroomSection from '@/components/store/ShowroomSection';
-import NewsletterSection from '@/components/store/NewsletterSection';
 import AnnouncementBar from '@/components/store/AnnouncementBar';
+import StoreFooter from '@/components/store/StoreFooter';
 
 function HomeContent() {
   const { cart, user, loading, products, loadProducts } = useShop();
@@ -187,8 +186,9 @@ function HomeContent() {
       <div className="max-w-7xl mx-auto px-3 sm:px-4">
         <FlashSaleSection />
       </div>
-      <ShowroomSection />
-      <NewsletterSection />
+
+      {/* Footer */}
+      <StoreFooter />
 
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </div>

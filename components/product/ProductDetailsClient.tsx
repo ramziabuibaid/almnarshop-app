@@ -85,16 +85,20 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
   const totalStock = warehouseStock + shopStock;
   const isAvailable = totalStock > 0;
 
-  // Price logic - use offer price if in active campaign, otherwise use sale_price
-  const originalSalePrice = product.price || product.SalePrice || 0;
+  // Price logic - prioritize campaign > promo > base
+  const baseRetailPrice = Number(product.price || 0);
+  const promotionalPrice = Number(product.sale_price || product.SalePrice || 0);
   const offerPrice = activeCampaign?.offer_price || null;
-  const displayPrice = offerPrice !== null ? offerPrice : originalSalePrice;
-  const regularPrice = product.CostPrice || product.T1Price || product.T2Price || 0;
-  const hasDiscount = regularPrice > 0 && regularPrice > displayPrice;
-  const hasCampaignDiscount = offerPrice !== null && offerPrice < originalSalePrice;
-  const campaignDiscountPercent = hasCampaignDiscount && originalSalePrice > 0
-    ? Math.round(((originalSalePrice - offerPrice!) / originalSalePrice) * 100)
+
+  const displayPrice = offerPrice !== null ? offerPrice : (promotionalPrice > 0 ? promotionalPrice : baseRetailPrice);
+
+  const campaignOriginalPrice = promotionalPrice > 0 ? promotionalPrice : baseRetailPrice;
+  const hasCampaignDiscount = offerPrice !== null && offerPrice < campaignOriginalPrice;
+  const campaignDiscountPercent = hasCampaignDiscount && campaignOriginalPrice > 0
+    ? Math.round(((campaignOriginalPrice - offerPrice!) / campaignOriginalPrice) * 100)
     : 0;
+
+  const hasGeneralPromo = !hasCampaignDiscount && promotionalPrice > 0 && promotionalPrice < baseRetailPrice;
 
   // WhatsApp function
   const handleWhatsApp = () => {
@@ -285,25 +289,20 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
                       ₪{displayPrice.toFixed(2)}
                     </span>
                     <span className="text-xl font-medium text-gray-400 line-through">
-                      ₪{originalSalePrice.toFixed(2)}
+                      ₪{campaignOriginalPrice.toFixed(2)}
                     </span>
                     <div className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-bold self-center">
                       وفر {campaignDiscountPercent}%
                     </div>
                   </div>
-                  {hasDiscount && regularPrice > displayPrice && (
-                    <div className="text-sm text-gray-400">
-                      السعر الأساسي: <span className="line-through">₪{regularPrice.toFixed(2)}</span>
-                    </div>
-                  )}
                 </div>
-              ) : hasDiscount ? (
+              ) : hasGeneralPromo ? (
                 <div className="flex items-baseline gap-3 flex-wrap">
-                  <span className="text-4xl font-bold text-gray-900">
+                  <span className="text-4xl font-bold text-red-600">
                     ₪{displayPrice.toFixed(2)}
                   </span>
                   <span className="text-xl font-medium text-gray-400 line-through">
-                    ₪{regularPrice.toFixed(2)}
+                    ₪{baseRetailPrice.toFixed(2)}
                   </span>
                 </div>
               ) : (
@@ -362,7 +361,7 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
         product={product}
         isAvailable={isAvailable}
         displayPrice={displayPrice}
-        originalPrice={originalSalePrice}
+        originalPrice={hasCampaignDiscount ? campaignOriginalPrice : (hasGeneralPromo ? baseRetailPrice : displayPrice)}
       />
     </>
   );

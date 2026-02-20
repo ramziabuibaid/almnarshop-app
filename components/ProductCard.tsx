@@ -25,18 +25,18 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [imageLoading, setImageLoading] = useState(true);
   const [isInView, setIsInView] = useState(false);
   const imgRef = useRef<HTMLDivElement>(null);
-  
+
   // Convert image URL to direct image link (handles Google Drive preview links)
   const rawImageUrl = product.image && product.image.trim() !== '' ? product.image.trim() : '';
   const imageUrl = getDirectImageUrl(rawImageUrl);
   const hasValidImage = imageUrl && !imageError;
-  
+
   // Check if product is available (CS_War + CS_Shop > 0)
   const warehouseStock = product.CS_War || product.cs_war || 0;
   const shopStock = product.CS_Shop || product.cs_shop || 0;
   const totalStock = warehouseStock + shopStock;
   const isAvailable = totalStock > 0;
-  
+
   // WhatsApp function
   const handleWhatsApp = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -45,6 +45,18 @@ export default function ProductCard({ product }: ProductCardProps) {
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
+
+  // Pricing Logic - Depend purely on ShopContext injected Campaign Prices
+  const originalParsed = parseFloat(String(product.originalPrice || 0));
+  const campaignParsed = parseFloat(String(product.campaignPrice || 0));
+
+  const hasDiscount = campaignParsed > 0 && originalParsed > 0 && campaignParsed < originalParsed;
+
+  // Fallback to standard price if no discount exists
+  const standardPrice = parseFloat(String(product.SalePrice || product.sale_price || product.price || 0));
+
+  const displayPrice = hasDiscount ? campaignParsed : standardPrice;
+  const renderStrikethrough = hasDiscount ? originalParsed : null;
 
   // Intersection Observer for lazy loading - only load images when visible
   useEffect(() => {
@@ -84,7 +96,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <>
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-        <div 
+        <div
           ref={imgRef}
           className="relative w-full aspect-square bg-gray-100 flex items-center justify-center cursor-pointer"
           onClick={() => setIsModalOpen(true)}
@@ -121,15 +133,29 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
         <div className="p-4">
-          <h3 
+          <h3
             className="font-semibold text-gray-900 mb-1 line-clamp-2 min-h-[2.5rem] cursor-pointer hover:text-gray-700 transition-colors"
             onClick={() => setIsModalOpen(true)}
           >
             {product.name}
           </h3>
-          <p className="text-lg font-bold text-gray-900 mb-3">
-            ₪{product.price.toFixed(2)}
-          </p>
+
+          <div className="mb-3">
+            {hasDiscount && renderStrikethrough ? (
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-bold text-red-600">
+                  ₪{displayPrice.toFixed(2)}
+                </span>
+                <span className="text-sm text-gray-400 line-through">
+                  ₪{renderStrikethrough.toFixed(2)}
+                </span>
+              </div>
+            ) : (
+              <p className="text-lg font-bold text-gray-900">
+                ₪{displayPrice.toFixed(2)}
+              </p>
+            )}
+          </div>
           <div className="space-y-2">
             {/* WhatsApp Button */}
             <button
@@ -139,7 +165,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               <MessageCircle size={18} />
               مراسلة عبر واتساب
             </button>
-            
+
             {/* Add to Cart Button */}
             <button
               onClick={(e) => {
@@ -149,11 +175,10 @@ export default function ProductCard({ product }: ProductCardProps) {
                 }
               }}
               disabled={!isAvailable}
-              className={`w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg transition-colors font-medium ${
-                isAvailable
-                  ? 'bg-gray-900 text-white hover:bg-gray-800'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
+              className={`w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg transition-colors font-medium ${isAvailable
+                ? 'bg-gray-900 text-white hover:bg-gray-800'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
             >
               <ShoppingCart size={18} />
               {isAvailable ? 'إضافة إلى السلة' : 'غير متوفر'}

@@ -98,11 +98,26 @@ export default function ProductCard({ product }: ProductCardProps) {
     };
   }, [hasValidImage]);
 
+  // Pricing logic depend purely on ShopContext injected Campaign Prices
+  const originalParsed = parseFloat(String(product.originalPrice || 0));
+  const campaignParsed = parseFloat(String(product.campaignPrice || 0));
+
+  const hasDiscount = Boolean(campaignParsed > 0 && originalParsed > 0 && campaignParsed < originalParsed);
+  const standardPrice = parseFloat(String(product.SalePrice || product.sale_price || product.price || 0));
+  const displayPrice = hasDiscount ? campaignParsed : standardPrice;
+  const renderStrikethrough = hasDiscount ? originalParsed : null;
+  const discountPercentage = hasDiscount ? Math.round(((originalParsed - campaignParsed) / originalParsed) * 100) : 0;
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (isAvailable) {
-      addToCart(product);
+      const productToAdd = {
+        ...product,
+        price: displayPrice,
+        SalePrice: displayPrice
+      };
+      addToCart(productToAdd);
     }
   };
 
@@ -116,13 +131,13 @@ export default function ProductCard({ product }: ProductCardProps) {
         >
           {/* Badges */}
           <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 z-10 flex flex-col gap-1.5 sm:gap-2" suppressHydrationWarning>
-            {/* Discount Badge - Priority in campaign mode */}
-            {product.isCampaignMode && product.discount && product.discount > 0 && (
+            {/* Discount Badge */}
+            {hasDiscount && discountPercentage > 0 && (
               <div className="bg-red-600 text-white px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold shadow-lg">
-                خصم {product.discount}%
+                خصم {discountPercentage}%
               </div>
             )}
-            {isNew && !product.isCampaignMode && (
+            {isNew && !hasDiscount && (
               <div className="bg-green-600 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold shadow-lg flex items-center gap-0.5 sm:gap-1">
                 <Sparkles size={10} className="sm:w-3 sm:h-3" />
                 جديد
@@ -169,8 +184,8 @@ export default function ProductCard({ product }: ProductCardProps) {
               onClick={handleAddToCart}
               disabled={!isAvailable}
               className={`w-full flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors font-medium text-xs sm:text-sm ${isAvailable
-                  ? 'bg-gray-900 text-white hover:bg-gray-800'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                ? 'bg-gray-900 text-white hover:bg-gray-800'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
             >
               <ShoppingCart size={14} className="sm:w-4 sm:h-4" />
@@ -189,18 +204,18 @@ export default function ProductCard({ product }: ProductCardProps) {
 
           {/* Price */}
           <div className="mb-2 sm:mb-3">
-            {product.isCampaignMode && product.originalPrice && product.originalPrice > product.price ? (
+            {hasDiscount && renderStrikethrough ? (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm sm:text-base text-gray-500 line-through">
-                  ₪{product.originalPrice.toFixed(2)}
+                  ₪{renderStrikethrough.toFixed(2)}
                 </span>
                 <span className="text-lg sm:text-xl font-bold text-red-600">
-                  ₪{product.price.toFixed(2)}
+                  ₪{displayPrice.toFixed(2)}
                 </span>
               </div>
             ) : (
               <p className="text-lg sm:text-xl font-bold text-gray-900">
-                ₪{product.price.toFixed(2)}
+                ₪{displayPrice.toFixed(2)}
               </p>
             )}
           </div>
@@ -210,8 +225,8 @@ export default function ProductCard({ product }: ProductCardProps) {
             onClick={handleAddToCart}
             disabled={!isAvailable}
             className={`w-full md:hidden flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg transition-colors font-medium text-xs sm:text-sm ${isAvailable
-                ? 'bg-gray-900 text-white hover:bg-gray-800'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              ? 'bg-gray-900 text-white hover:bg-gray-800'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
           >
             <ShoppingCart size={16} className="sm:w-[18px] sm:h-[18px]" />

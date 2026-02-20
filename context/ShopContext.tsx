@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { getProducts } from '@/lib/api';
+import { getProducts, getActiveCampaignWithProducts } from '@/lib/api';
 
 interface CartItem {
   id: string;
@@ -84,7 +84,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         if (!parsedUser.Role && !parsedUser.role) {
           parsedUser.Role = 'Customer';
         }
-        
+
         // Check if user data should be kept (if rememberMe was true)
         // localStorage persists indefinitely, so we just restore the user
         // Remove metadata fields before setting user
@@ -140,7 +140,26 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       console.log('[ShopContext] Loading products...');
       const fetchedProducts = await getProducts({ forStore: true });
       console.log('[ShopContext] Products loaded:', fetchedProducts.length);
-      setProducts(fetchedProducts);
+
+      const activeCampaign = await getActiveCampaignWithProducts();
+      let finalProducts = fetchedProducts;
+
+      if (activeCampaign && activeCampaign.products && activeCampaign.products.length > 0) {
+        console.log('[ShopContext] Found active campaign with products:', activeCampaign.products.length);
+        finalProducts = fetchedProducts.map(product => {
+          const campaignProduct = activeCampaign.products.find((cp: any) => cp.product_id === product.id || cp.id === product.id);
+          if (campaignProduct && campaignProduct.offer_price) {
+            return {
+              ...product,
+              originalPrice: product.SalePrice || product.price || 0,
+              campaignPrice: campaignProduct.offer_price
+            };
+          }
+          return product;
+        });
+      }
+
+      setProducts(finalProducts);
     } catch (error: any) {
       console.error('[ShopContext] Failed to load products:', error?.message || error);
       // Set empty array on error to prevent UI issues
