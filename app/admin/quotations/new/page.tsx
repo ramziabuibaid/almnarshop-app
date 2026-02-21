@@ -27,6 +27,8 @@ import {
   getProducts,
   getAllCustomers,
   getCustomerLastPriceForProduct,
+  getReservedQuantities,
+  ReservedQuotationsData,
 } from '@/lib/api';
 import { validateSerialNumbers } from '@/lib/validation';
 import {
@@ -121,7 +123,7 @@ function SortableTableRow({
       style={style}
       className={`bg-white ${isDragging ? 'shadow-lg opacity-50' : ''}`}
     >
-      <td 
+      <td
         {...listeners}
         className="px-2 py-3 w-8 cursor-grab active:cursor-grabbing"
         title="اسحب لإعادة الترتيب"
@@ -160,7 +162,7 @@ function SortableTableRow({
                     const serialNo = serialNos[serialIndex] || '';
                     const isEmpty = !serialNo.trim();
                     const isRequired = item.isSerialized && isEmpty;
-                    
+
                     return (
                       <div key={serialIndex} className="flex items-center gap-1">
                         <ScannerLatinInput
@@ -192,11 +194,10 @@ function SortableTableRow({
                           data-serial-index={serialIndex}
                           data-detail-id={item.detailID}
                           placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                          className={`w-full px-2 py-1 border rounded text-gray-900 font-mono text-xs ${
-                            isRequired
-                              ? 'border-yellow-400 bg-yellow-50'
-                              : 'border-gray-300'
-                          }`}
+                          className={`w-full px-2 py-1 border rounded text-gray-900 font-mono text-xs ${isRequired
+                            ? 'border-yellow-400 bg-yellow-50'
+                            : 'border-gray-300'
+                            }`}
                         />
                         <SerialNumberScanner
                           onScan={(scannedData) => {
@@ -205,14 +206,14 @@ function SortableTableRow({
                               .split(/[,\n\r]+|\s{2,}/)
                               .map(s => s.trim())
                               .filter(s => s.length > 0);
-                            
+
                             if (serials.length === 0) return;
-                            
+
                             const newSerialNos = [...(item.serialNos || [])];
                             while (newSerialNos.length < item.quantity) {
                               newSerialNos.push('');
                             }
-                            
+
                             let currentIndex = serialIndex;
                             for (const serial of serials) {
                               if (currentIndex < item.quantity) {
@@ -220,9 +221,9 @@ function SortableTableRow({
                                 currentIndex++;
                               }
                             }
-                            
+
                             onUpdateSerialNo(item.detailID, newSerialNos);
-                            
+
                             setTimeout(() => {
                               const nextEmptyIndex = newSerialNos.findIndex((s, idx) => idx >= serialIndex && !s.trim());
                               if (nextEmptyIndex !== -1) {
@@ -277,9 +278,8 @@ function SortableTableRow({
           ₪{(item.costPrice || 0).toFixed(2)}
         </td>
       )}
-      <td className={`px-3 py-3 text-sm font-semibold font-cairo text-center align-top ${
-        item.isGift ? 'text-green-600' : 'text-gray-900'
-      }`}>
+      <td className={`px-3 py-3 text-sm font-semibold font-cairo text-center align-top ${item.isGift ? 'text-green-600' : 'text-gray-900'
+        }`}>
         ₪{(item.quantity * item.unitPrice).toFixed(2)}
         {item.isGift && (
           <span className="text-xs text-green-600 mr-1 block">(هدية)</span>
@@ -288,11 +288,10 @@ function SortableTableRow({
       <td className="px-3 py-3 text-center align-top">
         <button
           onClick={() => onToggleGift(item.detailID)}
-          className={`p-1.5 rounded-lg transition-colors ${
-            item.isGift
-              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
+          className={`p-1.5 rounded-lg transition-colors ${item.isGift
+            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
           title={item.isGift ? 'إلغاء تحديد كهدية' : 'تحديد كهدية'}
         >
           <Gift size={16} />
@@ -356,9 +355,8 @@ function CardRow({
         )}
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-gray-900 font-cairo mb-1">{item.productName}</h3>
-          <div className={`text-lg font-bold font-cairo mb-2 ${
-            item.isGift ? 'text-green-600' : 'text-gray-900'
-          }`}>
+          <div className={`text-lg font-bold font-cairo mb-2 ${item.isGift ? 'text-green-600' : 'text-gray-900'
+            }`}>
             ₪{(item.quantity * item.unitPrice).toFixed(2)}
             {item.isGift && (
               <span className="text-xs text-green-600 mr-1">(هدية)</span>
@@ -375,7 +373,7 @@ function CardRow({
                 const serialNo = serialNos[serialIndex] || '';
                 const isEmpty = !serialNo.trim();
                 const isRequired = item.isSerialized && isEmpty;
-                
+
                 return (
                   <div key={serialIndex} className="flex items-center gap-1">
                     <ScannerLatinInput
@@ -408,11 +406,10 @@ function CardRow({
                       data-detail-id={item.detailID}
                       data-mobile="true"
                       placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                      className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm ${
-                        isRequired
-                          ? 'border-yellow-400 bg-yellow-50'
-                          : 'border-gray-300'
-                      }`}
+                      className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm ${isRequired
+                        ? 'border-yellow-400 bg-yellow-50'
+                        : 'border-gray-300'
+                        }`}
                     />
                     <SerialNumberScanner
                       onScan={(scannedData) => {
@@ -421,14 +418,14 @@ function CardRow({
                           .split(/[,\n\r]+|\s{2,}/)
                           .map(s => s.trim())
                           .filter(s => s.length > 0);
-                        
+
                         if (serials.length === 0) return;
-                        
+
                         const newSerialNos = [...(item.serialNos || [])];
                         while (newSerialNos.length < item.quantity) {
                           newSerialNos.push('');
                         }
-                        
+
                         let currentIndex = serialIndex;
                         for (const serial of serials) {
                           if (currentIndex < item.quantity) {
@@ -436,9 +433,9 @@ function CardRow({
                             currentIndex++;
                           }
                         }
-                        
+
                         onUpdateSerialNo(item.detailID, newSerialNos);
-                        
+
                         setTimeout(() => {
                           const nextEmptyIndex = newSerialNos.findIndex((s, idx) => idx >= serialIndex && !s.trim());
                           if (nextEmptyIndex !== -1) {
@@ -510,11 +507,10 @@ function CardRow({
       <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-200">
         <button
           onClick={() => onToggleGift(item.detailID)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-cairo ${
-            item.isGift
-              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-cairo ${item.isGift
+            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
         >
           <Gift size={16} />
           <span>{item.isGift ? 'إلغاء الهدية' : 'تحديد كهدية'}</span>
@@ -535,7 +531,7 @@ function QuotationsFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { admin } = useAdminAuth();
-  
+
   // Check if user can view customer balances
   const canViewBalances = admin?.is_super_admin || admin?.permissions?.viewBalances === true;
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -547,19 +543,20 @@ function QuotationsFormContent() {
   const [specialDiscountAmount, setSpecialDiscountAmount] = useState(0);
   const [giftDiscountAmount, setGiftDiscountAmount] = useState(0);
   const [details, setDetails] = useState<QuotationDetail[]>([]);
-  
+
   // Calculate gift discount automatically from items marked as gifts
   const calculatedGiftDiscount = useMemo(() => {
     return details
       .filter(item => item.isGift)
       .reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
   }, [details]);
-  
+
   // Update giftDiscountAmount when calculatedGiftDiscount changes
   useEffect(() => {
     setGiftDiscountAmount(calculatedGiftDiscount);
   }, [calculatedGiftDiscount]);
   const [products, setProducts] = useState<any[]>([]);
+  const [reservedQuantities, setReservedQuantities] = useState<Record<string, ReservedQuotationsData>>({});
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -621,8 +618,12 @@ function QuotationsFormContent() {
 
   const loadProducts = async () => {
     try {
-      const productsData = await getProducts();
+      const [productsData, reservedData] = await Promise.all([
+        getProducts(),
+        getReservedQuantities()
+      ]);
       setProducts(productsData);
+      setReservedQuantities(reservedData);
     } catch (err: any) {
       console.error('[NewQuotationPage] Failed to load products:', err);
     } finally {
@@ -643,7 +644,7 @@ function QuotationsFormContent() {
     // Reload customers list to get the newly added customer
     const updatedCustomers = await getAllCustomers();
     setCustomers(updatedCustomers);
-    
+
     // If customer ID is provided, find and select it
     if (newCustomerId) {
       const newCustomer = updatedCustomers.find(
@@ -656,7 +657,7 @@ function QuotationsFormContent() {
         setIsCustomerDropdownOpen(false);
       }
     }
-    
+
     setIsCustomerModalOpen(false);
   };
 
@@ -710,7 +711,7 @@ function QuotationsFormContent() {
         if (item.detailID === detailID) {
           const currentSerialNos = item.serialNos || [];
           let newSerialNos: string[];
-          
+
           if (newQuantity > item.quantity) {
             // Increase quantity - add empty strings
             newSerialNos = [...currentSerialNos, ...Array(newQuantity - item.quantity).fill('')];
@@ -718,7 +719,7 @@ function QuotationsFormContent() {
             // Decrease quantity - keep first N serials
             newSerialNos = currentSerialNos.slice(0, newQuantity);
           }
-          
+
           return { ...item, quantity: newQuantity, serialNos: newSerialNos };
         }
         return item;
@@ -787,7 +788,7 @@ function QuotationsFormContent() {
       if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
         return arrayMove(items, oldIndex, newIndex);
       }
-      
+
       return items;
     });
   };
@@ -801,7 +802,7 @@ function QuotationsFormContent() {
   const handleAddProduct = (productParam?: any, quantityParam?: number, priceParam?: number) => {
     // If product is provided directly (from barcode scanner), use it
     let productToAdd = productParam;
-    
+
     // Otherwise, use selectedProduct (from manual selection) - this preserves all product data
     if (!productToAdd) {
       // Priority 1: Use the selected product object directly if available (preserves all data including Name)
@@ -816,7 +817,7 @@ function QuotationsFormContent() {
       } else if (selectedProductId) {
         // Priority 2: Fallback - find product by selectedProductId
         const selectedId = String(selectedProductId || '').trim();
-        
+
         productToAdd = products.find((p) => {
           const possibleIds = [
             p.ProductID,
@@ -826,10 +827,10 @@ function QuotationsFormContent() {
             p['id'],
             p['product_id']
           ].filter(id => id != null).map(id => String(id).trim());
-          
+
           return possibleIds.includes(selectedId);
         });
-        
+
         if (!productToAdd) {
           alert('المنتج غير موجود');
           return;
@@ -843,18 +844,18 @@ function QuotationsFormContent() {
     const quantity = quantityParam != null ? quantityParam : newProductQuantity;
 
     const detailId = `temp-${Date.now()}`;
-    
+
     // Extract product ID first - productToAdd should have ID fields now
     // Since we ensured productToAdd has ID in previous steps, extract it directly
     const productIdForSearch = String(
-      productToAdd.ProductID || 
-      productToAdd.id || 
-      productToAdd.product_id || 
+      productToAdd.ProductID ||
+      productToAdd.id ||
+      productToAdd.product_id ||
       (productParam ? (productParam.ProductID || productParam.id || productParam.product_id) : null) ||
-      selectedProductId || 
+      selectedProductId ||
       ''
     ).trim();
-    
+
     if (!productIdForSearch) {
       console.error('[Quotations] CRITICAL: Product ID is still undefined!', {
         productToAdd: {
@@ -878,9 +879,9 @@ function QuotationsFormContent() {
       alert('خطأ فني: المنتج لا يحتوي على معرف صالح. يرجى المحاولة مرة أخرى أو اختيار منتج آخر.');
       return;
     }
-    
+
     console.log('[Quotations] Final product ID extracted:', productIdForSearch);
-    
+
     // Use provided price, manually entered price, or default sale price
     // Priority: priceParam > newProductPrice (if > 0) > productToAdd.SalePrice > selectedProduct > products array
     let unitPrice = productToAdd.SalePrice || productToAdd.sale_price || productToAdd.price || 0;
@@ -904,10 +905,10 @@ function QuotationsFormContent() {
         }
       }
     }
-    
+
     // Extract product name - check multiple possible fields
     let productName = '';
-    
+
     // Try all possible name fields
     if (productToAdd.Name && String(productToAdd.Name).trim()) {
       productName = String(productToAdd.Name).trim();
@@ -916,7 +917,7 @@ function QuotationsFormContent() {
     } else if (productToAdd.product_name && String(productToAdd.product_name).trim()) {
       productName = String(productToAdd.product_name).trim();
     }
-    
+
     // If still no name, try to get it from selectedProduct (for manual selection)
     if (!productName && selectedProduct) {
       productName = selectedProduct.Name || selectedProduct.name || '';
@@ -924,7 +925,7 @@ function QuotationsFormContent() {
         productName = String(productName).trim();
       }
     }
-    
+
     // Final fallback - search in products array
     if (!productName) {
       const originalProduct = products.find(p => {
@@ -938,15 +939,15 @@ function QuotationsFormContent() {
         }
       }
     }
-    
+
     // Last resort
     if (!productName) {
       productName = 'غير معروف';
     }
-    
+
     // Extract product image - check multiple possible fields
     let productImage = '';
-    
+
     // Try all possible image fields from productToAdd
     if (productToAdd.Image && String(productToAdd.Image).trim()) {
       productImage = String(productToAdd.Image).trim();
@@ -957,7 +958,7 @@ function QuotationsFormContent() {
     } else if (productToAdd['image'] && String(productToAdd['image']).trim()) {
       productImage = String(productToAdd['image']).trim();
     }
-    
+
     // If still no image, try to get it from selectedProduct (for manual selection)
     if (!productImage && selectedProduct) {
       productImage = selectedProduct.Image || selectedProduct.image || selectedProduct['Image'] || selectedProduct['image'] || '';
@@ -965,7 +966,7 @@ function QuotationsFormContent() {
         productImage = String(productImage).trim();
       }
     }
-    
+
     // Final fallback - search in products array
     if (!productImage) {
       const originalProduct = products.find(p => {
@@ -982,7 +983,7 @@ function QuotationsFormContent() {
 
     // Extract product cost price - check multiple possible fields
     let costPrice = 0;
-    
+
     // Try all possible cost price fields from productToAdd
     if (productToAdd.CostPrice != null && productToAdd.CostPrice !== undefined) {
       costPrice = parseFloat(String(productToAdd.CostPrice)) || 0;
@@ -991,7 +992,7 @@ function QuotationsFormContent() {
     } else if (productToAdd.costPrice != null && productToAdd.costPrice !== undefined) {
       costPrice = parseFloat(String(productToAdd.costPrice)) || 0;
     }
-    
+
     // If still no cost price, try to get it from selectedProduct (for manual selection)
     if (costPrice === 0 && selectedProduct) {
       if (selectedProduct.CostPrice != null && selectedProduct.CostPrice !== undefined) {
@@ -1002,7 +1003,7 @@ function QuotationsFormContent() {
         costPrice = parseFloat(String(selectedProduct.costPrice)) || 0;
       }
     }
-    
+
     // Final fallback - search in products array
     if (costPrice === 0) {
       const originalProduct = products.find(p => {
@@ -1019,7 +1020,7 @@ function QuotationsFormContent() {
         }
       }
     }
-    
+
     // Check if product already exists in details
     const existingDetailIndex = details.findIndex((item) => {
       const itemProductId = String(item.productID || '').trim();
@@ -1035,7 +1036,7 @@ function QuotationsFormContent() {
             : item
         )
       );
-      
+
       // Clear form and close
       setSelectedProductId('');
       setSelectedProduct(null);
@@ -1043,7 +1044,7 @@ function QuotationsFormContent() {
       setNewProductPrice(0);
       setShowAddProduct(false);
       setProductSearchQuery('');
-      
+
       // Don't fetch last price as product already exists
       return;
     }
@@ -1060,10 +1061,10 @@ function QuotationsFormContent() {
         isSerialized = originalProduct.is_serialized || originalProduct.IsSerialized || false;
       }
     }
-    
+
     // Initialize serial numbers array with empty strings for each quantity
     const serialNos: string[] = Array(quantity).fill('');
-    
+
     const newDetail: QuotationDetail = {
       detailID: detailId,
       productID: productIdForSearch,
@@ -1100,7 +1101,7 @@ function QuotationsFormContent() {
             customerId,
             productIdForSearch
           );
-          
+
           if (lastPrice && lastPrice > 0) {
             // Update the price for this specific detail
             setDetails((prev) =>
@@ -1362,9 +1363,8 @@ function QuotationsFormContent() {
                 onChange={(e) => setGiftDiscountAmount(parseFloat(e.target.value) || 0)}
                 onWheel={(e) => e.currentTarget.blur()}
                 disabled={calculatedGiftDiscount > 0}
-                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold ${
-                  calculatedGiftDiscount > 0 ? 'bg-gray-100 cursor-not-allowed' : ''
-                }`}
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold ${calculatedGiftDiscount > 0 ? 'bg-gray-100 cursor-not-allowed' : ''
+                  }`}
                 title={calculatedGiftDiscount > 0 ? 'يتم الحساب تلقائياً من الأصناف المحددة كهدايا' : ''}
               />
               {calculatedGiftDiscount > 0 && (
@@ -1388,7 +1388,7 @@ function QuotationsFormContent() {
           {/* Products */}
           <div>
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 font-cairo mb-4">المنتجات</h2>
-            
+
             {/* Barcode Scanner - Always visible */}
             <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
@@ -1401,7 +1401,7 @@ function QuotationsFormContent() {
                 className="w-full"
               />
             </div>
-            
+
             {/* Add Product Button */}
             <div className="mb-4">
               <button
@@ -1412,10 +1412,10 @@ function QuotationsFormContent() {
                 <span>إضافة منتج</span>
               </button>
             </div>
-            
+
             {showAddProduct && (
               <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
-                
+
                 <div className="relative mb-4" ref={productDropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
                   <div className="relative">
@@ -1435,53 +1435,65 @@ function QuotationsFormContent() {
                         {filteredProducts.map((product) => {
                           const imageUrl = product.Image || product.image || '';
                           return (
-                          <button
-                            key={product.ProductID || product.id || product.product_id}
-                            type="button"
-                            onClick={() => {
-                              const productId = String(product.ProductID || product.id || product.product_id || '').trim();
-                              const productName = product.Name || product.name || '';
-                              
-                              if (productId) {
-                                // Store the full product object to preserve all data including Name and Image
-                                setSelectedProduct(product);
-                                setSelectedProductId(productId);
-                                // Set default price from product
-                                const defaultPrice = product.SalePrice || product.sale_price || product.price || 0;
-                                setNewProductPrice(defaultPrice);
-                                setIsProductDropdownOpen(false);
-                                setProductSearchQuery(productName || product.Name || product.name || '');
-                              } else {
-                                alert('خطأ: المنتج لا يحتوي على معرف صالح');
-                              }
-                            }}
-                            className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
-                          >
-                            <div className="flex items-center gap-3">
-                              {imageUrl ? (
-                                <img
-                                  src={imageUrl}
-                                  alt={product.Name || product.name}
-                                  className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                  }}
-                                />
-                              ) : (
-                                <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                  <span className="text-gray-400 text-xs">—</span>
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-col gap-1">
-                                  <span className="text-right text-sm font-medium">{product.Name || product.name}</span>
-                                  <span className="text-right text-xs text-gray-600 font-light" dir="rtl">
-                                    ₪{product.SalePrice || product.sale_price || product.price || 0} • محل: {product.CS_Shop || product.cs_shop || 0} • مخزن: {product.CS_War || product.cs_war || 0}
-                                  </span>
+                            <button
+                              key={product.ProductID || product.id || product.product_id}
+                              type="button"
+                              onClick={() => {
+                                const productId = String(product.ProductID || product.id || product.product_id || '').trim();
+                                const productName = product.Name || product.name || '';
+
+                                if (productId) {
+                                  // Store the full product object to preserve all data including Name and Image
+                                  setSelectedProduct(product);
+                                  setSelectedProductId(productId);
+                                  // Set default price from product
+                                  const defaultPrice = product.SalePrice || product.sale_price || product.price || 0;
+                                  setNewProductPrice(defaultPrice);
+                                  setIsProductDropdownOpen(false);
+                                  setProductSearchQuery(productName || product.Name || product.name || '');
+                                } else {
+                                  alert('خطأ: المنتج لا يحتوي على معرف صالح');
+                                }
+                              }}
+                              className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
+                            >
+                              <div className="flex items-center gap-3">
+                                {imageUrl ? (
+                                  <img
+                                    src={imageUrl}
+                                    alt={product.Name || product.name}
+                                    className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-gray-400 text-xs">—</span>
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-right text-sm font-medium">{product.Name || product.name}</span>
+                                    <span className="text-right text-xs text-gray-600 font-light flex items-center gap-2 justify-end flex-wrap" dir="rtl">
+                                      <span>₪{product.SalePrice || product.sale_price || product.price || 0}</span>
+                                      <span>•</span>
+                                      <span>محل: {product.CS_Shop || product.cs_shop || 0}</span>
+                                      <span>•</span>
+                                      <span>مخزن: {product.CS_War || product.cs_war || 0}</span>
+                                      {(reservedQuantities[product.ProductID || product.id || product.product_id]?.total || 0) > 0 && (
+                                        <>
+                                          <span>•</span>
+                                          <span className="text-orange-600 font-semibold bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100">
+                                            محجوز: {reservedQuantities[product.ProductID || product.id || product.product_id].total}
+                                          </span>
+                                        </>
+                                      )}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </button>
+                            </button>
                           );
                         })}
                       </div>

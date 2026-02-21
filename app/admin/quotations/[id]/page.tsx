@@ -35,6 +35,8 @@ import {
   saveShopSalesInvoice,
   saveWarehouseSalesInvoice,
   getCustomerLastPriceForProduct,
+  getReservedQuantities,
+  ReservedQuotationsData,
 } from '@/lib/api';
 import { getSerialNumbersByDetailId } from '@/lib/api_serial_numbers';
 import { validateSerialNumbers } from '@/lib/validation';
@@ -214,8 +216,8 @@ function SortableTableRow({
                           data-detail-id={item.QuotationDetailID}
                           placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
                           className={`w-full px-2 py-1 border rounded text-gray-900 font-mono text-xs ${isRequired
-                              ? 'border-yellow-400 bg-yellow-50'
-                              : 'border-gray-300'
+                            ? 'border-yellow-400 bg-yellow-50'
+                            : 'border-gray-300'
                             }`}
                         />
                         <SerialNumberScanner
@@ -302,8 +304,8 @@ function SortableTableRow({
         <button
           onClick={() => onToggleGift(item.QuotationDetailID)}
           className={`p-1.5 rounded-lg transition-colors ${item.isGift
-              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           title={item.isGift ? 'إلغاء تحديد كهدية' : 'تحديد كهدية'}
         >
@@ -418,8 +420,8 @@ function CardRow({
                       data-mobile="true"
                       placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
                       className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm ${isRequired
-                          ? 'border-yellow-400 bg-yellow-50'
-                          : 'border-gray-300'
+                        ? 'border-yellow-400 bg-yellow-50'
+                        : 'border-gray-300'
                         }`}
                     />
                     <SerialNumberScanner
@@ -512,8 +514,8 @@ function CardRow({
         <button
           onClick={() => onToggleGift(item.QuotationDetailID)}
           className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-cairo ${item.isGift
-              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
         >
           <Gift size={16} />
@@ -568,6 +570,7 @@ export default function EditQuotationPage() {
     setGiftDiscountAmount(calculatedGiftDiscount);
   }, [calculatedGiftDiscount]);
   const [products, setProducts] = useState<any[]>([]);
+  const [reservedQuantities, setReservedQuantities] = useState<Record<string, ReservedQuotationsData>>({});
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -711,8 +714,12 @@ export default function EditQuotationPage() {
 
   const loadProducts = async () => {
     try {
-      const productsData = await getProducts();
+      const [productsData, reservedData] = await Promise.all([
+        getProducts(),
+        getReservedQuantities()
+      ]);
       setProducts(productsData);
+      setReservedQuantities(reservedData);
 
       // Update isSerialized for existing quotation items after products are loaded
       setDetails((prevDetails) => {
@@ -1329,11 +1336,10 @@ export default function EditQuotationPage() {
           unitPrice: item.UnitPrice,
           notes: item.notes || '',
           isGift: item.isGift || false,
-          isGift: item.isGift || false,
           serialNos: item.serialNos || [],
         })),
         isGroomOffer,
-        groomOfferTitle: isGroomOffer ? groomOfferTitle : null,
+        groomOfferTitle: isGroomOffer ? groomOfferTitle : undefined,
       });
       router.push('/admin/quotations');
     } catch (err: any) {

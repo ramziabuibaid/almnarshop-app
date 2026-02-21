@@ -10,6 +10,8 @@ import {
   getProducts,
   getAllCustomers,
   getCustomerLastPriceForProduct,
+  getReservedQuantities,
+  ReservedQuotationsData,
 } from '@/lib/api';
 import { getSerialNumbersByDetailId } from '@/lib/api_serial_numbers';
 import { validateSerialNumbers } from '@/lib/validation';
@@ -67,6 +69,7 @@ export default function EditWarehouseSalesInvoicePage() {
   const [discount, setDiscount] = useState(0);
   const [details, setDetails] = useState<InvoiceDetail[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [reservedQuantities, setReservedQuantities] = useState<Record<string, ReservedQuotationsData>>({});
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -115,12 +118,12 @@ export default function EditWarehouseSalesInvoicePage() {
     setError(null);
     try {
       const data = await getWarehouseSalesInvoice(invoiceId);
-      
+
       // Check if invoice is settled
       if (data.AccountantSign === 'مرحلة') {
         setError('لا يمكن تعديل فاتورة مرحلة');
       }
-      
+
       setInvoice(data);
       setDate(data.Date ? new Date(data.Date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
       const custId = data.CustomerID || '';
@@ -128,14 +131,14 @@ export default function EditWarehouseSalesInvoicePage() {
       setNotes(data.Notes || '');
       setStatus(data.Status || 'غير مدفوع');
       setDiscount(data.Discount || 0);
-      
+
       // Map invoice items to details (costPrice will be added after products are loaded)
       // First, get raw details from Supabase to access serial_no field
       const { data: rawDetails, error: rawDetailsError } = await supabase
         .from('warehouse_sales_details')
         .select('details_id, serial_no')
         .eq('invoice_id', invoiceId);
-      
+
       const serialNosMap = new Map<string, string[]>();
       if (!rawDetailsError && rawDetails) {
         rawDetails.forEach((detail: any) => {
@@ -144,7 +147,7 @@ export default function EditWarehouseSalesInvoicePage() {
           }
         });
       }
-      
+
       const mappedDetails: InvoiceDetail[] = await Promise.all(
         (data.Items || []).map(async (item: any) => {
           // Load existing serial numbers for this detail
@@ -154,7 +157,7 @@ export default function EditWarehouseSalesInvoicePage() {
               // First try to load from serial_numbers table
               serialNos = await getSerialNumbersByDetailId(item.DetailsID, 'warehouse_sales');
               console.log('[EditWarehouseSalesInvoicePage] Loaded serial numbers from serial_numbers table for detail', item.DetailsID, ':', serialNos);
-              
+
               // If no serials found in dedicated table, try to load from details table (fallback)
               if (serialNos.length === 0 && serialNosMap.has(item.DetailsID)) {
                 serialNos = serialNosMap.get(item.DetailsID) || [];
@@ -169,14 +172,14 @@ export default function EditWarehouseSalesInvoicePage() {
               }
             }
           }
-          
+
           // Ensure serialNos array matches quantity (use absolute value for negative quantities)
           const absQuantity = Math.abs(item.Quantity || 0);
           while (serialNos.length < absQuantity) {
             serialNos.push('');
           }
           serialNos = serialNos.slice(0, absQuantity);
-          
+
           return {
             detailID: item.DetailsID,
             productID: item.ProductID,
@@ -202,9 +205,13 @@ export default function EditWarehouseSalesInvoicePage() {
 
   const loadProducts = async () => {
     try {
-      const productsData = await getProducts();
+      const [productsData, reservedData] = await Promise.all([
+        getProducts(),
+        getReservedQuantities()
+      ]);
       setProducts(productsData);
-      
+      setReservedQuantities(reservedData);
+
       // Update costPrice and isSerialized for existing invoice items after products are loaded
       setDetails((prevDetails) => {
         return prevDetails.map((detail) => {
@@ -212,14 +219,14 @@ export default function EditWarehouseSalesInvoicePage() {
           const product = productsData.find(
             (p) => (p.ProductID || p.id || p.product_id) === detail.productID
           );
-          
+
           if (product) {
-            const costPrice = detail.costPrice && detail.costPrice > 0 
-              ? detail.costPrice 
+            const costPrice = detail.costPrice && detail.costPrice > 0
+              ? detail.costPrice
               : (product.CostPrice || product.cost_price || product.costPrice || 0);
-            
+
             const isSerialized = product.is_serialized || product.IsSerialized || false;
-            
+
             // Ensure serialNos array matches quantity, but preserve existing serial numbers
             // Use absolute value for negative quantities
             let serialNos = detail.serialNos || [];
@@ -232,7 +239,7 @@ export default function EditWarehouseSalesInvoicePage() {
             if (serialNos.length > absQuantity) {
               serialNos = serialNos.slice(0, absQuantity);
             }
-            
+
             return {
               ...detail,
               costPrice: costPrice,
@@ -317,12 +324,12 @@ export default function EditWarehouseSalesInvoicePage() {
         if (item.detailID === detailID) {
           const currentSerialNos = item.serialNos || [];
           let newSerialNos: string[];
-          
+
           // Use absolute value for serial numbers count (same number whether positive or negative)
           // Zero quantity = no serials needed (empty array)
           const absNewQuantity = Math.abs(newQuantity);
           const absCurrentQuantity = Math.abs(item.quantity);
-          
+
           if (absNewQuantity === 0) {
             // Zero quantity - no serials needed
             newSerialNos = [];
@@ -333,14 +340,14 @@ export default function EditWarehouseSalesInvoicePage() {
             // Decrease quantity - keep first N serials
             newSerialNos = currentSerialNos.slice(0, absNewQuantity);
           }
-          
+
           return { ...item, quantity: newQuantity, serialNos: newSerialNos };
         }
         return item;
       })
     );
   };
-  
+
   const handleUpdateSerialNo = (detailID: string | undefined, index: number, value: string) => {
     setDetails((prev) =>
       prev.map((item) => {
@@ -383,7 +390,7 @@ export default function EditWarehouseSalesInvoicePage() {
   const handleAddProduct = (productParam?: any, quantityParam?: number, priceParam?: number) => {
     // If product is provided directly (from barcode scanner), use it
     let productToAdd = productParam;
-    
+
     // Otherwise, use selectedProduct (from manual selection) - this preserves all product data
     if (!productToAdd) {
       // Priority 1: Use the selected product object directly if available (preserves all data including Name)
@@ -398,7 +405,7 @@ export default function EditWarehouseSalesInvoicePage() {
       } else if (selectedProductId) {
         // Priority 2: Fallback - find product by selectedProductId
         const selectedId = String(selectedProductId || '').trim();
-        
+
         productToAdd = products.find((p) => {
           const possibleIds = [
             p.ProductID,
@@ -408,10 +415,10 @@ export default function EditWarehouseSalesInvoicePage() {
             p['id'],
             p['product_id']
           ].filter(id => id != null).map(id => String(id).trim());
-          
+
           return possibleIds.includes(selectedId);
         });
-        
+
         if (!productToAdd) {
           alert(`المنتج غير موجود. المنتج المحدد: ${selectedProductId}`);
           return;
@@ -423,23 +430,23 @@ export default function EditWarehouseSalesInvoicePage() {
     }
 
     const quantity = quantityParam != null ? quantityParam : newProductQuantity;
-    const unitPrice = priceParam != null && priceParam > 0 
-      ? priceParam 
-      : (newProductPrice != null && newProductPrice > 0) 
-        ? newProductPrice 
+    const unitPrice = priceParam != null && priceParam > 0
+      ? priceParam
+      : (newProductPrice != null && newProductPrice > 0)
+        ? newProductPrice
         : (productToAdd.SalePrice || productToAdd.sale_price || productToAdd.price || 0);
 
     // Extract product ID - productToAdd should have ID fields now
     // Since we ensured productToAdd has ID in previous steps, extract it directly
     const productIdForSearch = String(
-      productToAdd.ProductID || 
-      productToAdd.id || 
-      productToAdd.product_id || 
+      productToAdd.ProductID ||
+      productToAdd.id ||
+      productToAdd.product_id ||
       (productParam ? (productParam.ProductID || productParam.id || productParam.product_id) : null) ||
-      selectedProductId || 
+      selectedProductId ||
       ''
     ).trim();
-    
+
     if (!productIdForSearch) {
       console.error('[WarehouseSales] CRITICAL: Product ID is still undefined!', {
         productToAdd: {
@@ -458,7 +465,7 @@ export default function EditWarehouseSalesInvoicePage() {
       alert('خطأ فني: المنتج لا يحتوي على معرف صالح. يرجى المحاولة مرة أخرى أو اختيار منتج آخر.');
       return;
     }
-    
+
     console.log('[WarehouseSales] Final product ID extracted:', productIdForSearch);
     console.log('[WarehouseSales] productToAdd before name extraction:', {
       ProductID: productToAdd.ProductID || productToAdd.id || productToAdd.product_id,
@@ -473,10 +480,10 @@ export default function EditWarehouseSalesInvoicePage() {
         'name (string)': String(productToAdd.name || '')
       }
     });
-    
+
     // Extract product name - check multiple possible fields
     let productName = '';
-    
+
     // Try all possible name fields
     if (productToAdd.Name && String(productToAdd.Name).trim()) {
       productName = String(productToAdd.Name).trim();
@@ -485,7 +492,7 @@ export default function EditWarehouseSalesInvoicePage() {
     } else if (productToAdd.product_name && String(productToAdd.product_name).trim()) {
       productName = String(productToAdd.product_name).trim();
     }
-    
+
     // If still no name, try to get it from selectedProduct (for manual selection)
     if (!productName && selectedProduct) {
       productName = selectedProduct.Name || selectedProduct.name || '';
@@ -493,7 +500,7 @@ export default function EditWarehouseSalesInvoicePage() {
         productName = String(productName).trim();
       }
     }
-    
+
     // Final fallback - search in products array
     if (!productName) {
       const originalProduct = products.find(p => {
@@ -507,7 +514,7 @@ export default function EditWarehouseSalesInvoicePage() {
         }
       }
     }
-    
+
     // Last resort
     if (!productName) {
       productName = 'غير معروف';
@@ -518,12 +525,12 @@ export default function EditWarehouseSalesInvoicePage() {
         selectedProductName: selectedProduct ? (selectedProduct.Name || selectedProduct.name) : null
       });
     }
-    
+
     console.log('[WarehouseSales] Final product name:', productName);
-    
+
     // Extract product image - check multiple possible fields
     let productImage = '';
-    
+
     // Try all possible image fields from productToAdd
     if (productToAdd.Image && String(productToAdd.Image).trim()) {
       productImage = String(productToAdd.Image).trim();
@@ -534,7 +541,7 @@ export default function EditWarehouseSalesInvoicePage() {
     } else if (productToAdd['image'] && String(productToAdd['image']).trim()) {
       productImage = String(productToAdd['image']).trim();
     }
-    
+
     // If still no image, try to get it from selectedProduct (for manual selection)
     if (!productImage && selectedProduct) {
       productImage = selectedProduct.Image || selectedProduct.image || selectedProduct['Image'] || selectedProduct['image'] || '';
@@ -542,7 +549,7 @@ export default function EditWarehouseSalesInvoicePage() {
         productImage = String(productImage).trim();
       }
     }
-    
+
     // Final fallback - search in products array
     if (!productImage) {
       const originalProduct = products.find(p => {
@@ -556,12 +563,12 @@ export default function EditWarehouseSalesInvoicePage() {
         }
       }
     }
-    
+
     console.log('[WarehouseSales] Final product image:', productImage ? `${productImage.substring(0, 50)}...` : 'No image');
-    
+
     // Extract costPrice - check multiple possible fields with fallback to products array
     let costPrice = 0;
-    
+
     // Try all possible costPrice fields from productToAdd
     if (productToAdd.CostPrice != null && productToAdd.CostPrice !== 0) {
       costPrice = parseFloat(String(productToAdd.CostPrice)) || 0;
@@ -570,12 +577,12 @@ export default function EditWarehouseSalesInvoicePage() {
     } else if (productToAdd.costPrice != null && productToAdd.costPrice !== 0) {
       costPrice = parseFloat(String(productToAdd.costPrice)) || 0;
     }
-    
+
     // If still no costPrice, try to get it from selectedProduct (for manual selection)
     if (costPrice === 0 && selectedProduct) {
       costPrice = parseFloat(String(selectedProduct.CostPrice || selectedProduct.cost_price || selectedProduct.costPrice || 0)) || 0;
     }
-    
+
     // Final fallback - search in products array
     if (costPrice === 0) {
       const originalProduct = products.find(p => {
@@ -586,9 +593,9 @@ export default function EditWarehouseSalesInvoicePage() {
         costPrice = parseFloat(String(originalProduct.CostPrice || originalProduct.cost_price || originalProduct.costPrice || 0)) || 0;
       }
     }
-    
+
     console.log('[WarehouseSales] Final costPrice:', costPrice);
-    
+
     // Check if product is serialized - try productToAdd first, then search in products array
     let isSerialized = productToAdd.is_serialized || productToAdd.IsSerialized || false;
     if (!isSerialized) {
@@ -601,13 +608,13 @@ export default function EditWarehouseSalesInvoicePage() {
         isSerialized = originalProduct.is_serialized || originalProduct.IsSerialized || false;
       }
     }
-    
+
     // Initialize serial numbers array with empty strings for each quantity (use absolute value)
     // Same number of serials whether quantity is positive or negative
     const serialNos: string[] = Array(Math.abs(quantity)).fill('');
-    
+
     const detailId = `temp-${Date.now()}`;
-    
+
     const newDetail: InvoiceDetail = {
       detailID: detailId,
       productID: productIdForSearch,
@@ -620,7 +627,7 @@ export default function EditWarehouseSalesInvoicePage() {
       serialNos: serialNos,
       isSerialized: isSerialized,
     };
-    
+
     // Check if product already exists in details
     const existingDetailIndex = details.findIndex((item) => {
       const itemProductId = String(item.productID || '').trim();
@@ -636,7 +643,7 @@ export default function EditWarehouseSalesInvoicePage() {
             : item
         )
       );
-      
+
       // Clear form and close
       setSelectedProductId('');
       setSelectedProduct(null);
@@ -644,7 +651,7 @@ export default function EditWarehouseSalesInvoicePage() {
       setNewProductPrice(0);
       setShowAddProduct(false);
       setProductSearchQuery('');
-      
+
       // Don't fetch last price as product already exists
       return;
     }
@@ -676,7 +683,7 @@ export default function EditWarehouseSalesInvoicePage() {
             customerId,
             productIdForSearch
           );
-          
+
           if (lastPrice && lastPrice > 0) {
             // Update the price for this specific detail
             setDetails((prev) =>
@@ -740,7 +747,7 @@ export default function EditWarehouseSalesInvoicePage() {
         serialNos: item.serialNos || [],
         isSerialized: item.isSerialized || false,
       })));
-      
+
       if (validationError) {
         alert(validationError);
         setSaving(false);
@@ -750,29 +757,29 @@ export default function EditWarehouseSalesInvoicePage() {
       // Separate items into: existing (to update), new (to add), and deleted (to remove)
       const itemsToUpdate: Array<{ detailID: string; productID: string; quantity: number; unitPrice: number; notes?: string; serialNos?: string[] }> = [];
       const itemsToAdd: Array<{ productID: string; quantity: number; unitPrice: number; notes?: string; serialNos?: string[] }> = [];
-      
+
       // Get original invoice to find deleted items
       const originalInvoice = await getWarehouseSalesInvoice(invoiceId);
       const originalDetailIDs = new Set<string>((originalInvoice.Items || []).map((item: any) => String(item.DetailsID || '')));
       const currentDetailIDs = new Set<string>(details.filter(item => item.detailID && !item.detailID.startsWith('temp-')).map(item => String(item.detailID!)));
-      
+
       // Find deleted items (items that were in original but not in current details)
       const itemIDsToDelete = Array.from(originalDetailIDs).filter((id: string) => !currentDetailIDs.has(id));
 
       // Process current details
       details.forEach((item) => {
         const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
-        
+
         if (item.detailID && !item.detailID.startsWith('temp-') && !item.isNew) {
           // Existing item - check if it changed
           const originalItem = originalInvoice.Items.find((i: any) => i.DetailsID === item.detailID);
           if (originalItem) {
-            const changed = 
+            const changed =
               originalItem.Quantity !== item.quantity ||
               originalItem.UnitPrice !== item.unitPrice ||
               originalItem.ProductID !== item.productID ||
               String(originalItem.notes || '') !== String(item.notes || '');
-            
+
             if (changed || serialNos.length > 0) {
               itemsToUpdate.push({
                 detailID: item.detailID,
@@ -849,8 +856,8 @@ export default function EditWarehouseSalesInvoicePage() {
   }
 
   if (error && !invoice) {
-  return (
-    <AdminLayout>
+    return (
+      <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
             <p className="text-red-600 text-lg mb-4 font-cairo">{error}</p>
@@ -860,8 +867,8 @@ export default function EditWarehouseSalesInvoicePage() {
             >
               العودة
             </button>
-              </div>
-              </div>
+          </div>
+        </div>
       </AdminLayout>
     );
   }
@@ -906,7 +913,7 @@ export default function EditWarehouseSalesInvoicePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">التاريخ</label>
-                  <input
+              <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
@@ -917,7 +924,7 @@ export default function EditWarehouseSalesInvoicePage() {
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الزبون</label>
               <div className="relative">
                 <input
-                    type="text"
+                  type="text"
                   value={selectedCustomer ? (selectedCustomer.name || selectedCustomer.Name || '') : customerSearchQuery}
                   onChange={(e) => {
                     const value = e.target.value;
@@ -942,9 +949,9 @@ export default function EditWarehouseSalesInvoicePage() {
                 {isCustomerDropdownOpen && filteredCustomers.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                     {filteredCustomers.map((customer) => (
-                  <button
+                      <button
                         key={customer.customer_id || customer.CustomerID || customer.id}
-                    type="button"
+                        type="button"
                         onClick={() => {
                           setCustomerId(customer.customer_id || customer.CustomerID || customer.id || '');
                           setSelectedCustomer(customer);
@@ -963,9 +970,9 @@ export default function EditWarehouseSalesInvoicePage() {
                             </span>
                           )}
                         </div>
-                  </button>
+                      </button>
                     ))}
-                </div>
+                  </div>
                 )}
               </div>
               {canViewBalances && selectedCustomer && (
@@ -1003,8 +1010,8 @@ export default function EditWarehouseSalesInvoicePage() {
                 onWheel={(e) => e.currentTarget.blur()}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
               />
-                </div>
-              </div>
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الملاحظات</label>
@@ -1014,12 +1021,12 @@ export default function EditWarehouseSalesInvoicePage() {
               rows={3}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
             />
-            </div>
+          </div>
 
           {/* Products */}
           <div>
             <h2 className="text-lg font-semibold text-gray-900 font-cairo mb-4">المنتجات</h2>
-                
+
             {/* Barcode Scanner - Always visible */}
             <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
@@ -1032,7 +1039,7 @@ export default function EditWarehouseSalesInvoicePage() {
                 className="w-full"
               />
             </div>
-            
+
             {/* Add Product Button */}
             <div className="mb-4">
               <button
@@ -1046,7 +1053,7 @@ export default function EditWarehouseSalesInvoicePage() {
 
             {showAddProduct && (
               <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
-                
+
                 <div className="relative mb-4" ref={productDropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
                   <div className="relative">
@@ -1066,68 +1073,80 @@ export default function EditWarehouseSalesInvoicePage() {
                         {filteredProducts.map((product) => {
                           const imageUrl = product.Image || product.image || '';
                           return (
-                          <button
-                            key={product.ProductID || product.id || product.product_id}
-                            type="button"
-                            onClick={() => {
-                              const productId = String(product.ProductID || product.id || product.product_id || '').trim();
-                              const productName = product.Name || product.name || '';
-                              
-                              if (productId) {
-                                // Store the full product object to preserve all data including Name
-                                setSelectedProduct(product);
-                                setSelectedProductId(productId);
-                                setNewProductPrice(product.SalePrice || product.sale_price || product.price || 0);
-                                setIsProductDropdownOpen(false);
-                                setProductSearchQuery(productName || product.Name || product.name || '');
-                                
-                                console.log('[WarehouseSales] Product selected from dropdown:', {
-                                  productId,
-                                  productName,
-                                  hasName: !!(product.Name || product.name),
-                                  productData: {
-                                    ProductID: product.ProductID || product.id || product.product_id,
-                                    Name: product.Name,
-                                    name: product.name
-                                  }
-                                });
-                              } else {
-                                alert('خطأ: المنتج لا يحتوي على معرف صالح');
-                              }
-                            }}
-                            className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
-                          >
-                            <div className="flex items-center gap-3">
-                              {imageUrl ? (
-                                <img
-                                  src={imageUrl}
-                                  alt={product.Name || product.name}
-                                  className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                  }}
-                                />
-                              ) : (
-                                <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                  <span className="text-gray-400 text-xs">—</span>
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-col gap-1">
-                                  <span className="text-right text-sm font-medium">{product.Name || product.name}</span>
-                                  <span className="text-right text-xs text-gray-600 font-light" dir="rtl">
-                                    ₪{product.SalePrice || product.sale_price || product.price || 0} • محل: {product.CS_Shop || product.cs_shop || 0} • مخزن: {product.CS_War || product.cs_war || 0}
-                                  </span>
+                            <button
+                              key={product.ProductID || product.id || product.product_id}
+                              type="button"
+                              onClick={() => {
+                                const productId = String(product.ProductID || product.id || product.product_id || '').trim();
+                                const productName = product.Name || product.name || '';
+
+                                if (productId) {
+                                  // Store the full product object to preserve all data including Name
+                                  setSelectedProduct(product);
+                                  setSelectedProductId(productId);
+                                  setNewProductPrice(product.SalePrice || product.sale_price || product.price || 0);
+                                  setIsProductDropdownOpen(false);
+                                  setProductSearchQuery(productName || product.Name || product.name || '');
+
+                                  console.log('[WarehouseSales] Product selected from dropdown:', {
+                                    productId,
+                                    productName,
+                                    hasName: !!(product.Name || product.name),
+                                    productData: {
+                                      ProductID: product.ProductID || product.id || product.product_id,
+                                      Name: product.Name,
+                                      name: product.name
+                                    }
+                                  });
+                                } else {
+                                  alert('خطأ: المنتج لا يحتوي على معرف صالح');
+                                }
+                              }}
+                              className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
+                            >
+                              <div className="flex items-center gap-3">
+                                {imageUrl ? (
+                                  <img
+                                    src={imageUrl}
+                                    alt={product.Name || product.name}
+                                    className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-gray-400 text-xs">—</span>
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-right text-sm font-medium">{product.Name || product.name}</span>
+                                    <span className="text-right text-xs text-gray-600 font-light flex items-center gap-2 justify-end flex-wrap" dir="rtl">
+                                      <span>₪{product.SalePrice || product.sale_price || product.price || 0}</span>
+                                      <span>•</span>
+                                      <span>محل: {product.CS_Shop || product.cs_shop || 0}</span>
+                                      <span>•</span>
+                                      <span>مخزن: {product.CS_War || product.cs_war || 0}</span>
+                                      {(reservedQuantities[product.ProductID || product.id || product.product_id]?.total || 0) > 0 && (
+                                        <>
+                                          <span>•</span>
+                                          <span className="text-orange-600 font-semibold bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100">
+                                            محجوز: {reservedQuantities[product.ProductID || product.id || product.product_id].total}
+                                          </span>
+                                        </>
+                                      )}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </button>
+                            </button>
                           );
                         })}
                       </div>
                     )}
-              </div>
-            </div>
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الكمية</label>
@@ -1152,7 +1171,7 @@ export default function EditWarehouseSalesInvoicePage() {
                       onFocus={(e) => e.target.select()}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
                     />
-            </div>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -1200,173 +1219,172 @@ export default function EditWarehouseSalesInvoicePage() {
                         const product = products.find(p => (p.ProductID || p.id || p.product_id) === item.productID);
                         const imageUrl = item.productImage || product?.Image || product?.image || '';
                         return (
-                        <tr key={item.detailID || index}>
-                          <td className="px-4 py-3 text-sm text-gray-900 font-cairo align-top">
-                            <div className="flex items-start gap-2">
-                              {imageUrl ? (
-                                <>
-                                  <img
-                                    src={imageUrl}
-                                    alt={item.productName}
-                                    className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                      const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
-                                      if (placeholder) placeholder.style.display = 'flex';
-                                    }}
-                                  />
-                                  <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
+                          <tr key={item.detailID || index}>
+                            <td className="px-4 py-3 text-sm text-gray-900 font-cairo align-top">
+                              <div className="flex items-start gap-2">
+                                {imageUrl ? (
+                                  <>
+                                    <img
+                                      src={imageUrl}
+                                      alt={item.productName}
+                                      className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                        if (placeholder) placeholder.style.display = 'flex';
+                                      }}
+                                    />
+                                    <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
+                                      <span className="text-gray-400 text-xs">—</span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
                                     <span className="text-gray-400 text-xs">—</span>
                                   </div>
-                                </>
-                              ) : (
-                                <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                  <span className="text-gray-400 text-xs">—</span>
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium">{item.productName}</div>
-                                {/* Serial Numbers Display - Show if product is serialized OR if there are existing serials */}
-                                {(item.isSerialized === true || (item.serialNos && item.serialNos.length > 0)) && (
-                                  <div className="mt-2 space-y-1">
-                                    {Array.from({ length: Math.abs(item.quantity) }, (_, serialIndex) => {
-                                      const serialNos = item.serialNos || [];
-                                      while (serialNos.length < Math.abs(item.quantity)) {
-                                        serialNos.push('');
-                                      }
-                                      const serialNo = serialNos[serialIndex] || '';
-                                      const isEmpty = !serialNo.trim();
-                                      const isRequired = item.isSerialized && isEmpty;
-                                      
-                                      return (
-                                        <div key={serialIndex} className="flex items-center gap-1">
-                                          <ScannerLatinInput
-                                            type="text"
-                                            value={serialNo}
-                                            onChange={(e) => handleUpdateSerialNo(item.detailID, serialIndex, e.target.value)}
-                                            onKeyDown={(e) => {
-                                              if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                const nextIndex = serialIndex + 1;
-                                                if (nextIndex < Math.abs(item.quantity)) {
-                                                  const nextInput = document.querySelector(
-                                                    `input[data-serial-index="${nextIndex}"][data-detail-id="${item.detailID}"]`
-                                                  ) as HTMLInputElement;
-                                                  if (nextInput) {
-                                                    nextInput.focus();
-                                                    nextInput.select();
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium">{item.productName}</div>
+                                  {/* Serial Numbers Display - Show if product is serialized OR if there are existing serials */}
+                                  {(item.isSerialized === true || (item.serialNos && item.serialNos.length > 0)) && (
+                                    <div className="mt-2 space-y-1">
+                                      {Array.from({ length: Math.abs(item.quantity) }, (_, serialIndex) => {
+                                        const serialNos = item.serialNos || [];
+                                        while (serialNos.length < Math.abs(item.quantity)) {
+                                          serialNos.push('');
+                                        }
+                                        const serialNo = serialNos[serialIndex] || '';
+                                        const isEmpty = !serialNo.trim();
+                                        const isRequired = item.isSerialized && isEmpty;
+
+                                        return (
+                                          <div key={serialIndex} className="flex items-center gap-1">
+                                            <ScannerLatinInput
+                                              type="text"
+                                              value={serialNo}
+                                              onChange={(e) => handleUpdateSerialNo(item.detailID, serialIndex, e.target.value)}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault();
+                                                  const nextIndex = serialIndex + 1;
+                                                  if (nextIndex < Math.abs(item.quantity)) {
+                                                    const nextInput = document.querySelector(
+                                                      `input[data-serial-index="${nextIndex}"][data-detail-id="${item.detailID}"]`
+                                                    ) as HTMLInputElement;
+                                                    if (nextInput) {
+                                                      nextInput.focus();
+                                                      nextInput.select();
+                                                    }
                                                   }
                                                 }
-                                              }
-                                            }}
-                                            data-serial-index={serialIndex}
-                                            data-detail-id={item.detailID}
-                                            placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                                            className={`w-full px-2 py-1 border rounded text-gray-900 font-mono text-xs ${
-                                              isRequired
+                                              }}
+                                              data-serial-index={serialIndex}
+                                              data-detail-id={item.detailID}
+                                              placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
+                                              className={`w-full px-2 py-1 border rounded text-gray-900 font-mono text-xs ${isRequired
                                                 ? 'border-yellow-400 bg-yellow-50'
                                                 : 'border-gray-300'
-                                            }`}
-                                          />
-                                          <SerialNumberScanner
-                                            onScan={(scannedData) => {
-                                              // Support multiple serials in one scan (separated by comma, newline, or multiple spaces)
-                                              // Split by: comma, newline, or 2+ spaces
-                                              const serials = scannedData
-                                                .split(/[,\n\r]+|\s{2,}/)
-                                                .map(s => s.trim())
-                                                .filter(s => s.length > 0);
-                                              
-                                              if (serials.length === 0) return;
-                                              
-                                              const newSerialNos = [...(item.serialNos || [])];
-                                              while (newSerialNos.length < Math.abs(item.quantity)) {
-                                                newSerialNos.push('');
-                                              }
-                                              
-                                              let currentIndex = serialIndex;
-                                              for (const serial of serials) {
-                                                if (currentIndex < Math.abs(item.quantity)) {
-                                                  newSerialNos[currentIndex] = serial;
-                                                  currentIndex++;
+                                                }`}
+                                            />
+                                            <SerialNumberScanner
+                                              onScan={(scannedData) => {
+                                                // Support multiple serials in one scan (separated by comma, newline, or multiple spaces)
+                                                // Split by: comma, newline, or 2+ spaces
+                                                const serials = scannedData
+                                                  .split(/[,\n\r]+|\s{2,}/)
+                                                  .map(s => s.trim())
+                                                  .filter(s => s.length > 0);
+
+                                                if (serials.length === 0) return;
+
+                                                const newSerialNos = [...(item.serialNos || [])];
+                                                while (newSerialNos.length < Math.abs(item.quantity)) {
+                                                  newSerialNos.push('');
                                                 }
-                                              }
-                                              
-                                              setDetails((prev) =>
-                                                prev.map((d) =>
-                                                  d.detailID === item.detailID
-                                                    ? { ...d, serialNos: newSerialNos }
-                                                    : d
-                                                )
-                                              );
-                                              
-                                              setTimeout(() => {
-                                                const nextEmptyIndex = newSerialNos.findIndex((s, idx) => idx >= serialIndex && !s.trim());
-                                                if (nextEmptyIndex !== -1) {
-                                                  const nextInput = document.querySelector(
-                                                    `input[data-serial-index="${nextEmptyIndex}"][data-detail-id="${item.detailID}"]`
-                                                  ) as HTMLInputElement;
-                                                  if (nextInput) {
-                                                    nextInput.focus();
+
+                                                let currentIndex = serialIndex;
+                                                for (const serial of serials) {
+                                                  if (currentIndex < Math.abs(item.quantity)) {
+                                                    newSerialNos[currentIndex] = serial;
+                                                    currentIndex++;
                                                   }
                                                 }
-                                              }, 100);
-                                            }}
-                                          />
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                                <textarea
-                                  value={item.notes || ''}
-                                  onChange={(e) => handleUpdateNotes(item.detailID, e.target.value)}
-                                  placeholder="ملاحظات..."
-                                  rows={1}
-                                  className="w-full mt-2 px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo resize-none"
-                                />
+
+                                                setDetails((prev) =>
+                                                  prev.map((d) =>
+                                                    d.detailID === item.detailID
+                                                      ? { ...d, serialNos: newSerialNos }
+                                                      : d
+                                                  )
+                                                );
+
+                                                setTimeout(() => {
+                                                  const nextEmptyIndex = newSerialNos.findIndex((s, idx) => idx >= serialIndex && !s.trim());
+                                                  if (nextEmptyIndex !== -1) {
+                                                    const nextInput = document.querySelector(
+                                                      `input[data-serial-index="${nextEmptyIndex}"][data-detail-id="${item.detailID}"]`
+                                                    ) as HTMLInputElement;
+                                                    if (nextInput) {
+                                                      nextInput.focus();
+                                                    }
+                                                  }
+                                                }, 100);
+                                              }}
+                                            />
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                  <textarea
+                                    value={item.notes || ''}
+                                    onChange={(e) => handleUpdateNotes(item.detailID, e.target.value)}
+                                    placeholder="ملاحظات..."
+                                    rows={1}
+                                    className="w-full mt-2 px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo resize-none"
+                                  />
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 align-top">
-                            <input
-                              type="number"
-                              step="1"
-                              value={item.quantity}
-                              onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
-                              onWheel={(e) => e.currentTarget.blur()}
-                              onFocus={(e) => e.target.select()}
-                              className="w-20 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
-                            />
-                          </td>
-                          <td className="px-4 py-3 align-top">
-                            <input
-                              type="number"
-                              step="1"
-                              value={item.unitPrice}
-                              onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
-                              onWheel={(e) => e.currentTarget.blur()}
-                              onFocus={(e) => e.target.select()}
-                              className="w-24 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
-                            />
-                          </td>
-                          {showCosts && canViewCost && (
-                            <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo align-top">
-                              ₪{(item.costPrice || 0).toFixed(2)}
                             </td>
-                          )}
-                          <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo align-top">
-                            ₪{(item.quantity * item.unitPrice).toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 align-top">
-                          <button
-                              onClick={() => handleRemoveItem(item.detailID)}
-                              className="text-red-600 hover:text-red-900 font-cairo"
-                          >
-                              حذف
-                          </button>
-                          </td>
-                        </tr>
+                            <td className="px-4 py-3 align-top">
+                              <input
+                                type="number"
+                                step="1"
+                                value={item.quantity}
+                                onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
+                                onWheel={(e) => e.currentTarget.blur()}
+                                onFocus={(e) => e.target.select()}
+                                className="w-20 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
+                              />
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              <input
+                                type="number"
+                                step="1"
+                                value={item.unitPrice}
+                                onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
+                                onWheel={(e) => e.currentTarget.blur()}
+                                onFocus={(e) => e.target.select()}
+                                className="w-24 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
+                              />
+                            </td>
+                            {showCosts && canViewCost && (
+                              <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo align-top">
+                                ₪{(item.costPrice || 0).toFixed(2)}
+                              </td>
+                            )}
+                            <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo align-top">
+                              ₪{(item.quantity * item.unitPrice).toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              <button
+                                onClick={() => handleRemoveItem(item.detailID)}
+                                className="text-red-600 hover:text-red-900 font-cairo"
+                              >
+                                حذف
+                              </button>
+                            </td>
+                          </tr>
                         );
                       })}
                     </tbody>
@@ -1414,7 +1432,7 @@ export default function EditWarehouseSalesInvoicePage() {
                                   const serialNo = serialNos[serialIndex] || '';
                                   const isEmpty = !serialNo.trim();
                                   const isRequired = item.isSerialized && isEmpty;
-                                  
+
                                   return (
                                     <div key={serialIndex} className="flex items-center gap-1">
                                       <ScannerLatinInput
@@ -1440,11 +1458,10 @@ export default function EditWarehouseSalesInvoicePage() {
                                         data-detail-id={item.detailID}
                                         data-mobile="true"
                                         placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                                        className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm ${
-                                          isRequired
-                                            ? 'border-yellow-400 bg-yellow-50'
-                                            : 'border-gray-300'
-                                        }`}
+                                        className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm ${isRequired
+                                          ? 'border-yellow-400 bg-yellow-50'
+                                          : 'border-gray-300'
+                                          }`}
                                       />
                                       <SerialNumberScanner
                                         onScan={(scannedData) => {
@@ -1453,14 +1470,14 @@ export default function EditWarehouseSalesInvoicePage() {
                                             .split(/[,\n\r]+|\s{2,}/)
                                             .map(s => s.trim())
                                             .filter(s => s.length > 0);
-                                          
+
                                           if (serials.length === 0) return;
-                                          
+
                                           const newSerialNos = [...(item.serialNos || [])];
                                           while (newSerialNos.length < Math.abs(item.quantity)) {
                                             newSerialNos.push('');
                                           }
-                                          
+
                                           let currentIndex = serialIndex;
                                           for (const serial of serials) {
                                             if (currentIndex < Math.abs(item.quantity)) {
@@ -1468,7 +1485,7 @@ export default function EditWarehouseSalesInvoicePage() {
                                               currentIndex++;
                                             }
                                           }
-                                          
+
                                           setDetails((prev) =>
                                             prev.map((d) =>
                                               d.detailID === item.detailID
@@ -1476,7 +1493,7 @@ export default function EditWarehouseSalesInvoicePage() {
                                                 : d
                                             )
                                           );
-                                          
+
                                           setTimeout(() => {
                                             const nextEmptyIndex = newSerialNos.findIndex((s, idx) => idx >= serialIndex && !s.trim());
                                             if (nextEmptyIndex !== -1) {
@@ -1547,7 +1564,7 @@ export default function EditWarehouseSalesInvoicePage() {
                 </div>
               </>
             )}
-            </div>
+          </div>
 
           {/* Summary */}
           <div className="border-t border-gray-200 pt-4">
@@ -1556,17 +1573,17 @@ export default function EditWarehouseSalesInvoicePage() {
                 <div className="flex justify-between text-sm text-gray-600 font-cairo">
                   <span>المجموع الفرعي:</span>
                   <span className="font-semibold">₪{calculateSubtotal().toFixed(2)}</span>
-              </div>
+                </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-sm text-gray-600 font-cairo">
                     <span>الخصم:</span>
                     <span className="font-semibold text-red-600">-₪{discount.toFixed(2)}</span>
-                </div>
+                  </div>
                 )}
                 <div className="flex justify-between text-lg font-bold text-gray-900 font-cairo border-t border-gray-200 pt-2">
                   <span>الإجمالي:</span>
                   <span>₪{calculateTotal().toFixed(2)}</span>
-                  </div>
+                </div>
                 {showCosts && canViewCost && (
                   <>
                     <div className="flex justify-between text-lg font-bold text-gray-900 font-cairo">
@@ -1580,8 +1597,8 @@ export default function EditWarehouseSalesInvoicePage() {
                   </>
                 )}
               </div>
-                </div>
-              </div>
+            </div>
+          </div>
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-gray-200">

@@ -10,7 +10,7 @@ import { Plus, Edit, Edit2, Image as ImageIcon, Loader2, Package, Sparkles, Chec
 import { useRouter } from 'next/navigation';
 import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
-import { deleteProduct, getProducts, saveProduct, updateProductVisibility, setProductsCacheInvalidated, clearProductsCache, getActiveCampaignWithProducts } from '@/lib/api';
+import { deleteProduct, getProducts, saveProduct, updateProductVisibility, setProductsCacheInvalidated, clearProductsCache, getActiveCampaignWithProducts, getReservedQuantities, ReservedQuotationsData } from '@/lib/api';
 import { ColumnDef } from '@tanstack/react-table';
 import ScannerLatinInput from '@/components/admin/ScannerLatinInput';
 import React from 'react';
@@ -28,6 +28,9 @@ const MobileProductCard = React.memo(({
   handleImageError,
   handleToggleVisibility,
   togglingVisibility,
+  reservedQuantities,
+  onImageClick,
+  onReservedClick,
 }: {
   product: Product;
   imageErrors: Record<string, boolean>;
@@ -40,7 +43,9 @@ const MobileProductCard = React.memo(({
   handleImageError: (productId: string) => void;
   handleToggleVisibility: (product: Product) => void;
   togglingVisibility: string | null;
+  reservedQuantities: Record<string, ReservedQuotationsData>;
   onImageClick?: (product: Product) => void;
+  onReservedClick?: (product: Product, data: ReservedQuotationsData) => void;
 }) => {
   const productId = product.ProductID || product.id || '';
   const rawImageUrl = product.image || product.Image || product.ImageUrl || '';
@@ -56,6 +61,8 @@ const MobileProductCard = React.memo(({
 
   const price = hasDiscount ? campaignParsed : (product.price || product.SalePrice || 0);
   const costPrice = canViewCost ? (product.CostPrice || null) : null;
+  const reservedData = reservedQuantities[productId];
+  const reservedQty = reservedData?.total || 0;
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
@@ -170,6 +177,16 @@ const MobileProductCard = React.memo(({
                 المجموع: {totalStock}
               </span>
             )}
+            {reservedQty > 0 && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onReservedClick?.(product, reservedData); }}
+                className="text-xs font-semibold text-orange-700 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 hover:bg-orange-100 transition-colors cursor-pointer w-fit mt-1"
+                title="عرض تفاصيل الحجوزات"
+              >
+                محجوز: {reservedQty}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -252,7 +269,8 @@ const MobileProductCard = React.memo(({
     prevProps.imageErrors[pid] === nextProps.imageErrors[pid] &&
     prevProps.canViewCost === nextProps.canViewCost &&
     prevProps.canAccountant === nextProps.canAccountant &&
-    prevProps.togglingVisibility === nextProps.togglingVisibility
+    prevProps.togglingVisibility === nextProps.togglingVisibility &&
+    prevProps.reservedQuantities[pid] === nextProps.reservedQuantities[pid]
   );
 });
 
@@ -262,6 +280,8 @@ export default function ProductsManagerPage() {
   const { admin } = useAdminAuth();
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
+  const [reservedQuantities, setReservedQuantities] = useState<Record<string, ReservedQuotationsData>>({});
+  const [selectedReservedProduct, setSelectedReservedProduct] = useState<{ id: string, name: string, data: ReservedQuotationsData } | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState(''); // For input field - updates immediately
   const [searchQuery, setSearchQuery] = useState(''); // For actual filtering - updates in background
@@ -323,6 +343,8 @@ export default function ProductsManagerPage() {
 
   // Check if user has permission to view cost
   const canViewCost = admin?.is_super_admin || admin?.permissions?.viewCost === true;
+  // Permission to access quotations
+  const canAccessQuotations = admin?.is_super_admin || admin?.permissions?.accessQuotations === true;
   // Permission to refresh products cache (invalidates cache for all store visitors)
   const canRefreshProductsCache = admin?.is_super_admin || admin?.permissions?.refreshProductsCache === true;
 
@@ -528,14 +550,17 @@ export default function ProductsManagerPage() {
     const loadProducts = async () => {
       try {
         setLoading(true);
-        const [data, campaign] = await Promise.all([
+        const [data, campaign, reserved] = await Promise.all([
           getProducts(),
-          getActiveCampaignWithProducts()
+          getActiveCampaignWithProducts(),
+          getReservedQuantities()
         ]);
         setProducts(mergeCampaigns(data || [], campaign));
+        setReservedQuantities(reserved || {});
       } catch (error) {
         console.error('[ProductsPage] Error loading products:', error);
         setProducts([]);
+        setReservedQuantities({});
       } finally {
         setLoading(false);
       }
@@ -547,11 +572,13 @@ export default function ProductsManagerPage() {
   // Reload products (from cache if available)
   const reloadProducts = async () => {
     try {
-      const [data, campaign] = await Promise.all([
+      const [data, campaign, reserved] = await Promise.all([
         getProducts(),
-        getActiveCampaignWithProducts()
+        getActiveCampaignWithProducts(),
+        getReservedQuantities()
       ]);
       setProducts(mergeCampaigns(data || [], campaign));
+      setReservedQuantities(reserved || {});
     } catch (error) {
       console.error('[ProductsPage] Error reloading products:', error);
     }
@@ -563,11 +590,13 @@ export default function ProductsManagerPage() {
       setLoading(true);
       await setProductsCacheInvalidated();
       clearProductsCache();
-      const [data, campaign] = await Promise.all([
+      const [data, campaign, reserved] = await Promise.all([
         getProducts({ force: true }),
-        getActiveCampaignWithProducts()
+        getActiveCampaignWithProducts(),
+        getReservedQuantities()
       ]);
       setProducts(mergeCampaigns(data || [], campaign));
+      setReservedQuantities(reserved || {});
     } catch (error) {
       console.error('[ProductsPage] Error refreshing from database:', error);
     } finally {
@@ -1043,7 +1072,7 @@ export default function ProductsManagerPage() {
           const product = row.original;
           if (!canViewCost) return <span className="text-gray-400 text-sm">—</span>;
           const costPrice = product.CostPrice;
-          return costPrice !== undefined && costPrice !== null && costPrice !== '' ? (
+          return costPrice !== undefined && costPrice !== null && String(costPrice) !== '' ? (
             <div className="text-sm text-gray-600">₪{parseFloat(String(costPrice)).toFixed(2)}</div>
           ) : (
             <span className="text-gray-400 text-sm">—</span>
@@ -1059,7 +1088,7 @@ export default function ProductsManagerPage() {
         cell: ({ row }) => {
           const product = row.original;
           const t1Price = product.T1Price;
-          return t1Price !== undefined && t1Price !== null && t1Price !== '' ? (
+          return t1Price !== undefined && t1Price !== null && String(t1Price) !== '' ? (
             <div className="text-sm text-gray-600">₪{parseFloat(String(t1Price)).toFixed(2)}</div>
           ) : (
             <span className="text-gray-400 text-sm">—</span>
@@ -1075,7 +1104,7 @@ export default function ProductsManagerPage() {
         cell: ({ row }) => {
           const product = row.original;
           const t2Price = product.T2Price;
-          return t2Price !== undefined && t2Price !== null && t2Price !== '' ? (
+          return t2Price !== undefined && t2Price !== null && String(t2Price) !== '' ? (
             <div className="text-sm text-gray-600">₪{parseFloat(String(t2Price)).toFixed(2)}</div>
           ) : (
             <span className="text-gray-400 text-sm">—</span>
@@ -1092,9 +1121,11 @@ export default function ProductsManagerPage() {
           const product = row.original;
           const warehouseStock = product.CS_War !== undefined && product.CS_War !== null ? (product.CS_War || 0) : null;
           const shopStock = product.CS_Shop !== undefined && product.CS_Shop !== null ? (product.CS_Shop || 0) : null;
-          const total = (warehouseStock || 0) + (shopStock || 0);
+          const total = (parseFloat(String(warehouseStock || 0))) + (parseFloat(String(shopStock || 0)));
+          const reservedData = reservedQuantities[product.ProductID || product.id || ''];
+          const reservedQty = reservedData?.total || 0;
 
-          if (warehouseStock === null && shopStock === null) {
+          if (warehouseStock === null && shopStock === null && reservedQty === 0) {
             return <span className="text-gray-400 text-sm">—</span>;
           }
 
@@ -1122,6 +1153,16 @@ export default function ProductsManagerPage() {
                   >
                     المجموع: {total}
                   </span>
+                )}
+                {reservedQty > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setSelectedReservedProduct({ id: product.ProductID || product.id || '', name: product.name || product.Name || '', data: reservedData }); }}
+                    className="px-2 py-1 flex items-center justify-center rounded border border-orange-100 text-xs font-semibold bg-orange-50 text-orange-700 mt-1 w-fit hover:bg-orange-100 transition-colors cursor-pointer"
+                    title="عرض تفاصيل الحجوزات"
+                  >
+                    محجوز: {reservedQty}
+                  </button>
                 )}
               </div>
             </div>
@@ -1349,6 +1390,7 @@ export default function ProductsManagerPage() {
       togglingVisibility,
       handleImageError,
       openImageLightbox,
+      reservedQuantities,
     ]
   );
 
@@ -1375,8 +1417,8 @@ export default function ProductsManagerPage() {
     }
     // Sort by آخر تجديد descending (newest first)
     return [...list].sort((a, b) => {
-      const aTime = (a.last_restocked_at || a.LastRestockedAt || a.created_at) ? new Date(a.last_restocked_at || a.LastRestockedAt || a.created_at).getTime() : 0;
-      const bTime = (b.last_restocked_at || b.LastRestockedAt || b.created_at) ? new Date(b.last_restocked_at || b.LastRestockedAt || b.created_at).getTime() : 0;
+      const aTime = (a.last_restocked_at || a.LastRestockedAt || a.created_at) ? new Date(String(a.last_restocked_at || a.LastRestockedAt || a.created_at)).getTime() : 0;
+      const bTime = (b.last_restocked_at || b.LastRestockedAt || b.created_at) ? new Date(String(b.last_restocked_at || b.LastRestockedAt || b.created_at)).getTime() : 0;
       return bTime - aTime;
     });
   }, [products, searchQuery]);
@@ -1637,7 +1679,9 @@ export default function ProductsManagerPage() {
                     handleImageError={handleImageError}
                     handleToggleVisibility={handleToggleVisibility}
                     togglingVisibility={togglingVisibility}
+                    reservedQuantities={reservedQuantities}
                     onImageClick={(p) => openImageLightbox(p, 0)}
+                    onReservedClick={(p, data) => setSelectedReservedProduct({ id: p.ProductID || p.id || '', name: p.name || p.Name || '', data })}
                   />
                 );
               })}
@@ -1851,6 +1895,91 @@ export default function ProductsManagerPage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+      {/* Reserved Quotations Modal */}
+      {selectedReservedProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setSelectedReservedProduct(null)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50/50">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">تفاصيل الحجوزات للمنتج</h3>
+                <p className="text-sm text-gray-500 mt-0.5">{selectedReservedProduct.name}</p>
+              </div>
+              <button
+                onClick={() => setSelectedReservedProduct(null)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 flex-1 overflow-y-auto">
+              <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
+                <span className="text-sm font-medium text-gray-600">إجمالي الكمية المحجوزة:</span>
+                <span className="text-sm font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100">
+                  {selectedReservedProduct.data?.total || 0}
+                </span>
+              </div>
+
+              {selectedReservedProduct.data?.details && selectedReservedProduct.data.details.length > 0 ? (
+                <div className="space-y-3 flex flex-col">
+                  {selectedReservedProduct.data.details.map((detail, idx) => {
+                    const content = (
+                      <>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className={`text-sm font-semibold text-gray-900 ${canAccessQuotations ? 'group-hover:text-blue-700 transition-colors' : ''}`}>عرض السعر: {detail.id}</span>
+                          {detail.customerName && (
+                            <span className="text-xs font-medium text-gray-600">الزبون: {detail.customerName}</span>
+                          )}
+                          {canAccessQuotations && (
+                            <span className="text-xs text-gray-400">انقر لفتح وتعديل العرض</span>
+                          )}
+                        </div>
+                        <div className={`flex flex-col items-center justify-center bg-gray-100 ${canAccessQuotations ? 'group-hover:bg-white' : ''} rounded-md px-3 py-1.5 min-w-[3rem]`}>
+                          <span className="text-[10px] text-gray-400 mb-0.5">الكمية</span>
+                          <span className="text-sm font-bold text-gray-900">{detail.quantity}</span>
+                        </div>
+                      </>
+                    );
+
+                    return canAccessQuotations ? (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setSelectedReservedProduct(null);
+                          router.push(`/admin/quotations/${detail.id}`);
+                        }}
+                        className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-sm transition-all text-right group"
+                      >
+                        {content}
+                      </button>
+                    ) : (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 text-right opacity-80"
+                      >
+                        {content}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500 text-sm">
+                  لا توجد تفاصيل متاحة.
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-gray-100 bg-gray-50">
+              <button
+                onClick={() => setSelectedReservedProduct(null)}
+                className="w-full py-2.5 px-4 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium text-sm"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </AdminLayout>

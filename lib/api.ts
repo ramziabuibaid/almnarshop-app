@@ -804,6 +804,79 @@ export async function getProducts(options?: { forStore?: boolean; force?: boolea
 }
 
 /**
+ * Get aggregated reserved quantities per product from quotations
+ * that have the status 'مدفوع كلي أو جزئي تم الحجز'.
+ * Returns a map of ProductID -> ReservedQuantity.
+ */
+export interface ReservedQuotationsData {
+  total: number;
+  details: { id: string; quantity: number; customerName?: string }[];
+}
+
+export async function getReservedQuantities(): Promise<Record<string, ReservedQuotationsData>> {
+  try {
+    // 1. Fetch quotations with the specified status and their customer names
+    const { data: qData, error: qError } = await supabase
+      .from('quotations')
+      .select('quotation_id, customers(name)')
+      .eq('status', 'مدفوع كلي أو جزئي تم الحجز');
+
+    if (qError) {
+      console.error('[API] Error fetching reserved quotations:', qError);
+      return {};
+    }
+
+    if (!qData || qData.length === 0) {
+      return {}; // No reserved quotations
+    }
+
+    const customerMap: Record<string, string> = {};
+    const quotationIds = qData.map((q: any) => {
+      const cust = Array.isArray(q.customers) ? q.customers[0] : q.customers;
+      customerMap[q.quotation_id] = cust?.name || 'غير معروف';
+      return q.quotation_id;
+    });
+
+    // 2. Fetch quotation details for these quotations
+    const { data: qdData, error: qdError } = await supabase
+      .from('quotation_details')
+      .select('quotation_id, product_id, quantity')
+      .in('quotation_id', quotationIds);
+
+    if (qdError) {
+      console.error('[API] Error fetching reserved quotation details:', qdError);
+      return {};
+    }
+
+    // 3. Aggregate quantities per product
+    const reservedQuantities: Record<string, ReservedQuotationsData> = {};
+    if (qdData) {
+      for (const item of qdData) {
+        if (item.product_id && item.quantity) {
+          const qty = parseFloat(String(item.quantity)) || 0;
+          if (qty > 0) {
+            if (!reservedQuantities[item.product_id]) {
+              reservedQuantities[item.product_id] = { total: 0, details: [] };
+            }
+            reservedQuantities[item.product_id].total += qty;
+            reservedQuantities[item.product_id].details.push({
+              id: item.quotation_id,
+              quantity: qty,
+              customerName: customerMap[item.quotation_id]
+            });
+          }
+        }
+      }
+    }
+
+    return reservedQuantities;
+  } catch (error) {
+    console.error('[API] getReservedQuantities error:', error);
+    return {};
+  }
+}
+
+/**
  * Get customer history (invoices and receipts)
  * Now uses Supabase instead of Google Sheets
  */

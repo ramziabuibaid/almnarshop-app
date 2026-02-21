@@ -43,7 +43,7 @@ const raleway = Raleway({
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
-  title: "My Shop - Retail Web App",
+  title: "Almnar Home - معرض المنار للأجهزة الكهربائية",
   description: "Modern mobile-first retail web app",
 };
 

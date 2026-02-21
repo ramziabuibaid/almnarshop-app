@@ -26,10 +26,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const imageUrl = campaign.banner_image || '/logo.png';
 
     return {
-      title: `${title} | My Shop`,
+      title: `${title} | Almnar Home`,
       description,
       openGraph: {
-        title: `${title} | My Shop`,
+        title: `${title} | Almnar Home`,
         description,
         images: [
           {
@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       },
       twitter: {
         card: 'summary_large_image',
-        title: `${title} | My Shop`,
+        title: `${title} | Almnar Home`,
         description,
         images: [imageUrl],
       },
@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   } catch (error) {
     console.error('[Metadata] Error generating metadata:', error);
     return {
-      title: 'Special Offer | My Shop',
+      title: 'Special Offer | Almnar Home',
       description: 'Check out our amazing special offers and discounts!',
     };
   }
@@ -61,10 +61,10 @@ export default async function CampaignPage({ params }: PageProps) {
   try {
     const { slug } = await params;
     console.log('[CampaignPage] Fetching campaign with slug/id:', slug);
-    
+
     // Try to get campaign by slug first
     let campaign = await getCampaignWithProductsBySlug(slug);
-    
+
     // If not found by slug, try to get by campaign_id (fallback)
     // This handles cases where slug is not set but campaign_id is used in URL
     if (!campaign) {

@@ -3,10 +3,10 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
-import InvoicePrint from '@/components/admin/InvoicePrint';
-import { saveCashInvoice, getProducts, getActiveCampaignWithProducts } from '@/lib/api';
+import { saveCashInvoice, getProducts, getActiveCampaignWithProducts, getReservedQuantities, ReservedQuotationsData } from '@/lib/api';
 import { validateSerialNumbers } from '@/lib/validation';
 import { Lock } from 'lucide-react';
+import InvoicePrint from '@/components/admin/InvoicePrint';
 import {
   Search,
   Filter,
@@ -45,6 +45,7 @@ interface CartItem {
 export default function POSPage() {
   const { admin } = useAdminAuth();
   const [products, setProducts] = useState<any[]>([]);
+  const [reservedQuantities, setReservedQuantities] = useState<Record<string, ReservedQuotationsData>>({});
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -328,9 +329,10 @@ export default function POSPage() {
     const loadProducts = async () => {
       try {
         setIsLoadingProducts(true);
-        const [data, campaign] = await Promise.all([
+        const [data, campaign, reservedData] = await Promise.all([
           getProducts(),
-          getActiveCampaignWithProducts()
+          getActiveCampaignWithProducts(),
+          getReservedQuantities(),
         ]);
 
         let mergedProducts = data || [];
@@ -350,6 +352,7 @@ export default function POSPage() {
         }
 
         setProducts(mergedProducts);
+        setReservedQuantities(reservedData);
       } catch (error) {
         console.error('[POS] Error loading products:', error);
         setProducts([]);
@@ -1715,6 +1718,14 @@ export default function POSPage() {
                               <span className="text-gray-500">المخزن:</span>
                               <span className={`font-bold px-1.5 py-0.5 rounded text-xs ${(product.CS_War || 0) > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
                                 }`}>{product.CS_War || 0}</span>
+                            </div>
+                          )}
+                          {(reservedQuantities[product.ProductID || product.id || product.product_id]?.total || 0) > 0 && (
+                            <div className="flex items-center gap-1 w-full mt-1">
+                              <span className="text-gray-500">محجوز:</span>
+                              <span className="font-bold px-1.5 py-0.5 rounded text-xs text-orange-700 bg-orange-50 w-full text-center">
+                                {reservedQuantities[product.ProductID || product.id || product.product_id].total}
+                              </span>
                             </div>
                           )}
                         </div>

@@ -10,6 +10,8 @@ import {
   getProducts,
   getAllCustomers,
   getCustomerLastPriceForProduct,
+  getReservedQuantities,
+  ReservedQuotationsData,
 } from '@/lib/api';
 import { validateSerialNumbers } from '@/lib/validation';
 import {
@@ -52,7 +54,7 @@ function ShopSalesFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { admin } = useAdminAuth();
-  
+
   // Check if user can view customer balances
   const canViewBalances = admin?.is_super_admin || admin?.permissions?.viewBalances === true;
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -64,6 +66,7 @@ function ShopSalesFormContent() {
   const [discount, setDiscount] = useState(0);
   const [details, setDetails] = useState<InvoiceDetail[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [reservedQuantities, setReservedQuantities] = useState<Record<string, ReservedQuotationsData>>({});
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -125,8 +128,12 @@ function ShopSalesFormContent() {
 
   const loadProducts = async () => {
     try {
-      const productsData = await getProducts();
+      const [productsData, reservedData] = await Promise.all([
+        getProducts(),
+        getReservedQuantities(),
+      ]);
       setProducts(productsData);
+      setReservedQuantities(reservedData);
     } catch (err: any) {
       console.error('[NewShopSalesInvoicePage] Failed to load products:', err);
     } finally {
@@ -147,7 +154,7 @@ function ShopSalesFormContent() {
     // Reload customers list to get the newly added customer
     const updatedCustomers = await getAllCustomers();
     setCustomers(updatedCustomers);
-    
+
     // If customer ID is provided, find and select it
     if (newCustomerId) {
       const newCustomer = updatedCustomers.find(
@@ -160,7 +167,7 @@ function ShopSalesFormContent() {
         setIsCustomerDropdownOpen(false);
       }
     }
-    
+
     setIsCustomerModalOpen(false);
   };
 
@@ -212,12 +219,12 @@ function ShopSalesFormContent() {
         if (item.detailID === detailID) {
           const currentSerialNos = item.serialNos || [];
           let newSerialNos: string[];
-          
+
           // Use absolute value for serial numbers count (same number whether positive or negative)
           // Zero quantity = no serials needed (empty array)
           const absNewQuantity = Math.abs(newQuantity);
           const absCurrentQuantity = Math.abs(item.quantity);
-          
+
           if (absNewQuantity === 0) {
             // Zero quantity - no serials needed
             newSerialNos = [];
@@ -228,7 +235,7 @@ function ShopSalesFormContent() {
             // Decrease quantity - keep first N serials
             newSerialNos = currentSerialNos.slice(0, absNewQuantity);
           }
-          
+
           return { ...item, quantity: newQuantity, serialNos: newSerialNos };
         }
         return item;
@@ -261,7 +268,7 @@ function ShopSalesFormContent() {
   const handleAddProduct = (productParam?: any, quantityParam?: number, priceParam?: number) => {
     // If product is provided directly (from barcode scanner), use it
     let productToAdd = productParam;
-    
+
     // Otherwise, use selectedProduct (from manual selection) - this preserves all product data
     if (!productToAdd) {
       // Priority 1: Use the selected product object directly if available (preserves all data including Name)
@@ -276,7 +283,7 @@ function ShopSalesFormContent() {
       } else if (selectedProductId) {
         // Priority 2: Fallback - find product by selectedProductId
         const selectedId = String(selectedProductId || '').trim();
-        
+
         productToAdd = products.find((p) => {
           const possibleIds = [
             p.ProductID,
@@ -286,10 +293,10 @@ function ShopSalesFormContent() {
             p['id'],
             p['product_id']
           ].filter(id => id != null).map(id => String(id).trim());
-          
+
           return possibleIds.includes(selectedId);
         });
-        
+
         if (!productToAdd) {
           alert('المنتج غير موجود');
           return;
@@ -303,18 +310,18 @@ function ShopSalesFormContent() {
     const quantity = quantityParam != null ? quantityParam : newProductQuantity;
 
     const detailId = `temp-${Date.now()}`;
-    
+
     // Extract product ID first - productToAdd should have ID fields now
     // Since we ensured productToAdd has ID in previous steps, extract it directly
     const productIdForSearch = String(
-      productToAdd.ProductID || 
-      productToAdd.id || 
-      productToAdd.product_id || 
+      productToAdd.ProductID ||
+      productToAdd.id ||
+      productToAdd.product_id ||
       (productParam ? (productParam.ProductID || productParam.id || productParam.product_id) : null) ||
-      selectedProductId || 
+      selectedProductId ||
       ''
     ).trim();
-    
+
     // Use provided price, manually entered price, or default sale price
     // Priority: priceParam > newProductPrice (if > 0) > productToAdd.SalePrice > selectedProduct > products array
     let unitPrice = productToAdd.SalePrice || productToAdd.sale_price || productToAdd.price || 0;
@@ -338,7 +345,7 @@ function ShopSalesFormContent() {
         }
       }
     }
-    
+
     if (!productIdForSearch) {
       console.error('[ShopSales] CRITICAL: Product ID is still undefined!', {
         productToAdd: {
@@ -362,12 +369,12 @@ function ShopSalesFormContent() {
       alert('خطأ فني: المنتج لا يحتوي على معرف صالح. يرجى المحاولة مرة أخرى أو اختيار منتج آخر.');
       return;
     }
-    
+
     console.log('[ShopSales] Final product ID extracted:', productIdForSearch);
-    
+
     // Extract product name - check multiple possible fields
     let productName = '';
-    
+
     // Try all possible name fields
     if (productToAdd.Name && String(productToAdd.Name).trim()) {
       productName = String(productToAdd.Name).trim();
@@ -376,7 +383,7 @@ function ShopSalesFormContent() {
     } else if (productToAdd.product_name && String(productToAdd.product_name).trim()) {
       productName = String(productToAdd.product_name).trim();
     }
-    
+
     // If still no name, try to get it from selectedProduct (for manual selection)
     if (!productName && selectedProduct) {
       productName = selectedProduct.Name || selectedProduct.name || '';
@@ -384,7 +391,7 @@ function ShopSalesFormContent() {
         productName = String(productName).trim();
       }
     }
-    
+
     // Final fallback - search in products array
     if (!productName) {
       const originalProduct = products.find(p => {
@@ -398,15 +405,15 @@ function ShopSalesFormContent() {
         }
       }
     }
-    
+
     // Last resort
     if (!productName) {
       productName = 'غير معروف';
     }
-    
+
     // Extract product image - check multiple possible fields
     let productImage = '';
-    
+
     // Try all possible image fields from productToAdd
     if (productToAdd.Image && String(productToAdd.Image).trim()) {
       productImage = String(productToAdd.Image).trim();
@@ -417,7 +424,7 @@ function ShopSalesFormContent() {
     } else if (productToAdd['image'] && String(productToAdd['image']).trim()) {
       productImage = String(productToAdd['image']).trim();
     }
-    
+
     // If still no image, try to get it from selectedProduct (for manual selection)
     if (!productImage && selectedProduct) {
       productImage = selectedProduct.Image || selectedProduct.image || selectedProduct['Image'] || selectedProduct['image'] || '';
@@ -425,7 +432,7 @@ function ShopSalesFormContent() {
         productImage = String(productImage).trim();
       }
     }
-    
+
     // Final fallback - search in products array
     if (!productImage) {
       const originalProduct = products.find(p => {
@@ -439,7 +446,7 @@ function ShopSalesFormContent() {
         }
       }
     }
-    
+
     // Check if product already exists in details
     const existingDetailIndex = details.findIndex((item) => {
       const itemProductId = String(item.productID || '').trim();
@@ -455,7 +462,7 @@ function ShopSalesFormContent() {
             : item
         )
       );
-      
+
       // Clear form and close
       setSelectedProductId('');
       setSelectedProduct(null);
@@ -463,14 +470,14 @@ function ShopSalesFormContent() {
       setNewProductPrice(0);
       setShowAddProduct(false);
       setProductSearchQuery('');
-      
+
       // Don't fetch last price as product already exists
       return;
     }
 
     // Extract costPrice - check multiple possible fields with fallback to products array
     let costPrice = 0;
-    
+
     // Try all possible costPrice fields from productToAdd
     if (productToAdd.CostPrice != null && productToAdd.CostPrice !== 0) {
       costPrice = parseFloat(String(productToAdd.CostPrice)) || 0;
@@ -479,12 +486,12 @@ function ShopSalesFormContent() {
     } else if (productToAdd.costPrice != null && productToAdd.costPrice !== 0) {
       costPrice = parseFloat(String(productToAdd.costPrice)) || 0;
     }
-    
+
     // If still no costPrice, try to get it from selectedProduct (for manual selection)
     if (costPrice === 0 && selectedProduct) {
       costPrice = parseFloat(String(selectedProduct.CostPrice || selectedProduct.cost_price || selectedProduct.costPrice || 0)) || 0;
     }
-    
+
     // Final fallback - search in products array
     if (costPrice === 0) {
       const originalProduct = products.find(p => {
@@ -495,7 +502,7 @@ function ShopSalesFormContent() {
         costPrice = parseFloat(String(originalProduct.CostPrice || originalProduct.cost_price || originalProduct.costPrice || 0)) || 0;
       }
     }
-    
+
     console.log('[ShopSales] Final costPrice:', costPrice);
 
     // Check if product is serialized - try productToAdd first, then search in products array
@@ -515,11 +522,11 @@ function ShopSalesFormContent() {
       is_serialized: productToAdd.is_serialized,
       IsSerialized: productToAdd.IsSerialized
     });
-    
+
     // Initialize serial numbers array with empty strings for each quantity (use absolute value)
     // Same number of serials whether quantity is positive or negative
     const serialNos: string[] = Array(Math.abs(quantity)).fill('');
-    
+
     const newDetail: InvoiceDetail = {
       detailID: detailId,
       productID: productIdForSearch,
@@ -531,7 +538,7 @@ function ShopSalesFormContent() {
       serialNos: serialNos,
       isSerialized: isSerialized,
     };
-    
+
     console.log('[ShopSales] Adding new detail:', {
       productName,
       productId: productIdForSearch,
@@ -561,7 +568,7 @@ function ShopSalesFormContent() {
             customerId,
             productIdForSearch
           );
-          
+
           if (lastPrice && lastPrice > 0) {
             // Update the price for this specific detail
             setDetails((prev) =>
@@ -718,8 +725,8 @@ function ShopSalesFormContent() {
                 </button>
               </div>
               <div className="relative">
-                  <input
-                    type="text"
+                <input
+                  type="text"
                   value={selectedCustomer ? (selectedCustomer.name || selectedCustomer.Name || '') : customerSearchQuery}
                   onChange={(e) => {
                     const value = e.target.value;
@@ -744,9 +751,9 @@ function ShopSalesFormContent() {
                 {isCustomerDropdownOpen && filteredCustomers.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                     {filteredCustomers.map((customer) => (
-                  <button
+                      <button
                         key={customer.customer_id || customer.CustomerID || customer.id}
-                    type="button"
+                        type="button"
                         onClick={() => {
                           setCustomerId(customer.customer_id || customer.CustomerID || customer.id || '');
                           setSelectedCustomer(customer);
@@ -765,7 +772,7 @@ function ShopSalesFormContent() {
                             </span>
                           )}
                         </div>
-                  </button>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -797,16 +804,16 @@ function ShopSalesFormContent() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الخصم</label>
-                  <input
+              <input
                 type="number"
                 step="1"
                 value={discount}
                 onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
                 onWheel={(e) => e.currentTarget.blur()}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
-                  />
-                </div>
-              </div>
+              />
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الملاحظات</label>
@@ -815,13 +822,13 @@ function ShopSalesFormContent() {
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
-                />
-              </div>
+            />
+          </div>
 
           {/* Products */}
           <div>
             <h2 className="text-lg font-semibold text-gray-900 font-cairo mb-4">المنتجات</h2>
-            
+
             {/* Barcode Scanner - Always visible */}
             <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
@@ -837,7 +844,7 @@ function ShopSalesFormContent() {
                 className="w-full"
               />
             </div>
-            
+
             {/* Add Product Button */}
             <div className="mb-4">
               <button
@@ -848,10 +855,10 @@ function ShopSalesFormContent() {
                 إضافة منتج
               </button>
             </div>
-            
+
             {showAddProduct && (
               <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
-                
+
                 <div className="relative mb-4" ref={productDropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
                   <div className="relative">
@@ -871,54 +878,66 @@ function ShopSalesFormContent() {
                         {filteredProducts.map((product) => {
                           const imageUrl = product.Image || product.image || '';
                           return (
-                          <button
-                            key={product.ProductID || product.id || product.product_id}
-                            type="button"
-                            onClick={() => {
-                              const productId = String(product.ProductID || product.id || product.product_id || '').trim();
-                              const productName = product.Name || product.name || '';
-                              
-                              if (productId) {
-                                // Store the full product object to preserve all data including Name and Image
-                                setSelectedProduct(product);
-                                setSelectedProductId(productId);
-                                // Set default price from product, but reset to 0 if we want to fetch last customer price
-                                // For now, set the default price so it shows immediately
-                                const defaultPrice = product.SalePrice || product.sale_price || product.price || 0;
-                                setNewProductPrice(defaultPrice);
-                                setIsProductDropdownOpen(false);
-                                setProductSearchQuery(productName || product.Name || product.name || '');
-                              } else {
-                                alert('خطأ: المنتج لا يحتوي على معرف صالح');
-                              }
-                            }}
-                            className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
-                          >
-                            <div className="flex items-center gap-3">
-                              {imageUrl ? (
-                                <img
-                                  src={imageUrl}
-                                  alt={product.Name || product.name}
-                                  className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                  }}
-                                />
-                              ) : (
-                                <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                  <span className="text-gray-400 text-xs">—</span>
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-col gap-1">
-                                  <span className="text-right text-sm font-medium">{product.Name || product.name}</span>
-                                  <span className="text-right text-xs text-gray-600 font-light" dir="rtl">
-                                    ₪{product.SalePrice || product.sale_price || product.price || 0} • محل: {product.CS_Shop || product.cs_shop || 0} • مخزن: {product.CS_War || product.cs_war || 0}
-                                  </span>
+                            <button
+                              key={product.ProductID || product.id || product.product_id}
+                              type="button"
+                              onClick={() => {
+                                const productId = String(product.ProductID || product.id || product.product_id || '').trim();
+                                const productName = product.Name || product.name || '';
+
+                                if (productId) {
+                                  // Store the full product object to preserve all data including Name and Image
+                                  setSelectedProduct(product);
+                                  setSelectedProductId(productId);
+                                  // Set default price from product, but reset to 0 if we want to fetch last customer price
+                                  // For now, set the default price so it shows immediately
+                                  const defaultPrice = product.SalePrice || product.sale_price || product.price || 0;
+                                  setNewProductPrice(defaultPrice);
+                                  setIsProductDropdownOpen(false);
+                                  setProductSearchQuery(productName || product.Name || product.name || '');
+                                } else {
+                                  alert('خطأ: المنتج لا يحتوي على معرف صالح');
+                                }
+                              }}
+                              className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
+                            >
+                              <div className="flex items-center gap-3">
+                                {imageUrl ? (
+                                  <img
+                                    src={imageUrl}
+                                    alt={product.Name || product.name}
+                                    className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-gray-400 text-xs">—</span>
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-right text-sm font-medium">{product.Name || product.name}</span>
+                                    <span className="text-right text-xs text-gray-600 font-light flex items-center gap-2 justify-end flex-wrap" dir="rtl">
+                                      <span>₪{product.SalePrice || product.sale_price || product.price || 0}</span>
+                                      <span>•</span>
+                                      <span>محل: {product.CS_Shop || product.cs_shop || 0}</span>
+                                      <span>•</span>
+                                      <span>مخزن: {product.CS_War || product.cs_war || 0}</span>
+                                      {(reservedQuantities[product.ProductID || product.id || product.product_id]?.total || 0) > 0 && (
+                                        <>
+                                          <span>•</span>
+                                          <span className="text-orange-600 font-semibold bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100">
+                                            محجوز: {reservedQuantities[product.ProductID || product.id || product.product_id].total}
+                                          </span>
+                                        </>
+                                      )}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </button>
+                            </button>
                           );
                         })}
                       </div>
@@ -1007,194 +1026,193 @@ function ShopSalesFormContent() {
                       {details.map((item, index) => {
                         const imageUrl = item.productImage && item.productImage.trim() !== '' ? item.productImage.trim() : '';
                         return (
-                        <tr key={item.detailID || index}>
-                          <td className="px-4 py-3 text-sm text-gray-900 font-cairo align-top">
-                            <div className="flex items-start gap-2">
-                              {imageUrl ? (
-                                <>
-                                  <img
-                                    src={imageUrl}
-                                    alt={item.productName}
-                                    className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                      const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
-                                      if (placeholder) placeholder.style.display = 'flex';
-                                    }}
-                                  />
-                                  <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
+                          <tr key={item.detailID || index}>
+                            <td className="px-4 py-3 text-sm text-gray-900 font-cairo align-top">
+                              <div className="flex items-start gap-2">
+                                {imageUrl ? (
+                                  <>
+                                    <img
+                                      src={imageUrl}
+                                      alt={item.productName}
+                                      className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                        if (placeholder) placeholder.style.display = 'flex';
+                                      }}
+                                    />
+                                    <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
+                                      <span className="text-gray-400 text-xs">—</span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
                                     <span className="text-gray-400 text-xs">—</span>
                                   </div>
-                                </>
-                              ) : (
-                                <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                  <span className="text-gray-400 text-xs">—</span>
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium">{item.productName}</div>
-                                {/* Serial Numbers Display - Show if product is serialized OR if there are existing serials */}
-                                {/* Always show serial fields if product is serialized, or if there are existing serials */}
-                                {(() => {
-                                  const shouldShow = item.isSerialized === true || (item.serialNos && item.serialNos.length > 0);
-                                  console.log('[ShopSales Render] Product:', item.productName, 'isSerialized:', item.isSerialized, 'serialNos length:', item.serialNos?.length, 'shouldShow:', shouldShow);
-                                  return shouldShow;
-                                })() && (
-                                  <div className="mt-2 space-y-1">
-                                    {Array.from({ length: Math.abs(item.quantity) }, (_, serialIndex) => {
-                                      const serialNos = item.serialNos || [];
-                                      while (serialNos.length < Math.abs(item.quantity)) {
-                                        serialNos.push('');
-                                      }
-                                      const serialNo = serialNos[serialIndex] || '';
-                                      const isEmpty = !serialNo.trim();
-                                      const isRequired = item.isSerialized && isEmpty;
-                                      
-                                      return (
-                                        <div key={serialIndex} className="flex items-center gap-1">
-                                          <ScannerLatinInput
-                                            type="text"
-                                            value={serialNo}
-                                            onChange={(e) => {
-                                              const newSerialNos = [...(item.serialNos || [])];
-                                              while (newSerialNos.length < Math.abs(item.quantity)) {
-                                                newSerialNos.push('');
-                                              }
-                                              newSerialNos[serialIndex] = e.target.value;
-                                              setDetails((prev) =>
-                                                prev.map((d) =>
-                                                  d.detailID === item.detailID
-                                                    ? { ...d, serialNos: newSerialNos }
-                                                    : d
-                                                )
-                                              );
-                                            }}
-                                            onKeyDown={(e) => {
-                                              if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                // Move to next serial input or next empty one
-                                                const nextIndex = serialIndex + 1;
-                                                if (nextIndex < Math.abs(item.quantity)) {
-                                                  const nextInput = document.querySelector(
-                                                    `input[data-serial-index="${nextIndex}"][data-detail-id="${item.detailID}"]`
-                                                  ) as HTMLInputElement;
-                                                  if (nextInput) {
-                                                    nextInput.focus();
-                                                    nextInput.select();
-                                                  }
-                                                }
-                                              }
-                                            }}
-                                            data-serial-index={serialIndex}
-                                            data-detail-id={item.detailID}
-                                            placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                                            className={`w-full px-2 py-1 border rounded text-gray-900 font-mono text-xs ${
-                                              isRequired
-                                                ? 'border-yellow-400 bg-yellow-50'
-                                                : 'border-gray-300'
-                                            }`}
-                                          />
-                                          <SerialNumberScanner
-                                            onScan={(scannedData) => {
-                                              // Support multiple serials in one scan (separated by comma, newline, or multiple spaces)
-                                              // Split by: comma, newline, or 2+ spaces
-                                              const serials = scannedData
-                                                .split(/[,\n\r]+|\s{2,}/)
-                                                .map(s => s.trim())
-                                                .filter(s => s.length > 0);
-                                              
-                                              if (serials.length === 0) return;
-                                              
-                                              const newSerialNos = [...(item.serialNos || [])];
-                                              while (newSerialNos.length < Math.abs(item.quantity)) {
-                                                newSerialNos.push('');
-                                              }
-                                              
-                                              // Fill serials starting from current index
-                                              let currentIndex = serialIndex;
-                                              for (const serial of serials) {
-                                                if (currentIndex < Math.abs(item.quantity)) {
-                                                  newSerialNos[currentIndex] = serial;
-                                                  currentIndex++;
-                                                }
-                                              }
-                                              
-                                              setDetails((prev) =>
-                                                prev.map((d) =>
-                                                  d.detailID === item.detailID
-                                                    ? { ...d, serialNos: newSerialNos }
-                                                    : d
-                                                )
-                                              );
-                                              
-                                              // Auto-focus next empty input
-                                              setTimeout(() => {
-                                                const nextEmptyIndex = newSerialNos.findIndex((s, idx) => idx >= serialIndex && !s.trim());
-                                                if (nextEmptyIndex !== -1) {
-                                                  const nextInput = document.querySelector(
-                                                    `input[data-serial-index="${nextEmptyIndex}"][data-detail-id="${item.detailID}"]`
-                                                  ) as HTMLInputElement;
-                                                  if (nextInput) {
-                                                    nextInput.focus();
-                                                  }
-                                                }
-                                              }, 100);
-                                            }}
-                                          />
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
                                 )}
-                                <textarea
-                                  value={item.notes || ''}
-                                  onChange={(e) => handleUpdateNotes(item.detailID, e.target.value)}
-                                  placeholder="ملاحظات..."
-                                  rows={1}
-                                  className="w-full mt-2 px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo resize-none"
-                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium">{item.productName}</div>
+                                  {/* Serial Numbers Display - Show if product is serialized OR if there are existing serials */}
+                                  {/* Always show serial fields if product is serialized, or if there are existing serials */}
+                                  {(() => {
+                                    const shouldShow = item.isSerialized === true || (item.serialNos && item.serialNos.length > 0);
+                                    console.log('[ShopSales Render] Product:', item.productName, 'isSerialized:', item.isSerialized, 'serialNos length:', item.serialNos?.length, 'shouldShow:', shouldShow);
+                                    return shouldShow;
+                                  })() && (
+                                      <div className="mt-2 space-y-1">
+                                        {Array.from({ length: Math.abs(item.quantity) }, (_, serialIndex) => {
+                                          const serialNos = item.serialNos || [];
+                                          while (serialNos.length < Math.abs(item.quantity)) {
+                                            serialNos.push('');
+                                          }
+                                          const serialNo = serialNos[serialIndex] || '';
+                                          const isEmpty = !serialNo.trim();
+                                          const isRequired = item.isSerialized && isEmpty;
+
+                                          return (
+                                            <div key={serialIndex} className="flex items-center gap-1">
+                                              <ScannerLatinInput
+                                                type="text"
+                                                value={serialNo}
+                                                onChange={(e) => {
+                                                  const newSerialNos = [...(item.serialNos || [])];
+                                                  while (newSerialNos.length < Math.abs(item.quantity)) {
+                                                    newSerialNos.push('');
+                                                  }
+                                                  newSerialNos[serialIndex] = e.target.value;
+                                                  setDetails((prev) =>
+                                                    prev.map((d) =>
+                                                      d.detailID === item.detailID
+                                                        ? { ...d, serialNos: newSerialNos }
+                                                        : d
+                                                    )
+                                                  );
+                                                }}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    // Move to next serial input or next empty one
+                                                    const nextIndex = serialIndex + 1;
+                                                    if (nextIndex < Math.abs(item.quantity)) {
+                                                      const nextInput = document.querySelector(
+                                                        `input[data-serial-index="${nextIndex}"][data-detail-id="${item.detailID}"]`
+                                                      ) as HTMLInputElement;
+                                                      if (nextInput) {
+                                                        nextInput.focus();
+                                                        nextInput.select();
+                                                      }
+                                                    }
+                                                  }
+                                                }}
+                                                data-serial-index={serialIndex}
+                                                data-detail-id={item.detailID}
+                                                placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
+                                                className={`w-full px-2 py-1 border rounded text-gray-900 font-mono text-xs ${isRequired
+                                                    ? 'border-yellow-400 bg-yellow-50'
+                                                    : 'border-gray-300'
+                                                  }`}
+                                              />
+                                              <SerialNumberScanner
+                                                onScan={(scannedData) => {
+                                                  // Support multiple serials in one scan (separated by comma, newline, or multiple spaces)
+                                                  // Split by: comma, newline, or 2+ spaces
+                                                  const serials = scannedData
+                                                    .split(/[,\n\r]+|\s{2,}/)
+                                                    .map(s => s.trim())
+                                                    .filter(s => s.length > 0);
+
+                                                  if (serials.length === 0) return;
+
+                                                  const newSerialNos = [...(item.serialNos || [])];
+                                                  while (newSerialNos.length < Math.abs(item.quantity)) {
+                                                    newSerialNos.push('');
+                                                  }
+
+                                                  // Fill serials starting from current index
+                                                  let currentIndex = serialIndex;
+                                                  for (const serial of serials) {
+                                                    if (currentIndex < Math.abs(item.quantity)) {
+                                                      newSerialNos[currentIndex] = serial;
+                                                      currentIndex++;
+                                                    }
+                                                  }
+
+                                                  setDetails((prev) =>
+                                                    prev.map((d) =>
+                                                      d.detailID === item.detailID
+                                                        ? { ...d, serialNos: newSerialNos }
+                                                        : d
+                                                    )
+                                                  );
+
+                                                  // Auto-focus next empty input
+                                                  setTimeout(() => {
+                                                    const nextEmptyIndex = newSerialNos.findIndex((s, idx) => idx >= serialIndex && !s.trim());
+                                                    if (nextEmptyIndex !== -1) {
+                                                      const nextInput = document.querySelector(
+                                                        `input[data-serial-index="${nextEmptyIndex}"][data-detail-id="${item.detailID}"]`
+                                                      ) as HTMLInputElement;
+                                                      if (nextInput) {
+                                                        nextInput.focus();
+                                                      }
+                                                    }
+                                                  }, 100);
+                                                }}
+                                              />
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  <textarea
+                                    value={item.notes || ''}
+                                    onChange={(e) => handleUpdateNotes(item.detailID, e.target.value)}
+                                    placeholder="ملاحظات..."
+                                    rows={1}
+                                    className="w-full mt-2 px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo resize-none"
+                                  />
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 align-top">
-                            <input
-                              type="number"
-                              step="1"
-                              value={item.quantity}
-                              onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
-                              onWheel={(e) => e.currentTarget.blur()}
-                              onFocus={(e) => e.target.select()}
-                              className="w-20 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
-                            />
-                          </td>
-                          <td className="px-4 py-3 align-top">
-                            <input
-                              type="number"
-                              step="1"
-                              value={item.unitPrice}
-                              onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
-                              onWheel={(e) => e.currentTarget.blur()}
-                              onFocus={(e) => e.target.select()}
-                              className="w-24 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
-                            />
-                          </td>
-                          {showCosts && canViewCost && (
-                            <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo align-top">
-                              ₪{(item.costPrice || 0).toFixed(2)}
                             </td>
-                          )}
-                          <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo align-top">
-                            ₪{(item.quantity * item.unitPrice).toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 align-top">
-                          <button
-                              onClick={() => handleRemoveItem(item.detailID)}
-                              className="text-red-600 hover:text-red-900 font-cairo"
-                          >
-                              حذف
-                          </button>
-                          </td>
-                        </tr>
+                            <td className="px-4 py-3 align-top">
+                              <input
+                                type="number"
+                                step="1"
+                                value={item.quantity}
+                                onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
+                                onWheel={(e) => e.currentTarget.blur()}
+                                onFocus={(e) => e.target.select()}
+                                className="w-20 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
+                              />
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              <input
+                                type="number"
+                                step="1"
+                                value={item.unitPrice}
+                                onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
+                                onWheel={(e) => e.currentTarget.blur()}
+                                onFocus={(e) => e.target.select()}
+                                className="w-24 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
+                              />
+                            </td>
+                            {showCosts && canViewCost && (
+                              <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo align-top">
+                                ₪{(item.costPrice || 0).toFixed(2)}
+                              </td>
+                            )}
+                            <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo align-top">
+                              ₪{(item.quantity * item.unitPrice).toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              <button
+                                onClick={() => handleRemoveItem(item.detailID)}
+                                className="text-red-600 hover:text-red-900 font-cairo"
+                              >
+                                حذف
+                              </button>
+                            </td>
+                          </tr>
                         );
                       })}
                     </tbody>
@@ -1240,7 +1258,7 @@ function ShopSalesFormContent() {
                                   const serialNo = serialNos[serialIndex] || '';
                                   const isEmpty = !serialNo.trim();
                                   const isRequired = item.isSerialized && isEmpty;
-                                  
+
                                   return (
                                     <div key={serialIndex} className="flex items-center gap-1">
                                       <ScannerLatinInput
@@ -1279,11 +1297,10 @@ function ShopSalesFormContent() {
                                         data-detail-id={item.detailID}
                                         data-mobile="true"
                                         placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                                        className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm ${
-                                          isRequired
+                                        className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm ${isRequired
                                             ? 'border-yellow-400 bg-yellow-50'
                                             : 'border-gray-300'
-                                        }`}
+                                          }`}
                                       />
                                       <SerialNumberScanner
                                         onScan={(scannedData) => {
@@ -1293,14 +1310,14 @@ function ShopSalesFormContent() {
                                             .split(/[,\n\r]+|\s{2,}/)
                                             .map(s => s.trim())
                                             .filter(s => s.length > 0);
-                                          
+
                                           if (serials.length === 0) return;
-                                          
+
                                           const newSerialNos = [...(item.serialNos || [])];
                                           while (newSerialNos.length < Math.abs(item.quantity)) {
                                             newSerialNos.push('');
                                           }
-                                          
+
                                           let currentIndex = serialIndex;
                                           for (const serial of serials) {
                                             if (currentIndex < Math.abs(item.quantity)) {
@@ -1308,7 +1325,7 @@ function ShopSalesFormContent() {
                                               currentIndex++;
                                             }
                                           }
-                                          
+
                                           setDetails((prev) =>
                                             prev.map((d) =>
                                               d.detailID === item.detailID
@@ -1316,7 +1333,7 @@ function ShopSalesFormContent() {
                                                 : d
                                             )
                                           );
-                                          
+
                                           setTimeout(() => {
                                             const nextEmptyIndex = newSerialNos.findIndex((s, idx) => idx >= serialIndex && !s.trim());
                                             if (nextEmptyIndex !== -1) {
@@ -1386,7 +1403,7 @@ function ShopSalesFormContent() {
                 </div>
               </>
             )}
-            </div>
+          </div>
 
           {/* Summary */}
           <div className="border-t border-gray-200 pt-4">

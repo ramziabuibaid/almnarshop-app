@@ -41,7 +41,7 @@ function HomeContent() {
   }, [isMounted]);
 
   useEffect(() => {
-    document.title = 'المتجر - My Shop';
+    document.title = 'المتجر - Almnar Home';
   }, []);
 
   const cartItemCount = useMemo(() => {

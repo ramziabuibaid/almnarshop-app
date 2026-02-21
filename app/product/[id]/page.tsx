@@ -51,7 +51,7 @@ export default function ProductPage() {
         setLoading(false);
 
         // Set page title immediately
-        document.title = `${productData.name || productData.Name || 'Product'} - My Shop`;
+        document.title = `${productData.name || productData.Name || 'Product'} - Almnar Home`;
       } catch (error) {
         console.error('[ProductPage] Error loading product:', error);
         setNotFoundPage(true);

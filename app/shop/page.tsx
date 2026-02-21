@@ -69,7 +69,7 @@ function ShopContent() {
     }, [isMounted, searchParams]);
 
     useEffect(() => {
-        document.title = 'الكتالوج - My Shop';
+        document.title = 'الكتالوج - Almnar Home';
     }, []);
 
     useEffect(() => {
