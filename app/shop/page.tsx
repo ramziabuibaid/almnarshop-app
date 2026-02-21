@@ -339,7 +339,8 @@ function ShopContent() {
                             />
                         </div>
 
-                        <div className="md:hidden flex items-center gap-2 flex-1" suppressHydrationWarning>
+                        {/* Tablet/Desktop Search Icon (Hidden on true mobile since we render a full search bar below) */}
+                        <div className="hidden sm:flex md:hidden items-center gap-2 flex-1" suppressHydrationWarning>
                             {!isSearchExpanded ? (
                                 <button
                                     onClick={() => {
@@ -442,11 +443,25 @@ function ShopContent() {
             </header>
 
             <main id="products-section" className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8" suppressHydrationWarning>
-                <div className="mb-4 sm:mb-6 flex items-center justify-between">
-                    <div>
-                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 text-right mb-2">
-                            تصفح جميع المنتجات
-                        </h2>
+                <div className="mb-4 sm:mb-6 flex flex-col items-start justify-center gap-3">
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 text-right">
+                        تصفح جميع المنتجات
+                    </h2>
+
+                    {/* Mobile Only: Big Search Bar under the title so it is absolutely obvious */}
+                    <div className="md:hidden relative w-full" suppressHydrationWarning>
+                        <Search
+                            size={18}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                        />
+                        <input
+                            type="text"
+                            placeholder="ابحث هنا عن المنتجات..."
+                            value={searchQuery}
+                            onChange={(e) => updateURL(e.target.value)}
+                            className="w-full pr-10 pl-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-gray-900 placeholder:text-gray-500 text-right text-base shadow-sm"
+                            dir="rtl"
+                        />
                     </div>
                 </div>
                 {loading && (
