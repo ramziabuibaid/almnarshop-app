@@ -92,8 +92,12 @@ export default function HeroBanner() {
               <button
                 className="px-8 py-4 bg-white/5 border border-white/10 text-white font-semibold text-lg rounded-xl backdrop-blur-sm hover:bg-white/10 transition-colors flex items-center gap-2"
                 onClick={() => {
-                  const showroomSection = document.getElementById('showroom-section');
-                  if (showroomSection) showroomSection.scrollIntoView({ behavior: 'smooth' });
+                  const footerSection = document.getElementById('site-footer');
+                  if (footerSection) {
+                    footerSection.scrollIntoView({ behavior: 'smooth' });
+                  } else {
+                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                  }
                 }}
               >
                 زيارة المعرض <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />

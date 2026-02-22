@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, useCallback } from 'react';
+import { forwardRef, useCallback, useEffect, useRef } from 'react';
 import { getLatinCharFromKeyEvent, normalizeBarcodeInput, SCANNER_KEY } from '@/lib/barcodeScannerLatin';
 
 type ScannerLatinInputProps = React.ComponentPropsWithoutRef<'input'>;
@@ -17,6 +17,43 @@ const ScannerLatinInput = forwardRef<HTMLInputElement, ScannerLatinInputProps>(f
   onPaste,
   ...rest
 }, ref) {
+  // We keep a synchronous ref of what we consider the "true" value
+  // to avoid stale closures during rapid scanner typing.
+  const internalValue = useRef(typeof value === 'string' ? value : '');
+
+  // Sync prop to ref if parent changes it
+  useEffect(() => {
+    internalValue.current = typeof value === 'string' ? value : '';
+  }, [value]);
+
+  const updateValueAndNotify = useCallback(
+    (inputElement: HTMLInputElement, nativeEvent: Event, newValue: string, cursor: number) => {
+      internalValue.current = newValue;
+      inputElement.value = newValue; // Force native DOM update
+      inputElement.setSelectionRange(cursor, cursor);
+
+      // Since React expects a ChangeEvent, we construct a synthetic event
+      // that looks just like what React would produce natively.
+      const syntheticEvent = {
+        ...nativeEvent,
+        nativeEvent,
+        target: inputElement,
+        currentTarget: inputElement,
+        type: 'change',
+        bubbles: true,
+        cancelable: false,
+        isDefaultPrevented: () => false,
+        isPropagationStopped: () => false,
+        persist: () => { },
+        preventDefault: () => { },
+        stopPropagation: () => { },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      onChange?.(syntheticEvent);
+    },
+    [onChange]
+  );
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       const ch = getLatinCharFromKeyEvent(e.nativeEvent);
@@ -24,24 +61,39 @@ const ScannerLatinInput = forwardRef<HTMLInputElement, ScannerLatinInputProps>(f
         onKeyDown?.(e);
         return;
       }
+
       if (ch === SCANNER_KEY.ENTER) {
-        e.preventDefault();
         onKeyDown?.(e);
         return;
       }
-      if (ch === SCANNER_KEY.BACKSPACE) {
-        e.preventDefault();
-        const str = typeof value === 'string' ? value : '';
-        onChange?.({ target: { ...e.currentTarget, value: str.slice(0, -1) } } as React.ChangeEvent<HTMLInputElement>);
-        onKeyDown?.(e);
-        return;
-      }
+
       e.preventDefault();
-      const str = typeof value === 'string' ? value : '';
-      onChange?.({ target: { ...e.currentTarget, value: str + ch } } as React.ChangeEvent<HTMLInputElement>);
+
+      const el = e.currentTarget;
+      const currentVal = internalValue.current;
+      const start = el.selectionStart ?? currentVal.length;
+      const end = el.selectionEnd ?? currentVal.length;
+
+      if (ch === SCANNER_KEY.BACKSPACE) {
+        if (start === end) {
+          if (start === 0) {
+            onKeyDown?.(e);
+            return;
+          }
+          const newVal = currentVal.slice(0, start - 1) + currentVal.slice(end);
+          updateValueAndNotify(el, e.nativeEvent, newVal, start - 1);
+        } else {
+          const newVal = currentVal.slice(0, start) + currentVal.slice(end);
+          updateValueAndNotify(el, e.nativeEvent, newVal, start);
+        }
+      } else {
+        const newVal = currentVal.slice(0, start) + ch + currentVal.slice(end);
+        updateValueAndNotify(el, e.nativeEvent, newVal, start + ch.length);
+      }
+
       onKeyDown?.(e);
     },
-    [value, onChange, onKeyDown]
+    [onKeyDown, updateValueAndNotify]
   );
 
   const handlePaste = useCallback(
@@ -49,20 +101,35 @@ const ScannerLatinInput = forwardRef<HTMLInputElement, ScannerLatinInputProps>(f
       e.preventDefault();
       const pasted = (e.clipboardData?.getData('text') ?? '').trim();
       const normalized = normalizeBarcodeInput(pasted);
-      const str = typeof value === 'string' ? value : '';
-      onChange?.({ target: { ...e.currentTarget, value: str + normalized } } as React.ChangeEvent<HTMLInputElement>);
+      const el = e.currentTarget;
+
+      const currentVal = internalValue.current;
+      const start = el.selectionStart ?? currentVal.length;
+      const end = el.selectionEnd ?? currentVal.length;
+
+      const newVal = currentVal.slice(0, start) + normalized + currentVal.slice(end);
+      updateValueAndNotify(el, e.nativeEvent as unknown as Event, newVal, start + normalized.length);
+
       onPaste?.(e);
     },
-    [value, onChange, onPaste]
+    [onPaste, updateValueAndNotify]
   );
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const normalized = normalizeBarcodeInput(e.target.value);
-      if (normalized !== e.target.value) {
-        e.target.value = normalized;
+      // If the browser (via IME/dead keys like 'لأ') bypassed e.preventDefault()
+      // in keydown, or inserted Arabic junk natively, e.target.value will NOT
+      // match our internalValue. In that case, we REVERT it.
+      // We do not normalize here because handleKeyDown already handled the physical key.
+
+      if (e.target.value !== internalValue.current) {
+        e.target.value = internalValue.current;
+        const cursor = e.target.selectionStart || internalValue.current.length;
+        e.target.setSelectionRange(cursor, cursor);
+        // Do NOT call onChange! The garbage was suppressed.
+      } else {
+        onChange?.(e);
       }
-      onChange?.(e);
     },
     [onChange]
   );
