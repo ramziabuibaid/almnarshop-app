@@ -71,9 +71,8 @@ export default function PromissoryNotesPage() {
     }, [printOverlayNoteId]);
 
     // Permission check
-    const canManage = admin?.is_super_admin || admin?.permissions?.accountant;
-
-    // ...
+    const hasPermission = admin?.is_super_admin || admin?.permissions?.accessPromissoryNotes;
+    const canManage = hasPermission;
 
     const handleEdit = (note: PromissoryNote) => {
         // Allow editing for everyone as requested? Or restrict?
@@ -176,6 +175,20 @@ export default function PromissoryNotesPage() {
             default: return 'text-gray-600';
         }
     };
+
+    if (!hasPermission) {
+        return (
+            <AdminLayout>
+                <div className="p-8 font-cairo" dir="rtl">
+                    <div className="bg-white rounded-xl shadow p-8 text-center flex flex-col items-center max-w-lg mx-auto border border-gray-200 mt-20">
+                        <AlertCircle size={64} className="text-red-500 mb-4" />
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">عذراً، لا تمتلك صلاحية الدخول</h2>
+                        <p className="text-gray-600 font-medium">ليس لديك الإذن للاطلاع على الكمبيالات. يرجى مراجعة مدير النظام.</p>
+                    </div>
+                </div>
+            </AdminLayout>
+        );
+    }
 
     return (
         <AdminLayout>

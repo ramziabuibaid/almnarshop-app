@@ -70,11 +70,12 @@ const invoicesSubmenu = [
   { href: '/admin/orders', label: 'طلبيات اون لاين', icon: ShoppingBag },
 ];
 
-/** Submenu under "الزبائن": المهام والمتابعات، الشيكات الراجعة */
+/** Submenu under "الزبائن": المهام والمتابعات، الشيكات الراجعة، الكمبيالات، الملفات القضائية */
 const customersSubmenu = [
   { href: '/admin/tasks', label: 'المهام والمتابعات', icon: ClipboardList, permission: 'viewTasks' as const },
   { href: '/admin/checks', label: 'الشيكات الراجعة', icon: FileText, permission: 'accessChecks' as const },
-  { href: '/admin/promissory-notes', label: 'الكمبيالات', icon: FileText, permission: 'any' as const }, // Permission handled in logic
+  { href: '/admin/promissory-notes', label: 'الكمبيالات', icon: FileText, permission: 'accessPromissoryNotes' as const },
+  { href: '/admin/legal-cases', label: 'الملفات القضائية', icon: FileText, permission: 'accessLegalCases' as const },
 ];
 
 const sidebarLinks = [
@@ -495,11 +496,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 if (isCustomersWithSubmenu) {
                   const hasPerm = (p: string) => admin.is_super_admin || (admin.permissions as Record<string, boolean>)?.[p] === true;
                   const filteredCustomersSubmenu = customersSubmenu.filter((s) => {
-                    // Custom logic for Promissory Notes: Allow if accessChecks OR accountant
-                    if (s.href === '/admin/promissory-notes') {
-                      return admin.is_super_admin || admin.permissions?.accessChecks || admin.permissions?.accountant;
-                    }
-                    return !('permission' in s && s.permission) || s.permission === 'any' || hasPerm(s.permission);
+                    return !('permission' in s && s.permission) || hasPerm(s.permission);
                   });
                   const customersSubmenuActive = pathname?.startsWith('/admin/tasks') || pathname?.startsWith('/admin/checks') || pathname?.startsWith('/admin/promissory-notes');
                   return (

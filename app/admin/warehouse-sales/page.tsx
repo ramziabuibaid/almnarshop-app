@@ -21,6 +21,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  MessageSquare,
 } from 'lucide-react';
 
 interface WarehouseSalesInvoice {
@@ -152,7 +153,7 @@ export default function WarehouseSalesPage() {
         if (e.data?.title) document.title = e.data.title;
         try {
           printIframeRef.current.contentWindow.print();
-        } catch (_) {}
+        } catch (_) { }
         setTimeout(() => { document.title = prevTitle; }, 500);
       }
     };
@@ -183,7 +184,7 @@ export default function WarehouseSalesPage() {
       details: [], // Will be loaded
     });
     setViewLoading(true);
-    
+
     // Load full invoice data in background
     try {
       const fullInvoice = await getWarehouseSalesInvoice(invoice.InvoiceID);
@@ -204,9 +205,70 @@ export default function WarehouseSalesPage() {
     setViewing({ invoice: null, details: null });
   };
 
+  const handleShareToWhatsApp = async (invoice: WarehouseSalesInvoice) => {
+    try {
+      // We might need full details to send a proper message.
+      let fullInvoice = viewing.invoice?.InvoiceID === invoice.InvoiceID ? viewing.invoice : null;
+      let details = viewing.details?.length ? viewing.details : null;
+
+      if (!fullInvoice || !details) {
+        // Show loading state implicitly or use a toast, but this is fast enough usually
+        fullInvoice = await getWarehouseSalesInvoice(invoice.InvoiceID);
+        details = fullInvoice?.Items || [];
+      }
+
+      // Format the message
+      const textParts = [
+        `*فاتورة مبيعات مخزن جديدة رقم:* ${invoice.InvoiceID}`,
+        `*التاريخ:* ${formatDate(invoice.Date)}`,
+        ` `,
+        `*الزبون:* ${invoice.CustomerName || invoice.CustomerID}`,
+      ];
+
+      if (fullInvoice?.customer_phone || fullInvoice?.CustomerPhone) {
+        textParts.push(`*رقم الهاتف:* ${fullInvoice.customer_phone || fullInvoice.CustomerPhone}`);
+      }
+
+      if (fullInvoice?.customer_address || fullInvoice?.CustomerAddress) {
+        textParts.push(`*العنوان:* ${fullInvoice.customer_address || fullInvoice.CustomerAddress}`);
+      }
+
+      if (invoice.Notes) {
+        textParts.push(`*ملاحظات الفاتورة:* ${invoice.Notes}`);
+      }
+
+      textParts.push(` `);
+      textParts.push(`*التفاصيل:*`);
+
+      details?.forEach((item: any, idx: number) => {
+        const name = item.ProductName || item.productName || item.product_name || item.Name || item.name || 'غير محدد';
+        const qty = item.Quantity || item.quantity || 0;
+        textParts.push(`${idx + 1}. ${name} - الكمية: ${qty}`);
+      });
+
+      textParts.push(` `);
+      textParts.push(`*الإجمالي:* ${formatCurrency(invoice.TotalAmount)}`);
+
+      // Add a link to view/print the invoice
+      const printUrl = `${window.location.origin}/admin/warehouse-sales/print/${invoice.InvoiceID}`;
+      textParts.push(` `);
+      textParts.push(`*لعرض أو طباعة الفاتورة:*`);
+      textParts.push(printUrl);
+
+      // WhatsApp Web/App url for generic sharing
+      const message = encodeURIComponent(textParts.join('\n'));
+      const whatsappUrl = `https://wa.me/?text=${message}`;
+
+      window.open(whatsappUrl, '_blank');
+    } catch (err: any) {
+      console.error('[WarehouseSalesPage] Failed to prepare WhatsApp message:', err);
+      alert('فشل تجهيز رسالة الواتساب: ' + (err?.message || ''));
+    }
+  };
+
   const handleMarkAsSettled = async () => {
     if (!viewing.invoice) return;
-    
+
     const invoiceId = viewing.invoice.InvoiceID || viewing.invoice.invoice_id;
     if (!invoiceId) return;
 
@@ -220,7 +282,7 @@ export default function WarehouseSalesPage() {
         details: fullInvoice?.Items || [],
       });
       // Update local state immediately (optimistic update like maintenance page)
-      setAllInvoices(prev => prev.map(inv => 
+      setAllInvoices(prev => prev.map(inv =>
         inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'مرحلة' } : inv
       ));
     } catch (err: any) {
@@ -240,7 +302,7 @@ export default function WarehouseSalesPage() {
     try {
       await updateWarehouseSalesInvoiceSign(invoiceId, 'مرحلة');
       // Update local state immediately
-      setAllInvoices(prev => prev.map(inv => 
+      setAllInvoices(prev => prev.map(inv =>
         inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'مرحلة' } : inv
       ));
     } catch (err: any) {
@@ -261,7 +323,7 @@ export default function WarehouseSalesPage() {
     try {
       await updateWarehouseSalesInvoiceSign(invoiceId, 'غير مرحلة');
       // Update local state immediately
-      setAllInvoices(prev => prev.map(inv => 
+      setAllInvoices(prev => prev.map(inv =>
         inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'غير مرحلة' } : inv
       ));
     } catch (err: any) {
@@ -283,7 +345,7 @@ export default function WarehouseSalesPage() {
     try {
       await updateWarehouseSalesInvoiceStatus(invoice.InvoiceID, newStatus);
       // Update local state immediately (optimistic update like maintenance page)
-      setAllInvoices(prev => prev.map(inv => 
+      setAllInvoices(prev => prev.map(inv =>
         inv.InvoiceID === invoice.InvoiceID ? { ...inv, Status: newStatus } : inv
       ));
     } catch (err: any) {
@@ -342,14 +404,14 @@ export default function WarehouseSalesPage() {
         .trim()
         .split(/\s+/)
         .filter(word => word.length > 0);
-      
+
       filtered = filtered.filter((invoice) => {
         const invoiceId = String(invoice.InvoiceID || '').toLowerCase();
         const customerName = String(invoice.CustomerName || '').toLowerCase();
         const customerId = String(invoice.CustomerID || '').toLowerCase();
-        
-        const searchableText = `${invoiceId} ${customerName} ${customerId}`;
-        
+
+        const searchableText = `${invoiceId} ${customerName} ${customerId} `;
+
         return searchWords.every(word => searchableText.includes(word));
       });
     }
@@ -576,11 +638,10 @@ export default function WarehouseSalesPage() {
                         </td>
                         <td className="px-4 py-3 text-right whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${
-                              invoice.AccountantSign === 'مرحلة'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${invoice.AccountantSign === 'مرحلة'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                              }`}
                           >
                             {invoice.AccountantSign === 'مرحلة' ? 'مرحلة' : 'غير مرحلة'}
                           </span>
@@ -600,11 +661,10 @@ export default function WarehouseSalesPage() {
                             <button
                               onClick={() => handleEditInvoice(invoice)}
                               disabled={invoice.AccountantSign === 'مرحلة'}
-                              className={`p-2 rounded-lg transition-colors ${
-                                invoice.AccountantSign === 'مرحلة'
-                                  ? 'text-gray-400 cursor-not-allowed opacity-50'
-                                  : 'text-gray-600 hover:bg-gray-100'
-                              }`}
+                              className={`p-2 rounded-lg transition-colors ${invoice.AccountantSign === 'مرحلة'
+                                ? 'text-gray-400 cursor-not-allowed opacity-50'
+                                : 'text-gray-600 hover:bg-gray-100'
+                                }`}
                               title={invoice.AccountantSign === 'مرحلة' ? 'لا يمكن تعديل فاتورة مرحلة' : 'تعديل'}
                             >
                               <Edit size={18} />
@@ -638,6 +698,13 @@ export default function WarehouseSalesPage() {
                               </button>
                             )}
                             <button
+                              onClick={() => handleShareToWhatsApp(invoice)}
+                              className="p-2 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+                              title="مشاركة عبر واتساب"
+                            >
+                              <MessageSquare size={18} />
+                            </button>
+                            <button
                               onClick={() => handlePrintInvoice(invoice)}
                               className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                               title="طباعة"
@@ -663,11 +730,10 @@ export default function WarehouseSalesPage() {
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-base font-bold text-gray-900 font-cairo">#{invoice.InvoiceID}</h3>
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-cairo ${
-                            invoice.AccountantSign === 'مرحلة'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-cairo ${invoice.AccountantSign === 'مرحلة'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                            }`}
                         >
                           {invoice.AccountantSign === 'مرحلة' ? 'مرحلة' : 'غير مرحلة'}
                         </span>
@@ -737,15 +803,21 @@ export default function WarehouseSalesPage() {
                     <button
                       onClick={() => handleEditInvoice(invoice)}
                       disabled={invoice.AccountantSign === 'مرحلة'}
-                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors font-cairo ${
-                        invoice.AccountantSign === 'مرحلة'
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
-                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                      }`}
+                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors font-cairo ${invoice.AccountantSign === 'مرحلة'
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                        }`}
                       title={invoice.AccountantSign === 'مرحلة' ? 'لا يمكن تعديل فاتورة مرحلة' : 'تعديل'}
                     >
                       <Edit size={16} />
                       <span>تعديل</span>
+                    </button>
+                    <button
+                      onClick={() => handleShareToWhatsApp(invoice)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors font-cairo"
+                    >
+                      <MessageSquare size={16} />
+                      <span className="hidden sm:inline">مشاركة</span>
                     </button>
                     <button
                       onClick={() => handlePrintInvoice(invoice)}
@@ -818,16 +890,15 @@ export default function WarehouseSalesPage() {
                       } else {
                         pageNum = currentPage - 2 + i;
                       }
-                      
+
                       return (
                         <button
                           key={pageNum}
                           onClick={() => setCurrentPage(pageNum)}
-                          className={`px-3 py-1 rounded-lg transition-colors text-sm font-cairo ${
-                            currentPage === pageNum
-                              ? 'bg-gray-900 text-white'
-                              : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
-                          }`}
+                          className={`px-3 py-1 rounded-lg transition-colors text-sm font-cairo ${currentPage === pageNum
+                            ? 'bg-gray-900 text-white'
+                            : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
+                            }`}
                         >
                           {pageNum}
                         </button>
@@ -850,12 +921,12 @@ export default function WarehouseSalesPage() {
 
         {/* Modal عرض الفاتورة */}
         {viewing.invoice && (
-          <div 
-            className="fixed inset-0 md:right-64 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4" 
+          <div
+            className="fixed inset-0 md:right-64 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4"
             dir="rtl"
             onClick={closeView}
           >
-            <div 
+            <div
               className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-hidden border border-gray-200 flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
@@ -869,6 +940,16 @@ export default function WarehouseSalesPage() {
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={() => {
+                      if (!viewing.invoice) return;
+                      handleShareToWhatsApp(viewing.invoice);
+                    }}
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-cairo"
+                  >
+                    <MessageSquare size={16} />
+                    <span className="hidden sm:inline">مشاركة واتساب</span>
+                  </button>
                   <button
                     onClick={() => {
                       const id = viewing.invoice.InvoiceID || viewing.invoice.invoice_id;
@@ -914,7 +995,7 @@ export default function WarehouseSalesPage() {
                             invoice: fullInvoice,
                             details: fullInvoice?.Items || [],
                           });
-                          setAllInvoices(prev => prev.map(inv => 
+                          setAllInvoices(prev => prev.map(inv =>
                             inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'غير مرحلة' } : inv
                           ));
                         } catch (err: any) {
@@ -982,11 +1063,10 @@ export default function WarehouseSalesPage() {
                     <div className="text-gray-500">حالة الترحيل</div>
                     <div className="font-semibold">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          viewing.invoice.AccountantSign === 'مرحلة'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${viewing.invoice.AccountantSign === 'مرحلة'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
+                          }`}
                       >
                         {viewing.invoice.AccountantSign || 'غير مرحلة'}
                       </span>

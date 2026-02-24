@@ -21,7 +21,9 @@ type PermissionKey =
   | 'dashboardAndNotifications'
   | 'viewNotifications'
   | 'refreshProductsCache'
-  | 'refreshCustomersCache';
+  | 'refreshCustomersCache'
+  | 'accessPromissoryNotes'
+  | 'accessLegalCases';
 
 export type AdminPermissions = Record<PermissionKey, boolean>;
 

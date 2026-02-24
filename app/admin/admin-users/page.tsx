@@ -24,6 +24,8 @@ const permissionLabels: { key: keyof AdminPermissions; label: string }[] = [
   { key: 'viewNotifications', label: 'View notifications' },
   { key: 'refreshProductsCache', label: 'Refresh products cache (تحديث كاش المنتجات لجميع الزوار)' },
   { key: 'refreshCustomersCache', label: 'Refresh customers cache (تحديث كاش الزبائن لجميع المستخدمين)' },
+  { key: 'accessPromissoryNotes', label: 'Access promissory notes (الكمبيالات)' },
+  { key: 'accessLegalCases', label: 'Access legal cases (الملفات القضائية)' },
 ];
 
 const emptyPermissions: AdminPermissions = {
@@ -46,6 +48,8 @@ const emptyPermissions: AdminPermissions = {
   dashboardAndNotifications: false,
   refreshProductsCache: false,
   refreshCustomersCache: false,
+  accessPromissoryNotes: false,
+  accessLegalCases: false,
 };
 
 export default function AdminUsersPage() {
@@ -117,7 +121,7 @@ export default function AdminUsersPage() {
       setError('Missing user id');
       return;
     }
-    
+
     setSaving(true);
     setError(null);
     try {

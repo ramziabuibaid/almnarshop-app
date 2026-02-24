@@ -11158,3 +11158,189 @@ export async function updateActivity(activityId: string, updates: {
     throw error;
   }
 }
+
+/**
+ * LEGAL CASES (الملفات القضائية)
+ * ==========================================
+ */
+
+export type LegalCaseStatus = 'Active' | 'Closed' | 'On Hold';
+
+export interface LegalCase {
+  id: string;
+  case_number: string;
+  customer_id: string;
+  total_amount: number;
+  status: LegalCaseStatus;
+  notes?: string | null;
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  customers?: {
+    name: string;
+    phone: string;
+    address?: string;
+  };
+  payments?: LegalCasePayment[];
+  paid_amount?: number; // Calculated field
+  remaining_amount?: number; // Calculated field
+}
+
+export interface LegalCasePayment {
+  id: string;
+  legal_case_id: string;
+  amount: number;
+  payment_date: string;
+  notes?: string | null;
+  created_by?: string | null;
+  created_at?: string;
+}
+
+export async function getLegalCases(filters?: {
+  customerId?: string;
+  status?: LegalCaseStatus;
+  searchQuery?: string;
+}): Promise<LegalCase[]> {
+  let query = supabase
+    .from('legal_cases')
+    .select(`
+      *,
+      customers (name, phone),
+      payments:legal_case_payments(amount)
+    `)
+    .order('created_at', { ascending: false });
+
+  if (filters?.customerId) {
+    query = query.eq('customer_id', filters.customerId);
+  }
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+  if (filters?.searchQuery) {
+    query = query.or(`case_number.ilike.%${filters.searchQuery}%,notes.ilike.%${filters.searchQuery}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data || []).map((c: any) => {
+    const totalPaid = c.payments ? c.payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0) : 0;
+    return {
+      ...c,
+      paid_amount: totalPaid,
+      remaining_amount: Number(c.total_amount) - totalPaid,
+    } as LegalCase;
+  });
+}
+
+export async function getLegalCaseById(id: string): Promise<LegalCase> {
+  const { data, error } = await supabase
+    .from('legal_cases')
+    .select(`
+      *,
+      customers (name, phone, address),
+      payments:legal_case_payments(*)
+    `)
+    .eq('id', id)
+    .single();
+
+  if (error) throw error;
+
+  const totalPaid = data.payments ? data.payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0) : 0;
+  return {
+    ...data,
+    paid_amount: totalPaid,
+    remaining_amount: Number(data.total_amount) - totalPaid,
+    payments: data.payments?.sort((a: any, b: any) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()),
+  } as LegalCase;
+}
+
+export async function createLegalCase(payload: {
+  caseNumber: string;
+  customerId: string;
+  totalAmount: number;
+  status?: LegalCaseStatus;
+  notes?: string;
+  createdBy?: string;
+}): Promise<LegalCase> {
+  const { data, error } = await supabase
+    .from('legal_cases')
+    .insert({
+      case_number: payload.caseNumber,
+      customer_id: payload.customerId,
+      total_amount: payload.totalAmount,
+      status: payload.status || 'Active',
+      notes: payload.notes,
+      created_by: payload.createdBy || null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as LegalCase;
+}
+
+export async function updateLegalCase(
+  id: string,
+  payload: {
+    caseNumber?: string;
+    customerId?: string;
+    totalAmount?: number;
+    status?: LegalCaseStatus;
+    notes?: string;
+  }
+): Promise<void> {
+  const updatePayload: any = {};
+  if (payload.caseNumber !== undefined) updatePayload.case_number = payload.caseNumber;
+  if (payload.customerId !== undefined) updatePayload.customer_id = payload.customerId;
+  if (payload.totalAmount !== undefined) updatePayload.total_amount = payload.totalAmount;
+  if (payload.status !== undefined) updatePayload.status = payload.status;
+  if (payload.notes !== undefined) updatePayload.notes = payload.notes;
+
+  if (Object.keys(updatePayload).length > 0) {
+    const { error } = await supabase
+      .from('legal_cases')
+      .update(updatePayload)
+      .eq('id', id);
+    if (error) throw error;
+  }
+}
+
+export async function deleteLegalCase(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('legal_cases')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function addLegalCasePayment(payload: {
+  legalCaseId: string;
+  amount: number;
+  paymentDate: string;
+  notes?: string;
+  createdBy?: string;
+}): Promise<void> {
+  const { error } = await supabase
+    .from('legal_case_payments')
+    .insert({
+      legal_case_id: payload.legalCaseId,
+      amount: payload.amount,
+      payment_date: payload.paymentDate,
+      notes: payload.notes,
+      created_by: payload.createdBy || null,
+    });
+
+  if (error) throw error;
+}
+
+export async function deleteLegalCasePayment(paymentId: string): Promise<void> {
+  const { error } = await supabase
+    .from('legal_case_payments')
+    .delete()
+    .eq('id', paymentId);
+
+  if (error) throw error;
+}
+

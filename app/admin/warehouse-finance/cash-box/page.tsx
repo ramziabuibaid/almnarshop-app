@@ -23,6 +23,7 @@ import {
   ChevronRight,
   CheckCircle,
   XCircle,
+  MessageSquare,
 } from 'lucide-react';
 
 interface CashFlowTransaction {
@@ -56,7 +57,7 @@ export default function WarehouseCashBoxPage() {
   }, []);
   const { admin } = useAdminAuth();
   const router = useRouter();
-  
+
   // All hooks must be called before any conditional returns
   const [transactions, setTransactions] = useState<CashFlowTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,8 +65,10 @@ export default function WarehouseCashBoxPage() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [customerMap, setCustomerMap] = useState<Map<string, string>>(new Map());
   const [customerShamelMap, setCustomerShamelMap] = useState<Map<string, string>>(new Map());
+  const [customerPhoneMap, setCustomerPhoneMap] = useState<Map<string, string>>(new Map());
+  const [customerBalanceMap, setCustomerBalanceMap] = useState<Map<string, number>>(new Map());
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
-  
+
   // Modal states
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -82,7 +85,7 @@ export default function WarehouseCashBoxPage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | null }>({ message: '', type: null });
   const [updatingSettlement, setUpdatingSettlement] = useState(false);
   const [updatingTransactionId, setUpdatingTransactionId] = useState<string | null>(null);
-  
+
   // Search and pagination
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -90,12 +93,12 @@ export default function WarehouseCashBoxPage() {
   const [printOverlaySlip, setPrintOverlaySlip] = useState<{ type: 'receipt' | 'payment'; id: string } | null>(null);
   const printSlipIframeRef = useRef<HTMLIFrameElement>(null);
   const isMobilePrint = () => typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  
+
   // Check permissions
   const canAccess = admin?.is_super_admin || admin?.permissions?.accessWarehouseCashBox === true;
   const canViewBalance = admin?.is_super_admin || admin?.permissions?.viewCashBoxBalance === true;
   const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
-  
+
   // Redirect if no access
   useEffect(() => {
     if (!admin) return;
@@ -103,7 +106,7 @@ export default function WarehouseCashBoxPage() {
       router.push('/admin');
     }
   }, [admin, canAccess, router]);
-  
+
   // Early returns after all hooks
   if (!admin) return null;
   if (!canAccess) {
@@ -126,23 +129,36 @@ export default function WarehouseCashBoxPage() {
     try {
       const data = await getAllCustomers();
       setCustomers(data);
-      
+
       // Create a map from customer_id to customer name
       const map = new Map<string, string>();
       const shamelMap = new Map<string, string>();
+      const phoneMap = new Map<string, string>();
+      const balanceMap = new Map<string, number>();
       data.forEach((customer: any) => {
         const customerId = customer.CustomerID || customer.id || customer.customer_id || '';
         const customerName = customer.Name || customer.name || '';
         const shamelNo = customer.ShamelNo || customer['Shamel No'] || customer.shamel_no || customer.shamelNo || '';
+        const phone = customer.Phone || customer.phone || customer.PhoneNumber || '';
+        const balance = parseFloat(customer.Balance || customer.balance || 0) || 0;
+
         if (customerId && customerName) {
           map.set(customerId, customerName);
         }
         if (customerId && shamelNo) {
           shamelMap.set(customerId, shamelNo);
         }
+        if (customerId && phone) {
+          phoneMap.set(customerId, String(phone));
+        }
+        if (customerId) {
+          balanceMap.set(customerId, balance);
+        }
       });
       setCustomerMap(map);
       setCustomerShamelMap(shamelMap);
+      setCustomerPhoneMap(phoneMap);
+      setCustomerBalanceMap(balanceMap);
     } catch (err: any) {
       console.error('[CashBox] Failed to load customers:', err);
     }
@@ -186,7 +202,7 @@ export default function WarehouseCashBoxPage() {
       console.log('[CashBox] Raw data from API:', data);
       console.log('[CashBox] Sample payment data:', data.find((item: any) => item.payment_id));
       console.log('[CashBox] Sample receipt data:', data.find((item: any) => item.receipt_id));
-      
+
       // Transform the data to match our interface
       // The warehouse_cash_flow view should have:
       // - date, direction ('in' or 'out'), amount, related_party, notes
@@ -198,9 +214,9 @@ export default function WarehouseCashBoxPage() {
         const paymentId = item.payment_id || item.paymentId || item.paymentID || '';
         const isReceipt = !!receiptId;
         const isPayment = !!paymentId;
-        
+
         console.log('[CashBox] Processing item:', { receiptId, paymentId, item });
-        
+
         // Determine direction - could be in the view or inferred from type
         let direction: 'in' | 'out' = 'in';
         if (item.direction) {
@@ -209,11 +225,11 @@ export default function WarehouseCashBoxPage() {
           // If no direction field, receipts are 'in', payments are 'out'
           direction = isReceipt ? 'in' : 'out';
         }
-        
+
         // Get related party - could be customer_id, related_party, or customer name from join
         let relatedParty = '';
         let customerId = '';
-        
+
         if (item.customer_id) {
           customerId = item.customer_id;
         } else if (item.related_party) {
@@ -222,19 +238,19 @@ export default function WarehouseCashBoxPage() {
         } else if (item.relatedParty) {
           customerId = item.relatedParty;
         }
-        
+
         // Store customer_id for later lookup
         relatedParty = customerId;
-        
+
         // Get user_id from various possible field names
         const userId = item.created_by || item.createdBy || item.user_id || item.userId || item.created_by_user_id || '';
-        
+
         const cashAmount = parseFloat(item.cash_amount || 0);
         const checkAmount = parseFloat(item.check_amount || 0);
         const totalAmount = cashAmount + checkAmount;
         // Fallback to amount if cash_amount/check_amount not available (backward compatibility)
         const fallbackAmount = parseFloat(item.amount || 0);
-        
+
         return {
           id: receiptId || paymentId || item.id || '',
           date: item.date,
@@ -254,7 +270,7 @@ export default function WarehouseCashBoxPage() {
           isSettled: item.is_settled || item.isSettled || false,
         };
       });
-      
+
       setTransactions(transformed);
     } catch (err: any) {
       console.error('[CashBox] Failed to load cash flow:', err);
@@ -276,17 +292,17 @@ export default function WarehouseCashBoxPage() {
         .trim()
         .split(/\s+/)
         .filter(word => word.length > 0);
-      
+
       filtered = filtered.filter((tx) => {
         // Get customer ID and name
         const customerId = tx.customer_id || tx.related_party || '';
         const customerName = customerId && customerMap.has(customerId)
           ? (customerMap.get(customerId) || '').toLowerCase()
           : '';
-        
+
         // Create searchable text from customer ID and name
         const searchableText = `${customerId.toLowerCase()} ${customerName}`.trim();
-        
+
         // Check if ALL search words are found in the searchable text (words don't need to be consecutive)
         return searchWords.every(word => searchableText.includes(word));
       });
@@ -324,15 +340,15 @@ export default function WarehouseCashBoxPage() {
       const cashIn = tx.direction === 'in' ? tx.cash_amount : 0;
       const cashOut = tx.direction === 'out' ? tx.cash_amount : 0;
       runningCashBalance = runningCashBalance + (cashIn - cashOut);
-      
+
       // Calculate check flow
       const checkIn = tx.direction === 'in' ? tx.check_amount : 0;
       const checkOut = tx.direction === 'out' ? tx.check_amount : 0;
       runningCheckBalance = runningCheckBalance + (checkIn - checkOut);
-      
+
       // Total balance (for backward compatibility)
       const totalBalance = runningCashBalance + runningCheckBalance;
-      
+
       return {
         ...tx,
         cash_balance: runningCashBalance,
@@ -347,7 +363,7 @@ export default function WarehouseCashBoxPage() {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
       if (dateA !== dateB) return dateB - dateA; // DESC - newest date first
-      
+
       // If same date, sort by created_at (newest first)
       if (a.created_at && b.created_at) {
         const timeA = new Date(a.created_at).getTime();
@@ -358,7 +374,7 @@ export default function WarehouseCashBoxPage() {
       } else if (!a.created_at && b.created_at) {
         return 1; // b has created_at, a doesn't - b comes first
       }
-      
+
       // Final fallback: sort by ID
       return b.id.localeCompare(a.id);
     });
@@ -377,7 +393,7 @@ export default function WarehouseCashBoxPage() {
         if (e.data?.title) document.title = e.data.title;
         try {
           printSlipIframeRef.current.contentWindow.print();
-        } catch (_) {}
+        } catch (_) { }
         setTimeout(() => { document.title = prevTitle; }, 500);
       }
     };
@@ -396,7 +412,7 @@ export default function WarehouseCashBoxPage() {
     // Calculate from all transactions, not filtered
     let runningCash = 0;
     let runningCheck = 0;
-    
+
     const allSorted = [...transactions].sort((a, b) => {
       if (a.created_at && b.created_at) {
         const timeA = new Date(a.created_at).getTime();
@@ -488,9 +504,9 @@ export default function WarehouseCashBoxPage() {
         await updateWarehousePaymentSettlementStatus(tx.payment_id, true);
       }
       // Update local state immediately (optimistic update)
-      setTransactions(prev => prev.map(t => 
-        (t.receipt_id === transactionId || t.payment_id === transactionId) 
-          ? { ...t, isSettled: true } 
+      setTransactions(prev => prev.map(t =>
+        (t.receipt_id === transactionId || t.payment_id === transactionId)
+          ? { ...t, isSettled: true }
           : t
       ));
     } catch (err: any) {
@@ -515,9 +531,9 @@ export default function WarehouseCashBoxPage() {
         await updateWarehousePaymentSettlementStatus(tx.payment_id, false);
       }
       // Update local state immediately (optimistic update)
-      setTransactions(prev => prev.map(t => 
-        (t.receipt_id === transactionId || t.payment_id === transactionId) 
-          ? { ...t, isSettled: false } 
+      setTransactions(prev => prev.map(t =>
+        (t.receipt_id === transactionId || t.payment_id === transactionId)
+          ? { ...t, isSettled: false }
           : t
       ));
     } catch (err: any) {
@@ -538,6 +554,76 @@ export default function WarehouseCashBoxPage() {
     }).format(amount);
   };
 
+  const handleShareToWhatsApp = (tx: TransactionWithBalance) => {
+    try {
+      const typeLabel = tx.type === 'receipt' ? 'سند قبض' : 'سند دفع';
+      const typeIcon = tx.type === 'receipt' ? '⬇️' : '⬆️';
+
+      const customerId = tx.customer_id || tx.related_party || '';
+      const customerName = customerId && customerMap.has(customerId)
+        ? customerMap.get(customerId) || customerId
+        : (tx.related_party || '—');
+
+      let phone = '';
+      if (customerId && customerPhoneMap.has(customerId)) {
+        phone = customerPhoneMap.get(customerId) || '';
+      }
+
+      const textParts = [
+        `*${typeIcon} ${typeLabel}*`,
+        `*رقم السند:* ${tx.receipt_id || tx.payment_id || tx.id || '—'}`,
+        `*التاريخ:* ${tx.date ? formatDate(tx.date) : '—'}`,
+        ` `,
+        `*البيان/الطرف:* ${customerName}`,
+      ];
+
+      textParts.push(` `);
+      textParts.push(`*المبالغ:*`);
+      if (tx.cash_amount > 0) textParts.push(`- *نقدي:* ${formatCurrency(tx.cash_amount)}`);
+      if (tx.check_amount > 0) textParts.push(`- *شيك:* ${formatCurrency(tx.check_amount)}`);
+
+      const totalAmount = tx.cash_amount + tx.check_amount;
+      textParts.push(`*الإجمالي:* ${formatCurrency(totalAmount)}`);
+
+      if (tx.type === 'receipt' && customerId && customerBalanceMap.has(customerId)) {
+        const balanceBefore = customerBalanceMap.get(customerId) || 0;
+        const balanceAfter = balanceBefore - totalAmount;
+        textParts.push(` `);
+        textParts.push(`*الرصيد قبل السند:* ${formatCurrency(balanceBefore)}`);
+        textParts.push(`*الرصيد بعد السند:* ${formatCurrency(balanceAfter)}`);
+      }
+
+      if (tx.notes && tx.notes.trim()) {
+        textParts.push(` `);
+        textParts.push(`*ملاحظات:* ${tx.notes}`);
+      }
+
+      const message = encodeURIComponent(textParts.join('\n'));
+
+      let whatsappUrl = `https://wa.me/?text=${message}`;
+
+      if (phone) {
+        // Clean phone number (remove spaces, dashes)
+        let cleanedPhone = phone.replace(/[^\d+]/g, '');
+        // If it starts with 05, replace 0 with +972
+        if (cleanedPhone.startsWith('05')) {
+          cleanedPhone = '972' + cleanedPhone.substring(1);
+        } else if (cleanedPhone.startsWith('+')) {
+          cleanedPhone = cleanedPhone.substring(1); // wa.me prefers without +
+        }
+
+        if (cleanedPhone) {
+          whatsappUrl = `https://wa.me/${cleanedPhone}?text=${message}`;
+        }
+      }
+
+      window.open(whatsappUrl, '_blank');
+    } catch (err: any) {
+      console.error('[WarehouseCashBox] Failed to prep WhatsApp message:', err);
+      alert('فشل تجهيز رسالة الواتساب: ' + (err?.message || ''));
+    }
+  };
+
   const handleReceiptSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -550,7 +636,7 @@ export default function WarehouseCashBoxPage() {
 
       const cashAmount = parseFloat(formData.cash_amount) || 0;
       const checkAmount = parseFloat(formData.check_amount) || 0;
-      
+
       if (cashAmount <= 0 && checkAmount <= 0) {
         throw new Error('يجب إدخال مبلغ نقدي أو شيك على الأقل');
       }
@@ -565,7 +651,7 @@ export default function WarehouseCashBoxPage() {
       };
 
       if (editingTransaction && editingTransaction.receipt_id) {
-        await updateWarehouseReceipt(editingTransaction.receipt_id, payload, admin?.username);
+        await updateWarehouseReceipt(editingTransaction.receipt_id!, payload, admin?.username);
         setToast({ message: 'تم تحديث سند القبض بنجاح', type: 'success' });
       } else {
         await createWarehouseReceipt(payload, admin?.username);
@@ -585,7 +671,7 @@ export default function WarehouseCashBoxPage() {
       setTimeout(() => {
         loadCashFlow();
       }, 100);
-      
+
       setTimeout(() => setToast({ message: '', type: null }), 3000);
     } catch (err: any) {
       console.error('[WarehouseCashBox] Failed to save receipt:', err);
@@ -607,7 +693,7 @@ export default function WarehouseCashBoxPage() {
 
       const cashAmount = parseFloat(formData.cash_amount) || 0;
       const checkAmount = parseFloat(formData.check_amount) || 0;
-      
+
       if (cashAmount <= 0 && checkAmount <= 0) {
         throw new Error('يجب إدخال مبلغ نقدي أو شيك على الأقل');
       }
@@ -622,7 +708,7 @@ export default function WarehouseCashBoxPage() {
       };
 
       if (editingTransaction && editingTransaction.payment_id) {
-        await updateWarehousePayment(editingTransaction.payment_id, payload, admin?.username);
+        await updateWarehousePayment(editingTransaction.payment_id!, payload, admin?.username);
         setToast({ message: 'تم تحديث سند الدفع بنجاح', type: 'success' });
       } else {
         await createWarehousePayment(payload, admin?.username);
@@ -642,7 +728,7 @@ export default function WarehouseCashBoxPage() {
       setTimeout(() => {
         loadCashFlow();
       }, 100);
-      
+
       setTimeout(() => setToast({ message: '', type: null }), 3000);
     } catch (err: any) {
       console.error('[WarehouseCashBox] Failed to save payment:', err);
@@ -820,11 +906,10 @@ export default function WarehouseCashBoxPage() {
                             </span>
                           )}
                           <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-cairo ${
-                              tx.isSettled
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-cairo ${tx.isSettled
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                              }`}
                           >
                             {tx.isSettled ? 'مرحلة' : 'غير مرحلة'}
                           </span>
@@ -954,6 +1039,13 @@ export default function WarehouseCashBoxPage() {
                         <Printer size={18} />
                       </button>
                       <button
+                        onClick={() => handleShareToWhatsApp(tx)}
+                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        title="مشاركة عبر واتساب"
+                      >
+                        <MessageSquare size={18} />
+                      </button>
+                      <button
                         onClick={async () => {
                           if (tx.isSettled) {
                             alert('لا يمكن تعديل سند مرحلة');
@@ -991,11 +1083,10 @@ export default function WarehouseCashBoxPage() {
                           }
                         }}
                         disabled={tx.isSettled}
-                        className={`p-2 rounded-lg transition-colors ${
-                          tx.isSettled
-                            ? 'text-gray-400 cursor-not-allowed opacity-50'
-                            : 'text-gray-600 hover:bg-gray-100'
-                        }`}
+                        className={`p-2 rounded-lg transition-colors ${tx.isSettled
+                          ? 'text-gray-400 cursor-not-allowed opacity-50'
+                          : 'text-gray-600 hover:bg-gray-100'
+                          }`}
                         title={tx.isSettled ? 'لا يمكن تعديل سند مرحلة' : 'تعديل'}
                       >
                         <Edit size={18} />
@@ -1045,299 +1136,304 @@ export default function WarehouseCashBoxPage() {
             <div className="hidden md:block bg-white rounded-lg border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
-                      رقم السند
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
-                      التاريخ
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
-                      النوع
-                    </th>
-                    <th colSpan={2} className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
-                      اسم الزبون
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
-                      المبالغ
-                    </th>
-                    {canViewBalance && (
-                      <>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
-                          الرصيد النقدي
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
-                          رصيد الشيكات
-                        </th>
-                      </>
-                    )}
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
-                      الإجراءات
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {paginatedTransactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-gray-200 transition-colors">
-                      <td className="px-4 py-3 text-right">
-                        <div className="font-medium text-gray-900">
-                          {tx.receipt_id || tx.payment_id || tx.id || '—'}
-                        </div>
-                        {(() => {
-                          const userId = tx.user_id || tx.created_by || '';
-                          if (userId && userMap.has(userId)) {
-                            const username = userMap.get(userId);
-                            return (
-                              <div className="text-xs text-gray-500 mt-1">
-                                {username}
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="text-gray-600">
-                          <div>{formatDate(tx.date)}</div>
-                        {tx.created_at && (
-                            <div className="text-xs text-gray-500 mt-0.5">{formatTime(tx.created_at)}</div>
-                        )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex flex-col gap-1.5 items-end">
-                          {tx.direction === 'in' ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              <ArrowUp size={12} />
-                              قبض
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                              <ArrowDown size={12} />
-                              صرف
-                            </span>
-                          )}
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${
-                              tx.isSettled
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                        رقم السند
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                        التاريخ
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                        النوع
+                      </th>
+                      <th colSpan={2} className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                        اسم الزبون
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                        المبالغ
+                      </th>
+                      {canViewBalance && (
+                        <>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                            الرصيد النقدي
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                            رصيد الشيكات
+                          </th>
+                        </>
+                      )}
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                        الإجراءات
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {paginatedTransactions.map((tx) => (
+                      <tr key={tx.id} className="hover:bg-gray-200 transition-colors">
+                        <td className="px-4 py-3 text-right">
+                          <div className="font-medium text-gray-900">
+                            {tx.receipt_id || tx.payment_id || tx.id || '—'}
+                          </div>
+                          {(() => {
+                            const userId = tx.user_id || tx.created_by || '';
+                            if (userId && userMap.has(userId)) {
+                              const username = userMap.get(userId);
+                              return (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {username}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="text-gray-600">
+                            <div>{formatDate(tx.date)}</div>
+                            {tx.created_at && (
+                              <div className="text-xs text-gray-500 mt-0.5">{formatTime(tx.created_at)}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex flex-col gap-1.5 items-end">
+                            {tx.direction === 'in' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <ArrowUp size={12} />
+                                قبض
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                <ArrowDown size={12} />
+                                صرف
+                              </span>
+                            )}
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${tx.isSettled
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-gray-100 text-gray-800'
-                            }`}
-                          >
-                            {tx.isSettled ? 'مرحلة' : 'غير مرحلة'}
-                          </span>
-                        </div>
-                      </td>
-                      <td colSpan={2} className="px-4 py-3 text-right">
-                        <div className="text-gray-900">
-                          {(() => {
-                            // Try to get customer name from map
-                            const customerId = tx.customer_id || tx.related_party || '';
-                            const customerName = customerId && customerMap.has(customerId)
-                              ? customerMap.get(customerId) || customerId
-                              : (tx.related_party || '—');
-                            const shamelNo = customerId && customerShamelMap.has(customerId)
-                              ? customerShamelMap.get(customerId)
-                              : null;
-                            
-                            return (
-                              <div className="leading-tight">
-                                {customerId ? (
-                                  <button
-                                    onClick={(e) => {
-                                      if (e.ctrlKey || e.metaKey || e.shiftKey) {
-                                        window.open(`/admin/customers/${customerId}`, '_blank', 'noopener,noreferrer');
-                                        return;
-                                      }
-                                      router.push(`/admin/customers/${customerId}`);
-                                    }}
-                                    onMouseDown={(e) => {
-                                      if (e.button === 1) {
-                                        e.preventDefault();
-                                        window.open(`/admin/customers/${customerId}`, '_blank', 'noopener,noreferrer');
-                                      }
-                                    }}
-                                    className="text-blue-600 hover:text-blue-800 hover:underline transition-colors text-right font-medium"
-                                    title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
-                                  >
-                                    {customerName}
-                                  </button>
-                                ) : (
-                                  <div>{customerName}</div>
+                                }`}
+                            >
+                              {tx.isSettled ? 'مرحلة' : 'غير مرحلة'}
+                            </span>
+                          </div>
+                        </td>
+                        <td colSpan={2} className="px-4 py-3 text-right">
+                          <div className="text-gray-900">
+                            {(() => {
+                              // Try to get customer name from map
+                              const customerId = tx.customer_id || tx.related_party || '';
+                              const customerName = customerId && customerMap.has(customerId)
+                                ? customerMap.get(customerId) || customerId
+                                : (tx.related_party || '—');
+                              const shamelNo = customerId && customerShamelMap.has(customerId)
+                                ? customerShamelMap.get(customerId)
+                                : null;
+
+                              return (
+                                <div className="leading-tight">
+                                  {customerId ? (
+                                    <button
+                                      onClick={(e) => {
+                                        if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                                          window.open(`/admin/customers/${customerId}`, '_blank', 'noopener,noreferrer');
+                                          return;
+                                        }
+                                        router.push(`/admin/customers/${customerId}`);
+                                      }}
+                                      onMouseDown={(e) => {
+                                        if (e.button === 1) {
+                                          e.preventDefault();
+                                          window.open(`/admin/customers/${customerId}`, '_blank', 'noopener,noreferrer');
+                                        }
+                                      }}
+                                      className="text-blue-600 hover:text-blue-800 hover:underline transition-colors text-right font-medium"
+                                      title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
+                                    >
+                                      {customerName}
+                                    </button>
+                                  ) : (
+                                    <div>{customerName}</div>
+                                  )}
+                                  {shamelNo && (
+                                    <div className="text-[10px] text-gray-400 mt-0.5 leading-none">
+                                      {shamelNo}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="space-y-1">
+                            {tx.direction === 'in' ? (
+                              <>
+                                {tx.cash_amount > 0 && (
+                                  <div className="text-sm font-semibold text-green-700">
+                                    نقدي: {formatCurrency(tx.cash_amount)}
+                                  </div>
                                 )}
-                                {shamelNo && (
-                                  <div className="text-[10px] text-gray-400 mt-0.5 leading-none">
-                                    {shamelNo}
+                                {tx.check_amount > 0 && (
+                                  <div className="text-sm font-semibold text-green-700">
+                                    شيك: {formatCurrency(tx.check_amount)}
+                                  </div>
+                                )}
+                                {tx.cash_amount === 0 && tx.check_amount === 0 && <span className="text-gray-400">—</span>}
+                              </>
+                            ) : (
+                              <>
+                                {tx.cash_amount > 0 && (
+                                  <div className="text-sm font-semibold text-red-700">
+                                    نقدي: {formatCurrency(tx.cash_amount)}
+                                  </div>
+                                )}
+                                {tx.check_amount > 0 && (
+                                  <div className="text-sm font-semibold text-red-700">
+                                    شيك: {formatCurrency(tx.check_amount)}
+                                  </div>
+                                )}
+                                {tx.cash_amount === 0 && tx.check_amount === 0 && <span className="text-gray-400">—</span>}
+                              </>
+                            )}
+                          </div>
+                        </td>
+                        {canViewBalance ? (
+                          <>
+                            <td className="px-4 py-3 text-right align-top">
+                              <div className={`font-semibold ${tx.cash_balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
+                                {formatCurrency(tx.cash_balance)}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right align-top">
+                              <div className={`font-semibold ${tx.check_balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
+                                {formatCurrency(tx.check_balance)}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right align-top">
+                              <div className="flex flex-col items-end gap-2">
+                                <div className="flex items-center gap-2 justify-end">
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        if (isMobilePrint()) {
+                                          if (tx.receipt_id) window.open(`/admin/warehouse-finance/receipts/print/${tx.receipt_id}`, `print-warehouse-receipt-${tx.receipt_id}`, 'noopener,noreferrer');
+                                          else if (tx.payment_id) window.open(`/admin/warehouse-finance/payments/print/${tx.payment_id}`, `print-warehouse-payment-${tx.payment_id}`, 'noopener,noreferrer');
+                                          return;
+                                        }
+                                        if (tx.receipt_id) setPrintOverlaySlip({ type: 'receipt', id: tx.receipt_id });
+                                        else if (tx.payment_id) setPrintOverlaySlip({ type: 'payment', id: tx.payment_id });
+                                      }}
+                                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                      title="طباعة"
+                                    >
+                                      <Printer size={18} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleShareToWhatsApp(tx)}
+                                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                      title="مشاركة عبر واتساب"
+                                    >
+                                      <MessageSquare size={18} />
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        if (tx.isSettled) {
+                                          alert('لا يمكن تعديل سند مرحلة');
+                                          return;
+                                        }
+                                        try {
+                                          let transactionData: any = null;
+                                          if (tx.receipt_id) {
+                                            transactionData = await getWarehouseReceipt(tx.receipt_id);
+                                            setFormData({
+                                              customerID: transactionData.customer_id || '',
+                                              date: transactionData.date ? (typeof transactionData.date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(transactionData.date) ? transactionData.date.split('T')[0] : new Date(transactionData.date).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
+                                              cash_amount: (transactionData.cash_amount || 0).toString(),
+                                              check_amount: (transactionData.check_amount || 0).toString(),
+                                              notes: transactionData.notes || '',
+                                            });
+                                            setEditingTransaction(tx);
+                                            setReceiptModalOpen(true);
+                                          } else if (tx.payment_id) {
+                                            transactionData = await getWarehousePayment(tx.payment_id);
+                                            setFormData({
+                                              customerID: transactionData.customer_id || '',
+                                              date: transactionData.date ? (typeof transactionData.date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(transactionData.date) ? transactionData.date.split('T')[0] : new Date(transactionData.date).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
+                                              cash_amount: (transactionData.cash_amount || 0).toString(),
+                                              check_amount: (transactionData.check_amount || 0).toString(),
+                                              notes: transactionData.notes || '',
+                                            });
+                                            setEditingTransaction(tx);
+                                            setPaymentModalOpen(true);
+                                          }
+                                          setFormError(null);
+                                        } catch (err: any) {
+                                          console.error('[WarehouseCashBox] Failed to load transaction:', err);
+                                          alert(`فشل تحميل بيانات السند: ${err?.message || 'خطأ غير معروف'}`);
+                                        }
+                                      }}
+                                      disabled={tx.isSettled}
+                                      className={`p-2 rounded-lg transition-colors ${tx.isSettled
+                                        ? 'text-gray-400 cursor-not-allowed opacity-50'
+                                        : 'text-gray-600 hover:bg-gray-100'
+                                        }`}
+                                      title={tx.isSettled ? 'لا يمكن تعديل سند مرحلة' : 'تعديل'}
+                                    >
+                                      <Edit size={18} />
+                                    </button>
+                                    {canAccountant && !tx.isSettled && (
+                                      <button
+                                        onClick={() => handleMarkAsSettled(tx)}
+                                        disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
+                                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="تغيير إلى مرحلة"
+                                      >
+                                        {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
+                                          <Loader2 size={18} className="animate-spin" />
+                                        ) : (
+                                          <CheckCircle size={18} />
+                                        )}
+                                      </button>
+                                    )}
+                                    {canAccountant && tx.isSettled && (
+                                      <button
+                                        onClick={() => handleMarkAsUnsettled(tx)}
+                                        disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
+                                        className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="إعادة إلى غير مرحلة"
+                                      >
+                                        {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
+                                          <Loader2 size={18} className="animate-spin" />
+                                        ) : (
+                                          <XCircle size={18} />
+                                        )}
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => handleDelete(tx)}
+                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="حذف"
+                                    >
+                                      <Trash2 size={18} />
+                                    </button>
+                                  </>
+                                </div>
+                                {tx.notes && tx.notes.trim() && (
+                                  <div className="text-xs text-gray-600 max-w-full leading-tight mt-1">
+                                    {tx.notes}
                                   </div>
                                 )}
                               </div>
-                            );
-                          })()}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="space-y-1">
-                          {tx.direction === 'in' ? (
-                            <>
-                              {tx.cash_amount > 0 && (
-                                <div className="text-sm font-semibold text-green-700">
-                                  نقدي: {formatCurrency(tx.cash_amount)}
-                                </div>
-                              )}
-                              {tx.check_amount > 0 && (
-                                <div className="text-sm font-semibold text-green-700">
-                                  شيك: {formatCurrency(tx.check_amount)}
-                                </div>
-                              )}
-                              {tx.cash_amount === 0 && tx.check_amount === 0 && <span className="text-gray-400">—</span>}
-                            </>
-                          ) : (
-                            <>
-                              {tx.cash_amount > 0 && (
-                                <div className="text-sm font-semibold text-red-700">
-                                  نقدي: {formatCurrency(tx.cash_amount)}
-                                </div>
-                              )}
-                              {tx.check_amount > 0 && (
-                                <div className="text-sm font-semibold text-red-700">
-                                  شيك: {formatCurrency(tx.check_amount)}
-                                </div>
-                              )}
-                              {tx.cash_amount === 0 && tx.check_amount === 0 && <span className="text-gray-400">—</span>}
-                            </>
-                          )}
-                        </div>
-                      </td>
-                      {canViewBalance ? (
-                        <>
-                          <td className="px-4 py-3 text-right align-top">
-                            <div className={`font-semibold ${tx.cash_balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
-                              {formatCurrency(tx.cash_balance)}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-right align-top">
-                            <div className={`font-semibold ${tx.check_balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
-                              {formatCurrency(tx.check_balance)}
-                            </div>
-                          </td>
+                            </td>
+                          </>
+                        ) : (
                           <td className="px-4 py-3 text-right align-top">
                             <div className="flex flex-col items-end gap-2">
                               <div className="flex items-center gap-2 justify-end">
-                          <>
-                            <button
-                                onClick={() => {
-                                  if (isMobilePrint()) {
-                                    if (tx.receipt_id) window.open(`/admin/warehouse-finance/receipts/print/${tx.receipt_id}`, `print-warehouse-receipt-${tx.receipt_id}`, 'noopener,noreferrer');
-                                    else if (tx.payment_id) window.open(`/admin/warehouse-finance/payments/print/${tx.payment_id}`, `print-warehouse-payment-${tx.payment_id}`, 'noopener,noreferrer');
-                                    return;
-                                  }
-                                  if (tx.receipt_id) setPrintOverlaySlip({ type: 'receipt', id: tx.receipt_id });
-                                  else if (tx.payment_id) setPrintOverlaySlip({ type: 'payment', id: tx.payment_id });
-                                }}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="طباعة"
-                              >
-                                <Printer size={18} />
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  if (tx.isSettled) {
-                                    alert('لا يمكن تعديل سند مرحلة');
-                                    return;
-                                  }
-                                  try {
-                                    let transactionData: any = null;
-                                    if (tx.receipt_id) {
-                                      transactionData = await getWarehouseReceipt(tx.receipt_id);
-                                      setFormData({
-                                        customerID: transactionData.customer_id || '',
-                                        date: transactionData.date ? (typeof transactionData.date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(transactionData.date) ? transactionData.date.split('T')[0] : new Date(transactionData.date).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
-                                        cash_amount: (transactionData.cash_amount || 0).toString(),
-                                        check_amount: (transactionData.check_amount || 0).toString(),
-                                        notes: transactionData.notes || '',
-                                      });
-                                      setEditingTransaction(tx);
-                                      setReceiptModalOpen(true);
-                                    } else if (tx.payment_id) {
-                                      transactionData = await getWarehousePayment(tx.payment_id);
-                                      setFormData({
-                                        customerID: transactionData.customer_id || '',
-                                        date: transactionData.date ? (typeof transactionData.date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(transactionData.date) ? transactionData.date.split('T')[0] : new Date(transactionData.date).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
-                                        cash_amount: (transactionData.cash_amount || 0).toString(),
-                                        check_amount: (transactionData.check_amount || 0).toString(),
-                                        notes: transactionData.notes || '',
-                                      });
-                                      setEditingTransaction(tx);
-                                      setPaymentModalOpen(true);
-                                    }
-                                    setFormError(null);
-                                  } catch (err: any) {
-                                    console.error('[WarehouseCashBox] Failed to load transaction:', err);
-                                    alert(`فشل تحميل بيانات السند: ${err?.message || 'خطأ غير معروف'}`);
-                                  }
-                                }}
-                                disabled={tx.isSettled}
-                                className={`p-2 rounded-lg transition-colors ${
-                                  tx.isSettled
-                                    ? 'text-gray-400 cursor-not-allowed opacity-50'
-                                    : 'text-gray-600 hover:bg-gray-100'
-                                }`}
-                                title={tx.isSettled ? 'لا يمكن تعديل سند مرحلة' : 'تعديل'}
-                              >
-                                <Edit size={18} />
-                              </button>
-                              {canAccountant && !tx.isSettled && (
-                                <button
-                                  onClick={() => handleMarkAsSettled(tx)}
-                                  disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
-                                  className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  title="تغيير إلى مرحلة"
-                                >
-                                  {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
-                                    <Loader2 size={18} className="animate-spin" />
-                                  ) : (
-                                    <CheckCircle size={18} />
-                                  )}
-                                </button>
-                              )}
-                              {canAccountant && tx.isSettled && (
-                                <button
-                                  onClick={() => handleMarkAsUnsettled(tx)}
-                                  disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
-                                  className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  title="إعادة إلى غير مرحلة"
-                                >
-                                  {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
-                                    <Loader2 size={18} className="animate-spin" />
-                                  ) : (
-                                    <XCircle size={18} />
-                                  )}
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleDelete(tx)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="حذف"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                              </>
-                              </div>
-                              {tx.notes && tx.notes.trim() && (
-                                <div className="text-xs text-gray-600 max-w-full leading-tight mt-1">
-                                  {tx.notes}
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        </>
-                      ) : (
-                        <td className="px-4 py-3 text-right align-top">
-                          <div className="flex flex-col items-end gap-2">
-                            <div className="flex items-center gap-2 justify-end">
-                              <>
-                                <button
+                                <>
+                                  <button
                                     onClick={() => {
                                       if (isMobilePrint()) {
                                         if (tx.receipt_id) window.open(`/admin/warehouse-finance/receipts/print/${tx.receipt_id}`, `print-warehouse-receipt-${tx.receipt_id}`, 'noopener,noreferrer');
@@ -1390,11 +1486,10 @@ export default function WarehouseCashBoxPage() {
                                       }
                                     }}
                                     disabled={tx.isSettled}
-                                    className={`p-2 rounded-lg transition-colors ${
-                                      tx.isSettled
-                                        ? 'text-gray-400 cursor-not-allowed opacity-50'
-                                        : 'text-gray-600 hover:bg-gray-100'
-                                    }`}
+                                    className={`p-2 rounded-lg transition-colors ${tx.isSettled
+                                      ? 'text-gray-400 cursor-not-allowed opacity-50'
+                                      : 'text-gray-600 hover:bg-gray-100'
+                                      }`}
                                     title={tx.isSettled ? 'لا يمكن تعديل سند مرحلة' : 'تعديل'}
                                   >
                                     <Edit size={18} />
@@ -1434,81 +1529,80 @@ export default function WarehouseCashBoxPage() {
                                   >
                                     <Trash2 size={18} />
                                   </button>
-                              </>
-                            </div>
-                            {tx.notes && tx.notes.trim() && (
-                              <div className="text-xs text-gray-600 max-w-full leading-tight mt-1">
-                                {tx.notes}
+                                </>
                               </div>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="bg-gray-50 border-t border-gray-200 px-3 sm:px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="text-xs sm:text-sm text-gray-700 font-cairo">
-                  عرض <span className="font-semibold">{startIndex + 1}</span> إلى{' '}
-                  <span className="font-semibold">
-                    {Math.min(endIndex, transactionsWithBalance.length)}
-                  </span>{' '}
-                  من <span className="font-semibold">{transactionsWithBalance.length}</span> سند
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="الصفحة السابقة"
-                  >
-                    <ChevronRight size={18} className="sm:w-5 sm:h-5 text-gray-600" />
-                  </button>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum: number;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`px-2 sm:px-3 py-1 rounded-lg transition-colors text-xs sm:text-sm font-cairo ${
-                            currentPage === pageNum
+                              {tx.notes && tx.notes.trim() && (
+                                <div className="text-xs text-gray-600 max-w-full leading-tight mt-1">
+                                  {tx.notes}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="bg-gray-50 border-t border-gray-200 px-3 sm:px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="text-xs sm:text-sm text-gray-700 font-cairo">
+                    عرض <span className="font-semibold">{startIndex + 1}</span> إلى{' '}
+                    <span className="font-semibold">
+                      {Math.min(endIndex, transactionsWithBalance.length)}
+                    </span>{' '}
+                    من <span className="font-semibold">{transactionsWithBalance.length}</span> سند
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="الصفحة السابقة"
+                    >
+                      <ChevronRight size={18} className="sm:w-5 sm:h-5 text-gray-600" />
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum: number;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`px-2 sm:px-3 py-1 rounded-lg transition-colors text-xs sm:text-sm font-cairo ${currentPage === pageNum
                               ? 'bg-gray-900 text-white'
                               : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
+                              }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="الصفحة التالية"
+                    >
+                      <ChevronLeft size={18} className="sm:w-5 sm:h-5 text-gray-600" />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="الصفحة التالية"
-                  >
-                    <ChevronLeft size={18} className="sm:w-5 sm:h-5 text-gray-600" />
-                  </button>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
           </>
         )}
 

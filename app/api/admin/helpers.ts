@@ -23,6 +23,8 @@ export const DEFAULT_PERMISSIONS = {
   viewNotifications: false,
   refreshProductsCache: false,
   refreshCustomersCache: false,
+  accessPromissoryNotes: false,
+  accessLegalCases: false,
 };
 
 export type Permissions = typeof DEFAULT_PERMISSIONS;
