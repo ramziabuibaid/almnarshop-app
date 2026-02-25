@@ -44,7 +44,7 @@ export default function NewMaintenancePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
-  
+
   // Determine default location and status based on admin's work location
   const getDefaultLocationAndStatus = () => {
     const workLocation = admin?.work_location || 'المحل';
@@ -61,7 +61,7 @@ export default function NewMaintenancePage() {
   };
 
   const defaults = getDefaultLocationAndStatus();
-  
+
   const [formData, setFormData] = useState({
     customerID: '',
     itemName: '',
@@ -74,7 +74,7 @@ export default function NewMaintenancePage() {
     imageOfProblem: '',
     imageOfWarranty: '',
     serialNo: '',
-    underWarranty: 'NO' as 'YES' | 'NO',
+    underWarranty: 'YES' as 'YES' | 'NO',
     status: defaults.status,
   });
 
@@ -111,12 +111,12 @@ export default function NewMaintenancePage() {
     // Reload customers list to get the newly added customer
     const updatedCustomers = await getAllCustomers();
     setCustomers(updatedCustomers);
-    
+
     // If customer ID is provided, select it automatically
     if (newCustomerId) {
       setFormData((prev) => ({ ...prev, customerID: newCustomerId }));
     }
-    
+
     setIsCustomerModalOpen(false);
   };
 
@@ -129,23 +129,23 @@ export default function NewMaintenancePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validation
     if (!formData.customerID) {
       setError('⚠️ يجب اختيار العميل');
       return;
     }
-    
+
     if (!formData.itemName.trim()) {
       setError('⚠️ يجب إدخال اسم القطعة');
       return;
     }
-    
+
     if (formData.itemName.trim().length < 3) {
       setError('⚠️ اسم القطعة يجب أن يكون على الأقل 3 أحرف');
       return;
     }
-    
+
     if (!formData.dateOfReceive) {
       setError('⚠️ يجب تحديد تاريخ الاستقبال');
       return;
@@ -262,7 +262,7 @@ export default function NewMaintenancePage() {
           {/* Item Information */}
           <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200 space-y-3 sm:space-y-4">
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 border-b border-gray-300 pb-2 mb-3 sm:mb-4 font-cairo">معلومات القطعة</h2>
-            
+
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-2 font-cairo">
                 اسم القطعة <span className="text-red-500">*</span>

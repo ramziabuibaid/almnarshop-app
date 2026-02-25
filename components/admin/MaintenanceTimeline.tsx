@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getMaintenanceHistory, deleteMaintenanceHistory, MaintenanceHistory } from '@/lib/api';
-import { Loader2, Clock, Trash2 } from 'lucide-react';
+import { Loader2, Clock, Trash2, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 
@@ -152,7 +152,7 @@ export default function MaintenanceTimeline({ maintNo }: MaintenanceTimelineProp
           {index < history.length - 1 && (
             <div className="absolute right-5 top-8 bottom-0 w-0.5 bg-gray-200" />
           )}
-          
+
           {/* Timeline dot */}
           <div className="relative z-10 flex-shrink-0">
             <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center border-4 border-white shadow-sm">
@@ -171,8 +171,8 @@ export default function MaintenanceTimeline({ maintNo }: MaintenanceTimelineProp
                   <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
                     {entry.status_from || '—'}
                   </span>
-                  <span className="text-gray-400">→</span>
-                  <span className="text-sm text-gray-900 bg-blue-100 px-2 py-1 rounded font-medium">
+                  <ArrowLeft size={16} className="text-blue-500" />
+                  <span className="text-sm text-blue-800 bg-blue-100 px-2 py-1 rounded font-bold">
                     {entry.status_to}
                   </span>
                 </div>
