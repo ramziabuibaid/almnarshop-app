@@ -247,30 +247,49 @@ export default function PublicMaintenanceView() {
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                         <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2 border-b pb-3">
                             <div className="bg-orange-100 p-2 rounded-lg"><LucideFileText className="w-5 h-5 text-orange-700" /></div>
-                            سجل المتابعة
+                            سجل التتبع والمكان
                         </h2>
 
                         <div className="relative border-r-2 border-gray-200 pr-5 ml-2 space-y-6">
-                            {history.map((record, index) => (
-                                <div key={record.id || index} className="relative">
-                                    {/* Timeline dot */}
-                                    <div className={`absolute -right-[27px] w-4 h-4 rounded-full border-2 border-white 
-                    ${index === 0 ? 'bg-blue-600' : 'bg-gray-400'}`}>
-                                    </div>
+                            {history.map((record, index) => {
+                                // Maps technical status to user-friendly location status
+                                const getLocationFromStatus = (status?: string | null) => {
+                                    if (!status) return 'جاري العمل عليها';
+                                    if (status.includes('المحل')) return 'في المعرض (المحل)';
+                                    if (status.includes('المخزن')) return 'في مستودع الشركة';
+                                    if (status.includes('الشركة')) return 'لدى مركز صيانة الوكيل المختص';
+                                    if (status.includes('سلمت للزبون')) return 'تم التسليم للزبون';
+                                    if (status === 'قيد الانتظار') return 'في المعرض (بانتظار الفحص)';
+                                    if (status === 'ملغى') return 'تم الإلغاء';
+                                    return 'جاري العمل عليها';
+                                };
 
-                                    <div className={`${index === 0 ? 'bg-blue-50/50' : 'bg-gray-50'} rounded-xl p-4 border ${index === 0 ? 'border-blue-100' : 'border-gray-100'}`}>
-                                        <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-2 gap-2">
-                                            <span className="text-sm font-bold text-gray-500 flex flex-col" dir="ltr">
-                                                {formatDateTime(record.created_at)}
-                                            </span>
+                                const locationLabel = getLocationFromStatus(record.Status);
+
+                                return (
+                                    <div key={record.id || index} className="relative">
+                                        {/* Timeline dot */}
+                                        <div className={`absolute -right-[27px] w-4 h-4 rounded-full border-2 border-white 
+                        ${index === 0 ? 'bg-blue-600' : 'bg-gray-400'}`}>
                                         </div>
 
-                                        {record.Notes && (
-                                            <p className="text-gray-700 mt-2 text-sm leading-relaxed whitespace-pre-wrap">{record.Notes}</p>
-                                        )}
+                                        <div className={`${index === 0 ? 'bg-blue-50/50' : 'bg-gray-50'} rounded-xl p-4 border ${index === 0 ? 'border-blue-100' : 'border-gray-100'}`}>
+                                            <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-2 gap-2">
+                                                <span className="font-bold text-gray-800 text-lg">
+                                                    {locationLabel}
+                                                </span>
+                                                <span className="text-sm font-bold text-gray-500 flex flex-col" dir="ltr">
+                                                    {formatDateTime(record.created_at)}
+                                                </span>
+                                            </div>
+
+                                            {record.Notes && record.Notes.trim() !== '' && (
+                                                <p className="text-gray-700 mt-2 text-sm leading-relaxed whitespace-pre-wrap border-t border-gray-200 pt-2">{record.Notes}</p>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}

@@ -17,7 +17,8 @@ import {
     ChevronRight,
     Camera,
     RotateCcw,
-    X
+    X,
+    Printer
 } from 'lucide-react';
 import { normalizeBarcodeInput, getLatinCharFromKeyEvent, SCANNER_KEY } from '@/lib/barcodeScannerLatin';
 import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
@@ -90,6 +91,7 @@ type ScanLog = {
     message: string;
     itemName?: string;
     customerName?: string;
+    companyName?: string;
 };
 
 export default function MaintenanceScannerPage() {
@@ -221,7 +223,8 @@ export default function MaintenanceScannerPage() {
                 success: true,
                 message: `تم النقل بنجاح إلى: ${computedNewStatus}`,
                 itemName: record.ItemName,
-                customerName: record.CustomerName
+                customerName: record.CustomerName,
+                companyName: record.Company
             });
 
             // Play success beep
@@ -742,12 +745,23 @@ export default function MaintenanceScannerPage() {
                                 <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm min-h-[300px]">
                                     <h3 className="font-bold text-gray-800 mb-4 flex items-center justify-between border-b pb-2">
                                         <span>سجل المسح الحديث ({logs.length})</span>
-                                        <button
-                                            onClick={() => setLogs([])}
-                                            className="text-sm text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50"
-                                        >
-                                            مسح السجل
-                                        </button>
+                                        <div className="flex items-center gap-3">
+                                            {logs.length > 0 && activeTransitionId && (
+                                                <button
+                                                    onClick={() => window.print()}
+                                                    className="flex items-center gap-1 text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 font-bold px-3 py-1.5 rounded transition-colors"
+                                                >
+                                                    <Printer size={16} />
+                                                    طباعة محضر التسليم
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => setLogs([])}
+                                                className="text-sm text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50"
+                                            >
+                                                مسح السجل
+                                            </button>
+                                        </div>
                                     </h3>
 
                                     {logs.length === 0 ? (
@@ -905,6 +919,74 @@ export default function MaintenanceScannerPage() {
                         </div>
                     </div>
                 )}
+                {/* Handover Print Report Overlay */}
+                <div className="hidden print:block absolute top-0 left-0 w-full bg-white z-[99999] min-h-screen p-8 text-black" dir="rtl">
+                    {/* Styles specifically for the print table to avoid page breaks in bad spots */}
+                    <style dangerouslySetInnerHTML={{
+                        __html: `
+                        @media print {
+                            body * { visibility: hidden; }
+                            .print\\:block, .print\\:block * { visibility: visible; }
+                            .print\\:block { position: absolute; left: 0; top: 0; margin: 0; padding: 15px; width: 100%; }
+                            table { page-break-inside: auto; width: 100%; border-collapse: collapse; }
+                            tr { page-break-inside: avoid; page-break-after: auto; border-bottom: 1px solid #d1d5db; }
+                            th { background-color: #f3f4f6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 10px; text-align: right; }
+                            td { padding: 8px 10px; }
+                        }
+                    `}} />
+
+                    <div className="flex justify-between items-start border-b-2 border-black pb-4 mb-6">
+                        <div>
+                            <h1 className="text-2xl font-bold mb-1">محضر تسليم بضاعة</h1>
+                            <p className="text-gray-600 text-sm">شركة المنار للأجهزة الكهربائية - جنين، شارع الناصرة</p>
+                        </div>
+                        <div className="text-left bg-gray-100 p-3 rounded-lg border border-gray-300">
+                            <p className="font-bold text-lg mb-1">{activeTransition?.label || 'تقرير تسليم'}</p>
+                            <p className="text-sm text-gray-700" dir="ltr">{new Date().toLocaleDateString('en-US')} {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                    </div>
+
+                    <table className="w-full text-right mb-12 text-sm">
+                        <thead>
+                            <tr className="border-y-2 border-black">
+                                <th className="font-bold">#</th>
+                                <th className="font-bold">رقم الصيانة</th>
+                                <th className="font-bold">الصنف / الجهاز</th>
+                                <th className="font-bold">اسم الزبون</th>
+                                <th className="font-bold">اسم الشركة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {logs.filter(l => l.success).slice().reverse().map((log, index) => (
+                                <tr key={log.id}>
+                                    <td className="w-12">{index + 1}</td>
+                                    <td className="font-bold w-32 tracking-wider">{log.maintNo}</td>
+                                    <td>{log.itemName || '—'}</td>
+                                    <td>{log.customerName || '—'}</td>
+                                    <td>{log.companyName || '—'}</td>
+                                </tr>
+                            ))}
+                            {logs.filter(l => l.success).length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="text-center py-8 text-gray-500 italic">لا يوجد عناصر ناجحة في هذا المحضر.</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+
+                    {/* Signatures */}
+                    <div className="flex justify-between items-end mt-16 pt-8 break-inside-avoid">
+                        <div className="text-center">
+                            <p className="font-bold mb-8">اسم وتوقيع المستلم</p>
+                            <p className="border-t border-black pt-2 w-48 mx-auto">...................................</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="font-bold mb-8">اسم وتوقيع المسلّم</p>
+                            <p className="border-t border-black pt-2 w-48 mx-auto font-bold text-gray-800">{admin?.username || 'مُدخل النظام'}</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </AdminLayout>
     );
