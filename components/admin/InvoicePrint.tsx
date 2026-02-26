@@ -19,6 +19,8 @@ interface InvoicePrintProps {
   discount: number;
   netTotal: number;
   notes?: string;
+  paymentMethod?: string;
+  customerName?: string;
 }
 
 export default function InvoicePrint({
@@ -29,6 +31,8 @@ export default function InvoicePrint({
   discount,
   netTotal,
   notes,
+  paymentMethod,
+  customerName,
 }: InvoicePrintProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -140,257 +144,303 @@ export default function InvoicePrint({
 
         /* CSS Variables for dynamic sizing */
         .invoice-print {
-          --border: #222;
-          --pad: 5px;
-          --gap: 6px;
-          --fs: 12px;      /* نص أساسي مقروء لـ A6 */
-          --fs-sm: 11px;   /* ميتا */
-          --fs-lg: 14px;   /* الإجماليات */
+          --primary-color: #1e293b;
+          --secondary-color: #64748b;
+          --border-color: #e2e8f0;
+          --bg-light: #f8fafc;
+          /* Default to highly compact sizing for A6/Thermal */
+          --pad: 6px;
+          --gap: 4px;
+          --fs-xs: 8px;
+          --fs-sm: 9px;
+          --fs: 11px;
+          --fs-lg: 13px;
+          --fs-xl: 16px;
+          --radius: 6px;
+          --margin-block: 8px; /* Used for spacing between major sections */
+          
           /* أعمدة A6 محسّنة */
-          --w-no: 16mm;    /* Item No */
-          --w-qty: 10mm;   /* QTY */
-          --w-price: 15mm; /* Price */
-          --w-amt: 17mm;   /* AMOUNT */
+          --w-no: 16mm;
+          --w-qty: 12mm;
+          --w-price: 18mm;
+          --w-amt: 20mm;
         }
 
-        /* A6 Default */
+        /* Base Print settings (Defaults to A6 / Thermal aesthetics) */
         @media print {
           @page {
-            size: A6 portrait;
+            size: auto; /* Let the printer driver and user selection dictate A4 or A6 */
             margin: 0;
           }
 
-          /* Prevent page breaks */
           .invoice-print {
-            padding: 8mm 7mm 8mm 7mm !important;
+            padding: 3mm !important;
             page-break-after: avoid !important;
             page-break-inside: avoid !important;
           }
 
-          .invoice-print > * {
+          /* Prevent specific sections from breaking across pages */
+          .header-section, .invoice-header-info, .table-container, .summary-wrapper, .notesBox, .footer-message {
             page-break-inside: avoid !important;
           }
         }
 
-        /* A4 - Dynamic scaling */
-        @media print and (min-width: 200mm) {
-          @page {
-            size: A4 portrait;
-            margin: 0;
-          }
-
+        /* Desktop / A4 - Dynamic scaling (Triggered when print page width > 150mm) */
+        @media print and (min-width: 150mm) {
           .invoice-print {
-            padding: 15mm !important;
-            /* Scale up for A4 */
-            --pad: 10px;
-            --gap: 10px;
-            --fs: 14px;
+            padding: 20mm !important;
+            --pad: 14px;
+            --gap: 12px;
+            --fs-xs: 11px;
             --fs-sm: 13px;
+            --fs: 15px;
             --fs-lg: 18px;
+            --fs-xl: 24px;
+            --radius: 8px;
+            --margin-block: 20px;
+            
             --w-no: 25mm;
             --w-qty: 15mm;
-            --w-price: 20mm;
-            --w-amt: 25mm;
+            --w-price: 25mm;
+            --w-amt: 30mm;
           }
         }
 
-        html,
-        body {
+        html, body {
           height: 100%;
         }
 
         body {
-          font-family: 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-          font-weight: 700;
+          font-family: 'Tajawal', system-ui, -apple-system, sans-serif;
           margin: 0;
           padding: 0;
+          color: var(--primary-color);
         }
 
         .invoice-print {
           direction: rtl;
-          font-family: 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-          font-weight: 700;
+          font-family: 'Tajawal', system-ui, -apple-system, sans-serif;
           width: 100%;
           max-width: 100%;
           box-sizing: border-box;
+          color: var(--primary-color);
         }
 
-        .box {
-          border: 1px solid var(--border);
-          padding: var(--pad);
-        }
-
-        .headerRow {
-          display: flex;
-          flex-direction: row;
-          align-items: flex-start;
-          justify-content: flex-start;
-          gap: 8px;
-        }
-
-        .brand {
-          text-align: right;
-          font-size: var(--fs-sm);
-          line-height: 1.3;
-        }
-
-        .logo {
-          width: 34px;
-          height: auto;
-          object-fit: contain;
-        }
-
-        .titleRow {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 8px;
-          margin: 8px 0 6px;
-        }
-
-        .titleMain {
-          flex: 1;
+        /* Header Section */
+        .header-section {
           text-align: center;
-          border: 1px solid var(--border);
-          padding: 4px;
-          font-weight: 700;
-          font-size: var(--fs);
+          margin-bottom: var(--margin-block);
+          padding-bottom: var(--margin-block);
+          border-bottom: 2px dashed var(--border-color);
         }
 
-        .titleId {
-          border: 1px solid var(--border);
-          padding: 4px 8px;
-          white-space: nowrap;
-          font-size: var(--fs);
+        .company-title {
+          font-size: var(--fs-xl);
+          font-weight: 800;
+          letter-spacing: -0.5px;
+          margin-bottom: 4px;
+          color: #0f172a;
         }
 
-        .meta {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: var(--gap);
-          margin-bottom: 6px;
-        }
-
-        .chip {
-          border: 1px solid var(--border);
-          padding: 4px 6px;
+        .company-subtitle {
           font-size: var(--fs-sm);
+          color: var(--secondary-color);
+          font-weight: 500;
+          line-height: 1.5;
         }
 
-        /* جدول العناصر */
+        /* Title & Meta Info */
+        .invoice-header-info {
+          display: flex;
+          flex-direction: column;
+          gap: var(--margin-block);
+          margin-bottom: var(--margin-block);
+        }
+
+        .invoice-type-badge {
+          align-self: flex-start;
+          background: var(--bg-light);
+          border: 1px solid var(--border-color);
+          padding: 4px 12px;
+          border-radius: 20px;
+          font-size: var(--fs-lg);
+          font-weight: 800;
+          color: #0f172a;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+
+        .meta-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 10px;
+          background: var(--bg-light);
+          padding: var(--pad);
+          border-radius: var(--radius);
+          border: 1px solid var(--border-color);
+        }
+
+        .meta-item {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .meta-item.full-width {
+          grid-column: 1 / -1;
+        }
+
+        .meta-label {
+          font-size: var(--fs-xs);
+          color: var(--secondary-color);
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+
+        .meta-value {
+          font-size: var(--fs);
+          font-weight: 700;
+          color: var(--primary-color);
+        }
+
+        /* Items Table */
+        .table-container {
+          border: 1px solid var(--border-color);
+          border-radius: var(--radius);
+          overflow: hidden;
+          margin-bottom: var(--margin-block);
+        }
+
         table.items {
           width: 100%;
           border-collapse: collapse;
-          table-layout: fixed;
+          table-layout: auto;
           font-size: var(--fs);
-          margin-top: 2px;
-        }
-
-        table.items col.col-no {
-          width: var(--w-no);
-        }
-
-        table.items col.col-name {
-          width: auto; /* يأخذ الباقي */
-        }
-
-        table.items col.col-qty {
-          width: var(--w-qty);
-        }
-
-        table.items col.col-price {
-          width: var(--w-price);
-        }
-
-        table.items col.col-amt {
-          width: var(--w-amt);
+          background: white;
         }
 
         table.items th,
         table.items td {
-          border: 1px solid var(--border);
-          padding: 4px;
+          padding: 6px var(--pad);
+          text-align: right;
+          border-bottom: 1px solid var(--border-color);
         }
 
-        table.items {
-          direction: rtl;
+        table.items tr:last-child td {
+          border-bottom: none;
         }
 
         table.items th {
-          background: #f5f5f5;
-          text-align: center;
-          font-weight: 700;
-          font-size: 11px;
-          white-space: nowrap;
+          background: var(--bg-light);
+          font-weight: 800;
+          font-size: var(--fs-sm);
+          color: var(--secondary-color);
+          text-transform: uppercase;
         }
 
         table.items td {
-          vertical-align: top;
+          font-weight: 600;
+          vertical-align: middle;
+        }
+
+        .ta-c { text-align: center !important; }
+        .ta-l { text-align: left !important; }
+        .nowrap { white-space: nowrap; }
+
+        .item-name-cell {
           font-weight: 700;
+          color: #0f172a;
         }
 
-        .ta-c {
-          text-align: center;
+        .item-serial {
+          font-size: var(--fs-xs);
+          color: var(--secondary-color);
+          font-family: monospace;
+          margin-top: 4px;
+          display: block;
+          direction: ltr;
         }
 
-        .ta-r {
-          text-align: right;
+        /* Summary Section */
+        .summary-wrapper {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: calc(var(--margin-block) / 2);
         }
 
-        .nowrap {
-          white-space: nowrap;
-        }
-
-        .nameCell {
-          word-break: break-word;
-          overflow-wrap: anywhere;
-        }
-
-        /* ملخصات */
         table.summary {
-          width: 100%;
-          margin-top: 6px;
+          width: 80%;
           border-collapse: collapse;
-          table-layout: fixed;
           direction: rtl;
         }
 
         table.summary td {
-          border: 1px solid var(--border);
-          padding: 6px;
+          padding: 4px 8px;
           font-size: var(--fs);
+          border-bottom: 1px dashed var(--border-color);
+        }
+
+        table.summary tr:last-child td {
+          border-bottom: none;
         }
 
         table.summary .label {
-          width: 60%;
           text-align: right;
+          color: var(--secondary-color);
+          font-weight: 600;
         }
 
         table.summary .value {
-          width: 40%;
           text-align: left;
+          font-weight: 800;
           white-space: nowrap;
         }
 
-        /* ملاحظات */
+        table.summary .total-row td {
+          padding-top: 8px;
+          font-size: var(--fs-lg);
+          color: #0f172a;
+        }
+        
+        table.summary .total-row .value {
+          color: #16a34a; /* Green for net total */
+        }
+
+        /* Notes Section */
         .notesBox {
-          border: 1px solid var(--border);
-          padding: 6px;
-          margin-top: 6px;
-          font-size: var(--fs);
+          margin-top: var(--margin-block);
+          padding: 10px;
+          background: #fffbeb; /* Light yellow warning/note bg */
+          border: 1px solid #fde68a;
+          border-radius: var(--radius);
+          font-size: var(--fs-sm);
           page-break-inside: avoid;
         }
 
         .notesHeader {
-          font-weight: 700;
+          font-weight: 800;
+          color: #d97706;
           margin-bottom: 4px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
         }
 
         .notesContent {
           white-space: pre-wrap;
           word-break: break-word;
-          overflow-wrap: anywhere;
           line-height: 1.4;
+          color: #92400e;
+          font-weight: 600;
+        }
+        
+        .footer-message {
+          text-align: center;
+          margin-top: var(--margin-block);
+          padding-top: var(--margin-block);
+          border-top: 1px dashed var(--border-color);
+          font-size: var(--fs-xs);
+          color: var(--secondary-color);
+          font-weight: 600;
         }
       `}</style>
       <link
@@ -402,120 +452,116 @@ export default function InvoicePrint({
         rel="stylesheet"
       />
       <div className="invoice-print">
-        {/* الترويسة */}
-        <div className="box headerRow">
-          <div className="brand">
-            <div>شركة المنار للأجهزة الكهربائية</div>
-            <div>جنين - شارع الناصرة</div>
-            <div>0599-048348 | 04-2438815</div>
+        {/* Header Content */}
+        <div className="header-section">
+          <div className="company-title">شركة المنار للأجهزة الكهربائية</div>
+          <div className="company-subtitle">
+            جنين - شارع الناصرة<br />
+            0599-048348 | 04-2438815
           </div>
         </div>
 
-        {/* العنوان + رقم الفاتورة */}
-        <div className="titleRow">
-          <div className="titleMain">فاتورة نقدية</div>
-          <div className="titleId">{invoiceID}</div>
-        </div>
-
-        {/* بيانات أساسية */}
-        <div className="meta">
-          <div className="chip">
-            التاريخ والوقت: <span>{formatDate(dateTime)}</span>
+        {/* Info & Meta */}
+        <div className="invoice-header-info">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="invoice-type-badge">
+              {paymentMethod === 'ذمة مالية' ? 'فاتورة ذمة مالية' : paymentMethod === 'فيزا' ? 'فاتورة فيزا' : 'فاتورة مبيعات نقدية'}
+            </div>
+            <div style={{ fontSize: 'var(--fs)', fontWeight: 800 }}>#{invoiceID}</div>
           </div>
-        </div>
 
-        {/* جدول العناصر */}
-        <table className="items">
-          <colgroup>
-            <col className="col-no" />
-            <col className="col-name" />
-            <col className="col-qty" />
-            <col className="col-price" />
-            <col className="col-amt" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th>Item No</th>
-              <th>ITEM NAME</th>
-              <th>QTY</th>
-              <th>Price</th>
-              <th>AMOUNT</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, index) => (
-              <tr key={index}>
-                <td className="ta-c nowrap">
-                  {item.shamelNo || item.barcode || item.productID}
-                </td>
-                <td className="ta-r nameCell">
-                  <div>{item.name}</div>
-                  {item.serialNos && item.serialNos.length > 0 && item.serialNos.some(s => s && s.trim()) && (
-                    <div style={{ 
-                      fontSize: '10px', 
-                      color: '#666', 
-                      marginTop: '4px',
-                      fontFamily: 'monospace',
-                      direction: 'ltr',
-                      textAlign: 'left'
-                    }}>
-                      {item.serialNos.filter(s => s && s.trim()).map((serial, idx) => (
-                        <span key={idx} style={{ display: 'block', marginBottom: '2px' }}>
-                          SN: {serial}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </td>
-                <td className="ta-c nowrap">{item.quantity}</td>
-                <td className="ta-c nowrap">
-                  {item.unitPrice.toFixed(2)} ₪
-                </td>
-                <td className="ta-c nowrap">
-                  {item.total.toFixed(2)} ₪
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {/* الملخصات */}
-        <table className="summary">
-          <tbody>
-            <tr>
-              <td className="label">المجموع</td>
-              <td className="value">{subtotal.toFixed(2)} ₪</td>
-            </tr>
-            {discount > 0 && (
-              <tr>
-                <td className="label">خصم خاص</td>
-                <td className="value">- {discount.toFixed(2)} ₪</td>
-              </tr>
+          <div className="meta-grid">
+            <div className="meta-item">
+              <span className="meta-label">التاريخ والوقت</span>
+              <span className="meta-value">{formatDate(dateTime)}</span>
+            </div>
+            {paymentMethod && paymentMethod !== 'ذمة مالية' && paymentMethod !== 'فيزا' && paymentMethod !== 'نقداً' && (
+              <div className="meta-item">
+                <span className="meta-label">طريقة الدفع</span>
+                <span className="meta-value">{paymentMethod}</span>
+              </div>
             )}
-            <tr>
-              <td className="label" style={{ fontWeight: 700 }}>
-                الصافي للدفع
-              </td>
-              <td
-                className="value"
-                style={{
-                  fontWeight: 700,
-                  fontSize: 'var(--fs-lg)',
-                }}
-              >
-                {netTotal.toFixed(2)} ₪
-              </td>
-            </tr>
-          </tbody>
-        </table>
+            {customerName && (
+              <div className="meta-item full-width">
+                <span className="meta-label">اسم الزبون</span>
+                <span className="meta-value">{customerName}</span>
+              </div>
+            )}
+          </div>
+        </div>
 
-        {/* ملاحظات (تظهر فقط عند وجودها) */}
+        {/* Items Table */}
+        <div className="table-container">
+          <table className="items">
+            <thead>
+              <tr>
+                <th style={{ width: '15%' }}>رقم</th>
+                <th style={{ width: '45%' }}>الصنف</th>
+                <th className="ta-c" style={{ width: '10%' }}>الكمية</th>
+                <th className="ta-c" style={{ width: '15%' }}>السعر</th>
+                <th className="ta-l" style={{ width: '15%' }}>المبلغ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, index) => (
+                <tr key={index}>
+                  <td className="nowrap" style={{ fontSize: 'var(--fs-sm)' }}>
+                    {item.shamelNo || item.barcode || item.productID}
+                  </td>
+                  <td>
+                    <div className="item-name-cell">{item.name}</div>
+                    {item.serialNos && item.serialNos.length > 0 && item.serialNos.some(s => s && s.trim()) && (
+                      <div className="item-serial">
+                        {item.serialNos.filter(s => s && s.trim()).map((serial, idx) => (
+                          <span key={idx} style={{ display: 'block' }}>SN: {serial}</span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="ta-c">{item.quantity}</td>
+                  <td className="ta-c nowrap">{item.unitPrice.toFixed(2)} ₪</td>
+                  <td className="ta-l nowrap">{item.total.toFixed(2)} ₪</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Summary */}
+        <div className="summary-wrapper">
+          <table className="summary">
+            <tbody>
+              <tr>
+                <td className="label">المجموع:</td>
+                <td className="value">{subtotal.toFixed(2)} ₪</td>
+              </tr>
+              {discount > 0 && (
+                <tr>
+                  <td className="label" style={{ color: '#ef4444' }}>خصم خاص:</td>
+                  <td className="value" style={{ color: '#ef4444' }}>- {discount.toFixed(2)} ₪</td>
+                </tr>
+              )}
+              <tr className="total-row">
+                <td className="label" style={{ color: '#0f172a' }}>الصافي للدفع:</td>
+                <td className="value">{netTotal.toFixed(2)} ₪</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Notes */}
         {notes && notes.trim().length > 0 && (
           <div className="notesBox">
-            <div className="notesHeader">ملاحظات:</div>
+            <div className="notesHeader">
+              <span>📝</span> ملاحظات الفاتورة:
+            </div>
             <div className="notesContent">{notes}</div>
           </div>
         )}
+
+        <div className="footer-message">
+          شكراً لتسوقكم من شركة المنار للأجهزة الكهربائية
+        </div>
       </div>
     </>
   );

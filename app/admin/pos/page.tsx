@@ -3,7 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
-import { saveCashInvoice, getProducts, getActiveCampaignWithProducts, getReservedQuantities, ReservedQuotationsData } from '@/lib/api';
+import { saveCashInvoice, getProducts, getActiveCampaignWithProducts, getReservedQuantities, ReservedQuotationsData, getAllCustomers, saveShopPayment, saveShopSalesInvoice } from '@/lib/api';
 import { validateSerialNumbers } from '@/lib/validation';
 import { Lock } from 'lucide-react';
 import InvoicePrint from '@/components/admin/InvoicePrint';
@@ -48,6 +48,11 @@ export default function POSPage() {
   const [reservedQuantities, setReservedQuantities] = useState<Record<string, ReservedQuotationsData>>({});
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Visa' | 'Receivable'>('Cash');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
 
   // Check if user has permission to create POS invoices
   const canCreatePOS = admin?.is_super_admin || admin?.permissions?.createPOS === true;
@@ -76,6 +81,8 @@ export default function POSPage() {
     discount: number;
     netTotal: number;
     notes?: string;
+    paymentMethod?: string;
+    customerName?: string;
   } | null>(null);
   const [currentInvoiceID, setCurrentInvoiceID] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -329,10 +336,11 @@ export default function POSPage() {
     const loadProducts = async () => {
       try {
         setIsLoadingProducts(true);
-        const [data, campaign, reservedData] = await Promise.all([
+        const [data, campaign, reservedData, customersData] = await Promise.all([
           getProducts(),
           getActiveCampaignWithProducts(),
           getReservedQuantities(),
+          getAllCustomers(),
         ]);
 
         let mergedProducts = data || [];
@@ -353,6 +361,7 @@ export default function POSPage() {
 
         setProducts(mergedProducts);
         setReservedQuantities(reservedData);
+        setCustomers(customersData || []);
       } catch (error) {
         console.error('[POS] Error loading products:', error);
         setProducts([]);
@@ -1311,6 +1320,11 @@ export default function POSPage() {
       return;
     }
 
+    if (paymentMethod === 'Receivable' && !selectedCustomerId) {
+      alert('الرجاء اختيار الزبون لدفع الذمة المالية');
+      return;
+    }
+
     // Validate serial numbers (currently disabled)
     const validationError = validateSerialNumbers(cart);
     if (validationError) {
@@ -1338,16 +1352,58 @@ export default function POSPage() {
         created_by: admin?.id || undefined,
       };
 
-      // Save invoice directly
-      const result = await saveCashInvoice(payload);
+      let currentInvoiceIdToPrint = '';
+
+      const customerObj = customers.find(c => c.id === selectedCustomerId || c.customer_id === selectedCustomerId || c.CustomerID === selectedCustomerId);
+      const customerNameFinal = customerObj ? (customerObj.name || customerObj.Name) : undefined;
+      let finalPaymentMethodStr = paymentMethod === 'Cash' ? 'نقداً' : paymentMethod === 'Visa' ? 'فيزا' : 'ذمة مالية';
+
+      if (paymentMethod === 'Receivable') {
+        // Save as Shop Sales Invoice (ذمة مالية)
+        const receivablePayload = {
+          customerID: selectedCustomerId,
+          date: new Date().toISOString().split('T')[0],
+          items: cart.map((item) => ({
+            productID: item.productID,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            notes: '',
+            serialNos: item.serialNos || [],
+          })),
+          notes: notes.trim() || undefined,
+          discount: discount || 0,
+          status: 'غير مدفوع' as const,
+          created_by: admin?.id || undefined,
+        };
+        const result = await saveShopSalesInvoice(receivablePayload);
+        currentInvoiceIdToPrint = result.invoiceID;
+      } else {
+        // Cash or Visa - Save as Cash Invoice first
+        const result = await saveCashInvoice(payload);
+        currentInvoiceIdToPrint = result.invoiceID;
+
+        // If Visa, also create a shop payment for CUS-0778
+        if (paymentMethod === 'Visa') {
+          // Find if CUS-0778 exists, else just use the string 'CUS-0778'
+          const visaCustomer = customers.find(c => c.id === 'CUS-0778' || c.customer_id === 'CUS-0778' || c.CustomerID === 'CUS-0778');
+          await saveShopPayment({
+            customerID: visaCustomer ? (visaCustomer.id || visaCustomer.customer_id || visaCustomer.CustomerID) : 'CUS-0778',
+            date: new Date().toISOString().split('T')[0],
+            chequeAmount: 0,
+            cashAmount: netTotal,
+            notes: `سداد فاتورة فيزا POS #${result.invoiceID}`,
+            created_by: admin?.id || undefined,
+          });
+        }
+      }
 
       // Set current invoice ID
-      setCurrentInvoiceID(result.invoiceID);
+      setCurrentInvoiceID(currentInvoiceIdToPrint);
 
       // Prepare invoice data for printing
       // Use current time (will be formatted with Palestine timezone in InvoicePrint)
       setInvoiceData({
-        invoiceID: result.invoiceID,
+        invoiceID: currentInvoiceIdToPrint,
         dateTime: new Date().toISOString(),
         items: cart.map((item) => ({
           productID: item.productID,
@@ -1362,13 +1418,15 @@ export default function POSPage() {
         discount: discount || 0,
         netTotal,
         notes: notes.trim() || undefined,
+        paymentMethod: finalPaymentMethodStr,
+        customerName: customerNameFinal,
       });
 
       // Print: on mobile open new tab; on desktop show overlay with iframe (no new tab)
       if (isMobilePrint()) {
-        window.open(`/admin/invoices/print/${result.invoiceID}`, `print-${result.invoiceID}`, 'noopener,noreferrer');
+        window.open(`/admin/invoices/print/${currentInvoiceIdToPrint}`, `print-${currentInvoiceIdToPrint}`, 'noopener,noreferrer');
       } else {
-        setPrintOverlayInvoiceId(result.invoiceID);
+        setPrintOverlayInvoiceId(currentInvoiceIdToPrint);
       }
 
       // Clear cart after successful save
@@ -1378,6 +1436,8 @@ export default function POSPage() {
         setDiscount(0);
         setInvoiceData(null);
         setCurrentInvoiceID(null);
+        setPaymentMethod('Cash');
+        setSelectedCustomerId('');
       }, 1000);
     } catch (error: any) {
       console.error('[POS] Error saving invoice:', error);
@@ -2227,6 +2287,59 @@ export default function POSPage() {
                 </div>
               </div>
 
+              {/* Payment Method Selection */}
+              <div className="mb-4">
+                <span className="text-sm font-bold text-gray-700 font-cairo block mb-2">طريقة الدفع:</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['Cash', 'Visa', 'Receivable'] as const).map((method) => {
+                    const label = method === 'Cash' ? 'نقداً' : method === 'Visa' ? 'فيزا' : 'ذمة مالية';
+                    return (
+                      <button
+                        key={method}
+                        onClick={() => {
+                          setPaymentMethod(method);
+                          if (method !== 'Receivable') {
+                            setSelectedCustomerId('');
+                          }
+                        }}
+                        className={`py-2 px-1 text-sm rounded-lg border font-cairo font-bold transition-all ${paymentMethod === method
+                          ? 'bg-blue-50 border-blue-500 text-blue-700'
+                          : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                          }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {paymentMethod === 'Receivable' && (
+                  <div className="mt-3">
+                    <span className="text-xs font-bold text-gray-700 font-cairo block mb-2">اختر الزبون:</span>
+                    {selectedCustomerId ? (
+                      <div className="flex justify-between items-center p-2 border border-gray-200 rounded-lg bg-gray-50">
+                        <span className="text-sm font-bold text-gray-900 font-cairo truncate pl-2" title={customers.find(c => (c.id || c.customer_id || c.CustomerID) === selectedCustomerId)?.name || ''}>
+                          {customers.find(c => (c.id || c.customer_id || c.CustomerID) === selectedCustomerId)?.name || ''}
+                        </span>
+                        <button
+                          onClick={() => setShowCustomerModal(true)}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-cairo font-bold whitespace-nowrap"
+                        >
+                          تغيير الزبون
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowCustomerModal(true)}
+                        className="w-full p-2 border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg text-sm font-bold font-cairo transition-colors flex justify-center items-center gap-2"
+                      >
+                        <Search size={16} />
+                        <span>البحث عن زبون</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Pay Button */}
               <button
                 onClick={handlePayAndPrint}
@@ -2307,6 +2420,83 @@ export default function POSPage() {
                 className="w-full border-0 bg-white"
                 style={{ width: '105mm', minHeight: '148mm', height: '70vh' }}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Selection Modal */}
+      {showCustomerModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden transform transition-all">
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h3 className="font-bold text-gray-900 text-lg font-cairo">اختر الزبون (ذمة مالية)</h3>
+              <button
+                onClick={() => setShowCustomerModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors"
+                title="إغلاق"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 border-b border-gray-100">
+              <div className="relative">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="ابحث عن زبون بالاسم أو رقم الهاتف..."
+                  value={customerSearchQuery}
+                  onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                  className="w-full pr-10 pl-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-cairo text-sm"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-2 bg-gray-50/50">
+              {customers
+                .filter(c => {
+                  const searchStr = customerSearchQuery.toLowerCase();
+                  return (
+                    (c.name || c.Name || '').toLowerCase().includes(searchStr) ||
+                    (c.phone || '').includes(searchStr)
+                  );
+                })
+                .map(c => (
+                  <button
+                    key={c.id || c.customer_id || c.CustomerID}
+                    onClick={() => {
+                      setSelectedCustomerId(c.id || c.customer_id || c.CustomerID || '');
+                      setShowCustomerModal(false);
+                      setCustomerSearchQuery('');
+                    }}
+                    className="w-full text-right p-3 hover:bg-white bg-transparent rounded-xl border-b border-gray-100 last:border-0 transition-all flex flex-col group hover:shadow-sm"
+                  >
+                    <div className="font-bold text-sm text-gray-900 font-cairo group-hover:text-blue-700 transition-colors">
+                      {c.name || c.Name}
+                    </div>
+                    {c.phone && (
+                      <div className="text-xs text-gray-500 mt-1 font-cairo">
+                        {c.phone}
+                      </div>
+                    )}
+                  </button>
+                ))}
+
+              {customers.filter(c => {
+                const searchStr = customerSearchQuery.toLowerCase();
+                return (
+                  (c.name || c.Name || '').toLowerCase().includes(searchStr) ||
+                  (c.phone || '').includes(searchStr)
+                );
+              }).length === 0 && (
+                  <div className="text-center py-12 text-gray-500 font-cairo">
+                    <div className="text-4xl mb-3 opacity-20">🔍</div>
+                    <div className="font-bold">لا يوجد زبائن مطابقة</div>
+                    <div className="text-xs mt-1">جرب البحث بكلمات مختلفة</div>
+                  </div>
+                )}
             </div>
           </div>
         </div>

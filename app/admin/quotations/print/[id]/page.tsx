@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { getQuotationFromSupabase } from '@/lib/api';
-import { getDirectImageUrl } from '@/lib/utils';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface QuotationItem {
   QuotationDetailID: string;
@@ -18,10 +18,7 @@ interface QuotationItem {
 
 export default function QuotationPrintPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const quotationId = params?.id as string;
-  const useImageVariant = searchParams?.get('variant') === 'image';
-  const isEmbed = searchParams?.get('embed') === '1';
 
   const [data, setData] = useState<{
     quotationID: string;
@@ -56,13 +53,6 @@ export default function QuotationPrintPage() {
     const title = `عروض الاسعار - ${customerName} - ${docNo}`;
     document.title = title;
 
-    if (isEmbed) {
-      try {
-        window.parent.postMessage({ type: 'print-ready', title }, '*');
-      } catch (_) {}
-      return;
-    }
-
     let printed = false;
     const doPrint = () => {
       if (printed) return;
@@ -70,37 +60,9 @@ export default function QuotationPrintPage() {
       window.print();
     };
 
-    const printAfterReady = () => {
-      if (!useImageVariant) {
-        setTimeout(doPrint, 400);
-        return;
-      }
-      const directUrls = data.items
-        .map((item) => {
-          const raw = item.product?.image || (item as any).product?.Image || '';
-          return raw ? getDirectImageUrl(raw) : '';
-        })
-        .filter(Boolean);
-      if (directUrls.length === 0) {
-        setTimeout(doPrint, 500);
-        return;
-      }
-      const loadPromises = directUrls.map(
-        (src) =>
-          new Promise<void>((resolve) => {
-            const img = new Image();
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-            img.src = src;
-          })
-      );
-      Promise.all(loadPromises).then(() => setTimeout(doPrint, 300));
-      setTimeout(doPrint, 3000);
-    };
-
-    const timer = setTimeout(printAfterReady, 150);
+    const timer = setTimeout(doPrint, 500);
     return () => clearTimeout(timer);
-  }, [data, loading, useImageVariant, isEmbed]);
+  }, [data, loading]);
 
   const loadData = async () => {
     try {
@@ -210,6 +172,8 @@ export default function QuotationPrintPage() {
       </div>
     );
   }
+
+  const publicUrl = typeof window !== 'undefined' ? `${window.location.origin}/quotation/${data?.quotationID}` : '';
 
   return (
     <div style={{ background: 'white', color: 'black', direction: 'rtl' }}>
@@ -568,19 +532,23 @@ export default function QuotationPrintPage() {
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;900&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
 
-      {!isEmbed && (
-        <div className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
-          <button onClick={() => window.print()}>إعادة الطباعة</button>
-        </div>
-      )}
+      <div className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
+        <button onClick={() => window.print()}>إعادة الطباعة</button>
+      </div>
 
       <table className="sheet">
         <thead>
           <tr>
             <td>
               {/* Header box */}
-              <div className="box headerRow" style={{ marginBottom: '20px' }}>
-                <div className="brand">
+              <div className="box headerRow" style={{ marginBottom: '20px', alignItems: 'center' }}>
+                <div style={{ flexShrink: 0, textAlign: 'center' }}>
+                  <QRCodeSVG value={publicUrl} size={80} level="M" />
+                  <div style={{ fontSize: '10px', marginTop: '4px', fontWeight: 'bold', maxWidth: '80px', marginInline: 'auto', lineHeight: '1.2' }}>
+                    امسح الكود لرؤية النسخة الرقمية
+                  </div>
+                </div>
+                <div className="brand" style={{ flex: 1 }}>
                   <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, marginBottom: '4px' }}>
                     شركة المنار للأجهزة الكهربائية
                   </div>
@@ -618,14 +586,14 @@ export default function QuotationPrintPage() {
                 <div className="chip" style={{ gridColumn: '2 / span 1' }}>
                   التاريخ: <span style={{ fontWeight: 700 }}>{formatDate(data.date)}</span>
                 </div>
-                
+
                 {/* Row 2: Phone */}
                 {data.customer?.phone && (
                   <div className="chip" style={{ gridColumn: '1 / span 1' }}>
                     الهاتف: <span>{data.customer.phone}</span>
                   </div>
                 )}
-                
+
                 {/* Row 3: Address */}
                 {data.customer?.address && (
                   <div className="chip" style={{ gridColumn: data.customer?.phone ? '2 / span 1' : '1 / span 2' }}>
@@ -636,7 +604,7 @@ export default function QuotationPrintPage() {
 
               {/* Regular Items */}
               {regularItems.length > 0 && (
-                <table className={`items ${useImageVariant ? 'col-image' : ''}`}>
+                <table className="items">
                   <colgroup>
                     <col className="col-no" />
                     <col className="col-name" />
@@ -646,7 +614,7 @@ export default function QuotationPrintPage() {
                   </colgroup>
                   <thead>
                     <tr>
-                      <th>{useImageVariant ? 'صورة' : 'Item No'}</th>
+                      <th>رقم الصنف</th>
                       <th>ITEM NAME</th>
                       <th>QTY</th>
                       <th>Price</th>
@@ -655,62 +623,43 @@ export default function QuotationPrintPage() {
                   </thead>
                   <tbody>
                     {regularItems.map((item, index) => {
-                      const productImage = item.product?.image || (item as any).product?.Image || '';
-                      const imageUrl = getDirectImageUrl(productImage);
                       return (
-                      <tr key={item.QuotationDetailID || index}>
-                        <td className="ta-c nowrap">
-                          {useImageVariant ? (
-                            imageUrl ? (
-                              <div className="item-img-wrap">
-                                <img src={imageUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                              </div>
-                            ) : (
-                              <div className="item-img-wrap" style={{ fontSize: '9px', color: '#999', padding: '4px' }}>
-                                —
-                              </div>
-                            )
-                          ) : (
-                            item.product?.shamelNo || item.product?.barcode || item.ProductID
-                          )}
-                        </td>
-                        <td className="ta-r nameCell">
-                          <div>
-                            <div>{item.product?.name || `Product ${item.ProductID}`}</div>
-                            {useImageVariant && (item.product?.shamelNo || item.product?.barcode || item.ProductID) && (
-                              <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
-                                رقم شامل: {item.product?.shamelNo || item.product?.barcode || item.ProductID}
-                              </div>
-                            )}
-                            {item.serialNos && item.serialNos.length > 0 && (
-                              <div style={{ 
-                                fontSize: '12px', 
-                                color: '#666', 
-                                marginTop: '4px',
-                                fontFamily: 'monospace',
-                                direction: 'ltr',
-                                textAlign: 'left',
-                                lineHeight: '1.4'
-                              }}>
-                                {item.serialNos.map((serial, idx) => (
-                                  <span key={idx} style={{ display: 'block', marginBottom: '2px' }}>
-                                    SN: {serial}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                            {item.notes && item.notes.trim() && (
-                              <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
-                                {item.notes}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="ta-c nowrap">{item.Quantity}</td>
-                        <td className="ta-c nowrap">{item.UnitPrice.toFixed(2)} ₪</td>
-                        <td className="ta-c nowrap">{(item.Quantity * item.UnitPrice).toFixed(2)} ₪</td>
-                      </tr>
-                    );
+                        <tr key={item.QuotationDetailID || index}>
+                          <td className="ta-c nowrap">
+                            {item.product?.shamelNo || item.product?.barcode || item.ProductID}
+                          </td>
+                          <td className="ta-r nameCell">
+                            <div>
+                              <div>{item.product?.name || `Product ${item.ProductID}`}</div>
+                              {item.serialNos && item.serialNos.length > 0 && (
+                                <div style={{
+                                  fontSize: '12px',
+                                  color: '#666',
+                                  marginTop: '4px',
+                                  fontFamily: 'monospace',
+                                  direction: 'ltr',
+                                  textAlign: 'left',
+                                  lineHeight: '1.4'
+                                }}>
+                                  {item.serialNos.map((serial, idx) => (
+                                    <span key={idx} style={{ display: 'block', marginBottom: '2px' }}>
+                                      SN: {serial}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {item.notes && item.notes.trim() && (
+                                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
+                                  {item.notes}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="ta-c nowrap">{item.Quantity}</td>
+                          <td className="ta-c nowrap">{item.UnitPrice.toFixed(2)} ₪</td>
+                          <td className="ta-c nowrap">{(item.Quantity * item.UnitPrice).toFixed(2)} ₪</td>
+                        </tr>
+                      );
                     })}
                   </tbody>
                 </table>
@@ -721,7 +670,7 @@ export default function QuotationPrintPage() {
                 <div className="gift-section">
                   <div className="gift-title">🎁 الهدايا</div>
                   <div className="gift-items">
-                    <table className={`items ${useImageVariant ? 'col-image' : ''}`}>
+                    <table className="items">
                       <colgroup>
                         <col className="col-no" />
                         <col className="col-name" />
@@ -731,62 +680,43 @@ export default function QuotationPrintPage() {
                       </colgroup>
                       <tbody>
                         {giftItems.map((item, index) => {
-                          const productImage = item.product?.image || (item as any).product?.Image || '';
-                          const imageUrl = getDirectImageUrl(productImage);
                           return (
-                          <tr key={item.QuotationDetailID || `gift-${index}`}>
-                            <td className="ta-c nowrap">
-                              {useImageVariant ? (
-                                imageUrl ? (
-                                  <div className="item-img-wrap">
-                                    <img src={imageUrl} alt="" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                                  </div>
-                                ) : (
-                                  <div className="item-img-wrap" style={{ fontSize: '9px', color: '#999', padding: '4px' }}>
-                                    —
-                                  </div>
-                                )
-                              ) : (
-                                item.product?.shamelNo || item.product?.barcode || item.ProductID
-                              )}
-                            </td>
-                            <td className="ta-r nameCell">
-                              <div>
-                                <div>{item.product?.name || `Product ${item.ProductID}`}</div>
-                                {useImageVariant && (item.product?.shamelNo || item.product?.barcode || item.ProductID) && (
-                                  <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
-                                    رقم شامل: {item.product?.shamelNo || item.product?.barcode || item.ProductID}
-                                  </div>
-                                )}
-                                {item.serialNos && item.serialNos.length > 0 && (
-                                  <div style={{ 
-                                    fontSize: '12px', 
-                                    color: '#666', 
-                                    marginTop: '4px',
-                                    fontFamily: 'monospace',
-                                    direction: 'ltr',
-                                    textAlign: 'left',
-                                    lineHeight: '1.4'
-                                  }}>
-                                    {item.serialNos.map((serial, idx) => (
-                                      <span key={idx} style={{ display: 'block', marginBottom: '2px' }}>
-                                        SN: {serial}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                                {item.notes && item.notes.trim() && (
-                                  <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
-                                    {item.notes}
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="ta-c nowrap">{item.Quantity}</td>
-                            <td className="ta-c nowrap">{item.UnitPrice.toFixed(2)} ₪</td>
-                            <td className="ta-c nowrap">{(item.Quantity * item.UnitPrice).toFixed(2)} ₪</td>
-                          </tr>
-                        );
+                            <tr key={item.QuotationDetailID || `gift-${index}`}>
+                              <td className="ta-c nowrap">
+                                {item.product?.shamelNo || item.product?.barcode || item.ProductID}
+                              </td>
+                              <td className="ta-r nameCell">
+                                <div>
+                                  <div>{item.product?.name || `Product ${item.ProductID}`}</div>
+                                  {item.serialNos && item.serialNos.length > 0 && (
+                                    <div style={{
+                                      fontSize: '12px',
+                                      color: '#666',
+                                      marginTop: '4px',
+                                      fontFamily: 'monospace',
+                                      direction: 'ltr',
+                                      textAlign: 'left',
+                                      lineHeight: '1.4'
+                                    }}>
+                                      {item.serialNos.map((serial, idx) => (
+                                        <span key={idx} style={{ display: 'block', marginBottom: '2px' }}>
+                                          SN: {serial}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {item.notes && item.notes.trim() && (
+                                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
+                                      {item.notes}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="ta-c nowrap">{item.Quantity}</td>
+                              <td className="ta-c nowrap">{item.UnitPrice.toFixed(2)} ₪</td>
+                              <td className="ta-c nowrap">{(item.Quantity * item.UnitPrice).toFixed(2)} ₪</td>
+                            </tr>
+                          );
                         })}
                       </tbody>
                     </table>
