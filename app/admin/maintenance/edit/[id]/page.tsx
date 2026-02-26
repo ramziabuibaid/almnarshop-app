@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -12,6 +12,9 @@ import {
   Save,
   Trash2,
   ArrowLeft,
+  ScanLine,
+  X,
+  Printer,
 } from 'lucide-react';
 
 const companyOptions = [
@@ -39,7 +42,7 @@ export default function EditMaintenancePage() {
   const params = useParams();
   const { admin } = useAdminAuth();
   const maintNo = params?.id as string;
-  
+
   // Check if user has accountant permission (for delete)
   const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
 
@@ -67,6 +70,11 @@ export default function EditMaintenancePage() {
     isPaid: false,
   });
 
+  const [printQrOverlayMaintNo, setPrintQrOverlayMaintNo] = useState<string | null>(null);
+  const printQrIframeRef = useRef<HTMLIFrameElement>(null);
+
+  const isMobilePrint = () => typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
   useEffect(() => {
     if (maintNo) {
       loadRecord();
@@ -75,15 +83,31 @@ export default function EditMaintenancePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maintNo]);
 
+  useEffect(() => {
+    if (!printQrOverlayMaintNo) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'print-ready' && printQrIframeRef.current?.contentWindow) {
+        const prevTitle = document.title;
+        if (e.data?.title) document.title = e.data.title;
+        try {
+          printQrIframeRef.current.contentWindow.print();
+        } catch (_) { }
+        setTimeout(() => { document.title = prevTitle; }, 500);
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [printQrOverlayMaintNo]);
+
   const loadRecord = async () => {
     setLoading(true);
     setError(null);
     try {
       const record = await getMaintenance(maintNo);
-      
+
       const dateOfPurchase = record.DateOfPurchase ? new Date(record.DateOfPurchase).toISOString().split('T')[0] : '';
       const dateOfReceive = record.DateOfReceive ? new Date(record.DateOfReceive).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-      
+
       setFormData({
         customerID: record.CustomerID || '',
         itemName: record.ItemName || '',
@@ -128,23 +152,23 @@ export default function EditMaintenancePage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validation
     if (!formData.customerID) {
       setError('⚠️ يجب اختيار العميل');
       return;
     }
-    
+
     if (!formData.itemName.trim()) {
       setError('⚠️ يجب إدخال اسم القطعة');
       return;
     }
-    
+
     if (formData.itemName.trim().length < 3) {
       setError('⚠️ اسم القطعة يجب أن يكون على الأقل 3 أحرف');
       return;
     }
-    
+
     if (!formData.dateOfReceive) {
       setError('⚠️ يجب تحديد تاريخ الاستقبال');
       return;
@@ -237,6 +261,22 @@ export default function EditMaintenancePage() {
           </button>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cairo">تعديل سجل الصيانة</h1>
           <span className="text-sm sm:text-base text-gray-500 font-cairo">#{maintNo}</span>
+          <div className="flex-1" />
+          <button
+            type="button"
+            onClick={() => {
+              if (isMobilePrint()) {
+                window.open(`/admin/maintenance/print-qr/${maintNo}`, `print-qr-${maintNo}`, 'noopener,noreferrer');
+                return;
+              }
+              setPrintQrOverlayMaintNo(maintNo);
+            }}
+            className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium font-cairo text-sm"
+            title="طباعة ملصق الباركود بحجم 50x25"
+          >
+            <ScanLine size={18} />
+            <span className="hidden sm:inline">طباعة الباركود</span>
+          </button>
         </div>
 
         {/* Error Message */}
@@ -269,7 +309,7 @@ export default function EditMaintenancePage() {
           {/* Item Information */}
           <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200 space-y-3 sm:space-y-4">
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 border-b border-gray-300 pb-2 mb-3 sm:mb-4 font-cairo">معلومات القطعة</h2>
-            
+
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-2 font-cairo">
                 اسم القطعة <span className="text-red-500">*</span>
@@ -537,6 +577,51 @@ export default function EditMaintenancePage() {
           </div>
         </form>
       </div>
+
+      {printQrOverlayMaintNo && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+          dir="rtl"
+          onClick={() => setPrintQrOverlayMaintNo(null)}
+        >
+          <div
+            className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+            style={{ minWidth: '120mm', maxHeight: '95vh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+              <span className="text-sm font-cairo text-gray-700">معاينة طباعة — ملصق الباركود</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => printQrIframeRef.current?.contentWindow?.print()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  <Printer size={20} />
+                  طباعة مرة أخرى
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintQrOverlayMaintNo(null)}
+                  className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                  aria-label="إغلاق"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto bg-white min-h-0 flex items-center justify-center bg-gray-100">
+              <iframe
+                ref={printQrIframeRef}
+                src={`/admin/maintenance/print-qr/${printQrOverlayMaintNo}?embed=1`}
+                title="طباعة ملصق الباركود"
+                className="border border-gray-300 shadow-sm bg-white"
+                style={{ width: '50mm', height: '25mm' }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

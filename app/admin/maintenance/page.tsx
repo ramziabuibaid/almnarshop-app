@@ -85,7 +85,17 @@ export default function MaintenancePage() {
   const [loadingViewRecord, setLoadingViewRecord] = useState(false);
   const [viewActiveTab, setViewActiveTab] = useState<'details' | 'history'>('details');
   const [printOverlayMaintNo, setPrintOverlayMaintNo] = useState<string | null>(null);
+  const [printQrOverlayMaintNo, setPrintQrOverlayMaintNo] = useState<string | null>(null);
   const printIframeRef = useRef<HTMLIFrameElement>(null);
+  const printQrIframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Batch Print
+  const [selectedForPrint, setSelectedForPrint] = useState<Set<string>>(new Set());
+  const [printBatchA6OverlayMaintNos, setPrintBatchA6OverlayMaintNos] = useState<string[] | null>(null);
+  const [printBatchQrOverlayMaintNos, setPrintBatchQrOverlayMaintNos] = useState<string[] | null>(null);
+  const printBatchA6IframeRef = useRef<HTMLIFrameElement>(null);
+  const printBatchQrIframeRef = useRef<HTMLIFrameElement>(null);
+
   const itemsPerPage = 20;
 
   const isMobilePrint = () => typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -114,6 +124,54 @@ export default function MaintenancePage() {
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, [printOverlayMaintNo]);
+
+  useEffect(() => {
+    if (!printQrOverlayMaintNo) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'print-ready' && printQrIframeRef.current?.contentWindow) {
+        const prevTitle = document.title;
+        if (e.data?.title) document.title = e.data.title;
+        try {
+          printQrIframeRef.current.contentWindow.print();
+        } catch (_) { }
+        setTimeout(() => { document.title = prevTitle; }, 500);
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [printQrOverlayMaintNo]);
+
+  useEffect(() => {
+    if (!printBatchA6OverlayMaintNos || printBatchA6OverlayMaintNos.length === 0) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'batch-print-ready' && printBatchA6IframeRef.current?.contentWindow) {
+        const prevTitle = document.title;
+        if (e.data?.title) document.title = e.data.title;
+        try {
+          printBatchA6IframeRef.current.contentWindow.print();
+        } catch (_) { }
+        setTimeout(() => { document.title = prevTitle; }, 500);
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [printBatchA6OverlayMaintNos]);
+
+  useEffect(() => {
+    if (!printBatchQrOverlayMaintNos || printBatchQrOverlayMaintNos.length === 0) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'batch-print-ready' && printBatchQrIframeRef.current?.contentWindow) {
+        const prevTitle = document.title;
+        if (e.data?.title) document.title = e.data.title;
+        try {
+          printBatchQrIframeRef.current.contentWindow.print();
+        } catch (_) { }
+        setTimeout(() => { document.title = prevTitle; }, 500);
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [printBatchQrOverlayMaintNos]);
 
   const loadUsers = async () => {
     try {
@@ -261,6 +319,59 @@ ${viewingRecordFull.SerialNo ? `الرقم التسلسلي: ${viewingRecordFull
       return;
     }
     setPrintOverlayMaintNo(record.MaintNo);
+  };
+
+  const handlePrintQrRecord = (record: MaintenanceRecord) => {
+    if (isMobilePrint()) {
+      window.open(`/admin/maintenance/print-qr/${record.MaintNo}`, `print-qr-${record.MaintNo}`, 'noopener,noreferrer');
+      return;
+    }
+    setPrintQrOverlayMaintNo(record.MaintNo);
+  };
+
+  const toggleSelectForPrint = (maintNo: string) => {
+    setSelectedForPrint((prev) => {
+      const next = new Set(prev);
+      if (next.has(maintNo)) next.delete(maintNo);
+      else next.add(maintNo);
+      return next;
+    });
+  };
+
+  const selectAllOnPage = () => {
+    setSelectedForPrint((prev) => {
+      const next = new Set(prev);
+      paginatedRecords.forEach((r) => next.add(r.MaintNo));
+      return next;
+    });
+  };
+
+  const clearPrintSelection = () => setSelectedForPrint(new Set());
+
+  const openBatchPrintA6 = () => {
+    const orderedIds = filteredAndSortedRecords
+      .map((r) => r.MaintNo)
+      .filter((id) => selectedForPrint.has(id));
+    if (orderedIds.length === 0) return;
+
+    if (isMobilePrint()) {
+      window.open(`/admin/maintenance/print-batch?ids=${encodeURIComponent(orderedIds.join(','))}`, 'print-batch', 'noopener,noreferrer');
+      return;
+    }
+    setPrintBatchA6OverlayMaintNos(orderedIds);
+  };
+
+  const openBatchPrintQr = () => {
+    const orderedIds = filteredAndSortedRecords
+      .map((r) => r.MaintNo)
+      .filter((id) => selectedForPrint.has(id));
+    if (orderedIds.length === 0) return;
+
+    if (isMobilePrint()) {
+      window.open(`/admin/maintenance/print-qr-batch?ids=${encodeURIComponent(orderedIds.join(','))}`, 'print-qr-batch', 'noopener,noreferrer');
+      return;
+    }
+    setPrintBatchQrOverlayMaintNos(orderedIds);
   };
 
   const getActionButtons = (currentStatus: string, maintNo: string) => {
@@ -846,12 +957,62 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
           </div>
         ) : (
           <>
+            {/* Batch Print Actions */}
+            {selectedForPrint.size > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2 border-l border-blue-200 pl-4 ml-2">
+                  <span className="bg-blue-600 text-white w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold font-cairo shadow-sm">
+                    {selectedForPrint.size}
+                  </span>
+                  <span className="text-blue-900 font-bold font-cairo text-sm sm:text-base">
+                    قطعة محددة
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={openBatchPrintA6}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium font-cairo text-sm"
+                  >
+                    <Printer size={18} />
+                    <span>طباعة الفواتير (A6)</span>
+                  </button>
+                  <button
+                    onClick={openBatchPrintQr}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors shadow-sm font-medium font-cairo text-sm"
+                  >
+                    <ScanLine size={18} />
+                    <span>طباعة الباركود (50x25)</span>
+                  </button>
+                  <button
+                    onClick={clearPrintSelection}
+                    className="flex items-center justify-center p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors border border-transparent hover:border-red-200"
+                    title="إلغاء التحديد"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Desktop Table View */}
             <div className="hidden md:block bg-white rounded-lg border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
+                      <th className="px-4 py-3 text-right">
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={paginatedRecords.length > 0 && paginatedRecords.every(r => selectedForPrint.has(r.MaintNo))}
+                            onChange={(e) => {
+                              if (e.target.checked) selectAllOnPage();
+                              else clearPrintSelection();
+                            }}
+                            className="w-4 h-4 text-gray-900 bg-gray-100 border-gray-300 rounded focus:ring-gray-900 focus:ring-2 cursor-pointer"
+                          />
+                        </div>
+                      </th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
                         رقم الصيانة
                       </th>
@@ -878,7 +1039,17 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   <tbody className="divide-y divide-gray-200">
                     {paginatedRecords.map((record) => (
                       <React.Fragment key={record.MaintNo}>
-                        <tr className={`${getRowBackgroundColor(record)} transition-colors`}>
+                        <tr className={`${getRowBackgroundColor(record)} transition-colors ${selectedForPrint.has(record.MaintNo) ? 'bg-blue-50/50' : ''}`}>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={selectedForPrint.has(record.MaintNo)}
+                                onChange={() => toggleSelectForPrint(record.MaintNo)}
+                                className="w-4 h-4 text-gray-900 bg-gray-100 border-gray-300 rounded focus:ring-gray-900 focus:ring-2 cursor-pointer"
+                              />
+                            </div>
+                          </td>
                           <td className="px-4 py-3 text-right">
                             <div className="font-medium text-gray-900 font-cairo">{record.MaintNo}</div>
                             {userMap.get(record.created_by || record.createdBy || record.user_id || '') && (
@@ -1014,6 +1185,13 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                                 <Printer size={18} />
                               </button>
                               <button
+                                onClick={() => handlePrintQrRecord(record)}
+                                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                title="طباعة الباركود"
+                              >
+                                <ScanLine size={18} />
+                              </button>
+                              <button
                                 onClick={() => handleViewRecord(record)}
                                 className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                                 title="عرض"
@@ -1069,144 +1247,159 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                 <div key={record.MaintNo} className={`bg-white border rounded-lg p-4 shadow-sm ${getRowBackgroundColor(record)}`}>
                   {/* Header Row */}
                   <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className="text-base font-bold text-gray-900 font-cairo">#{record.MaintNo}</h3>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-cairo ${getStatusColor(record.Status)}`}>
-                          {record.Status}
-                        </span>
-                      </div>
-                      {userMap.get(record.created_by || record.createdBy || record.user_id || '') && (
-                        <div className="text-xs text-gray-500 font-cairo">
-                          {userMap.get(record.created_by || record.createdBy || record.user_id || '')}
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedForPrint.has(record.MaintNo)}
+                        onChange={() => toggleSelectForPrint(record.MaintNo)}
+                        className="w-4 h-4 text-gray-900 bg-gray-100 border-gray-300 rounded focus:ring-gray-900 focus:ring-2 cursor-pointer mt-0.5"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <h3 className="text-base font-bold text-gray-900 font-cairo">#{record.MaintNo}</h3>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-cairo ${getStatusColor(record.Status)}`}>
+                            {record.Status}
+                          </span>
                         </div>
+                        {userMap.get(record.created_by || record.createdBy || record.user_id || '') && (
+                          <div className="text-xs text-gray-500 font-cairo">
+                            {userMap.get(record.created_by || record.createdBy || record.user_id || '')}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Customer Info */}
+                    <div className="mb-3">
+                      <div className="text-xs text-gray-500 font-cairo mb-1">العميل</div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/admin/customers/${record.CustomerID}`);
+                        }}
+                        className="text-sm text-gray-900 hover:text-gray-900 hover:underline font-medium font-cairo"
+                      >
+                        {record.CustomerName || record.CustomerID}
+                      </button>
+                    </div>
+
+                    {/* Item Info */}
+                    <div className="mb-3">
+                      <div className="text-xs text-gray-500 font-cairo mb-1">اسم القطعة</div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="text-sm font-semibold text-gray-900 font-cairo">{record.ItemName}</div>
+                        {record.CostAmount !== null && record.CostAmount !== undefined && record.CostAmount > 0 && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-800 rounded-full text-xs font-medium font-cairo">
+                            <DollarSign size={12} />
+                            {record.CostAmount} ₪
+                          </span>
+                        )}
+                      </div>
+                      {record.Company && (
+                        <div className="text-xs text-gray-500 mt-1 font-cairo">{record.Company}</div>
+                      )}
+                      {record.CostReason && (
+                        <div className="text-xs text-orange-600 mt-1 font-cairo">{record.CostReason}</div>
                       )}
                     </div>
-                  </div>
 
-                  {/* Customer Info */}
-                  <div className="mb-3">
-                    <div className="text-xs text-gray-500 font-cairo mb-1">العميل</div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/admin/customers/${record.CustomerID}`);
-                      }}
-                      className="text-sm text-gray-900 hover:text-gray-900 hover:underline font-medium font-cairo"
-                    >
-                      {record.CustomerName || record.CustomerID}
-                    </button>
-                  </div>
-
-                  {/* Item Info */}
-                  <div className="mb-3">
-                    <div className="text-xs text-gray-500 font-cairo mb-1">اسم القطعة</div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="text-sm font-semibold text-gray-900 font-cairo">{record.ItemName}</div>
-                      {record.CostAmount !== null && record.CostAmount !== undefined && record.CostAmount > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-800 rounded-full text-xs font-medium font-cairo">
-                          <DollarSign size={12} />
-                          {record.CostAmount} ₪
-                        </span>
-                      )}
+                    {/* Location and Date */}
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <div className="text-xs text-gray-500 font-cairo mb-1">الموقع</div>
+                        <div className="text-sm text-gray-900 font-cairo">{record.Location}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 font-cairo mb-1">تاريخ الاستقبال</div>
+                        <div className="text-sm text-gray-900 font-cairo">{formatDate(record.DateOfReceive)}</div>
+                        {record.CreatedAt && (
+                          <div className="text-xs text-gray-500 mt-0.5 font-cairo">{formatTime(record.CreatedAt)}</div>
+                        )}
+                      </div>
                     </div>
-                    {record.Company && (
-                      <div className="text-xs text-gray-500 mt-1 font-cairo">{record.Company}</div>
+
+                    {/* Action Buttons */}
+                    {getActionButtons(record.Status, record.MaintNo).length > 0 && (
+                      <div className="mb-3 pt-3 border-t border-gray-200">
+                        <div className="text-xs text-gray-500 font-cairo mb-2">إجراءات الحالة</div>
+                        <div className="flex flex-wrap gap-2">
+                          {getActionButtons(record.Status, record.MaintNo).map((action, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => handleStatusChangeClick(record.MaintNo, action.newStatus, action.label)}
+                              disabled={updatingStatus === record.MaintNo}
+                              className={`text-xs px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-colors text-gray-900 font-medium font-cairo ${updatingStatus === record.MaintNo ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                                }`}
+                            >
+                              {action.label}
+                            </button>
+                          ))}
+                        </div>
+                        {updatingStatus === record.MaintNo && (
+                          <div className="flex items-center gap-1 text-xs text-gray-500 mt-2 font-cairo">
+                            <Loader2 size={12} className="animate-spin" />
+                            <span>جاري التحديث...</span>
+                          </div>
+                        )}
+                      </div>
                     )}
-                    {record.CostReason && (
-                      <div className="text-xs text-orange-600 mt-1 font-cairo">{record.CostReason}</div>
-                    )}
-                  </div>
 
-                  {/* Location and Date */}
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                      <div className="text-xs text-gray-500 font-cairo mb-1">الموقع</div>
-                      <div className="text-sm text-gray-900 font-cairo">{record.Location}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500 font-cairo mb-1">تاريخ الاستقبال</div>
-                      <div className="text-sm text-gray-900 font-cairo">{formatDate(record.DateOfReceive)}</div>
-                      {record.CreatedAt && (
-                        <div className="text-xs text-gray-500 mt-0.5 font-cairo">{formatTime(record.CreatedAt)}</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  {getActionButtons(record.Status, record.MaintNo).length > 0 && (
-                    <div className="mb-3 pt-3 border-t border-gray-200">
-                      <div className="text-xs text-gray-500 font-cairo mb-2">إجراءات الحالة</div>
-                      <div className="flex flex-wrap gap-2">
-                        {getActionButtons(record.Status, record.MaintNo).map((action, idx) => (
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+                      <button
+                        onClick={() => toggleRowExpansion(record.MaintNo)}
+                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-cairo ${expandedRows.has(record.MaintNo) ? 'bg-gray-200' : ''
+                          }`}
+                      >
+                        <History size={16} />
+                        <span>السجل التاريخي</span>
+                      </button>
+                      {shouldShowWhatsApp(record.Status) && (
+                        <div className="relative">
                           <button
-                            key={idx}
-                            onClick={() => handleStatusChangeClick(record.MaintNo, action.newStatus, action.label)}
-                            disabled={updatingStatus === record.MaintNo}
-                            className={`text-xs px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-colors text-gray-900 font-medium font-cairo ${updatingStatus === record.MaintNo ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                              }`}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            onClick={() => {
+                              // On mobile, show a simple menu or default to 970
+                              handleWhatsApp(record, '970');
+                            }}
+                            title="إرسال واتساب"
                           >
-                            {action.label}
+                            <MessageCircle size={18} />
                           </button>
-                        ))}
-                      </div>
-                      {updatingStatus === record.MaintNo && (
-                        <div className="flex items-center gap-1 text-xs text-gray-500 mt-2 font-cairo">
-                          <Loader2 size={12} className="animate-spin" />
-                          <span>جاري التحديث...</span>
                         </div>
                       )}
+                      <button
+                        onClick={() => handlePrintRecord(record)}
+                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="طباعة"
+                      >
+                        <Printer size={18} />
+                      </button>
+                      <button
+                        onClick={() => handlePrintQrRecord(record)}
+                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="طباعة الباركود"
+                      >
+                        <ScanLine size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleViewRecord(record)}
+                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="عرض"
+                      >
+                        <Eye size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleEditRecord(record)}
+                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="تعديل"
+                      >
+                        <Edit size={18} />
+                      </button>
                     </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
-                    <button
-                      onClick={() => toggleRowExpansion(record.MaintNo)}
-                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-cairo ${expandedRows.has(record.MaintNo) ? 'bg-gray-200' : ''
-                        }`}
-                    >
-                      <History size={16} />
-                      <span>السجل التاريخي</span>
-                    </button>
-                    {shouldShowWhatsApp(record.Status) && (
-                      <div className="relative">
-                        <button
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          onClick={() => {
-                            // On mobile, show a simple menu or default to 970
-                            handleWhatsApp(record, '970');
-                          }}
-                          title="إرسال واتساب"
-                        >
-                          <MessageCircle size={18} />
-                        </button>
-                      </div>
-                    )}
-                    <button
-                      onClick={() => handlePrintRecord(record)}
-                      className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                      title="طباعة"
-                    >
-                      <Printer size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleViewRecord(record)}
-                      className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                      title="عرض"
-                    >
-                      <Eye size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleEditRecord(record)}
-                      className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                      title="تعديل"
-                    >
-                      <Edit size={18} />
-                    </button>
                   </div>
 
-                  {/* Expanded Timeline */}
+                    /* Expanded Timeline */
                   {expandedRows.has(record.MaintNo) && (
                     <div className="mt-3 pt-3 border-t border-gray-200">
                       <div className="flex items-center justify-between mb-3">
@@ -1409,6 +1602,20 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   >
                     <Printer size={16} />
                     <span className="hidden sm:inline">طباعة</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (isMobilePrint()) {
+                        window.open(`/admin/maintenance/print-qr/${viewingRecord.MaintNo}`, `print-qr-${viewingRecord.MaintNo}`, 'noopener,noreferrer');
+                        return;
+                      }
+                      setPrintQrOverlayMaintNo(viewingRecord.MaintNo);
+                    }}
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-cairo"
+                    title="طباعة الباركود (50x25)"
+                  >
+                    <ScanLine size={16} />
+                    <span className="hidden sm:inline">الباركود</span>
                   </button>
                   <button
                     onClick={() => router.push(`/admin/maintenance/edit/${viewingRecord.MaintNo}`)}
@@ -1663,8 +1870,149 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
             </div>
           </div>
         )}
+
+        {printQrOverlayMaintNo && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+            dir="rtl"
+            onClick={() => setPrintQrOverlayMaintNo(null)}
+          >
+            <div
+              className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+              style={{ minWidth: '120mm', maxHeight: '95vh' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                <span className="text-sm font-cairo text-gray-700">معاينة طباعة — ملصق الباركود</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => printQrIframeRef.current?.contentWindow?.print()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    <Printer size={20} />
+                    طباعة مرة أخرى
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPrintQrOverlayMaintNo(null)}
+                    className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                    aria-label="إغلاق"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto bg-white min-h-0 flex items-center justify-center bg-gray-100">
+                <iframe
+                  ref={printQrIframeRef}
+                  src={`/admin/maintenance/print-qr/${printQrOverlayMaintNo}?embed=1`}
+                  title="طباعة ملصق الباركود"
+                  className="border border-gray-300 shadow-sm bg-white"
+                  style={{ width: '50mm', height: '25mm' }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* BATCH PRINT OVERLAYS */}
+        {printBatchA6OverlayMaintNos && printBatchA6OverlayMaintNos.length > 0 && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+            dir="rtl"
+            onClick={() => setPrintBatchA6OverlayMaintNos(null)}
+          >
+            <div
+              className="relative bg-white rounded-lg shadow-xl flex flex-col w-full max-w-4xl h-[95vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                <div className="flex items-center gap-2 text-gray-700 font-cairo">
+                  <Printer size={16} />
+                  <span className="text-sm">معاينة طباعة — {printBatchA6OverlayMaintNos.length} تذكرة صيانة محددة (A6)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => printBatchA6IframeRef.current?.contentWindow?.print()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    <Printer size={20} />
+                    طباعة مرة أخرى
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPrintBatchA6OverlayMaintNos(null)}
+                    className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                    aria-label="إغلاق"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto bg-gray-100 min-h-0 flex justify-center">
+                <iframe
+                  ref={printBatchA6IframeRef}
+                  src={`/admin/maintenance/print-batch?embed=1&ids=${encodeURIComponent(printBatchA6OverlayMaintNos.join(','))}`}
+                  title="طباعة تذاكر صيانة"
+                  className="w-full h-full shadow-lg max-w-[105mm] border-x border-gray-300 bg-white"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {printBatchQrOverlayMaintNos && printBatchQrOverlayMaintNos.length > 0 && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+            dir="rtl"
+            onClick={() => setPrintBatchQrOverlayMaintNos(null)}
+          >
+            <div
+              className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+              style={{ minWidth: '120mm', maxHeight: '95vh' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                <div className="flex items-center gap-2 text-gray-700 font-cairo">
+                  <ScanLine size={16} />
+                  <span className="text-sm">معاينة طباعة — {printBatchQrOverlayMaintNos.length} ملصق باركود محدد (50x25)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => printBatchQrIframeRef.current?.contentWindow?.print()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    <Printer size={20} />
+                    طباعة مرة أخرى
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPrintBatchQrOverlayMaintNos(null)}
+                    className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                    aria-label="إغلاق"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto bg-gray-100 min-h-0 flex justify-center items-center">
+                <iframe
+                  ref={printBatchQrIframeRef}
+                  src={`/admin/maintenance/print-qr-batch?embed=1&ids=${encodeURIComponent(printBatchQrOverlayMaintNos.join(','))}`}
+                  title="طباعة ملصقات الباركود"
+                  className="shadow-md bg-white border border-gray-300"
+                  style={{ width: '50mm', height: '25mm' }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
-    </AdminLayout>
+    </AdminLayout >
   );
 }
 

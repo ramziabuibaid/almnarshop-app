@@ -456,9 +456,9 @@ export default function MaintenancePrintPage() {
                 <div className="info-cell">
                   <span className="cell-label">حالة الكفالة</span>
                   <div className="cell-value" style={{
-                    color: maintenanceData.UnderWarranty === 'نعم' ? '#059669' : '#dc2626'
+                    color: maintenanceData.UnderWarranty === 'YES' ? '#059669' : '#dc2626'
                   }}>
-                    {maintenanceData.UnderWarranty === 'نعم' ? 'ضمن الكفالة' : 'خارج الكفالة'}
+                    {maintenanceData.UnderWarranty === 'YES' ? 'ضمن الكفالة' : 'خارج الكفالة'}
                   </div>
                 </div>
 
