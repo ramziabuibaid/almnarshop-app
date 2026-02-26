@@ -1245,9 +1245,10 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
             <div className="md:hidden space-y-3">
               {paginatedRecords.map((record) => (
                 <div key={record.MaintNo} className={`bg-white border rounded-lg p-4 shadow-sm ${getRowBackgroundColor(record)}`}>
-                  {/* Header Row */}
+
+                  {/* Header Row: Selection, ID and Status */}
                   <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 w-full">
                       <input
                         type="checkbox"
                         checked={selectedForPrint.has(record.MaintNo)}
@@ -1255,763 +1256,793 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                         className="w-4 h-4 text-gray-900 bg-gray-100 border-gray-300 rounded focus:ring-gray-900 focus:ring-2 cursor-pointer mt-0.5"
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="text-base font-bold text-gray-900 font-cairo">#{record.MaintNo}</h3>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-cairo ${getStatusColor(record.Status)}`}>
-                            {record.Status}
-                          </span>
+                        <div className="flex flex-wrap items-center justify-between gap-1 w-full">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-base font-bold text-gray-900 font-cairo">#{record.MaintNo}</h3>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-cairo ${getStatusColor(record.Status)}`}>
+                              {record.Status}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500 font-cairo flex-shrink-0">
+                            {formatDate(record.DateOfReceive)}
+                          </div>
                         </div>
                         {userMap.get(record.created_by || record.createdBy || record.user_id || '') && (
-                          <div className="text-xs text-gray-500 font-cairo">
+                          <div className="text-xs text-gray-500 font-cairo mt-1">
                             {userMap.get(record.created_by || record.createdBy || record.user_id || '')}
                           </div>
                         )}
                       </div>
                     </div>
+                  </div>
 
-                    {/* Customer Info */}
-                    <div className="mb-3">
-                      <div className="text-xs text-gray-500 font-cairo mb-1">العميل</div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/admin/customers/${record.CustomerID}`);
-                        }}
-                        className="text-sm text-gray-900 hover:text-gray-900 hover:underline font-medium font-cairo"
-                      >
-                        {record.CustomerName || record.CustomerID}
-                      </button>
-                    </div>
-
-                    {/* Item Info */}
-                    <div className="mb-3">
-                      <div className="text-xs text-gray-500 font-cairo mb-1">اسم القطعة</div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <div className="text-sm font-semibold text-gray-900 font-cairo">{record.ItemName}</div>
-                        {record.CostAmount !== null && record.CostAmount !== undefined && record.CostAmount > 0 && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-800 rounded-full text-xs font-medium font-cairo">
-                            <DollarSign size={12} />
-                            {record.CostAmount} ₪
-                          </span>
-                        )}
+                  {/* Customer Info */}
+                  <div className="mb-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/admin/customers/${record.CustomerID}`);
+                      }}
+                      className="text-blue-600 hover:text-blue-800 hover:underline font-semibold text-sm font-cairo text-right w-full"
+                    >
+                      {record.CustomerName || record.CustomerID}
+                    </button>
+                    {(record as any).CustomerPhone && (
+                      <div className="text-xs text-gray-500 font-cairo mt-1" dir="ltr">
+                        {fixPhoneNumber((record as any).CustomerPhone)}
                       </div>
-                      {record.Company && (
-                        <div className="text-xs text-gray-500 mt-1 font-cairo">{record.Company}</div>
+                    )}
+                  </div>
+
+                  {/* Date & Location Grid */}
+                  <div className="grid grid-cols-2 gap-3 mb-3 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                    <div>
+                      <div className="text-xs text-gray-500 font-cairo mb-1">الموقع</div>
+                      <div className="text-sm font-semibold text-gray-900 font-cairo">{record.Location || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 font-cairo mb-1">تاريخ الإنشاء</div>
+                      <div className="text-sm font-semibold text-gray-900 font-cairo">
+                        {record.CreatedAt ? formatTime(record.CreatedAt) : '—'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Item Description block */}
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-xs text-gray-500 font-cairo">اسم القطعة</div>
+                      {record.CostAmount !== null && record.CostAmount !== undefined && record.CostAmount > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-800 rounded-full text-xs font-bold font-cairo">
+                          {record.CostAmount} ₪
+                        </span>
                       )}
-                      {record.CostReason && (
-                        <div className="text-xs text-orange-600 mt-1 font-cairo">{record.CostReason}</div>
-                      )}
                     </div>
-
-                    {/* Location and Date */}
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <div>
-                        <div className="text-xs text-gray-500 font-cairo mb-1">الموقع</div>
-                        <div className="text-sm text-gray-900 font-cairo">{record.Location}</div>
+                    <div className="text-sm font-semibold text-gray-900 font-cairo">{record.ItemName}</div>
+                    {(record.Company || record.CostReason) && (
+                      <div className="mt-1 flex flex-col gap-0.5">
+                        {record.Company && <div className="text-xs font-medium text-gray-600 font-cairo">{record.Company}</div>}
+                        {record.CostReason && <div className="text-xs text-orange-600 font-cairo">{record.CostReason}</div>}
                       </div>
-                      <div>
-                        <div className="text-xs text-gray-500 font-cairo mb-1">تاريخ الاستقبال</div>
-                        <div className="text-sm text-gray-900 font-cairo">{formatDate(record.DateOfReceive)}</div>
-                        {record.CreatedAt && (
-                          <div className="text-xs text-gray-500 mt-0.5 font-cairo">{formatTime(record.CreatedAt)}</div>
-                        )}
-                      </div>
-                    </div>
+                    )}
+                  </div>
 
-                    {/* Action Buttons */}
-                    {getActionButtons(record.Status, record.MaintNo).length > 0 && (
-                      <div className="mb-3 pt-3 border-t border-gray-200">
-                        <div className="text-xs text-gray-500 font-cairo mb-2">إجراءات الحالة</div>
-                        <div className="flex flex-wrap gap-2">
-                          {getActionButtons(record.Status, record.MaintNo).map((action, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => handleStatusChangeClick(record.MaintNo, action.newStatus, action.label)}
-                              disabled={updatingStatus === record.MaintNo}
-                              className={`text-xs px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-colors text-gray-900 font-medium font-cairo ${updatingStatus === record.MaintNo ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                                }`}
-                            >
-                              {action.label}
-                            </button>
-                          ))}
-                        </div>
+                  {/* Status Actions */}
+                  {getActionButtons(record.Status, record.MaintNo).length > 0 && (
+                    <div className="mb-3 pt-3 border-t border-gray-200">
+                      <div className="text-xs text-gray-500 font-cairo mb-2 flex justify-between items-center">
+                        <span>إجراءات الحالة</span>
                         {updatingStatus === record.MaintNo && (
-                          <div className="flex items-center gap-1 text-xs text-gray-500 mt-2 font-cairo">
+                          <div className="flex items-center gap-1 text-xs text-blue-600 font-cairo animate-pulse">
                             <Loader2 size={12} className="animate-spin" />
-                            <span>جاري التحديث...</span>
+                            <span>يتم التحديث...</span>
                           </div>
                         )}
                       </div>
-                    )}
+                      <div className="flex flex-wrap gap-2">
+                        {getActionButtons(record.Status, record.MaintNo).map((action, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleStatusChangeClick(record.MaintNo, action.newStatus, action.label)}
+                            disabled={updatingStatus === record.MaintNo}
+                            className={`flex-1 min-w-[30%] text-xs px-2 py-2 border border-blue-200 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-bold font-cairo text-center ${updatingStatus === record.MaintNo ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+                  {/* Primary & Secondary Actions */}
+                  <div className="pt-3 border-t border-gray-200">
+                    {/* Primary Row */}
+                    <div className="flex gap-2 w-full mb-2">
+                      <button
+                        onClick={() => handleViewRecord(record)}
+                        className="flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-cairo font-bold"
+                      >
+                        <Eye size={16} />
+                        <span>عرض</span>
+                      </button>
+                      <button
+                        onClick={() => handleEditRecord(record)}
+                        className="flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-cairo font-bold"
+                      >
+                        <Edit size={16} />
+                        <span>تعديل</span>
+                      </button>
                       <button
                         onClick={() => toggleRowExpansion(record.MaintNo)}
-                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-cairo ${expandedRows.has(record.MaintNo) ? 'bg-gray-200' : ''
+                        className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm rounded-lg transition-colors font-cairo font-bold ${expandedRows.has(record.MaintNo)
+                          ? 'bg-gray-800 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                           }`}
                       >
                         <History size={16} />
-                        <span>السجل التاريخي</span>
+                        <span>تاريخ</span>
                       </button>
-                      {shouldShowWhatsApp(record.Status) && (
-                        <div className="relative">
-                          <button
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                            onClick={() => {
-                              // On mobile, show a simple menu or default to 970
-                              handleWhatsApp(record, '970');
-                            }}
-                            title="إرسال واتساب"
-                          >
-                            <MessageCircle size={18} />
-                          </button>
-                        </div>
-                      )}
+                    </div>
+                    {/* Secondary Row */}
+                    <div className="flex justify-start gap-2">
                       <button
                         onClick={() => handlePrintRecord(record)}
-                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                        title="طباعة"
+                        className="p-2 bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="طباعة الحجم الطبيعي"
                       >
                         <Printer size={18} />
                       </button>
                       <button
                         onClick={() => handlePrintQrRecord(record)}
-                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-2 bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                         title="طباعة الباركود"
                       >
                         <ScanLine size={18} />
                       </button>
-                      <button
-                        onClick={() => handleViewRecord(record)}
-                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                        title="عرض"
-                      >
-                        <Eye size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleEditRecord(record)}
-                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                        title="تعديل"
-                      >
-                        <Edit size={18} />
-                      </button>
+                      {shouldShowWhatsApp(record.Status) && (
+                        <button
+                          className="p-2 bg-green-50 border border-green-200 text-green-600 hover:bg-green-100 rounded-lg transition-colors ml-auto"
+                          onClick={() => handleWhatsApp(record, '970')}
+                          title="إرسال واتساب"
+                        >
+                          <MessageCircle size={18} />
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                    /* Expanded Timeline */
+                  {/* Expanded Timeline Block */}
                   {expandedRows.has(record.MaintNo) && (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-xs font-bold text-gray-900 font-cairo">السجل التاريخي</h4>
+                    <div className="mt-3 pt-3 border-t border-gray-200 animate-in fade-in slide-in-from-top-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <History size={14} className="text-gray-500" />
+                          <h4 className="text-xs font-bold text-gray-900 font-cairo">سجل التتبع</h4>
+                        </div>
                         <button
                           onClick={() => toggleRowExpansion(record.MaintNo)}
-                          className="text-xs text-gray-500 hover:text-gray-700 transition-colors font-cairo"
+                          className="text-xs text-gray-500 hover:text-gray-900 bg-gray-100 px-2 py-1 rounded"
                         >
-                          إخفاء
+                          إغلاق
                         </button>
                       </div>
-                      <div className="max-h-64 overflow-y-auto">
+                      <div className="max-h-64 overflow-y-auto bg-gray-50 rounded-lg p-2">
                         <MaintenanceTimeline maintNo={record.MaintNo} />
                       </div>
                     </div>
                   )}
+
                 </div>
               ))}
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="text-xs sm:text-sm text-gray-600 font-cairo text-center sm:text-right">
-                    عرض {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedRecords.length)} من {filteredAndSortedRecords.length} سجل
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                      className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight size={20} />
-                    </button>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNum;
-                        if (totalPages <= 5) {
-                          pageNum = i + 1;
-                        } else if (currentPage <= 3) {
-                          pageNum = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i;
-                        } else {
-                          pageNum = currentPage - 2 + i;
-                        }
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => setCurrentPage(pageNum)}
-                            className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors font-cairo ${currentPage === pageNum
-                              ? 'bg-gray-900 text-white'
-                              : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                              }`}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      })}
+            {
+              totalPages > 1 && (
+                <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="text-xs sm:text-sm text-gray-600 font-cairo text-center sm:text-right">
+                      عرض {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedRecords.length)} من {filteredAndSortedRecords.length} سجل
                     </div>
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                      className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft size={20} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ChevronRight size={20} />
+                      </button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setCurrentPage(pageNum)}
+                              className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors font-cairo ${currentPage === pageNum
+                                ? 'bg-gray-900 text-white'
+                                : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ChevronLeft size={20} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )
+            }
           </>
         )}
 
         {/* Status Change Modal */}
-        {statusChangeModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" dir="rtl">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6 space-y-3 sm:space-y-4 max-h-[95vh] overflow-y-auto">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900 font-cairo">تغيير الحالة</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">من</label>
-                  <p className="text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg font-cairo">{statusChangeModal.currentStatus}</p>
+        {
+          statusChangeModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" dir="rtl">
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6 space-y-3 sm:space-y-4 max-h-[95vh] overflow-y-auto">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 font-cairo">تغيير الحالة</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">من</label>
+                    <p className="text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg font-cairo">{statusChangeModal.currentStatus}</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">إلى</label>
+                    <p className="text-sm sm:text-base text-gray-900 bg-blue-50 px-3 py-2 rounded-lg font-medium font-cairo">{statusChangeModal.newStatus}</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">
+                      ملاحظة (اختياري)
+                    </label>
+                    <textarea
+                      value={statusChangeNote}
+                      onChange={(e) => setStatusChangeNote(e.target.value)}
+                      placeholder="أضف ملاحظة حول هذا التغيير..."
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 resize-y font-cairo text-sm sm:text-base"
+                    />
+                  </div>
+                  {statusChangeModal.currentStatus === 'موجودة في الشركة' &&
+                    (statusChangeModal.newStatus === 'جاهزة للتسليم للزبون من المحل' ||
+                      statusChangeModal.newStatus === 'جاهزة للتسليم للزبون من المخزن') && (
+                      <>
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">
+                            مبلغ التكلفة (₪)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={statusChangeCostAmount}
+                            onChange={(e) => setStatusChangeCostAmount(e.target.value)}
+                            placeholder="0.00"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo text-sm sm:text-base"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">
+                            سبب التكلفة (اختياري)
+                          </label>
+                          <textarea
+                            value={statusChangeCostReason}
+                            onChange={(e) => setStatusChangeCostReason(e.target.value)}
+                            placeholder="وصف سبب التكلفة..."
+                            rows={2}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 resize-y font-cairo text-sm sm:text-base"
+                          />
+                        </div>
+                      </>
+                    )}
                 </div>
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">إلى</label>
-                  <p className="text-sm sm:text-base text-gray-900 bg-blue-50 px-3 py-2 rounded-lg font-medium font-cairo">{statusChangeModal.newStatus}</p>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={handleStatusChangeCancel}
+                    className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium font-cairo text-sm sm:text-base"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    onClick={handleStatusChangeConfirm}
+                    disabled={updatingStatus === statusChangeModal.maintNo}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed font-cairo text-sm sm:text-base"
+                  >
+                    {updatingStatus === statusChangeModal.maintNo ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>جاري التحديث...</span>
+                      </>
+                    ) : (
+                      'تأكيد التغيير'
+                    )}
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">
-                    ملاحظة (اختياري)
-                  </label>
-                  <textarea
-                    value={statusChangeNote}
-                    onChange={(e) => setStatusChangeNote(e.target.value)}
-                    placeholder="أضف ملاحظة حول هذا التغيير..."
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 resize-y font-cairo text-sm sm:text-base"
-                  />
-                </div>
-                {statusChangeModal.currentStatus === 'موجودة في الشركة' &&
-                  (statusChangeModal.newStatus === 'جاهزة للتسليم للزبون من المحل' ||
-                    statusChangeModal.newStatus === 'جاهزة للتسليم للزبون من المخزن') && (
-                    <>
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">
-                          مبلغ التكلفة (₪)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={statusChangeCostAmount}
-                          onChange={(e) => setStatusChangeCostAmount(e.target.value)}
-                          placeholder="0.00"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo text-sm sm:text-base"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">
-                          سبب التكلفة (اختياري)
-                        </label>
-                        <textarea
-                          value={statusChangeCostReason}
-                          onChange={(e) => setStatusChangeCostReason(e.target.value)}
-                          placeholder="وصف سبب التكلفة..."
-                          rows={2}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 resize-y font-cairo text-sm sm:text-base"
-                        />
-                      </div>
-                    </>
-                  )}
-              </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">
-                <button
-                  onClick={handleStatusChangeCancel}
-                  className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium font-cairo text-sm sm:text-base"
-                >
-                  إلغاء
-                </button>
-                <button
-                  onClick={handleStatusChangeConfirm}
-                  disabled={updatingStatus === statusChangeModal.maintNo}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed font-cairo text-sm sm:text-base"
-                >
-                  {updatingStatus === statusChangeModal.maintNo ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>جاري التحديث...</span>
-                    </>
-                  ) : (
-                    'تأكيد التغيير'
-                  )}
-                </button>
               </div>
             </div>
-          </div>
-        )}
+          )
+        }
 
         {/* View Record Modal */}
-        {viewingRecord && (
-          <div
-            className="fixed inset-0 md:right-64 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4"
-            dir="rtl"
-            onClick={closeViewModal}
-          >
+        {
+          viewingRecord && (
             <div
-              className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col"
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 md:right-64 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4"
+              dir="rtl"
+              onClick={closeViewModal}
             >
-              {/* Header */}
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 z-10 flex-shrink-0">
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-lg sm:text-xl font-bold text-gray-900 font-cairo">عرض سجل الصيانة</h2>
-                  <p className="text-sm text-gray-600 font-cairo">#{viewingRecord.MaintNo}</p>
-                </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  {shouldShowWhatsApp(viewingRecord.Status) && viewingRecordFull && (
-                    <div className="relative">
-                      <button
-                        onClick={() => handleWhatsAppFromModal('970')}
-                        className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-cairo"
-                        title="واتساب 970"
-                      >
-                        <MessageCircle size={16} />
-                        <span className="hidden sm:inline">واتساب</span>
-                      </button>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => {
-                      if (isMobilePrint()) {
-                        window.open(`/admin/maintenance/print/${viewingRecord.MaintNo}`, `print-maintenance-${viewingRecord.MaintNo}`, 'noopener,noreferrer');
-                        return;
-                      }
-                      setPrintOverlayMaintNo(viewingRecord.MaintNo);
-                    }}
-                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-cairo"
-                  >
-                    <Printer size={16} />
-                    <span className="hidden sm:inline">طباعة</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (isMobilePrint()) {
-                        window.open(`/admin/maintenance/print-qr/${viewingRecord.MaintNo}`, `print-qr-${viewingRecord.MaintNo}`, 'noopener,noreferrer');
-                        return;
-                      }
-                      setPrintQrOverlayMaintNo(viewingRecord.MaintNo);
-                    }}
-                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-cairo"
-                    title="طباعة الباركود (50x25)"
-                  >
-                    <ScanLine size={16} />
-                    <span className="hidden sm:inline">الباركود</span>
-                  </button>
-                  <button
-                    onClick={() => router.push(`/admin/maintenance/edit/${viewingRecord.MaintNo}`)}
-                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
-                  >
-                    <Edit size={16} />
-                    <span className="hidden sm:inline">تعديل</span>
-                  </button>
-                  <button
-                    onClick={closeViewModal}
-                    className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <X size={20} className="text-gray-600" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Tabs */}
-              <div className="flex border-b border-gray-200 flex-shrink-0" dir="rtl">
-                <button
-                  onClick={() => setViewActiveTab('details')}
-                  className={`flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 font-medium transition-colors text-xs sm:text-sm font-cairo ${viewActiveTab === 'details'
-                    ? 'text-gray-900 border-b-2 border-gray-900 bg-gray-50'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
-                >
-                  <Edit size={16} />
-                  <span>التفاصيل</span>
-                </button>
-                <button
-                  onClick={() => setViewActiveTab('history')}
-                  className={`flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 font-medium transition-colors text-xs sm:text-sm font-cairo ${viewActiveTab === 'history'
-                    ? 'text-gray-900 border-b-2 border-gray-900 bg-gray-50'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
-                >
-                  <History size={16} />
-                  <span>السجل التاريخي</span>
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0">
-                {loadingViewRecord ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 size={32} className="animate-spin text-gray-400" />
+              <div
+                className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="sticky top-0 bg-white border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 z-10 flex-shrink-0">
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 font-cairo">عرض سجل الصيانة</h2>
+                    <p className="text-sm text-gray-600 font-cairo">#{viewingRecord.MaintNo}</p>
                   </div>
-                ) : viewActiveTab === 'details' && viewingRecordFull ? (
-                  <div className="space-y-4 sm:space-y-6">
-                    {/* Customer Info */}
-                    <div>
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-3 sm:mb-4 font-cairo">معلومات العميل</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                        <div>
-                          <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">اسم العميل</label>
-                          <button
-                            onClick={() => {
-                              if (window.event && (window.event as any).ctrlKey) {
-                                window.open(`/admin/customers/${viewingRecordFull.CustomerID}`, '_blank', 'noopener,noreferrer');
-                              } else {
-                                router.push(`/admin/customers/${viewingRecordFull.CustomerID}`);
-                              }
-                            }}
-                            className="text-sm sm:text-base text-gray-900 font-medium hover:underline font-cairo"
-                          >
-                            {viewingRecordFull.CustomerName || viewingRecordFull.CustomerID}
-                          </button>
-                        </div>
-                        <div>
-                          <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">رقم العميل</label>
-                          <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.CustomerID}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Item Information */}
-                    <div>
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-3 sm:mb-4 font-cairo">معلومات القطعة</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                        <div>
-                          <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">اسم القطعة</label>
-                          <p className="text-sm sm:text-base text-gray-900 font-medium font-cairo">{viewingRecordFull.ItemName}</p>
-                        </div>
-                        <div>
-                          <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">الموقع</label>
-                          <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.Location}</p>
-                        </div>
-                        <div>
-                          <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">الشركة الكفيلة</label>
-                          <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.Company || '—'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">رقم السيريال</label>
-                          <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.SerialNo || '—'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">تحت الكفالة</label>
-                          <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.UnderWarranty === 'YES' ? 'نعم' : 'لا'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">الحالة</label>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${getStatusColor(viewingRecordFull.Status)}`}>
-                            {viewingRecordFull.Status}
-                          </span>
-                        </div>
-                        {viewingRecordFull.CostAmount !== null && viewingRecordFull.CostAmount !== undefined && (
-                          <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">مبلغ التكلفة</label>
-                            <p className="text-sm sm:text-base text-gray-900 font-medium font-cairo">{viewingRecordFull.CostAmount} ₪</p>
-                          </div>
-                        )}
-                        {viewingRecordFull.CostReason && (
-                          <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">سبب التكلفة</label>
-                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.CostReason}</p>
-                          </div>
-                        )}
-                        {viewingRecordFull.IsPaid !== undefined && (
-                          <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">تم الدفع</label>
-                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.IsPaid ? 'نعم' : 'لا'}</p>
-                          </div>
-                        )}
-                        <div>
-                          <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">تاريخ الشراء</label>
-                          <p className="text-sm sm:text-base text-gray-900 font-cairo">{formatDate(viewingRecordFull.DateOfPurchase)}</p>
-                        </div>
-                        <div>
-                          <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">تاريخ الاستقبال</label>
-                          <p className="text-sm sm:text-base text-gray-900 font-cairo">{formatDate(viewingRecordFull.DateOfReceive)}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Problem Description */}
-                    {viewingRecordFull.Problem && (
-                      <div>
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-3 sm:mb-4 font-cairo">وصف المشكلة</h3>
-                        <p className="text-sm sm:text-base text-gray-900 whitespace-pre-wrap font-cairo">{viewingRecordFull.Problem}</p>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {shouldShowWhatsApp(viewingRecord.Status) && viewingRecordFull && (
+                      <div className="relative">
+                        <button
+                          onClick={() => handleWhatsAppFromModal('970')}
+                          className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-cairo"
+                          title="واتساب 970"
+                        >
+                          <MessageCircle size={16} />
+                          <span className="hidden sm:inline">واتساب</span>
+                        </button>
                       </div>
                     )}
+                    <button
+                      onClick={() => {
+                        if (isMobilePrint()) {
+                          window.open(`/admin/maintenance/print/${viewingRecord.MaintNo}`, `print-maintenance-${viewingRecord.MaintNo}`, 'noopener,noreferrer');
+                          return;
+                        }
+                        setPrintOverlayMaintNo(viewingRecord.MaintNo);
+                      }}
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-cairo"
+                    >
+                      <Printer size={16} />
+                      <span className="hidden sm:inline">طباعة</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (isMobilePrint()) {
+                          window.open(`/admin/maintenance/print-qr/${viewingRecord.MaintNo}`, `print-qr-${viewingRecord.MaintNo}`, 'noopener,noreferrer');
+                          return;
+                        }
+                        setPrintQrOverlayMaintNo(viewingRecord.MaintNo);
+                      }}
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-cairo"
+                      title="طباعة الباركود (50x25)"
+                    >
+                      <ScanLine size={16} />
+                      <span className="hidden sm:inline">الباركود</span>
+                    </button>
+                    <button
+                      onClick={() => router.push(`/admin/maintenance/edit/${viewingRecord.MaintNo}`)}
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
+                    >
+                      <Edit size={16} />
+                      <span className="hidden sm:inline">تعديل</span>
+                    </button>
+                    <button
+                      onClick={closeViewModal}
+                      className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <X size={20} className="text-gray-600" />
+                    </button>
+                  </div>
+                </div>
 
-                    {/* Images */}
-                    <div>
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-3 sm:mb-4 font-cairo">الصور</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-                        {viewingRecordFull.ImageOfItem && (
+                {/* Tabs */}
+                <div className="flex border-b border-gray-200 flex-shrink-0" dir="rtl">
+                  <button
+                    onClick={() => setViewActiveTab('details')}
+                    className={`flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 font-medium transition-colors text-xs sm:text-sm font-cairo ${viewActiveTab === 'details'
+                      ? 'text-gray-900 border-b-2 border-gray-900 bg-gray-50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      }`}
+                  >
+                    <Edit size={16} />
+                    <span>التفاصيل</span>
+                  </button>
+                  <button
+                    onClick={() => setViewActiveTab('history')}
+                    className={`flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 font-medium transition-colors text-xs sm:text-sm font-cairo ${viewActiveTab === 'history'
+                      ? 'text-gray-900 border-b-2 border-gray-900 bg-gray-50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      }`}
+                  >
+                    <History size={16} />
+                    <span>السجل التاريخي</span>
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0">
+                  {loadingViewRecord ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 size={32} className="animate-spin text-gray-400" />
+                    </div>
+                  ) : viewActiveTab === 'details' && viewingRecordFull ? (
+                    <div className="space-y-4 sm:space-y-6">
+                      {/* Customer Info */}
+                      <div>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-3 sm:mb-4 font-cairo">معلومات العميل</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-2 font-cairo">صورة القطعة</label>
-                            <div className="relative w-full h-40 sm:h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                              <img
-                                src={getImageUrl(viewingRecordFull.ImageOfItem) || ''}
-                                alt="صورة القطعة"
-                                className="w-full h-full object-contain"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
-                              />
-                            </div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">اسم العميل</label>
+                            <button
+                              onClick={() => {
+                                if (window.event && (window.event as any).ctrlKey) {
+                                  window.open(`/admin/customers/${viewingRecordFull.CustomerID}`, '_blank', 'noopener,noreferrer');
+                                } else {
+                                  router.push(`/admin/customers/${viewingRecordFull.CustomerID}`);
+                                }
+                              }}
+                              className="text-sm sm:text-base text-gray-900 font-medium hover:underline font-cairo"
+                            >
+                              {viewingRecordFull.CustomerName || viewingRecordFull.CustomerID}
+                            </button>
                           </div>
-                        )}
-                        {viewingRecordFull.ImageOfProblem && (
                           <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-2 font-cairo">صورة المشكلة</label>
-                            <div className="relative w-full h-40 sm:h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                              <img
-                                src={getImageUrl(viewingRecordFull.ImageOfProblem) || ''}
-                                alt="صورة المشكلة"
-                                className="w-full h-full object-contain"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
-                              />
-                            </div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">رقم العميل</label>
+                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.CustomerID}</p>
                           </div>
-                        )}
-                        {viewingRecordFull.ImageOfWarranty && (
+                        </div>
+                      </div>
+
+                      {/* Item Information */}
+                      <div>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-3 sm:mb-4 font-cairo">معلومات القطعة</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-2 font-cairo">صورة الكفالة</label>
-                            <div className="relative w-full h-40 sm:h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                              <img
-                                src={getImageUrl(viewingRecordFull.ImageOfWarranty) || ''}
-                                alt="صورة الكفالة"
-                                className="w-full h-full object-contain"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
-                              />
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">اسم القطعة</label>
+                            <p className="text-sm sm:text-base text-gray-900 font-medium font-cairo">{viewingRecordFull.ItemName}</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">الموقع</label>
+                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.Location}</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">الشركة الكفيلة</label>
+                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.Company || '—'}</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">رقم السيريال</label>
+                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.SerialNo || '—'}</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">تحت الكفالة</label>
+                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.UnderWarranty === 'YES' ? 'نعم' : 'لا'}</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">الحالة</label>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${getStatusColor(viewingRecordFull.Status)}`}>
+                              {viewingRecordFull.Status}
+                            </span>
+                          </div>
+                          {viewingRecordFull.CostAmount !== null && viewingRecordFull.CostAmount !== undefined && (
+                            <div>
+                              <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">مبلغ التكلفة</label>
+                              <p className="text-sm sm:text-base text-gray-900 font-medium font-cairo">{viewingRecordFull.CostAmount} ₪</p>
                             </div>
+                          )}
+                          {viewingRecordFull.CostReason && (
+                            <div>
+                              <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">سبب التكلفة</label>
+                              <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.CostReason}</p>
+                            </div>
+                          )}
+                          {viewingRecordFull.IsPaid !== undefined && (
+                            <div>
+                              <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">تم الدفع</label>
+                              <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.IsPaid ? 'نعم' : 'لا'}</p>
+                            </div>
+                          )}
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">تاريخ الشراء</label>
+                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{formatDate(viewingRecordFull.DateOfPurchase)}</p>
                           </div>
-                        )}
-                        {!viewingRecordFull.ImageOfItem && !viewingRecordFull.ImageOfProblem && !viewingRecordFull.ImageOfWarranty && (
-                          <div className="col-span-full text-center py-8 text-gray-500 font-cairo">
-                            <ImageIcon size={48} className="mx-auto mb-2 text-gray-300" />
-                            <p className="text-sm">لا توجد صور</p>
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">تاريخ الاستقبال</label>
+                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{formatDate(viewingRecordFull.DateOfReceive)}</p>
                           </div>
-                        )}
+                        </div>
+                      </div>
+
+                      {/* Problem Description */}
+                      {viewingRecordFull.Problem && (
+                        <div>
+                          <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-3 sm:mb-4 font-cairo">وصف المشكلة</h3>
+                          <p className="text-sm sm:text-base text-gray-900 whitespace-pre-wrap font-cairo">{viewingRecordFull.Problem}</p>
+                        </div>
+                      )}
+
+                      {/* Images */}
+                      <div>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-3 sm:mb-4 font-cairo">الصور</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                          {viewingRecordFull.ImageOfItem && (
+                            <div>
+                              <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-2 font-cairo">صورة القطعة</label>
+                              <div className="relative w-full h-40 sm:h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                                <img
+                                  src={getImageUrl(viewingRecordFull.ImageOfItem) || ''}
+                                  alt="صورة القطعة"
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                          {viewingRecordFull.ImageOfProblem && (
+                            <div>
+                              <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-2 font-cairo">صورة المشكلة</label>
+                              <div className="relative w-full h-40 sm:h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                                <img
+                                  src={getImageUrl(viewingRecordFull.ImageOfProblem) || ''}
+                                  alt="صورة المشكلة"
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                          {viewingRecordFull.ImageOfWarranty && (
+                            <div>
+                              <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-2 font-cairo">صورة الكفالة</label>
+                              <div className="relative w-full h-40 sm:h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                                <img
+                                  src={getImageUrl(viewingRecordFull.ImageOfWarranty) || ''}
+                                  alt="صورة الكفالة"
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                          {!viewingRecordFull.ImageOfItem && !viewingRecordFull.ImageOfProblem && !viewingRecordFull.ImageOfWarranty && (
+                            <div className="col-span-full text-center py-8 text-gray-500 font-cairo">
+                              <ImageIcon size={48} className="mx-auto mb-2 text-gray-300" />
+                              <p className="text-sm">لا توجد صور</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ) : viewActiveTab === 'history' && viewingRecord ? (
-                  <div>
-                    <MaintenanceTimeline maintNo={viewingRecord.MaintNo} />
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {printOverlayMaintNo && (
-          <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
-            dir="rtl"
-            onClick={() => setPrintOverlayMaintNo(null)}
-          >
-            <div
-              className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
-              style={{ minWidth: '120mm', maxHeight: '95vh' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-                <span className="text-sm font-cairo text-gray-700">معاينة الطباعة — معاملة صيانة</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => printIframeRef.current?.contentWindow?.print()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                  >
-                    <Printer size={16} />
-                    طباعة مرة أخرى
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPrintOverlayMaintNo(null)}
-                    className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
-                    aria-label="إغلاق"
-                  >
-                    <X size={20} />
-                  </button>
+                  ) : viewActiveTab === 'history' && viewingRecord ? (
+                    <div>
+                      <MaintenanceTimeline maintNo={viewingRecord.MaintNo} />
+                    </div>
+                  ) : null}
                 </div>
               </div>
-              <div className="flex-1 overflow-auto bg-white min-h-0">
-                <iframe
-                  ref={printIframeRef}
-                  src={`/admin/maintenance/print/${printOverlayMaintNo}?embed=1`}
-                  title="طباعة معاملة الصيانة"
-                  className="w-full border-0 bg-white"
-                  style={{ minHeight: '70vh', height: '70vh' }}
-                />
-              </div>
             </div>
-          </div>
-        )}
+          )
+        }
 
-        {printQrOverlayMaintNo && (
-          <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
-            dir="rtl"
-            onClick={() => setPrintQrOverlayMaintNo(null)}
-          >
+        {
+          printOverlayMaintNo && (
             <div
-              className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
-              style={{ minWidth: '120mm', maxHeight: '95vh' }}
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+              dir="rtl"
+              onClick={() => setPrintOverlayMaintNo(null)}
             >
-              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-                <span className="text-sm font-cairo text-gray-700">معاينة طباعة — ملصق الباركود</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => printQrIframeRef.current?.contentWindow?.print()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                  >
-                    <Printer size={20} />
-                    طباعة مرة أخرى
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPrintQrOverlayMaintNo(null)}
-                    className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
-                    aria-label="إغلاق"
-                  >
-                    <X size={20} />
-                  </button>
+              <div
+                className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+                style={{ minWidth: '120mm', maxHeight: '95vh' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                  <span className="text-sm font-cairo text-gray-700">معاينة الطباعة — معاملة صيانة</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => printIframeRef.current?.contentWindow?.print()}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      <Printer size={16} />
+                      طباعة مرة أخرى
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPrintOverlayMaintNo(null)}
+                      className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                      aria-label="إغلاق"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-auto bg-white min-h-0">
+                  <iframe
+                    ref={printIframeRef}
+                    src={`/admin/maintenance/print/${printOverlayMaintNo}?embed=1`}
+                    title="طباعة معاملة الصيانة"
+                    className="w-full border-0 bg-white"
+                    style={{ minHeight: '70vh', height: '70vh' }}
+                  />
                 </div>
               </div>
-              <div className="flex-1 overflow-auto bg-white min-h-0 flex items-center justify-center bg-gray-100">
-                <iframe
-                  ref={printQrIframeRef}
-                  src={`/admin/maintenance/print-qr/${printQrOverlayMaintNo}?embed=1`}
-                  title="طباعة ملصق الباركود"
-                  className="border border-gray-300 shadow-sm bg-white"
-                  style={{ width: '50mm', height: '25mm' }}
-                />
+            </div>
+          )
+        }
+
+        {
+          printQrOverlayMaintNo && (
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+              dir="rtl"
+              onClick={() => setPrintQrOverlayMaintNo(null)}
+            >
+              <div
+                className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+                style={{ minWidth: '120mm', maxHeight: '95vh' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                  <span className="text-sm font-cairo text-gray-700">معاينة طباعة — ملصق الباركود</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => printQrIframeRef.current?.contentWindow?.print()}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      <Printer size={20} />
+                      طباعة مرة أخرى
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPrintQrOverlayMaintNo(null)}
+                      className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                      aria-label="إغلاق"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-auto bg-white min-h-0 flex items-center justify-center bg-gray-100">
+                  <iframe
+                    ref={printQrIframeRef}
+                    src={`/admin/maintenance/print-qr/${printQrOverlayMaintNo}?embed=1`}
+                    title="طباعة ملصق الباركود"
+                    className="border border-gray-300 shadow-sm bg-white"
+                    style={{ width: '50mm', height: '25mm' }}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )
+        }
 
         {/* BATCH PRINT OVERLAYS */}
-        {printBatchA6OverlayMaintNos && printBatchA6OverlayMaintNos.length > 0 && (
-          <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
-            dir="rtl"
-            onClick={() => setPrintBatchA6OverlayMaintNos(null)}
-          >
+        {
+          printBatchA6OverlayMaintNos && printBatchA6OverlayMaintNos.length > 0 && (
             <div
-              className="relative bg-white rounded-lg shadow-xl flex flex-col w-full max-w-4xl h-[95vh] overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+              dir="rtl"
+              onClick={() => setPrintBatchA6OverlayMaintNos(null)}
             >
-              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-                <div className="flex items-center gap-2 text-gray-700 font-cairo">
-                  <Printer size={16} />
-                  <span className="text-sm">معاينة طباعة — {printBatchA6OverlayMaintNos.length} تذكرة صيانة محددة (A6)</span>
+              <div
+                className="relative bg-white rounded-lg shadow-xl flex flex-col w-full max-w-4xl h-[95vh] overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                  <div className="flex items-center gap-2 text-gray-700 font-cairo">
+                    <Printer size={16} />
+                    <span className="text-sm">معاينة طباعة — {printBatchA6OverlayMaintNos.length} تذكرة صيانة محددة (A6)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => printBatchA6IframeRef.current?.contentWindow?.print()}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      <Printer size={20} />
+                      طباعة مرة أخرى
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPrintBatchA6OverlayMaintNos(null)}
+                      className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                      aria-label="إغلاق"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => printBatchA6IframeRef.current?.contentWindow?.print()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                  >
-                    <Printer size={20} />
-                    طباعة مرة أخرى
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPrintBatchA6OverlayMaintNos(null)}
-                    className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
-                    aria-label="إغلاق"
-                  >
-                    <X size={20} />
-                  </button>
+                <div className="flex-1 overflow-auto bg-gray-100 min-h-0 flex justify-center">
+                  <iframe
+                    ref={printBatchA6IframeRef}
+                    src={`/admin/maintenance/print-batch?embed=1&ids=${encodeURIComponent(printBatchA6OverlayMaintNos.join(','))}`}
+                    title="طباعة تذاكر صيانة"
+                    className="w-full h-full shadow-lg max-w-[105mm] border-x border-gray-300 bg-white"
+                  />
                 </div>
-              </div>
-              <div className="flex-1 overflow-auto bg-gray-100 min-h-0 flex justify-center">
-                <iframe
-                  ref={printBatchA6IframeRef}
-                  src={`/admin/maintenance/print-batch?embed=1&ids=${encodeURIComponent(printBatchA6OverlayMaintNos.join(','))}`}
-                  title="طباعة تذاكر صيانة"
-                  className="w-full h-full shadow-lg max-w-[105mm] border-x border-gray-300 bg-white"
-                />
               </div>
             </div>
-          </div>
-        )}
+          )
+        }
 
-        {printBatchQrOverlayMaintNos && printBatchQrOverlayMaintNos.length > 0 && (
-          <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
-            dir="rtl"
-            onClick={() => setPrintBatchQrOverlayMaintNos(null)}
-          >
+        {
+          printBatchQrOverlayMaintNos && printBatchQrOverlayMaintNos.length > 0 && (
             <div
-              className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
-              style={{ minWidth: '120mm', maxHeight: '95vh' }}
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+              dir="rtl"
+              onClick={() => setPrintBatchQrOverlayMaintNos(null)}
             >
-              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-                <div className="flex items-center gap-2 text-gray-700 font-cairo">
-                  <ScanLine size={16} />
-                  <span className="text-sm">معاينة طباعة — {printBatchQrOverlayMaintNos.length} ملصق باركود محدد (50x25)</span>
+              <div
+                className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+                style={{ minWidth: '120mm', maxHeight: '95vh' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                  <div className="flex items-center gap-2 text-gray-700 font-cairo">
+                    <ScanLine size={16} />
+                    <span className="text-sm">معاينة طباعة — {printBatchQrOverlayMaintNos.length} ملصق باركود محدد (50x25)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => printBatchQrIframeRef.current?.contentWindow?.print()}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      <Printer size={20} />
+                      طباعة مرة أخرى
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPrintBatchQrOverlayMaintNos(null)}
+                      className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                      aria-label="إغلاق"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => printBatchQrIframeRef.current?.contentWindow?.print()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                  >
-                    <Printer size={20} />
-                    طباعة مرة أخرى
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPrintBatchQrOverlayMaintNos(null)}
-                    className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
-                    aria-label="إغلاق"
-                  >
-                    <X size={20} />
-                  </button>
+                <div className="flex-1 overflow-auto bg-gray-100 min-h-0 flex justify-center items-center">
+                  <iframe
+                    ref={printBatchQrIframeRef}
+                    src={`/admin/maintenance/print-qr-batch?embed=1&ids=${encodeURIComponent(printBatchQrOverlayMaintNos.join(','))}`}
+                    title="طباعة ملصقات الباركود"
+                    className="shadow-md bg-white border border-gray-300"
+                    style={{ width: '50mm', height: '25mm' }}
+                  />
                 </div>
-              </div>
-              <div className="flex-1 overflow-auto bg-gray-100 min-h-0 flex justify-center items-center">
-                <iframe
-                  ref={printBatchQrIframeRef}
-                  src={`/admin/maintenance/print-qr-batch?embed=1&ids=${encodeURIComponent(printBatchQrOverlayMaintNos.join(','))}`}
-                  title="طباعة ملصقات الباركود"
-                  className="shadow-md bg-white border border-gray-300"
-                  style={{ width: '50mm', height: '25mm' }}
-                />
               </div>
             </div>
-          </div>
-        )}
+          )
+        }
 
-      </div>
+      </div >
     </AdminLayout >
   );
 }
