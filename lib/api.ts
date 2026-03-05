@@ -2907,16 +2907,18 @@ export async function getCRMDataFromSupabase(): Promise<any> {
     console.log('[API] Fetching CRM data from Supabase...');
     const startTime = Date.now();
 
-    // Fetch all customers with their balance
-    const { data: customers, error: customersError } = await supabase
-      .from('customers')
-      .select('customer_id, name, email, phone, balance')
-      .order('name');
+    // Fetch all customers with their balance USING the cache to save Dashboard Egress
+    const appCustomers = await getAllCustomers();
+    // mapped customers use PascalCase Name, Email, Phone, Balance, CustomerID
 
-    if (customersError) {
-      console.error('[API] Failed to fetch customers:', customersError);
-      throw new Error(`Failed to fetch customers: ${customersError.message}`);
-    }
+    // Map them back to the exact snake_case structure our dashboard code expects below
+    const customers = appCustomers.map(c => ({
+      customer_id: c.CustomerID || c.customer_id,
+      name: c.Name || c.name,
+      email: c.Email || c.email,
+      phone: c.Phone || c.phone,
+      balance: c.Balance || c.balance
+    }));
 
     // Fetch all active promises (PTP) with customer info (including audit: created_by, updated_by)
     const { data: activities, error: activitiesError } = await supabase
@@ -2943,14 +2945,8 @@ export async function getCRMDataFromSupabase(): Promise<any> {
       throw new Error(`Failed to fetch activities: ${activitiesError.message}`);
     }
 
-    // Fetch customer data separately and map
-    const customerIds = [...new Set((activities || []).map((a: any) => a.customer_id))];
-    const { data: customerData } = await supabase
-      .from('customers')
-      .select('customer_id, name, email, phone, balance')
-      .in('customer_id', customerIds);
-
-    const customerMap = new Map((customerData || []).map((c: any) => [c.customer_id, c]));
+    // Customer map for promises
+    const customerMap = new Map((customers || []).map((c: any) => [c.customer_id, c]));
 
     // Resolve admin usernames for created_by / updated_by (audit)
     const adminIds = new Set<string>();
@@ -11342,5 +11338,118 @@ export async function deleteLegalCasePayment(paymentId: string): Promise<void> {
     .eq('id', paymentId);
 
   if (error) throw error;
+}
+
+// ==========================================
+// ARTICLES API
+// ==========================================
+
+export async function getArticles(options?: { type?: string; is_published?: boolean; limit?: number }) {
+  let query = supabase
+    .from('articles')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (options?.type) {
+    query = query.eq('type', options.type);
+  }
+  if (options?.is_published !== undefined) {
+    query = query.eq('is_published', options.is_published);
+  }
+  if (options?.limit) {
+    query = query.limit(options.limit);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
+export async function getArticleById(id: string) {
+  const { data, error } = await supabase
+    .from('articles')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getArticleBySlug(slug: string) {
+  const { data, error } = await supabase
+    .from('articles')
+    .select('*')
+    .eq('slug', slug)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function saveArticle(articleData: any) {
+  const isUpdate = !!articleData.id;
+
+  if (isUpdate) {
+    const { data, error } = await supabase
+      .from('articles')
+      .update(articleData)
+      .eq('id', articleData.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } else {
+    // Check if slug exists first
+    const { data: existing, error: errCheck } = await supabase
+      .from('articles')
+      .select('id')
+      .eq('slug', articleData.slug)
+      .maybeSingle();
+
+    if (existing) {
+      throw new Error('رابط المقالة موجود مسبقاً، يرجى اختيار رابط مختلف.');
+    }
+
+    // Create new
+    const { data, error } = await supabase
+      .from('articles')
+      .insert([articleData])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+}
+
+export async function deleteArticle(id: string) {
+  const { error } = await supabase
+    .from('articles')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function incrementArticleView(id: string) {
+  // Simple read-modify-write for views. Supabase doesn't have a simple increment without RPC.
+  try {
+    const { data: current } = await supabase
+      .from('articles')
+      .select('view_count')
+      .eq('id', id)
+      .single();
+
+    if (current) {
+      await supabase
+        .from('articles')
+        .update({ view_count: (current.view_count || 0) + 1 })
+        .eq('id', id);
+    }
+  } catch (e) {
+    console.error('Failed to increment view count', e);
+  }
 }
 

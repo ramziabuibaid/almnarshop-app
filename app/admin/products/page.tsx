@@ -14,6 +14,7 @@ import { deleteProduct, getProducts, saveProduct, updateProductVisibility, setPr
 import { ColumnDef } from '@tanstack/react-table';
 import ScannerLatinInput from '@/components/admin/ScannerLatinInput';
 import React from 'react';
+import Image from 'next/image';
 
 // Optimized Mobile Product Card Component
 const MobileProductCard = React.memo(({
@@ -72,19 +73,20 @@ const MobileProductCard = React.memo(({
         <button
           type="button"
           onClick={() => hasAnyImage && onImageClick?.(product)}
-          className={`w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center ${hasAnyImage ? 'cursor-pointer hover:ring-2 hover:ring-gray-400 transition-shadow' : 'cursor-default'}`}
+          className={`w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center relative ${hasAnyImage ? 'cursor-pointer hover:ring-2 hover:ring-gray-400 transition-shadow' : 'cursor-default'}`}
           title={hasAnyImage ? 'انقر لعرض الصور' : undefined}
         >
           {hasImageError || !imageUrl ? (
             <ImageIcon size={24} className="text-gray-300" />
           ) : (
-            <img
+            <Image
               src={imageUrl}
-              alt={product.name || product.Name || ''}
-              className="object-contain w-full h-full"
+              alt={product.name || product.Name || 'product image'}
+              fill
+              unoptimized={process.env.NODE_ENV === 'development'}
+              className="object-contain"
+              sizes="80px"
               onError={() => handleImageError(productId)}
-              loading="lazy"
-              decoding="async"
             />
           )}
         </button>
@@ -846,13 +848,14 @@ export default function ProductsManagerPage() {
               {hasImageError || !imageUrl ? (
                 <ImageIcon size={24} className="text-gray-300" />
               ) : (
-                <img
+                <Image
                   src={imageUrl}
-                  alt={product.name || product.Name || ''}
-                  className="object-contain w-full h-full"
+                  alt={product.name || product.Name || 'product image'}
+                  fill
+                  unoptimized={process.env.NODE_ENV === 'development'}
+                  className="object-contain"
+                  sizes="64px"
                   onError={() => handleImageError(productId)}
-                  loading="lazy"
-                  decoding="async"
                 />
               )}
             </button>

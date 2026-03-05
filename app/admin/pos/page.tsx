@@ -3,10 +3,12 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
-import { saveCashInvoice, getProducts, getActiveCampaignWithProducts, getReservedQuantities, ReservedQuotationsData, getAllCustomers, saveShopPayment, saveShopSalesInvoice } from '@/lib/api';
+import { saveCashInvoice, getProducts, getActiveCampaignWithProducts, getReservedQuantities, ReservedQuotationsData, getAllCustomers, saveShopPayment, saveShopSalesInvoice, getCustomerLastPriceForProduct } from '@/lib/api';
 import { validateSerialNumbers } from '@/lib/validation';
+import CustomerFormModal from '@/components/admin/CustomerFormModal';
 import { Lock } from 'lucide-react';
 import InvoicePrint from '@/components/admin/InvoicePrint';
+import Image from 'next/image';
 import {
   Search,
   Filter,
@@ -50,9 +52,26 @@ export default function POSPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [customers, setCustomers] = useState<any[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Visa' | 'Receivable'>('Cash');
+
+
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+
+  const handleCustomerAdded = async (newCustomerId?: string) => {
+    const updatedCustomers = await getAllCustomers();
+    setCustomers(updatedCustomers);
+    if (newCustomerId) {
+      const newCustomer = updatedCustomers.find((c) => (c.customer_id || c.CustomerID || c.id) === newCustomerId);
+      if (newCustomer) {
+        setSelectedCustomerId(newCustomerId);
+        setCustomerSearchQuery(newCustomer.name || newCustomer.Name || '');
+        setShowCustomerModal(false);
+      }
+    }
+    setIsCustomerModalOpen(false);
+  };
 
   // Check if user has permission to create POS invoices
   const canCreatePOS = admin?.is_super_admin || admin?.permissions?.createPOS === true;
@@ -121,6 +140,40 @@ export default function POSPage() {
   const lastScannedRef = useRef<string>('');
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const resizeContainerRef = useRef<HTMLDivElement>(null);
+
+  // Effect to fetch last prices when customer is selected in Receivable mode
+  useEffect(() => {
+    if (paymentMethod === 'Receivable' && selectedCustomerId && cart.length > 0) {
+      const fetchLastPrices = async () => {
+        let pricesUpdated = false;
+        const newCart = [...cart];
+
+        for (let i = 0; i < newCart.length; i++) {
+          const item = newCart[i];
+          // Only fetch if price hasn't been manually heavily changed or just to be safe, fetch for all
+          try {
+            const lastPrice = await getCustomerLastPriceForProduct(selectedCustomerId, item.productID);
+            if (lastPrice && lastPrice > 0 && lastPrice !== item.unitPrice) {
+              newCart[i] = {
+                ...item,
+                unitPrice: lastPrice,
+                total: item.quantity * lastPrice
+              };
+              pricesUpdated = true;
+            }
+          } catch (error) {
+            console.error('[POS] Error fetching last customer price for product:', item.productID, error);
+          }
+        }
+
+        if (pricesUpdated) {
+          setCart(newCart);
+        }
+      };
+
+      fetchLastPrices();
+    }
+  }, [selectedCustomerId, paymentMethod, cart.length]); // depend on cart.length so it runs when new items are added
 
   // SearchableSelect Component
   interface SearchableSelectProps {
@@ -1740,12 +1793,15 @@ export default function POSPage() {
                         }}
                         className="group bg-white rounded-xl border border-gray-200 p-2 sm:p-3 cursor-pointer hover:shadow-xl hover:border-blue-400 hover:-translate-y-1 active:scale-[0.98] transition-all duration-200 font-cairo"
                       >
-                        <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg mb-2 flex items-center justify-center overflow-hidden border border-gray-200 group-hover:border-blue-300 transition-colors">
+                        <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg mb-2 flex items-center justify-center overflow-hidden border border-gray-200 group-hover:border-blue-300 transition-colors relative">
                           {imageUrl ? (
-                            <img
+                            <Image
                               src={imageUrl}
-                              alt={product.Name || product.name}
-                              className="w-full h-full object-contain p-1"
+                              alt={product.Name || product.name || 'product image'}
+                              fill
+                              unoptimized={process.env.NODE_ENV === 'development'}
+                              className="object-contain p-1"
+                              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
                                 const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
@@ -1884,16 +1940,21 @@ export default function POSPage() {
                         <div className="hidden lg:block">
                           <div className="flex items-start gap-3 mb-3">
                             {imageUrl ? (
-                              <img
-                                src={imageUrl}
-                                alt={item.name}
-                                className="w-16 h-16 object-contain rounded-lg border border-gray-200 flex-shrink-0"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                  const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
-                                  if (placeholder) placeholder.style.display = 'flex';
-                                }}
-                              />
+                              <div className="relative w-16 h-16 rounded-lg border border-gray-200 flex-shrink-0 overflow-hidden">
+                                <Image
+                                  src={imageUrl}
+                                  alt={item.name}
+                                  fill
+                                  unoptimized={process.env.NODE_ENV === 'development'}
+                                  className="object-contain"
+                                  sizes="64px"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const placeholder = e.currentTarget.parentElement?.nextElementSibling as HTMLElement;
+                                    if (placeholder) placeholder.style.display = 'flex';
+                                  }}
+                                />
+                              </div>
                             ) : (
                               <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center flex-shrink-0">
                                 <span className="text-gray-400 text-xs">—</span>
@@ -2018,16 +2079,21 @@ export default function POSPage() {
                         <div className="md:hidden space-y-2">
                           <div className="flex items-start gap-3">
                             {imageUrl ? (
-                              <img
-                                src={imageUrl}
-                                alt={item.name}
-                                className="w-16 h-16 object-contain rounded border border-gray-200 flex-shrink-0"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                  const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
-                                  if (placeholder) placeholder.style.display = 'flex';
-                                }}
-                              />
+                              <div className="relative w-16 h-16 rounded border border-gray-200 flex-shrink-0 overflow-hidden">
+                                <Image
+                                  src={imageUrl}
+                                  alt={item.name}
+                                  fill
+                                  unoptimized={process.env.NODE_ENV === 'development'}
+                                  className="object-contain"
+                                  sizes="64px"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const placeholder = e.currentTarget.parentElement?.nextElementSibling as HTMLElement;
+                                    if (placeholder) placeholder.style.display = 'flex';
+                                  }}
+                                />
+                              </div>
                             ) : (
                               <div className="w-16 h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
                                 <span className="text-gray-400 text-xs">—</span>
@@ -2431,13 +2497,23 @@ export default function POSPage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden transform transition-all">
             <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <h3 className="font-bold text-gray-900 text-lg font-cairo">اختر الزبون (ذمة مالية)</h3>
-              <button
-                onClick={() => setShowCustomerModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors"
-                title="إغلاق"
-              >
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsCustomerModalOpen(true)}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors font-cairo text-sm font-bold"
+                  title="إضافة زبون جديد"
+                >
+                  <Plus size={16} />
+                  <span>إضافة زبون</span>
+                </button>
+                <button
+                  onClick={() => setShowCustomerModal(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors"
+                  title="إغلاق"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             <div className="p-4 border-b border-gray-100">
@@ -2445,10 +2521,10 @@ export default function POSPage() {
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input
                   type="text"
-                  placeholder="ابحث عن زبون بالاسم أو رقم الهاتف..."
+                  placeholder="ابحث عن زبون بالاسم، رقم الهاتف، أو رقم الهوية..."
                   value={customerSearchQuery}
                   onChange={(e) => setCustomerSearchQuery(e.target.value)}
-                  className="w-full pr-10 pl-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-cairo text-sm"
+                  className="w-full pr-10 pl-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-cairo text-sm text-gray-900 font-bold placeholder:text-gray-500 placeholder:font-normal"
                   autoFocus
                 />
               </div>
@@ -2457,11 +2533,15 @@ export default function POSPage() {
             <div className="overflow-y-auto flex-1 p-2 bg-gray-50/50">
               {customers
                 .filter(c => {
-                  const searchStr = customerSearchQuery.toLowerCase();
-                  return (
-                    (c.name || c.Name || '').toLowerCase().includes(searchStr) ||
-                    (c.phone || '').includes(searchStr)
-                  );
+                  const searchWords = customerSearchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
+                  if (searchWords.length === 0) return true;
+
+                  const name = String(c.name || c.Name || '').toLowerCase();
+                  const cid = String(c.customer_id || c.CustomerID || '').toLowerCase();
+                  const phone = String(c.phone || c.Phone || '').toLowerCase();
+                  const searchableText = `${name} ${cid} ${phone}`;
+
+                  return searchWords.every((word) => searchableText.includes(word));
                 })
                 .map(c => (
                   <button
@@ -2473,23 +2553,51 @@ export default function POSPage() {
                     }}
                     className="w-full text-right p-3 hover:bg-white bg-transparent rounded-xl border-b border-gray-100 last:border-0 transition-all flex flex-col group hover:shadow-sm"
                   >
-                    <div className="font-bold text-sm text-gray-900 font-cairo group-hover:text-blue-700 transition-colors">
-                      {c.name || c.Name}
+                    <div className="flex justify-between items-start w-full gap-2">
+                       <div className="flex flex-col gap-1 items-start">
+                         <div className="font-bold text-sm text-gray-900 font-cairo group-hover:text-blue-700 transition-colors text-right">
+                           {c.name || c.Name}
+                         </div>
+                         <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                           {c.phone && (
+                             <span className="text-xs text-gray-500 font-cairo bg-gray-100 px-1.5 py-0.5 rounded">
+                               {c.phone}
+                             </span>
+                           )}
+                           {(c.customer_id || c.CustomerID || c.id) && (
+                             <span className="text-xs text-blue-600 font-cairo bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100" title="رقم الزبون (النظام)">
+                               #{c.customer_id || c.CustomerID || c.id}
+                             </span>
+                           )}
+                           {c.external_id && (
+                             <span className="text-xs text-purple-600 font-cairo bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100" title="رقم الشامل">
+                               شامل: {c.external_id}
+                             </span>
+                           )}
+                         </div>
+                       </div>
+                       
+                       {/* Balance display */}
+                       <div className="flex flex-col items-end shrink-0">
+                         <span className="text-[10px] text-gray-500 font-cairo mb-0.5">الرصيد</span>
+                         <span dir="ltr" className={`text-sm font-bold font-cairo ${(c.balance || 0) < 0 ? 'text-red-600' : (c.balance || 0) > 0 ? 'text-green-600' : 'text-gray-700'}`}>
+                           {(c.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₪
+                         </span>
+                       </div>
                     </div>
-                    {c.phone && (
-                      <div className="text-xs text-gray-500 mt-1 font-cairo">
-                        {c.phone}
-                      </div>
-                    )}
                   </button>
                 ))}
 
               {customers.filter(c => {
-                const searchStr = customerSearchQuery.toLowerCase();
-                return (
-                  (c.name || c.Name || '').toLowerCase().includes(searchStr) ||
-                  (c.phone || '').includes(searchStr)
-                );
+                const searchWords = customerSearchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
+                if (searchWords.length === 0) return true;
+
+                const name = String(c.name || c.Name || '').toLowerCase();
+                const cid = String(c.customer_id || c.CustomerID || '').toLowerCase();
+                const phone = String(c.phone || c.Phone || '').toLowerCase();
+                const searchableText = `${name} ${cid} ${phone}`;
+
+                return searchWords.every((word) => searchableText.includes(word));
               }).length === 0 && (
                   <div className="text-center py-12 text-gray-500 font-cairo">
                     <div className="text-4xl mb-3 opacity-20">🔍</div>
@@ -2514,7 +2622,14 @@ export default function POSPage() {
           notes={invoiceData.notes}
         />
       )}
+
+      {isCustomerModalOpen && (
+        <CustomerFormModal
+          isOpen={isCustomerModalOpen}
+          onClose={() => setIsCustomerModalOpen(false)}
+          onSuccess={handleCustomerAdded}
+        />
+      )}
     </AdminLayout>
   );
 }
-

@@ -62,3 +62,25 @@ export interface Product {
   [key: string]: any;
 }
 
+export type ArticleBlockType = 'text' | 'image' | 'products';
+
+export interface ArticleBlock {
+  id: string;
+  type: ArticleBlockType;
+  content: any; // string for text/image, array of product IDs for products
+}
+
+export interface Article {
+  id: string;
+  slug: string;
+  title: string;
+  type: string;
+  summary?: string;
+  cover_image?: string;
+  content: ArticleBlock[];
+  view_count: number;
+  is_published: boolean;
+  published_at?: string;
+  created_at?: string;
+  updated_at?: string;
+}
