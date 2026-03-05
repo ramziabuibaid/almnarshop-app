@@ -5,14 +5,16 @@ import StoreFooter from '@/components/store/StoreFooter';
 import ViewCounterPing from '@/components/store/ViewCounterPing';
 import ProductCard from '@/components/store/ProductCard';
 import { getDirectImageUrl } from '@/lib/utils';
-import { Calendar, Eye, Share2, ArrowRight } from 'lucide-react';
+import { Calendar, Eye, Share2, ArrowRight, Package } from 'lucide-react';
 import Link from 'next/link';
 
 export const revalidate = 60;
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
     try {
-        const article = await getArticleBySlug(params.slug);
+        const resolvedParams = await params;
+        const decodedSlug = decodeURIComponent(resolvedParams.slug);
+        const article = await getArticleBySlug(decodedSlug);
         if (!article || !article.is_published) return {};
 
         return {
@@ -27,11 +29,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     }
 }
 
-export default async function ArticleDetailPage({ params }: { params: { slug: string } }) {
+export default async function ArticleDetailPage({ params }: { params: Promise<{ slug: string }> }) {
     let article;
 
     try {
-        article = await getArticleBySlug(params.slug);
+        const resolvedParams = await params;
+        const decodedSlug = decodeURIComponent(resolvedParams.slug);
+        article = await getArticleBySlug(decodedSlug);
     } catch (e) {
         notFound();
     }
@@ -140,7 +144,7 @@ export default async function ArticleDetailPage({ params }: { params: { slug: st
                         }
                         if (block.type === 'products') {
                             const productIds = Array.isArray(block.content) ? block.content : [];
-                            const validProducts = productIds.map(id => productMap.get(id)).filter(Boolean);
+                            const validProducts = productIds.map((id: any) => productMap.get(id)).filter(Boolean);
 
                             if (validProducts.length === 0) return null;
 
@@ -153,7 +157,7 @@ export default async function ArticleDetailPage({ params }: { params: { slug: st
                                         <h3 className="text-2xl font-bold text-indigo-900 m-0">منتجات مقترحة لك</h3>
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {validProducts.map(p => (
+                                        {validProducts.map((p: any) => (
                                             <div key={p.id || p.ProductID} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300">
                                                 <ProductCard product={p} />
                                             </div>
@@ -168,6 +172,6 @@ export default async function ArticleDetailPage({ params }: { params: { slug: st
             </main>
 
             <StoreFooter />
-        </div>
+        </div >
     );
 }

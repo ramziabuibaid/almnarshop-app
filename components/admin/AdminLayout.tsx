@@ -283,6 +283,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   }
                 }
 
+                if (link.href === '/admin/articles') {
+                  const canManageArticles = admin.is_super_admin || admin.permissions?.manageArticles === true;
+                  if (!canManageArticles) {
+                    return null;
+                  }
+                }
+
                 const styles = ACCENT_STYLES[link.accent] ?? ACCENT_STYLES.neutral;
                 const borderClass = isActive ? styles.border : styles.borderMuted;
 

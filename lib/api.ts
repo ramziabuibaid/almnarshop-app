@@ -11453,3 +11453,136 @@ export async function incrementArticleView(id: string) {
   }
 }
 
+// ==========================================
+// GUEST AUTHORS API
+// ==========================================
+
+export async function getGuestLinks() {
+  const { data, error } = await supabase
+    .from('article_guest_links')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function createGuestLink(authorName: string) {
+  // Generate a random token
+  const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+  const { data, error } = await supabase
+    .from('article_guest_links')
+    .insert([{
+      token,
+      author_name: authorName,
+      is_active: true
+    }])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function toggleGuestLink(id: string, isActive: boolean) {
+  const { error } = await supabase
+    .from('article_guest_links')
+    .update({ is_active: isActive })
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function deleteGuestLink(id: string) {
+  const { error } = await supabase
+    .from('article_guest_links')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function verifyGuestToken(token: string) {
+  const { data, error } = await supabase
+    .from('article_guest_links')
+    .select('*')
+    .eq('token', token)
+    .single();
+
+  if (error || !data) {
+    throw new Error('الرابط غير صالح أو غير موجود.');
+  }
+
+  if (!data.is_active) {
+    throw new Error('تم تعطيل هذا الرابط من قبل الإدارة.');
+  }
+
+  return data;
+}
+
+export async function guestGetArticles(guestLinkId: string) {
+  const { data, error } = await supabase
+    .from('articles')
+    .select('*')
+    .eq('guest_link_id', guestLinkId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function guestSaveArticle(guestLinkId: string, authorName: string, articleData: any) {
+  const isUpdate = !!articleData.id;
+
+  // Force guest ownership and unpublished status
+  const safeData = {
+    ...articleData,
+    guest_link_id: guestLinkId,
+    author_name: authorName,
+    is_published: false // Guests can never publish directly
+  };
+
+  if (isUpdate) {
+    // Verify ownership before updating
+    const { data: existing, error: checkErr } = await supabase
+      .from('articles')
+      .select('guest_link_id')
+      .eq('id', articleData.id)
+      .single();
+
+    if (checkErr || existing?.guest_link_id !== guestLinkId) {
+      throw new Error('غير مصرح لك بتعديل هذه المقالة.');
+    }
+
+    const { data, error } = await supabase
+      .from('articles')
+      .update(safeData)
+      .eq('id', articleData.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } else {
+    // Check if slug exists first
+    const { data: existing, error: errCheck } = await supabase
+      .from('articles')
+      .select('id')
+      .eq('slug', articleData.slug)
+      .maybeSingle();
+
+    if (existing) {
+      throw new Error('رابط المقالة موجود مسبقاً، يرجى اختيار رابط مختلف.');
+    }
+
+    const { data, error } = await supabase
+      .from('articles')
+      .insert([safeData])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+}

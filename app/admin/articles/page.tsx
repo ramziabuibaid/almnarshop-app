@@ -15,10 +15,14 @@ export default function AdminArticlesPage() {
     const [articles, setArticles] = useState<Article[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Check permissions - optionally limit to specific roles
-    // const canManageArticles = admin?.is_super_admin || admin?.permissions?.manageArticles === true;
+    // Check permissions
+    const canManageArticles = admin?.is_super_admin || admin?.permissions?.manageArticles === true;
 
     useEffect(() => {
+        if (!admin || !canManageArticles) {
+            router.push('/admin');
+            return;
+        }
         loadArticles();
     }, []);
 
@@ -46,7 +50,7 @@ export default function AdminArticlesPage() {
         }
     };
 
-    if (loading) {
+    if (loading || !canManageArticles) {
         return (
             <AdminLayout>
                 <div className="flex items-center justify-center h-64">
@@ -56,18 +60,28 @@ export default function AdminArticlesPage() {
         );
     }
 
+    if (!canManageArticles) return null;
+
     return (
         <AdminLayout>
             <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <h1 className="text-2xl font-bold text-gray-900">المقالات</h1>
-                    <Link
-                        href="/admin/articles/new"
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-                    >
-                        <Plus size={20} />
-                        إضافة مقالة جديدة
-                    </Link>
+                    <div className="flex items-center gap-2">
+                        <Link
+                            href="/admin/articles/guests"
+                            className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg transition-colors font-medium border border-gray-200"
+                        >
+                            دعوات الكتابة
+                        </Link>
+                        <Link
+                            href="/admin/articles/new"
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                        >
+                            <Plus size={20} />
+                            إضافة مقالة
+                        </Link>
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -86,13 +100,13 @@ export default function AdminArticlesPage() {
                             <tbody>
                                 {articles.map((article) => (
                                     <tr key={article.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                        <td className="p-4 max-w-xs truncate font-medium">{article.title}</td>
+                                        <td className="p-4 max-w-xs truncate font-bold text-gray-900">{article.title}</td>
                                         <td className="p-4">
                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                                                 {article.type}
                                             </span>
                                         </td>
-                                        <td className="p-4 text-center">{article.view_count || 0}</td>
+                                        <td className="p-4 text-center font-bold text-gray-900">{article.view_count || 0}</td>
                                         <td className="p-4 text-center">
                                             {article.is_published ? (
                                                 <span className="inline-flex items-center gap-1 text-green-600 bg-green-50 px-2.5 py-1 rounded-full text-sm">
@@ -104,8 +118,8 @@ export default function AdminArticlesPage() {
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="p-4 text-center text-sm text-gray-600">
-                                            {article.published_at ? new Date(article.published_at).toLocaleDateString('ar-JO') : '-'}
+                                        <td className="p-4 text-center text-sm text-gray-600 font-medium">
+                                            {article.published_at ? new Date(article.published_at).toLocaleDateString('en-GB') : '-'}
                                         </td>
                                         <td className="p-4">
                                             <div className="flex items-center justify-center gap-2">

@@ -23,7 +23,8 @@ type PermissionKey =
   | 'refreshProductsCache'
   | 'refreshCustomersCache'
   | 'accessPromissoryNotes'
-  | 'accessLegalCases';
+  | 'accessLegalCases'
+  | 'manageArticles';
 
 export type AdminPermissions = Record<PermissionKey, boolean>;
 

@@ -4,12 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Article, ArticleBlock, ArticleBlockType, Product } from '@/types';
 import { saveArticle, getProducts } from '@/lib/api';
-import { Plus, Trash, ArrowUp, ArrowDown, Image as ImageIcon, Type, Package, X, Check } from 'lucide-react';
+import { Plus, Trash, ArrowUp, ArrowDown, Image as ImageIcon, Type, Package, X, Check, Upload } from 'lucide-react';
 import { getDirectImageUrl } from '@/lib/utils';
 
 
 interface ArticleFormProps {
     initialData?: Article;
+    onSave?: (articleData: any) => Promise<void>;
+    hidePublishOption?: boolean;
 }
 
 const ARTICLE_TYPES = [
@@ -19,7 +21,7 @@ const ARTICLE_TYPES = [
     'معلومات عامة'
 ];
 
-export default function ArticleForm({ initialData }: ArticleFormProps) {
+export default function ArticleForm({ initialData, onSave, hidePublishOption }: ArticleFormProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -40,6 +42,67 @@ export default function ArticleForm({ initialData }: ArticleFormProps) {
     // For product selection block
     const [allProducts, setAllProducts] = useState<Product[]>([]);
     const [productsLoading, setProductsLoading] = useState(false);
+
+    const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNsFS3q_wyBqS_tBW1fe9DF1HIrg3mvECey8c9WqgXBO_MGiIN31j-Ew25yYjWOOs/exec";
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, onSuccess: (url: string) => void, contextId: string) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setUploadingImage(contextId);
+
+            let fileToUpload = file;
+            try {
+                const imageCompression = (await import('browser-image-compression')).default;
+                fileToUpload = await imageCompression(file, {
+                    maxSizeMB: 1,
+                    maxWidthOrHeight: 1200,
+                    useWebWorker: true,
+                });
+            } catch (compErr) {
+                console.warn('Image compression failed, using original', compErr);
+            }
+
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                try {
+                    const base64Data = reader.result as string;
+                    const base64 = base64Data.split(',')[1];
+
+                    const formData = new FormData();
+                    formData.append('fileData', base64);
+                    formData.append('mimeType', fileToUpload.type);
+                    formData.append('fileName', fileToUpload.name);
+
+                    const res = await fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await res.json();
+
+                    if (result.status === 'success') {
+                        onSuccess(result.fileId);
+                    } else {
+                        throw new Error(result.message || 'فشل الرفع');
+                    }
+                } catch (err: any) {
+                    console.error('Upload Error:', err);
+                    alert('تعذر الرفع: ' + (err.message || 'خطأ غير معروف'));
+                } finally {
+                    setUploadingImage(null);
+                }
+            };
+            if (fileToUpload) {
+                reader.readAsDataURL(fileToUpload);
+            }
+        } catch (err: any) {
+            alert(err.message || 'حدث خطأ أثناء معالجة الصورة');
+            setUploadingImage(null);
+        }
+    };
 
     useEffect(() => {
         // Autogenerate slug from title if empty
@@ -123,9 +186,13 @@ export default function ArticleForm({ initialData }: ArticleFormProps) {
                 published_at: isPublished && !initialData?.published_at ? new Date().toISOString() : initialData?.published_at
             };
 
-            await saveArticle(articleData);
-            router.push('/admin/articles');
-            router.refresh();
+            if (onSave) {
+                await onSave(articleData);
+            } else {
+                await saveArticle(articleData);
+                router.push('/admin/articles');
+                router.refresh();
+            }
         } catch (err: any) {
             setError(err.message || 'حدث خطأ أثناء حفظ المقالة');
             setLoading(false);
@@ -181,21 +248,23 @@ export default function ArticleForm({ initialData }: ArticleFormProps) {
                         </select>
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">حالة النشر</label>
-                        <div className="flex items-center h-[50px]">
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    className="sr-only peer"
-                                    checked={isPublished}
-                                    onChange={(e) => setIsPublished(e.target.checked)}
-                                />
-                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                <span className="ms-3 text-sm font-medium text-gray-700">{isPublished ? 'منشور للعامة' : 'مسودة مخفية'}</span>
-                            </label>
+                    {!hidePublishOption && (
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700">حالة النشر</label>
+                            <div className="flex items-center h-[50px]">
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={isPublished}
+                                        onChange={(e) => setIsPublished(e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <span className="ms-3 text-sm font-medium text-gray-700">{isPublished ? 'منشور للعامة' : 'مسودة مخفية'}</span>
+                                </label>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 <div className="space-y-2">
@@ -208,19 +277,39 @@ export default function ArticleForm({ initialData }: ArticleFormProps) {
                     />
                 </div>
 
-                <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">رابط صورة الغلاف</label>
-                    <input
-                        type="text"
-                        value={coverImage}
-                        onChange={(e) => setCoverImage(e.target.value)}
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-left font-mono text-gray-900"
-                        dir="ltr"
-                        placeholder="https://example.com/image.jpg (أو معرف جوجل درايف)"
-                    />
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <label className="block text-sm font-bold text-gray-800">صورة الغلاف (رئيسية)</label>
+                        <label className={`cursor-pointer text-sm flex items-center gap-2 px-4 py-2 rounded-lg transition-colors border shadow-sm ${uploadingImage === 'cover' ? 'bg-gray-100 text-gray-500 border-gray-300' : 'bg-blue-600 text-white hover:bg-blue-700 border-blue-700'}`}>
+                            {uploadingImage === 'cover' ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            ) : (
+                                <Upload size={16} />
+                            )}
+                            <span className="font-medium">{uploadingImage === 'cover' ? 'جاري الرفع...' : 'رفع صورة من جهازك'}</span>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => handleImageUpload(e, (url) => setCoverImage(url), 'cover')}
+                                disabled={uploadingImage === 'cover'}
+                            />
+                        </label>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                        <span className="text-xs text-gray-500 whitespace-nowrap">الرابط المباشر:</span>
+                        <input
+                            type="text"
+                            value={coverImage}
+                            onChange={(e) => setCoverImage(e.target.value)}
+                            className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-left font-mono text-gray-900 text-sm"
+                            dir="ltr"
+                            placeholder="للتعديل اليدوي إن لزم الأمر (معرف جوجل درايف)"
+                        />
+                    </div>
                     {coverImage && (
-                        <div className="mt-2 text-center">
-                            <img src={getDirectImageUrl(coverImage)} alt="Preview" className="h-32 object-contain rounded-lg border inline-block" />
+                        <div className="mt-4 text-center border-t border-gray-100 pt-4">
+                            <img src={getDirectImageUrl(coverImage)} alt="Preview" className="h-40 object-contain rounded-lg border inline-block shadow-sm" />
                         </div>
                     )}
                 </div>
@@ -282,17 +371,43 @@ export default function ArticleForm({ initialData }: ArticleFormProps) {
                                     )}
 
                                     {block.type === 'image' && (
-                                        <div className="space-y-2">
-                                            <input
-                                                type="text"
-                                                value={block.content}
-                                                onChange={(e) => handleBlockContentChange(index, e.target.value)}
-                                                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-left font-mono text-gray-900"
-                                                dir="ltr"
-                                                placeholder="رابط الصورة المباشر أو معرف جوجل درايف"
-                                            />
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                                <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                                    <ImageIcon size={18} className="text-gray-400" />
+                                                    عرض صورة في هذا القسم
+                                                </div>
+                                                <label className={`cursor-pointer text-sm flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors border shadow-sm ${uploadingImage === `block-${block.id}` ? 'bg-gray-100 text-gray-500 border-gray-300' : 'bg-blue-600 text-white hover:bg-blue-700 border-blue-700'}`}>
+                                                    {uploadingImage === `block-${block.id}` ? (
+                                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                    ) : (
+                                                        <Upload size={14} />
+                                                    )}
+                                                    <span className="font-medium">{uploadingImage === `block-${block.id}` ? 'جاري الرفع...' : 'رفع من الجهاز'}</span>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        className="hidden"
+                                                        onChange={(e) => handleImageUpload(e, (url) => handleBlockContentChange(index, url), `block-${block.id}`)}
+                                                        disabled={uploadingImage === `block-${block.id}`}
+                                                    />
+                                                </label>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="text-xs text-gray-500 whitespace-nowrap">الرابط المباشر:</div>
+                                                <input
+                                                    type="text"
+                                                    value={block.content}
+                                                    onChange={(e) => handleBlockContentChange(index, e.target.value)}
+                                                    className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-left font-mono text-gray-900 text-xs"
+                                                    dir="ltr"
+                                                    placeholder="رابط مباشر أو معرف جوجل درايف"
+                                                />
+                                            </div>
                                             {block.content && typeof block.content === 'string' && (
-                                                <img src={getDirectImageUrl(block.content)} alt="Block Preview" className="max-h-48 object-contain rounded-lg border" />
+                                                <div className="mt-3 text-center border-t border-gray-100 pt-3">
+                                                    <img src={getDirectImageUrl(block.content)} alt="Block Preview" className="max-h-64 object-contain rounded-lg border mx-auto shadow-sm" />
+                                                </div>
                                             )}
                                         </div>
                                     )}
