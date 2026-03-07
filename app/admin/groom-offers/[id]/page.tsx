@@ -27,14 +27,10 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import AdminLayout from '@/components/admin/AdminLayout';
 import {
-  getQuotationFromSupabase,
-  saveQuotation,
-  deleteQuotation,
+  getGroomOfferFromSupabase,
+  saveGroomOffer,
+  deleteGroomOffer,
   getProducts,
-  getAllCustomers,
-  saveShopSalesInvoice,
-  saveWarehouseSalesInvoice,
-  getCustomerLastPriceForProduct,
   getReservedQuantities,
   ReservedQuotationsData,
 } from '@/lib/api';
@@ -90,12 +86,9 @@ interface Quotation {
 }
 
 const STATUS_OPTIONS = [
+  'فعال',
+  'غير فعال',
   'مسودة',
-  'مقدم للزبون',
-  'مدفوع كلي أو جزئي تم الحجز',
-  'تم تسلم جزء من الطلبية',
-  'مسلمة بالكامل',
-  'ملغي',
 ];
 
 // Sortable Row Component for Desktop Table
@@ -547,11 +540,9 @@ export default function EditQuotationPage() {
 
   const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [date, setDate] = useState('');
-  const [customerId, setCustomerId] = useState<string>('');
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
-  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [groomOfferTitle, setGroomOfferTitle] = useState('');
   const [notes, setNotes] = useState('');
-  const [status, setStatus] = useState('مسودة');
+  const [status, setStatus] = useState('فعال');
   const [specialDiscountAmount, setSpecialDiscountAmount] = useState(0);
   const [giftDiscountAmount, setGiftDiscountAmount] = useState(0);
 
@@ -570,7 +561,6 @@ export default function EditQuotationPage() {
   }, [calculatedGiftDiscount]);
   const [products, setProducts] = useState<any[]>([]);
   const [reservedQuantities, setReservedQuantities] = useState<Record<string, ReservedQuotationsData>>({});
-  const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -582,22 +572,14 @@ export default function EditQuotationPage() {
   const [newProductPrice, setNewProductPrice] = useState(0);
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
-  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
   const [showCosts, setShowCosts] = useState(false);
-  const [converting, setConverting] = useState<'shop' | 'warehouse' | null>(null);
-  const [convertMessage, setConvertMessage] = useState<string | null>(null);
   const productDropdownRef = useRef<HTMLDivElement>(null);
-  const customerDropdownRef = useRef<HTMLDivElement>(null);
-  const [printOverlayQuotation, setPrintOverlayQuotation] = useState<{ id: string; variant?: 'image' } | null>(null);
-  const printIframeRef = useRef<HTMLIFrameElement>(null);
-  const isMobilePrint = () => typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   const canViewCost = admin?.is_super_admin || admin?.permissions?.viewCost === true;
 
   useEffect(() => {
     if (quotationId) {
       loadQuotationData();
       loadProducts();
-      loadCustomers();
     }
   }, [quotationId]);
 
@@ -606,43 +588,25 @@ export default function EditQuotationPage() {
       if (productDropdownRef.current && !productDropdownRef.current.contains(event.target as Node)) {
         setIsProductDropdownOpen(false);
       }
-      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target as Node)) {
-        setIsCustomerDropdownOpen(false);
-      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (!printOverlayQuotation) return;
-    const onMessage = (e: MessageEvent) => {
-      if (e.data?.type === 'print-ready' && printIframeRef.current?.contentWindow) {
-        const prevTitle = document.title;
-        if (e.data?.title) document.title = e.data.title;
-        try {
-          printIframeRef.current.contentWindow.print();
-        } catch (_) { }
-        setTimeout(() => { document.title = prevTitle; }, 500);
-      }
-    };
-    window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
-  }, [printOverlayQuotation]);
+
 
   const loadQuotationData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getQuotationFromSupabase(quotationId);
+      const data = await getGroomOfferFromSupabase(quotationId);
       setQuotation(data);
       setDate(data.Date || new Date().toISOString().split('T')[0]);
-      const custId = data.CustomerID || '';
-      setCustomerId(custId);
       setNotes(data.Notes || '');
-      setStatus(data.Status || 'مسودة');
+      setStatus(data.Status || 'فعال');
       setSpecialDiscountAmount(data.SpecialDiscountAmount || 0);
       setGiftDiscountAmount(data.GiftDiscountAmount || 0);
+      setGroomOfferTitle(data.groom_offer_title || data.groomOfferTitle || '');
 
 
       // First, get raw details from Supabase to access serial_no field
@@ -755,27 +719,6 @@ export default function EditQuotationPage() {
     }
   };
 
-  const loadCustomers = async () => {
-    try {
-      const customersData = await getAllCustomers();
-      setCustomers(customersData);
-    } catch (err: any) {
-      console.error('[EditQuotationPage] Failed to load customers:', err);
-    }
-  };
-
-  // Update selected customer when customers are loaded and customerId is set
-  useEffect(() => {
-    if (customerId && customers.length > 0 && !selectedCustomer) {
-      const customer = customers.find(
-        (c) => (c.customer_id || c.CustomerID || c.id) === customerId
-      );
-      if (customer) {
-        setSelectedCustomer(customer);
-      }
-    }
-  }, [customerId, customers, selectedCustomer]);
-
   const filteredProducts = useMemo(() => {
     const searchWords = productSearchQuery
       .toLowerCase()
@@ -796,25 +739,7 @@ export default function EditQuotationPage() {
       .slice(0, 50);
   }, [products, productSearchQuery]);
 
-  const filteredCustomers = useMemo(() => {
-    const searchWords = customerSearchQuery
-      .toLowerCase()
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
 
-    if (searchWords.length === 0) return customers.slice(0, 50);
-
-    return customers
-      .filter((c) => {
-        const name = String(c.name || c.Name || '').toLowerCase();
-        const cid = String(c.customer_id || c.CustomerID || '').toLowerCase();
-        const phone = String(c.phone || c.Phone || '').toLowerCase();
-        const searchableText = `${name} ${cid} ${phone}`;
-        return searchWords.every((word) => searchableText.includes(word));
-      })
-      .slice(0, 50);
-  }, [customers, customerSearchQuery]);
 
   const handleUpdateQuantity = (detailID: string, newQuantity: number) => {
     setDetails((prev) =>
@@ -1198,31 +1123,6 @@ export default function EditQuotationPage() {
     setShowAddProduct(false);
     setProductSearchQuery('');
 
-    // Fetch last customer price in background and update if found
-    // Only fetch if customer is selected and no price was passed from barcode (priceParam)
-    // Always fetch for manual selection, as newProductPrice might be the default product price
-    if (customerId && (!priceParam || priceParam === 0)) {
-      // Use setTimeout to run in background without blocking UI
-      setTimeout(async () => {
-        try {
-          const lastPrice = await getCustomerLastPriceForProduct(
-            customerId,
-            productIdForSearch
-          );
-
-          if (lastPrice && lastPrice > 0) {
-            // Update the price for this specific detail
-            setDetails((prev) =>
-              prev.map((item) =>
-                item.QuotationDetailID === detailId ? { ...item, UnitPrice: lastPrice } : item
-              )
-            );
-          }
-        } catch (error) {
-          console.error('[Quotations] Error fetching last customer price:', error);
-        }
-      }, 0);
-    }
   };
 
   const calculateSubtotal = () => {
@@ -1258,59 +1158,12 @@ export default function EditQuotationPage() {
     return (totalDiscount / subtotal) * 100;
   };
 
-  const handleConvertToInvoice = async (target: 'shop' | 'warehouse') => {
-    if (!customerId) {
-      alert('يجب اختيار زبون قبل التحويل إلى فاتورة');
-      return;
-    }
-    if (details.length === 0) {
-      alert('لا يمكن التحويل بدون بنود');
-      return;
-    }
-
-    const discountSum = (specialDiscountAmount || 0) + (giftDiscountAmount || 0);
-    const itemsPayload = details.map((item) => ({
-      productID: item.ProductID,
-      quantity: item.Quantity,
-      unitPrice: item.UnitPrice,
-      serialNos: (item.serialNos || []).filter(s => s && s.trim()), // Include serial numbers in conversion (filter empty ones)
-    }));
-
-    try {
-      setConverting(target);
-      setConvertMessage(null);
-      if (target === 'shop') {
-        const res = await saveShopSalesInvoice({
-          customerID: customerId,
-          date,
-          items: itemsPayload,
-          notes,
-          discount: discountSum,
-          status: mapToInvoiceStatus(),
-          created_by: admin?.id || undefined,
-        });
-        setConvertMessage(`تم التحويل إلى فاتورة المحل بنجاح (رقم: ${res?.invoiceID || '—'})`);
-      } else {
-        const res = await saveWarehouseSalesInvoice({
-          customerID: customerId,
-          date,
-          items: itemsPayload,
-          notes,
-          discount: discountSum,
-          status: mapToInvoiceStatus(),
-          created_by: admin?.id || undefined,
-        });
-        setConvertMessage(`تم التحويل إلى فاتورة المخزن بنجاح (رقم: ${res?.invoiceID || '—'})`);
-      }
-    } catch (err: any) {
-      console.error('[EditQuotationPage] convert to invoice error:', err);
-      alert(err?.message || 'فشل التحويل إلى فاتورة');
-    } finally {
-      setConverting(null);
-    }
-  };
 
   const handleSave = async () => {
+    if (!groomOfferTitle.trim()) {
+      alert('يرجى إدخال عنوان العرض');
+      return;
+    }
     if (details.length === 0) {
       alert('يرجى إضافة منتج واحد على الأقل');
       return;
@@ -1319,46 +1172,9 @@ export default function EditQuotationPage() {
     setSaving(true);
     setError(null);
     try {
-      await saveQuotation(quotationId, {
-        date,
-        customerId: customerId || null,
-        notes,
-        status,
-        specialDiscountAmount,
-        giftDiscountAmount,
-        created_by: admin?.id || undefined,
-        items: details.map((item) => ({
-          detailID: item.QuotationDetailID.startsWith('temp-') ? undefined : item.QuotationDetailID,
-          productID: item.ProductID,
-          quantity: item.Quantity,
-          unitPrice: item.UnitPrice,
-          notes: item.notes || '',
-          isGift: item.isGift || false,
-          serialNos: item.serialNos || [],
-        })),
-
-      });
-      router.push('/admin/quotations');
-    } catch (err: any) {
-      console.error('[EditQuotationPage] Failed to save quotation:', err);
-      setError(err?.message || 'فشل حفظ العرض السعري');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handlePrintAndSave = async () => {
-    if (details.length === 0) {
-      alert('يرجى إضافة منتج واحد على الأقل');
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-    try {
-      await saveQuotation(quotationId, {
-        date,
-        customerId: customerId || null,
+      await saveGroomOffer(quotationId, {
+        title: groomOfferTitle.trim(),
+        date: new Date().toISOString().split('T')[0],
         notes,
         status,
         specialDiscountAmount,
@@ -1374,31 +1190,27 @@ export default function EditQuotationPage() {
           serialNos: item.serialNos || [],
         })),
       });
-      if (isMobilePrint()) {
-        window.open(`/admin/quotations/print/${quotationId}`, `print-quotation-${quotationId}`, 'noopener,noreferrer');
-      } else {
-        setPrintOverlayQuotation({ id: quotationId });
-      }
+      router.push('/admin/groom-offers');
     } catch (err: any) {
-      console.error('[EditQuotationPage] Failed to save and print quotation:', err);
-      setError(err?.message || 'فشل حفظ العرض السعري');
+      console.error('[EditGroomOfferPage] Failed to save offer:', err);
+      setError(err?.message || 'فشل حفظ عرض العرسان');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm('هل أنت متأكد من حذف هذا العرض السعري؟')) {
+    if (!confirm('هل أنت متأكد من حذف قالب عرض العرسان هذا؟')) {
       return;
     }
 
     setDeleting(true);
     try {
-      await deleteQuotation(quotationId);
-      router.push('/admin/quotations');
+      await deleteGroomOffer(quotationId);
+      router.push('/admin/groom-offers');
     } catch (err: any) {
-      console.error('[EditQuotationPage] Failed to delete quotation:', err);
-      alert(err?.message || 'فشل حذف العرض السعري');
+      console.error('[EditGroomOfferPage] Failed to delete offer:', err);
+      alert(err?.message || 'فشل حذف عرض العرسان');
     } finally {
       setDeleting(false);
     }
@@ -1424,7 +1236,7 @@ export default function EditQuotationPage() {
           <div className="text-center">
             <p className="text-red-600 text-lg mb-4 font-cairo">{error}</p>
             <button
-              onClick={() => router.push('/admin/quotations')}
+              onClick={() => router.push('/admin/groom-offers')}
               className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
             >
               العودة
@@ -1441,39 +1253,16 @@ export default function EditQuotationPage() {
         {/* Header */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">تعديل عرض سعري</h1>
+            <h1 className="text-3xl font-bold text-gray-900">تعديل قالب عرض عرسان</h1>
             <p className="text-gray-600 mt-1">#{quotation?.QuotationID}</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={() => setShowCosts((prev) => !prev)}
-              disabled={!canViewCost}
-              className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {showCosts ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-            <button
-              onClick={() => handleConvertToInvoice('shop')}
-              disabled={converting !== null}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {converting === 'shop' ? <Loader2 size={18} className="animate-spin" /> : null}
-              تحويل لفاتورة المحل
-            </button>
-            <button
-              onClick={() => handleConvertToInvoice('warehouse')}
-              disabled={converting !== null}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {converting === 'warehouse' ? <Loader2 size={18} className="animate-spin" /> : null}
-              تحويل لفاتورة المخزن
-            </button>
-            <button
-              onClick={() => router.push('/admin/quotations')}
+              onClick={() => router.push('/admin/groom-offers')}
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold"
             >
               <ArrowLeft size={20} />
-              إلغاء
+              العودة
             </button>
           </div>
         </div>
@@ -1483,114 +1272,44 @@ export default function EditQuotationPage() {
             <p className="text-red-600 font-cairo">{error}</p>
           </div>
         )}
-        {convertMessage && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <p className="text-green-700 font-cairo">{convertMessage}</p>
-          </div>
-        )}
+
 
         {/* Form */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">التاريخ</label>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">عنوان عرض العرسان *</label>
               <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                type="text"
+                value={groomOfferTitle}
+                onChange={(e) => setGroomOfferTitle(e.target.value)}
+                placeholder="مثال: الباقة الذهبية المتميزة"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 font-bold"
               />
             </div>
-            <div className="relative" ref={customerDropdownRef}>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700 font-cairo">الزبون</label>
-                {selectedCustomer && customerId && (
-                  <button
-                    onClick={(e) => {
-                      if (e.ctrlKey || e.metaKey || e.shiftKey) {
-                        window.open(`/admin/customers/${customerId}`, '_blank', 'noopener,noreferrer');
-                        return;
-                      }
-                      router.push(`/admin/customers/${customerId}`);
-                    }}
-                    onMouseDown={(e) => {
-                      if (e.button === 1) {
-                        e.preventDefault();
-                        window.open(`/admin/customers/${customerId}`, '_blank', 'noopener,noreferrer');
-                      }
-                    }}
-                    className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium"
-                    title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
-                  >
-                    فتح البروفايل
-                  </button>
-                )}
-              </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={selectedCustomer ? (selectedCustomer.name || selectedCustomer.Name || '') : customerSearchQuery}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setCustomerSearchQuery(value);
-                    if (value === '') {
-                      setSelectedCustomer(null);
-                      setCustomerId('');
-                    } else {
-                      setSelectedCustomer(null);
-                      setCustomerId('');
-                    }
-                    setIsCustomerDropdownOpen(true);
-                  }}
-                  onFocus={() => {
-                    if (!selectedCustomer) {
-                      setIsCustomerDropdownOpen(true);
-                    }
-                  }}
-                  placeholder="ابحث عن زبون..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
-                />
-                {isCustomerDropdownOpen && filteredCustomers.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {filteredCustomers.map((customer) => (
-                      <button
-                        key={customer.customer_id || customer.CustomerID || customer.id}
-                        type="button"
-                        onClick={() => {
-                          setCustomerId(customer.customer_id || customer.CustomerID || customer.id || '');
-                          setSelectedCustomer(customer);
-                          setCustomerSearchQuery('');
-                          setIsCustomerDropdownOpen(false);
-                        }}
-                        className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="flex-1 text-right">
-                            {customer.name || customer.Name} ({customer.customer_id || customer.CustomerID || customer.id})
-                          </span>
-                          {canViewBalances && (
-                            <span className="text-sm text-gray-500 mr-2" dir="ltr">
-                              رصيد: ₪{((customer.balance || customer.Balance || 0)).toFixed(2)}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {selectedCustomer && canViewBalances && (
-                <div className="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between text-sm font-cairo">
-                    <span className="text-gray-600">الرصيد:</span>
-                    <span className={`font-semibold ${(selectedCustomer.balance || selectedCustomer.Balance || 0) > 0 ? 'text-red-600' : (selectedCustomer.balance || selectedCustomer.Balance || 0) < 0 ? 'text-green-600' : 'text-gray-600'}`}>
-                      ₪{((selectedCustomer.balance || selectedCustomer.Balance || 0)).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الحالة</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+              >
+                {STATUS_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">ملاحظات عامة</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={1}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الحالة</label>
@@ -1952,21 +1671,10 @@ export default function EditQuotationPage() {
                 إلغاء
               </button>
               <button
-                onClick={handlePrintAndSave}
-                disabled={saving || details.length === 0}
-                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => router.push('/admin/groom-offers')}
+                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold"
               >
-                {saving ? (
-                  <>
-                    <Loader2 size={20} className="animate-spin" />
-                    جاري الحفظ...
-                  </>
-                ) : (
-                  <>
-                    <Printer size={20} />
-                    حفظ وطباعة
-                  </>
-                )}
+                إلغاء
               </button>
               <button
                 onClick={handleSave}
@@ -1989,51 +1697,6 @@ export default function EditQuotationPage() {
           </div>
         </div>
       </div>
-
-      {printOverlayQuotation && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
-          dir="rtl"
-          onClick={() => setPrintOverlayQuotation(null)}
-        >
-          <div
-            className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
-            style={{ minWidth: '120mm', maxHeight: '95vh' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-              <span className="text-sm font-cairo text-gray-700">معاينة الطباعة — عرض سعري</span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => printIframeRef.current?.contentWindow?.print()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-cairo bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  <Printer size={20} />
-                  طباعة مرة أخرى
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPrintOverlayQuotation(null)}
-                  className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
-                  aria-label="إغلاق"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 overflow-auto bg-white min-h-0">
-              <iframe
-                ref={printIframeRef}
-                src={`/admin/quotations/print/${printOverlayQuotation.id}${printOverlayQuotation.variant === 'image' ? '?variant=image&' : '?'}embed=1`}
-                title="طباعة العرض السعري"
-                className="w-full border-0 bg-white"
-                style={{ minHeight: '70vh', height: '70vh' }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </AdminLayout>
   );
 }

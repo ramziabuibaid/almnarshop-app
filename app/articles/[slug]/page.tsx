@@ -123,9 +123,11 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
                     {blocks.map((block: any, idx: number) => {
                         if (block.type === 'text') {
                             return (
-                                <div key={block.id || idx} className="prose prose-lg md:prose-xl max-w-none prose-indigo text-gray-800 leading-loose prose-p:my-6 prose-headings:font-bold prose-a:text-indigo-600 hover:prose-a:text-indigo-500 whitespace-pre-wrap font-cairo">
-                                    {block.content}
-                                </div>
+                                <div
+                                    key={block.id || idx}
+                                    className="prose prose-lg md:prose-xl max-w-none prose-indigo text-gray-800 leading-loose prose-p:my-6 prose-headings:font-bold prose-a:text-indigo-600 hover:prose-a:text-indigo-500 font-cairo"
+                                    dangerouslySetInnerHTML={{ __html: block.content || '' }}
+                                />
                             );
                         }
                         if (block.type === 'image') {
@@ -163,6 +165,28 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
                                             </div>
                                         ))}
                                     </div>
+                                </div>
+                            );
+                        }
+                        if (block.type === 'table') {
+                            if (!block.content || !block.content.rows) return null;
+                            return (
+                                <div key={block.id || idx} className="my-12 overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
+                                    <table className="w-full text-right bg-white text-sm md:text-base whitespace-nowrap md:whitespace-normal">
+                                        <tbody>
+                                            {block.content.rows.map((row: string[], rowIndex: number) => (
+                                                <tr key={rowIndex} className={`border-b last:border-0 ${rowIndex === 0 ? 'bg-indigo-50 font-bold text-indigo-900 border-b-2 border-indigo-200' : 'hover:bg-gray-50 transition-colors'}`}>
+                                                    {row.map((cell: string, colIndex: number) => (
+                                                        <td
+                                                            key={colIndex}
+                                                            className="p-4 md:p-5 border-l last:border-0 prose prose-sm max-w-none prose-indigo"
+                                                            dangerouslySetInnerHTML={{ __html: cell || '' }}
+                                                        />
+                                                    ))}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             );
                         }

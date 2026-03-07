@@ -9,6 +9,7 @@ import {
   searchQuotationById,
   deleteQuotation,
   updateQuotationStatus,
+  duplicateQuoteToOffer,
 } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import {
@@ -24,6 +25,7 @@ import {
   ChevronRight,
   ChevronDown,
   Image,
+  Copy,
 } from 'lucide-react';
 
 interface Quotation {
@@ -71,6 +73,7 @@ export default function QuotationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('الكل');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [cloningId, setCloningId] = useState<string | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const QUOTATIONS_PER_PAGE = 50;
@@ -187,6 +190,22 @@ export default function QuotationsPage() {
       alert(err?.message || 'فشل حذف العرض السعري');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleCloneAsOffer = async (quotationId: string) => {
+    const title = window.prompt('أدخل عنوان عرض العرسان الجديد (مثال: الباقة الذهبية):');
+    if (!title || !title.trim()) return;
+
+    setCloningId(quotationId);
+    try {
+      await duplicateQuoteToOffer(quotationId, title.trim(), admin?.id || undefined);
+      alert('تم استنساخ عرض العرسان بنجاح! يمكنك إدارته من صفحة عروض العرسان.');
+    } catch (err: any) {
+      console.error('[QuotationsPage] Failed to clone offer:', err);
+      alert(err?.message || 'فشل استنساخ عرض العرسان');
+    } finally {
+      setCloningId(null);
     }
   };
 
@@ -604,6 +623,21 @@ export default function QuotationsPage() {
                             </button>
                             {canAccountant && (
                               <button
+                                onClick={() => handleCloneAsOffer(quotation.QuotationID)}
+                                disabled={cloningId === quotation.QuotationID}
+                                className="text-purple-600 hover:text-purple-900 flex items-center gap-1 font-cairo disabled:opacity-50"
+                                title="استنساخ كعرض عرسان"
+                              >
+                                {cloningId === quotation.QuotationID ? (
+                                  <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                  <Copy size={16} />
+                                )}
+                                استنساخ
+                              </button>
+                            )}
+                            {canAccountant && (
+                              <button
                                 onClick={() => handleDelete(quotation.QuotationID)}
                                 disabled={deletingId === quotation.QuotationID}
                                 className="text-red-600 hover:text-red-900 flex items-center gap-1 font-cairo disabled:opacity-50"
@@ -765,6 +799,21 @@ export default function QuotationsPage() {
                       <Edit size={16} />
                       <span>تعديل</span>
                     </button>
+                    {canAccountant && (
+                      <button
+                        onClick={() => handleCloneAsOffer(quotation.QuotationID)}
+                        disabled={cloningId === quotation.QuotationID}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="استنساخ كعرض عرسان عام"
+                      >
+                        {cloningId === quotation.QuotationID ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <Copy size={16} />
+                        )}
+                        <span className="hidden sm:inline">استنساخ</span>
+                      </button>
+                    )}
                     {canAccountant && (
                       <button
                         onClick={() => handleDelete(quotation.QuotationID)}

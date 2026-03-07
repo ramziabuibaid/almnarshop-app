@@ -1,8 +1,11 @@
 import { getGroomOffers } from '@/lib/api';
+import Link from 'next/link';
 import StoreHeader from '@/components/store/StoreHeader';
 import NewsletterSection from '@/components/store/NewsletterSection';
 import { Package, Check, Gift } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 export const revalidate = 0; // Disable static caching for this page to get fresh offers
 
 export default async function GroomOffersPage() {
@@ -34,9 +37,10 @@ export default async function GroomOffersPage() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {offers.map((offer) => (
-                            <div
+                            <Link
+                                href={`/groom-offers/${offer.QuotationID}`}
                                 key={offer.QuotationID}
-                                className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-shadow duration-300 flex flex-col border border-purple-50 relative group"
+                                className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-shadow duration-300 flex flex-col border border-purple-50 relative group cursor-pointer block"
                             >
                                 {/* Decorative Crown/Badge */}
                                 <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-bl-lg z-10 shadow-sm flex items-center gap-1">
@@ -91,11 +95,11 @@ export default async function GroomOffersPage() {
                                         </div>
                                     )}
 
-                                    <button className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-purple-200 mt-auto">
-                                        اطلب هذا العرض
+                                    <button className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-purple-200 mt-auto flex items-center justify-center gap-2">
+                                        عرض التفاصيل والطلب
                                     </button>
                                 </div>
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 )}

@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { Plus, Trash, Check, X, Copy, Mail, Link as LinkIcon, AlertCircle } from 'lucide-react';
+import { Plus, Trash, Check, X, Copy, Mail, Link as LinkIcon, AlertCircle, Edit2, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getGuestLinks, createGuestLink, toggleGuestLink, deleteGuestLink } from '@/lib/api';
+import { getGuestLinks, createGuestLink, toggleGuestLink, deleteGuestLink, updateGuestLinkName } from '@/lib/api';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 
 export default function GuestLinksPage() {
@@ -14,6 +14,10 @@ export default function GuestLinksPage() {
     const [loading, setLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
     const [newAuthorName, setNewAuthorName] = useState('');
+
+    // Edit state
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editName, setEditName] = useState('');
 
     const canManageArticles = admin?.is_super_admin || admin?.permissions?.manageArticles === true;
 
@@ -51,6 +55,29 @@ export default function GuestLinksPage() {
             alert('حدث خطأ أثناء إنشاء الرابط. حاول مرة أخرى.');
         } finally {
             setIsCreating(false);
+        }
+    };
+
+    const handleEditStart = (link: any) => {
+        setEditingId(link.id);
+        setEditName(link.author_name);
+    };
+
+    const handleEditCancel = () => {
+        setEditingId(null);
+        setEditName('');
+    };
+
+    const handleUpdateName = async (id: string) => {
+        if (!editName.trim()) return;
+
+        try {
+            await updateGuestLinkName(id, editName.trim());
+            setEditingId(null);
+            await loadLinks();
+        } catch (error) {
+            console.error('Error updating name:', error);
+            alert('حدث خطأ أثناء تحديث الاسم.');
         }
     };
 
@@ -163,8 +190,39 @@ export default function GuestLinksPage() {
                             <tbody className="divide-y divide-gray-100">
                                 {links.map((link) => (
                                     <tr key={link.id} className={`${!link.is_active ? 'bg-gray-50/50' : ''} hover:bg-gray-50 transition-colors`}>
-                                        <td className="p-4 font-bold text-gray-900">
-                                            {link.author_name}
+                                        <td className="p-4 font-bold text-gray-900 group">
+                                            {editingId === link.id ? (
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={editName}
+                                                        onChange={(e) => setEditName(e.target.value)}
+                                                        className="px-2 py-1 text-sm border border-blue-500 font-bold rounded focus:outline-none focus:ring-1 focus:ring-blue-500 w-full min-w-[120px]"
+                                                        autoFocus
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') handleUpdateName(link.id);
+                                                            if (e.key === 'Escape') handleEditCancel();
+                                                        }}
+                                                    />
+                                                    <button onClick={() => handleUpdateName(link.id)} className="text-green-600 hover:bg-green-50 p-1 rounded" title="حفظ">
+                                                        <Save size={16} />
+                                                    </button>
+                                                    <button onClick={handleEditCancel} className="text-gray-500 hover:bg-gray-200 p-1 rounded" title="إلغاء">
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span>{link.author_name}</span>
+                                                    <button
+                                                        onClick={() => handleEditStart(link)}
+                                                        className="text-gray-400 hover:text-blue-600 p-1 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                                        title="تعديل الاسم"
+                                                    >
+                                                        <Edit2 size={14} />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="p-4 text-sm text-gray-600 font-medium">
                                             {new Date(link.created_at).toLocaleDateString('en-GB')}

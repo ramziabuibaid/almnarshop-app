@@ -62,11 +62,11 @@ const posSubmenu = [
   { href: '/admin/invoices', label: 'قائمة الفواتير النقدية', icon: FileText, permission: 'viewCashInvoices' as const },
 ];
 
-/** Submenu under "الفواتير": فواتير المحل، فواتير المخزن، عرض سعر، طلبيات اون لاين */
 const invoicesSubmenu = [
   { href: '/admin/shop-sales', label: 'فواتير المحل', icon: FileText, permission: 'accessShopInvoices' as const },
   { href: '/admin/warehouse-sales', label: 'فواتير المخزن', icon: FileText, permission: 'accessWarehouseInvoices' as const },
   { href: '/admin/quotations', label: 'عرض سعر', icon: FileText, permission: 'accessQuotations' as const },
+  { href: '/admin/groom-offers', label: 'عروض العرسان', icon: FileText, permission: 'accessQuotations' as const },
   { href: '/admin/orders', label: 'طلبيات اون لاين', icon: ShoppingBag },
 ];
 
@@ -436,7 +436,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   const hasPerm = (p: string) => admin.is_super_admin || (admin.permissions as Record<string, boolean>)?.[p] === true;
                   const filteredInvoicesSubmenu = invoicesSubmenu.filter((s) => !('permission' in s && s.permission) || hasPerm(s.permission));
                   if (filteredInvoicesSubmenu.length === 0) return null;
-                  const invoicesSubmenuActive = pathname?.startsWith('/admin/shop-sales') || pathname?.startsWith('/admin/warehouse-sales') || pathname?.startsWith('/admin/quotations') || pathname?.startsWith('/admin/orders');
+                  const invoicesSubmenuActive = pathname?.startsWith('/admin/shop-sales') || pathname?.startsWith('/admin/warehouse-sales') || pathname?.startsWith('/admin/quotations') || pathname?.startsWith('/admin/groom-offers') || pathname?.startsWith('/admin/orders');
                   return (
                     <div key={link.href} className="space-y-0.5">
                       {sectionHeader}

@@ -6,34 +6,34 @@ export interface Product {
   ProductID?: string;
   'Shamel No'?: string;
   Barcode?: string;
-  
+
   // Basic Info
   Name?: string;
   Type?: string;
   Brand?: string;
   Origin?: string;
   Warranty?: string;
-  
+
   // Specs
   Size?: string;
   Color?: string;
   Dimention?: string;
-  
+
   // Stock
   CS_War?: number; // Warehouse Qty
   CS_Shop?: number; // Shop Qty
-  
+
   // Pricing
   CostPrice?: number;
   SalePrice?: number;
   T1Price?: number;
   T2Price?: number;
-  
+
   // Images
   Image?: string;
   'Image 2'?: string;
   'image 3'?: string;
-  
+
   // Serial Number Support
   is_serialized?: boolean;
   IsSerialized?: boolean;
@@ -46,7 +46,7 @@ export interface Product {
   last_restocked_at?: string | null;
   LastRestockedAt?: string | null;
   created_at?: string | null;
-  
+
   // Legacy fields (for backward compatibility)
   id?: string;
   name?: string;
@@ -62,12 +62,12 @@ export interface Product {
   [key: string]: any;
 }
 
-export type ArticleBlockType = 'text' | 'image' | 'products';
+export type ArticleBlockType = 'text' | 'image' | 'products' | 'table';
 
 export interface ArticleBlock {
   id: string;
   type: ArticleBlockType;
-  content: any; // string for text/image, array of product IDs for products
+  content: any; // string for text/image, array of product IDs for products, { rows: string[][] } for table
 }
 
 export interface Article {

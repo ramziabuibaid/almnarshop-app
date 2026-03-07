@@ -8401,6 +8401,69 @@ export async function saveQuotation(
   }
 }
 
+
+/**
+ * Duplicate an existing quotation to a public Groom Offer
+ */
+export async function duplicateQuoteToOffer(quoteId: string, offerTitle: string, adminId?: string): Promise<any> {
+  const original = await getQuotationFromSupabase(quoteId);
+  if (!original) throw new Error('Original quote not found');
+
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+
+  const payload = {
+    title: offerTitle || `عرض مستنسخ من ${quoteId}`,
+    date: today,
+    notes: original.Notes || '',
+    status: 'مسودة',
+    specialDiscountAmount: original.SpecialDiscountAmount || 0,
+    giftDiscountAmount: original.GiftDiscountAmount || 0,
+    created_by: adminId,
+    items: original.details.map((item: any) => ({
+      productID: item.ProductID,
+      quantity: item.Quantity,
+      unitPrice: item.UnitPrice,
+      notes: item.notes || '',
+      isGift: item.isGift || false,
+      serialNos: [], // Don't copy serial numbers to a template
+    })),
+  };
+
+  return await saveGroomOffer(null, payload);
+}
+
+/**
+ * Create a new standard quotation from a public Groom Offer
+ */
+export async function createQuoteFromOffer(offerId: string, adminId?: string): Promise<any> {
+  const offer = await getGroomOfferFromSupabase(offerId);
+  if (!offer) throw new Error('Offer not found');
+
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+
+  const payload = {
+    date: today,
+    customerId: null, // Will be set by admin later
+    notes: `مبني على عرض: ${offer.groomOfferTitle || offerId}\n${offer.Notes || ''}`,
+    status: 'مسودة',
+    specialDiscountAmount: offer.SpecialDiscountAmount || 0,
+    giftDiscountAmount: offer.GiftDiscountAmount || 0,
+    created_by: adminId,
+    isGroomOffer: false, // Standard quote
+    groomOfferTitle: undefined,
+    items: offer.details.map((item: any) => ({
+      productID: item.ProductID,
+      quantity: item.Quantity,
+      unitPrice: item.UnitPrice,
+      notes: item.notes || '',
+      isGift: item.isGift || false,
+      serialNos: [],
+    })),
+  };
+
+  return await saveQuotation(null, payload);
+}
+
 async function generateQuotationId(): Promise<string> {
   // Get exact count for incremental numbering
   const { count, error } = await supabase
@@ -8468,17 +8531,76 @@ export async function deleteQuotation(quotationId: string): Promise<void> {
 }
 
 /**
+ * Update groom offer status in Supabase
+ */
+export async function updateGroomOfferStatus(offerId: string, status: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('groom_offers')
+      .update({ status })
+      .eq('offer_id', offerId);
+
+    if (error) {
+      throw new Error(`Failed to update groom offer status: ${error.message}`);
+    }
+  } catch (error: any) {
+    console.error('[API] updateGroomOfferStatus error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete Groom Offer from Supabase
+ */
+export async function deleteGroomOffer(offerId: string): Promise<void> {
+  try {
+    console.log('[API] Deleting groom offer from Supabase:', offerId);
+
+    // Details will be deleted automatically due to CASCADE
+    const { error } = await supabase
+      .from('groom_offers')
+      .delete()
+      .eq('offer_id', offerId);
+
+    if (error) {
+      console.error('[API] Error deleting groom offer:', error);
+      throw new Error(`Failed to delete groom offer: ${error.message}`);
+    }
+  } catch (error: any) {
+    console.error('[API] deleteGroomOffer error:', error);
+    throw error;
+  }
+}
+
+async function generateGroomOfferId(): Promise<string> {
+  // Get exact count for incremental numbering
+  const { count, error } = await supabase
+    .from('groom_offers')
+    .select('*', { count: 'exact', head: true });
+
+  if (error) {
+    // fallback
+    const fallback = `GrO-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 900 + 100)}`;
+    return fallback;
+  }
+
+  const nextNumber = (count || 0) + 1;
+  const padded = String(nextNumber).padStart(4, '0');
+  const random = Math.floor(Math.random() * (999 - 10 + 1)) + 10; // 10..999
+  return `GrO-${padded}-${random}`;
+}
+
+/**
  * Get public Groom Offers for the storefront
  */
 export async function getGroomOffers(): Promise<any[]> {
   try {
     console.log('[API] Fetching Grom Offers...');
 
-    // Fetch quotations marked as is_groom_offer = true
-    const { data: quotations, error } = await supabase
-      .from('quotations')
-      .select('*, customers:customer_id(name, phone, address, shamel_no)')
-      .eq('is_groom_offer', true)
+    // Fetch offers from new dedicated table
+    const { data: offersData, error } = await supabase
+      .from('groom_offers')
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -8486,30 +8608,35 @@ export async function getGroomOffers(): Promise<any[]> {
       throw new Error(`Failed to fetch groom offers: ${error.message}`);
     }
 
-    if (!quotations || !Array.isArray(quotations)) {
+    if (!offersData || !Array.isArray(offersData)) {
       return [];
     }
 
     // Process each offer to calculate totals and get details
-    const offers = await Promise.all(quotations.map(async (quotation: any) => {
+    const offers = await Promise.all(offersData.map(async (offer: any) => {
       // Get details
-      const details = await getQuotationDetailsFromSupabase(quotation.quotation_id);
+      const details = await getGroomOfferDetailsFromSupabase(offer.offer_id);
 
       // Calculate total
       const subtotal = details.reduce((sum: number, detail: any) => {
         return sum + (detail.Quantity * detail.UnitPrice);
       }, 0);
-      const specialDiscount = parseFloat(String(quotation.special_discount_amount || 0)) || 0;
-      const giftDiscount = parseFloat(String(quotation.gift_discount_amount || 0)) || 0;
+      const specialDiscount = parseFloat(String(offer.special_discount_amount || 0)) || 0;
+      const giftDiscount = parseFloat(String(offer.gift_discount_amount || 0)) || 0;
       const totalAmount = subtotal - specialDiscount - giftDiscount;
 
-      // Map using existing function
-      const mapped = mapQuotationFromSupabase(quotation, totalAmount);
-
       return {
-        ...mapped,
+        QuotationID: offer.offer_id,
+        Date: offer.date,
+        CustomerID: null,
+        Notes: offer.notes,
+        Status: offer.status,
+        SpecialDiscountAmount: specialDiscount,
+        GiftDiscountAmount: giftDiscount,
+        groomOfferTitle: offer.title, // For frontend mapping
+        isGroomOffer: true,
+        TotalPrice: totalAmount,
         details: details, // Include details for display
-        TotalPrice: totalAmount, // Explicit field for UI
       };
     }));
 
@@ -8518,6 +8645,166 @@ export async function getGroomOffers(): Promise<any[]> {
     console.error('[API] getGroomOffers error:', error);
     return [];
   }
+}
+
+/**
+ * Get single Groom Offer from Supabase
+ */
+export async function getGroomOfferFromSupabase(offerId: string): Promise<any> {
+  try {
+    const { data: offer, error } = await supabase
+      .from('groom_offers')
+      .select('*')
+      .eq('offer_id', offerId)
+      .maybeSingle();
+
+    if (error) throw new Error(`Failed to fetch groom offer: ${error.message}`);
+    if (!offer) throw new Error('Groom offer not found');
+
+    const details = await getGroomOfferDetailsFromSupabase(offerId);
+
+    const subtotal = details.reduce((sum: number, detail: any) => {
+      return sum + (detail.Quantity * detail.UnitPrice);
+    }, 0);
+    const specialDiscount = parseFloat(String(offer.special_discount_amount || 0)) || 0;
+    const giftDiscount = parseFloat(String(offer.gift_discount_amount || 0)) || 0;
+    const totalAmount = subtotal - specialDiscount - giftDiscount;
+
+    return {
+      QuotationID: offer.offer_id,
+      Date: offer.date,
+      CustomerID: null,
+      Notes: offer.notes,
+      Status: offer.status,
+      SpecialDiscountAmount: specialDiscount,
+      GiftDiscountAmount: giftDiscount,
+      groomOfferTitle: offer.title,
+      isGroomOffer: true,
+      groom_offer_title: offer.title, // Keep old property names matching fallback
+      is_groom_offer: true,
+      totalAmount: totalAmount,
+      details: details,
+    };
+  } catch (error: any) {
+    console.error('[API] getGroomOfferFromSupabase error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get details for a specific Groom Offer
+ */
+export async function getGroomOfferDetailsFromSupabase(offerId: string): Promise<any[]> {
+  try {
+    const { data: details, error } = await supabase
+      .from('groom_offer_details')
+      .select('*, products(*)')
+      .eq('offer_id', offerId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('[API] Error fetching groom offer details:', error);
+      throw new Error(`Failed to fetch groom offer details: ${error.message}`);
+    }
+
+    if (!details) return [];
+
+    return details.map(detail => ({
+      QuotationDetailID: detail.detail_id,
+      QuotationID: detail.offer_id,
+      ProductID: detail.product_id,
+      Quantity: detail.quantity,
+      UnitPrice: detail.unit_price,
+      notes: detail.notes,
+      isGift: detail.is_gift,
+      serialNos: detail.serial_nos || [],
+      product: detail.products ? mapProductFromSupabase(detail.products) : null,
+    }));
+  } catch (error: any) {
+    console.error('[API] getGroomOfferDetailsFromSupabase error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Save grooming offer to new schema
+ */
+export async function saveGroomOffer(
+  offerId: string | null,
+  payload: {
+    title: string;
+    date: string;
+    notes?: string;
+    status: string;
+    specialDiscountAmount?: number;
+    giftDiscountAmount?: number;
+    created_by?: string;
+    items: Array<{
+      detailID?: string;
+      productID: string;
+      quantity: number;
+      unitPrice: number;
+      notes?: string;
+      isGift?: boolean;
+      serialNos?: string[];
+    }>;
+  }
+): Promise<any> {
+  const isNew = !offerId;
+  if (isNew) {
+    offerId = await generateGroomOfferId();
+  }
+
+  const offerData: any = {
+    offer_id: offerId,
+    title: payload.title,
+    date: payload.date,
+    notes: payload.notes || null,
+    status: payload.status || 'فعال',
+    special_discount_amount: payload.specialDiscountAmount || 0,
+    gift_discount_amount: payload.giftDiscountAmount || 0,
+  };
+  if (isNew && payload.created_by) {
+    offerData.created_by = payload.created_by;
+  }
+
+  const { error: offerError } = await supabase
+    .from('groom_offers')
+    .upsert(offerData, { onConflict: 'offer_id' });
+
+  if (offerError) throw new Error(`Failed to save offer: ${offerError.message}`);
+
+  if (!isNew) {
+    const { error: deleteError } = await supabase
+      .from('groom_offer_details')
+      .delete()
+      .eq('offer_id', offerId);
+    if (deleteError) throw new Error(`Failed to update offer details: ${deleteError.message}`);
+  }
+
+  if (payload.items && payload.items.length > 0) {
+    const detailsToInsert = payload.items.map((item) => {
+      const serialNos = (item.serialNos || []).filter(s => s && s.trim()).map(s => s.trim());
+      return {
+        detail_id: item.detailID?.startsWith('temp-') || !item.detailID ? `GrOD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` : item.detailID,
+        offer_id: offerId,
+        product_id: item.productID,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        notes: item.notes || null,
+        is_gift: item.isGift || false,
+        serial_nos: serialNos,
+      };
+    });
+
+    const { error: detailsError } = await supabase
+      .from('groom_offer_details')
+      .insert(detailsToInsert);
+
+    if (detailsError) throw new Error(`Failed to save offer details: ${detailsError.message}`);
+  }
+
+  return { offer_id: offerId };
 }
 
 /**
@@ -11483,6 +11770,15 @@ export async function createGuestLink(authorName: string) {
 
   if (error) throw error;
   return data;
+}
+
+export async function updateGuestLinkName(id: string, newName: string) {
+  const { error } = await supabase
+    .from('article_guest_links')
+    .update({ author_name: newName })
+    .eq('id', id);
+
+  if (error) throw error;
 }
 
 export async function toggleGuestLink(id: string, isActive: boolean) {
