@@ -12,6 +12,7 @@ import CategoryHighlights from '@/components/store/CategoryHighlights';
 import FlashSaleSection from '@/components/store/FlashSaleSection';
 import AnnouncementBar from '@/components/store/AnnouncementBar';
 import StoreFooter from '@/components/store/StoreFooter';
+import ArticleHighlights from '@/components/store/ArticleHighlights';
 
 function HomeContent() {
   const { cart, user, loading, products, loadProducts } = useShop();
@@ -186,6 +187,8 @@ function HomeContent() {
       <div className="max-w-7xl mx-auto px-3 sm:px-4">
         <FlashSaleSection />
       </div>
+
+      <ArticleHighlights />
 
       {/* Footer */}
       <StoreFooter />

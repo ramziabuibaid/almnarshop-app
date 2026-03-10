@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Clock, AlertCircle, CheckCircle, Megaphone, LayoutDashboard } from 'lucide-react';
+import { Save, Clock, AlertCircle, CheckCircle, Megaphone, LayoutDashboard, Search, X } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 
 export default function SettingsPage() {
@@ -13,7 +13,12 @@ export default function SettingsPage() {
         hero_title: '',
         hero_description: '',
         hero_button_text: 'تسوق الآن',
+        hero_selected_products: '[]', // JSON string of product IDs
     });
+
+    const [products, setProducts] = useState<any[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -36,6 +41,47 @@ export default function SettingsPage() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        // Fetch products to be able to select them
+        const fetchProducts = async () => {
+            try {
+                // Fetch products using supabase directly to avoid caching issues in admin
+                const supabaseClient = (await import('@supabase/supabase-js')).createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+                );
+                
+                const { data } = await supabaseClient
+                    .from('products')
+                    .select('product_id, name, image_url, image_url_2, image_url_3, sale_price')
+                    .eq('is_visible', true)
+                    .order('created_at', { ascending: false });
+                
+                if (data) {
+                    setProducts(data);
+                }
+            } catch (error) {
+                console.error('Error fetching products:', error);
+            }
+        };
+        fetchProducts();
+    }, []);
+
+    // Effect to map selected product IDs to full product objects once both are loaded
+    useEffect(() => {
+        if (products.length > 0 && settings.hero_selected_products) {
+            try {
+                const selectedIds = JSON.parse(settings.hero_selected_products);
+                if (Array.isArray(selectedIds)) {
+                    const matched = selectedIds.map(id => products.find(p => p.product_id === id)).filter(Boolean);
+                    setSelectedProducts(matched);
+                }
+            } catch (e) {
+                console.error('Error parsing hero_selected_products', e);
+            }
+        }
+    }, [products, settings.hero_selected_products]);
 
     const handleSave = async () => {
         setSaving(true);
@@ -151,6 +197,81 @@ export default function SettingsPage() {
                                 className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-right text-gray-900 dark:text-gray-100"
                                 dir="rtl"
                             />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">المنتجات المميزة في البانر (الجهة اليسرى)</label>
+                            
+                            {/* Selected Products List */}
+                            {selectedProducts.length > 0 && (
+                                <div className="mb-4 grid gap-2">
+                                    {selectedProducts.map((product) => (
+                                        <div key={product.product_id} className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg border border-blue-100 dark:border-blue-800">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-white dark:bg-slate-700 rounded overflow-hidden flex items-center justify-center">
+                                                    {(product.image_url || product.image_url_2 || product.image_url_3) ? (
+                                                        <img src={product.image_url || product.image_url_2 || product.image_url_3} alt={product.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400">لا توجد</span>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">{product.name}</p>
+                                                    <p className="text-xs text-blue-600 dark:text-blue-400">₪{product.sale_price}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded-md transition-colors"
+                                                onClick={() => {
+                                                    const newSelected = selectedProducts.filter(p => p.product_id !== product.product_id);
+                                                    setSelectedProducts(newSelected);
+                                                    handleChange('hero_selected_products', JSON.stringify(newSelected.map(p => p.product_id)));
+                                                }}
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Product Search */}
+                            <div className="relative">
+                                <div className="relative">
+                                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                    <input
+                                        type="text"
+                                        placeholder="ابحث عن منتج لإضافته للبانر..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-4 pr-10 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-right text-gray-900 dark:text-gray-100"
+                                    />
+                                </div>
+                                
+                                {searchQuery && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                        {products
+                                            .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) && !selectedProducts.find(sp => sp.product_id === p.product_id))
+                                            .slice(0, 10)
+                                            .map((product) => (
+                                                <button
+                                                    key={product.product_id}
+                                                    onClick={() => {
+                                                        const newSelected = [...selectedProducts, product];
+                                                        setSelectedProducts(newSelected);
+                                                        handleChange('hero_selected_products', JSON.stringify(newSelected.map(p => p.product_id)));
+                                                        setSearchQuery('');
+                                                    }}
+                                                    className="w-full text-right px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center justify-between border-b border-gray-100 dark:border-slate-700/50 last:border-0"
+                                                >
+                                                    <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{product.name}</span>
+                                                    <span className="text-xs text-blue-600 dark:text-blue-400">₪{product.sale_price}</span>
+                                                </button>
+                                            ))
+                                        }
+                                    </div>
+                                )}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">عوضاً عن صورة ثابتة، سيتم عرض هذه المنتجات بطريقة احترافية (3D Floating) في يسار البانر.</p>
                         </div>
                     </div>
                 </div>
