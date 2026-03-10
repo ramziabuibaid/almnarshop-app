@@ -266,7 +266,7 @@ export default function AdminUsersPage() {
   if (authLoading) {
     return (
       <AdminLayout>
-        <div className="p-6 text-gray-700">Checking admin session...</div>
+        <div className="p-6 text-gray-700 dark:text-gray-300">Checking admin session...</div>
       </AdminLayout>
     );
   }
@@ -275,7 +275,7 @@ export default function AdminUsersPage() {
     return (
       <AdminLayout>
         <div className="p-6">
-          <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-800">
+          <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-4 text-amber-800">
             You must be a super admin to manage admin users.
           </div>
         </div>
@@ -288,44 +288,44 @@ export default function AdminUsersPage() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Shield className="text-gray-900" size={22} />
+            <Shield className="text-gray-900 dark:text-gray-100" size={22} />
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Admin users & permissions</h1>
-              <p className="text-sm text-gray-500">Control who can access sensitive areas</p>
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Admin users & permissions</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Control who can access sensitive areas</p>
             </div>
           </div>
           <button
             onClick={fetchUsers}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-slate-600 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50"
           >
             <RefreshCw size={16} />
             Refresh
           </button>
         </div>
 
-        {error && <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">{error}</div>}
+        {error && <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 p-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
 
         {/* Create user */}
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <Plus size={18} className="text-gray-800" />
-            <h2 className="text-lg font-semibold text-gray-900">Add admin user</h2>
+            <Plus size={18} className="text-gray-800 dark:text-gray-200" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add admin user</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <input
-              className="rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="rounded-lg border border-gray-300 dark:border-slate-600 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
               placeholder="Username"
               value={newUser.username}
               onChange={(e) => setNewUser((p) => ({ ...p, username: e.target.value }))}
             />
             <input
-              className="rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="rounded-lg border border-gray-300 dark:border-slate-600 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
               placeholder="Password"
               type="password"
               value={newUser.password}
               onChange={(e) => setNewUser((p) => ({ ...p, password: e.target.value }))}
             />
-            <label className="flex items-center gap-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
                 type="checkbox"
                 checked={newUser.is_super_admin}
@@ -333,7 +333,7 @@ export default function AdminUsersPage() {
               />
               Super admin (full access)
             </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
                 type="checkbox"
                 checked={newUser.is_active}
@@ -342,13 +342,13 @@ export default function AdminUsersPage() {
               Active
             </label>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 مكان العمل <span className="text-red-500">*</span>
               </label>
               <select
                 value={newUser.work_location}
                 onChange={(e) => setNewUser((p) => ({ ...p, work_location: e.target.value as 'المحل' | 'المخزن' }))}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full rounded-lg border border-gray-300 dark:border-slate-600 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
               >
                 <option value="المحل">المحل</option>
                 <option value="المخزن">المخزن</option>
@@ -357,7 +357,7 @@ export default function AdminUsersPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
             {permissionLabels.map(({ key, label }) => (
-              <label key={key} className="flex items-center gap-2 text-sm text-gray-700">
+              <label key={key} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                 <input
                   type="checkbox"
                   checked={newUser.permissions[key] === true}
@@ -376,7 +376,7 @@ export default function AdminUsersPage() {
             <button
               onClick={createUser}
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-lg bg-gray-900 text-white px-4 py-2 text-sm font-semibold hover:bg-gray-800 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-gray-900 dark:bg-slate-700 text-white px-4 py-2 text-sm font-semibold hover:bg-gray-800 dark:hover:bg-slate-600 disabled:opacity-50"
             >
               <Save size={16} />
               {saving ? 'Saving...' : 'Create user'}
@@ -385,32 +385,32 @@ export default function AdminUsersPage() {
         </div>
 
         {/* Existing users */}
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <Shield size={18} className="text-gray-800" />
-            <h2 className="text-lg font-semibold text-gray-900">Existing admins</h2>
+            <Shield size={18} className="text-gray-800 dark:text-gray-200" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Existing admins</h2>
           </div>
           {loading ? (
-            <div className="text-gray-600">Loading users...</div>
+            <div className="text-gray-600 dark:text-gray-400">Loading users...</div>
           ) : users.length === 0 ? (
-            <div className="text-gray-600">No admin users found.</div>
+            <div className="text-gray-600 dark:text-gray-400">No admin users found.</div>
           ) : (
             <div className="space-y-4">
               {users.map((user) => (
                 <div
                   key={user.id}
-                  className="rounded-lg border border-gray-200 p-3 shadow-sm"
+                  className="rounded-lg border border-gray-200 dark:border-slate-700 p-3 shadow-sm"
                 >
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                     <div>
-                      <div className="font-semibold text-gray-900">{user.username}</div>
-                      <div className="text-sm text-gray-500">
+                      <div className="font-semibold text-gray-900 dark:text-gray-100">{user.username}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
                         {user.is_super_admin ? 'Super admin' : 'Standard admin'} •{' '}
                         {user.is_active ? 'Active' : 'Disabled'} •{' '}
                         مكان العمل: {user.work_location || 'المحل'}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 text-sm text-gray-700 flex-wrap">
+                    <div className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300 flex-wrap">
                       <label className="flex items-center gap-1">
                         <input
                           type="checkbox"
@@ -430,11 +430,11 @@ export default function AdminUsersPage() {
                         </label>
                       )}
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">مكان العمل:</label>
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">مكان العمل:</label>
                         <select
                           value={user.work_location || 'المحل'}
                           onChange={(e) => updateUser(user.id, { work_location: e.target.value as 'المحل' | 'المخزن' })}
-                          className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                          className="rounded border border-gray-300 dark:border-slate-600 px-2 py-1 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-100"
                         >
                           <option value="المحل">المحل</option>
                           <option value="المخزن">المخزن</option>
@@ -453,7 +453,7 @@ export default function AdminUsersPage() {
                         <button
                           onClick={() => deleteUser(user.id)}
                           disabled={saving}
-                          className="flex items-center gap-1 px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 text-sm font-medium"
+                          className="flex items-center gap-1 px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 text-sm font-medium"
                           title="Delete user"
                         >
                           <Trash2 size={16} />
@@ -465,7 +465,7 @@ export default function AdminUsersPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
                     {permissionLabels.map(({ key, label }) => (
-                      <label key={key} className="flex items-center gap-2 text-sm text-gray-700">
+                      <label key={key} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                         <input
                           type="checkbox"
                           checked={user.permissions[key] === true}
@@ -496,20 +496,20 @@ export default function AdminUsersPage() {
             onClick={closePasswordModal}
           >
             <div
-              className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
+              className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
               onClick={(e) => e.stopPropagation()}
               dir="rtl"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Key size={20} className="text-gray-700" />
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <Key size={20} className="text-gray-700 dark:text-gray-300" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                     تغيير كلمة المرور
                   </h3>
                 </div>
                 <button
                   onClick={closePasswordModal}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                   disabled={changingPassword}
                 >
                   <X size={20} />
@@ -517,20 +517,20 @@ export default function AdminUsersPage() {
               </div>
 
               <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-1">
-                  المستخدم: <span className="font-medium text-gray-900">{passwordModal.username}</span>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                  المستخدم: <span className="font-medium text-gray-900 dark:text-gray-100">{passwordModal.username}</span>
                 </p>
               </div>
 
               {error && (
-                <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+                <div className="mb-4 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 p-3 text-sm text-red-700 dark:text-red-400">
                   {error}
                 </div>
               )}
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     كلمة المرور الجديدة <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -540,14 +540,14 @@ export default function AdminUsersPage() {
                       setNewPassword(e.target.value);
                       setError(null);
                     }}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                    className="w-full rounded-lg border border-gray-300 dark:border-slate-600 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
                     placeholder="أدخل كلمة المرور الجديدة (6 أحرف على الأقل)"
                     disabled={changingPassword}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     تأكيد كلمة المرور <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -557,7 +557,7 @@ export default function AdminUsersPage() {
                       setConfirmPassword(e.target.value);
                       setError(null);
                     }}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                    className="w-full rounded-lg border border-gray-300 dark:border-slate-600 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
                     placeholder="أعد إدخال كلمة المرور الجديدة"
                     disabled={changingPassword}
                   />
@@ -568,14 +568,14 @@ export default function AdminUsersPage() {
                 <button
                   onClick={closePasswordModal}
                   disabled={changingPassword}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-medium disabled:opacity-50"
                 >
                   إلغاء
                 </button>
                 <button
                   onClick={changePassword}
                   disabled={changingPassword || !newPassword || !confirmPassword}
-                  className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {changingPassword ? (
                     <>

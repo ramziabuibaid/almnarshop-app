@@ -656,8 +656,8 @@ function ShopSalesFormContent() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 font-cairo">جاري التحميل...</p>
+            <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 font-cairo">جاري التحميل...</p>
           </div>
         </div>
       </AdminLayout>
@@ -670,21 +670,21 @@ function ShopSalesFormContent() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cairo">فاتورة مبيعات محل جديدة</h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base font-cairo">إنشاء فاتورة مبيعات محل جديدة</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 font-cairo">فاتورة مبيعات محل جديدة</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm sm:text-base font-cairo">إنشاء فاتورة مبيعات محل جديدة</p>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setShowCosts((prev) => !prev)}
               disabled={!canViewCost}
-              className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-none"
+              className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-none"
             >
               {showCosts ? <EyeOff size={18} /> : <Eye size={18} />}
               <span className="sm:hidden text-sm">التكلفة</span>
             </button>
             <button
               onClick={() => router.push('/admin/shop-sales')}
-              className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold flex-1 sm:flex-none"
+              className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo text-gray-900 dark:text-gray-100 font-bold flex-1 sm:flex-none"
             >
               <ArrowLeft size={20} />
               <span>إلغاء</span>
@@ -693,31 +693,31 @@ function ShopSalesFormContent() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600 font-cairo">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-4">
+            <p className="text-red-600 dark:text-red-400 font-cairo">{error}</p>
           </div>
         )}
 
         {/* Form */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">التاريخ</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">التاريخ</label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
               />
             </div>
             <div className="relative" ref={customerDropdownRef}>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700 font-cairo">الزبون</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 font-cairo">الزبون</label>
                 <button
                   type="button"
                   onClick={() => setIsCustomerModalOpen(true)}
-                  className="flex items-center gap-1 px-2 py-1 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors font-cairo"
+                  className="flex items-center gap-1 px-2 py-1 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors font-cairo"
                   title="إضافة زبون جديد"
                 >
                   <UserPlus size={16} />
@@ -746,10 +746,10 @@ function ShopSalesFormContent() {
                     }
                   }}
                   placeholder="ابحث عن زبون..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
                 />
                 {isCustomerDropdownOpen && filteredCustomers.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                     {filteredCustomers.map((customer) => (
                       <button
                         key={customer.customer_id || customer.CustomerID || customer.id}
@@ -760,14 +760,14 @@ function ShopSalesFormContent() {
                           setCustomerSearchQuery('');
                           setIsCustomerDropdownOpen(false);
                         }}
-                        className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
+                        className="w-full text-right px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-900 dark:text-gray-100 font-cairo"
                       >
                         <div className="flex items-center justify-between">
                           <span className="flex-1 text-right">
                             {customer.name || customer.Name} ({customer.customer_id || customer.CustomerID || customer.id})
                           </span>
                           {canViewBalances && (
-                            <span className="text-sm text-gray-500 mr-2" dir="ltr">
+                            <span className="text-sm text-gray-500 dark:text-gray-400 mr-2" dir="ltr">
                               رصيد: ₪{((customer.balance || customer.Balance || 0)).toFixed(2)}
                             </span>
                           )}
@@ -778,10 +778,10 @@ function ShopSalesFormContent() {
                 )}
               </div>
               {selectedCustomer && canViewBalances && (
-                <div className="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="mt-2 p-2 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700">
                   <div className="flex items-center justify-between text-sm font-cairo">
-                    <span className="text-gray-600">الرصيد:</span>
-                    <span className={`font-semibold ${(selectedCustomer.balance || selectedCustomer.Balance || 0) > 0 ? 'text-red-600' : (selectedCustomer.balance || selectedCustomer.Balance || 0) < 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                    <span className="text-gray-600 dark:text-gray-400">الرصيد:</span>
+                    <span className={`font-semibold ${(selectedCustomer.balance || selectedCustomer.Balance || 0) > 0 ? 'text-red-600 dark:text-red-400' : (selectedCustomer.balance || selectedCustomer.Balance || 0) < 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
                       ₪{((selectedCustomer.balance || selectedCustomer.Balance || 0)).toFixed(2)}
                     </span>
                   </div>
@@ -789,11 +789,11 @@ function ShopSalesFormContent() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الحالة</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">الحالة</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
               >
                 {STATUS_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>
@@ -803,35 +803,35 @@ function ShopSalesFormContent() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الخصم</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">الخصم</label>
               <input
                 type="number"
                 step="1"
                 value={discount}
                 onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
                 onWheel={(e) => e.currentTarget.blur()}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الملاحظات</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">الملاحظات</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
             />
           </div>
 
           {/* Products */}
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 font-cairo mb-4">المنتجات</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 font-cairo mb-4">المنتجات</h2>
 
             {/* Barcode Scanner - Always visible */}
-            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
+            <div className="mb-4 p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
               <BarcodeScannerInput
                 onProductFound={(product) => {
                   handleAddProduct(product, 1);
@@ -849,7 +849,7 @@ function ShopSalesFormContent() {
             <div className="mb-4">
               <button
                 onClick={() => setShowAddProduct(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo w-full sm:w-auto"
+                className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo w-full sm:w-auto"
               >
                 <Plus size={20} />
                 إضافة منتج
@@ -857,10 +857,10 @@ function ShopSalesFormContent() {
             </div>
 
             {showAddProduct && (
-              <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="mb-4 p-3 sm:p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700">
 
                 <div className="relative mb-4" ref={productDropdownRef}>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">اختر منتج</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -871,10 +871,10 @@ function ShopSalesFormContent() {
                       }}
                       onFocus={() => setIsProductDropdownOpen(true)}
                       placeholder="ابحث عن منتج..."
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
                     />
                     {isProductDropdownOpen && filteredProducts.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                         {filteredProducts.map((product) => {
                           const imageUrl = product.Image || product.image || '';
                           return (
@@ -899,27 +899,27 @@ function ShopSalesFormContent() {
                                   alert('خطأ: المنتج لا يحتوي على معرف صالح');
                                 }
                               }}
-                              className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
+                              className="w-full text-right px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-900 dark:text-gray-100 font-cairo"
                             >
                               <div className="flex items-center gap-3">
                                 {imageUrl ? (
                                   <img
                                     src={imageUrl}
                                     alt={product.Name || product.name}
-                                    className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
+                                    className="w-12 h-12 object-contain rounded border border-gray-200 dark:border-slate-700 flex-shrink-0"
                                     onError={(e) => {
                                       e.currentTarget.style.display = 'none';
                                     }}
                                   />
                                 ) : (
-                                  <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                    <span className="text-gray-400 text-xs">—</span>
+                                  <div className="w-12 h-12 bg-gray-100 dark:bg-slate-700/50 rounded border border-gray-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
                                   </div>
                                 )}
                                 <div className="flex-1 min-w-0">
                                   <div className="flex flex-col gap-1">
                                     <span className="text-right text-sm font-medium">{product.Name || product.name}</span>
-                                    <span className="text-right text-xs text-gray-600 font-light flex items-center gap-2 justify-end flex-wrap" dir="rtl">
+                                    <span className="text-right text-xs text-gray-600 dark:text-gray-400 font-light flex items-center gap-2 justify-end flex-wrap" dir="rtl">
                                       <span>₪{product.SalePrice || product.sale_price || product.price || 0}</span>
                                       <span>•</span>
                                       <span>محل: {product.CS_Shop || product.cs_shop || 0}</span>
@@ -928,7 +928,7 @@ function ShopSalesFormContent() {
                                       {(reservedQuantities[product.ProductID || product.id || product.product_id]?.total || 0) > 0 && (
                                         <>
                                           <span>•</span>
-                                          <span className="text-orange-600 font-semibold bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100">
+                                          <span className="text-orange-600 dark:text-orange-400 font-semibold bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded border border-orange-100 dark:border-orange-900/30">
                                             محجوز: {reservedQuantities[product.ProductID || product.id || product.product_id].total}
                                           </span>
                                         </>
@@ -946,7 +946,7 @@ function ShopSalesFormContent() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الكمية</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">الكمية</label>
                     <input
                       type="number"
                       step="1"
@@ -954,11 +954,11 @@ function ShopSalesFormContent() {
                       onChange={(e) => setNewProductQuantity(parseFloat(e.target.value) || 1)}
                       onWheel={(e) => e.currentTarget.blur()}
                       onFocus={(e) => e.target.select()}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">سعر الوحدة</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">سعر الوحدة</label>
                     <input
                       type="number"
                       step="1"
@@ -966,11 +966,11 @@ function ShopSalesFormContent() {
                       onChange={(e) => setNewProductPrice(parseFloat(e.target.value) || 0)}
                       onWheel={(e) => e.currentTarget.blur()}
                       onFocus={(e) => e.target.select()}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">
                       الرقم التسلسلي (اختياري)
                     </label>
                     <input
@@ -978,14 +978,14 @@ function ShopSalesFormContent() {
                       value={newProductSerialNo}
                       onChange={(e) => setNewProductSerialNo(e.target.value)}
                       placeholder="أدخل الرقم التسلسلي..."
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
                     />
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleAddProduct}
-                    className="flex-1 sm:flex-none px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo text-sm sm:text-base"
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo text-sm sm:text-base"
                   >
                     إضافة
                   </button>
@@ -995,7 +995,7 @@ function ShopSalesFormContent() {
                       setSelectedProductId('');
                       setProductSearchQuery('');
                     }}
-                    className="flex-1 sm:flex-none px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold text-sm sm:text-base"
+                    className="flex-1 sm:flex-none px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo text-gray-900 dark:text-gray-100 font-bold text-sm sm:text-base"
                   >
                     إلغاء
                   </button>
@@ -1004,50 +1004,50 @@ function ShopSalesFormContent() {
             )}
 
             {details.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 font-cairo">لا توجد منتجات</div>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400 font-cairo">لا توجد منتجات</div>
             ) : (
               <>
                 {/* Desktop Table View */}
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
                       <tr>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">المنتج</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الكمية</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">سعر الوحدة</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">المنتج</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">الكمية</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">سعر الوحدة</th>
                         {showCosts && canViewCost && (
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
                         )}
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الإجمالي</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">إجراءات</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">الإجمالي</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">إجراءات</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200">
                       {details.map((item, index) => {
                         const imageUrl = item.productImage && item.productImage.trim() !== '' ? item.productImage.trim() : '';
                         return (
                           <tr key={item.detailID || index}>
-                            <td className="px-4 py-3 text-sm text-gray-900 font-cairo align-top">
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 font-cairo align-top">
                               <div className="flex items-start gap-2">
                                 {imageUrl ? (
                                   <>
                                     <img
                                       src={imageUrl}
                                       alt={item.productName}
-                                      className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
+                                      className="w-10 h-10 object-contain rounded border border-gray-200 dark:border-slate-700 flex-shrink-0"
                                       onError={(e) => {
                                         e.currentTarget.style.display = 'none';
                                         const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
                                         if (placeholder) placeholder.style.display = 'flex';
                                       }}
                                     />
-                                    <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0 hidden">
-                                      <span className="text-gray-400 text-xs">—</span>
+                                    <div className="w-10 h-10 bg-gray-100 dark:bg-slate-700/50 rounded border border-gray-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0 hidden">
+                                      <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
                                     </div>
                                   </>
                                 ) : (
-                                  <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                    <span className="text-gray-400 text-xs">—</span>
+                                  <div className="w-10 h-10 bg-gray-100 dark:bg-slate-700/50 rounded border border-gray-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
                                   </div>
                                 )}
                                 <div className="flex-1 min-w-0">
@@ -1107,9 +1107,9 @@ function ShopSalesFormContent() {
                                                 data-serial-index={serialIndex}
                                                 data-detail-id={item.detailID}
                                                 placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                                                className={`w-full px-2 py-1 border rounded text-gray-900 font-mono text-xs ${isRequired
+                                                className={`w-full px-2 py-1 border rounded text-gray-900 dark:text-gray-100 font-mono text-xs ${isRequired
                                                     ? 'border-yellow-400 bg-yellow-50'
-                                                    : 'border-gray-300'
+                                                    : 'border-gray-300 dark:border-slate-600'
                                                   }`}
                                               />
                                               <SerialNumberScanner
@@ -1169,7 +1169,7 @@ function ShopSalesFormContent() {
                                     onChange={(e) => handleUpdateNotes(item.detailID, e.target.value)}
                                     placeholder="ملاحظات..."
                                     rows={1}
-                                    className="w-full mt-2 px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo resize-none"
+                                    className="w-full mt-2 px-2 py-1 text-xs border border-gray-300 dark:border-slate-600 rounded text-gray-900 dark:text-gray-100 font-cairo resize-none"
                                   />
                                 </div>
                               </div>
@@ -1182,7 +1182,7 @@ function ShopSalesFormContent() {
                                 onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
                                 onWheel={(e) => e.currentTarget.blur()}
                                 onFocus={(e) => e.target.select()}
-                                className="w-20 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
+                                className="w-20 px-2 py-1 border border-gray-300 dark:border-slate-600 rounded text-gray-900 dark:text-gray-100 font-bold"
                               />
                             </td>
                             <td className="px-4 py-3 align-top">
@@ -1193,21 +1193,21 @@ function ShopSalesFormContent() {
                                 onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
                                 onWheel={(e) => e.currentTarget.blur()}
                                 onFocus={(e) => e.target.select()}
-                                className="w-24 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
+                                className="w-24 px-2 py-1 border border-gray-300 dark:border-slate-600 rounded text-gray-900 dark:text-gray-100 font-bold"
                               />
                             </td>
                             {showCosts && canViewCost && (
-                              <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo align-top">
+                              <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo align-top">
                                 ₪{(item.costPrice || 0).toFixed(2)}
                               </td>
                             )}
-                            <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo align-top">
+                            <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo align-top">
                               ₪{(item.quantity * item.unitPrice).toFixed(2)}
                             </td>
                             <td className="px-4 py-3 align-top">
                               <button
                                 onClick={() => handleRemoveItem(item.detailID)}
-                                className="text-red-600 hover:text-red-900 font-cairo"
+                                className="text-red-600 dark:text-red-400 hover:text-red-900 font-cairo"
                               >
                                 حذف
                               </button>
@@ -1224,13 +1224,13 @@ function ShopSalesFormContent() {
                   {details.map((item, index) => {
                     const imageUrl = item.productImage && item.productImage.trim() !== '' ? item.productImage.trim() : '';
                     return (
-                      <div key={item.detailID || index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                      <div key={item.detailID || index} className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4 shadow-sm">
                         <div className="flex items-start gap-3 mb-3">
                           {imageUrl ? (
                             <img
                               src={imageUrl}
                               alt={item.productName}
-                              className="w-16 h-16 object-contain rounded border border-gray-200 flex-shrink-0"
+                              className="w-16 h-16 object-contain rounded border border-gray-200 dark:border-slate-700 flex-shrink-0"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
                                 const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
@@ -1238,13 +1238,13 @@ function ShopSalesFormContent() {
                               }}
                             />
                           ) : (
-                            <div className="w-16 h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                              <span className="text-gray-400 text-xs">—</span>
+                            <div className="w-16 h-16 bg-gray-100 dark:bg-slate-700/50 rounded border border-gray-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
+                              <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-semibold text-gray-900 font-cairo mb-1 line-clamp-2">{item.productName}</h3>
-                            <div className="text-lg font-bold text-gray-900 font-cairo mb-2">
+                            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo mb-1 line-clamp-2">{item.productName}</h3>
+                            <div className="text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo mb-2">
                               ₪{(item.quantity * item.unitPrice).toFixed(2)}
                             </div>
                             {/* Serial Numbers Display - Show if product is serialized OR if there are existing serials */}
@@ -1297,9 +1297,9 @@ function ShopSalesFormContent() {
                                         data-detail-id={item.detailID}
                                         data-mobile="true"
                                         placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                                        className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm ${isRequired
+                                        className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 dark:text-gray-100 font-mono text-sm ${isRequired
                                             ? 'border-yellow-400 bg-yellow-50'
-                                            : 'border-gray-300'
+                                            : 'border-gray-300 dark:border-slate-600'
                                           }`}
                                       />
                                       <SerialNumberScanner
@@ -1355,7 +1355,7 @@ function ShopSalesFormContent() {
                           </div>
                           <button
                             onClick={() => handleRemoveItem(item.detailID)}
-                            className="text-red-600 hover:text-red-900 p-1"
+                            className="text-red-600 dark:text-red-400 hover:text-red-900 p-1"
                             title="حذف"
                           >
                             <X size={18} />
@@ -1364,7 +1364,7 @@ function ShopSalesFormContent() {
 
                         <div className="grid grid-cols-2 gap-3 mb-3">
                           <div>
-                            <label className="block text-xs text-gray-600 mb-1 font-cairo">الكمية</label>
+                            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 font-cairo">الكمية</label>
                             <input
                               type="number"
                               step="1"
@@ -1372,11 +1372,11 @@ function ShopSalesFormContent() {
                               onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
                               onWheel={(e) => e.currentTarget.blur()}
                               onFocus={(e) => e.target.select()}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-gray-100 font-bold text-sm"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs text-gray-600 mb-1 font-cairo">سعر الوحدة</label>
+                            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 font-cairo">سعر الوحدة</label>
                             <input
                               type="number"
                               step="1"
@@ -1384,16 +1384,16 @@ function ShopSalesFormContent() {
                               onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
                               onWheel={(e) => e.currentTarget.blur()}
                               onFocus={(e) => e.target.select()}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-gray-100 font-bold text-sm"
                             />
                           </div>
                         </div>
 
                         {showCosts && canViewCost && (
-                          <div className="pt-2 border-t border-gray-200">
-                            <div className="flex justify-between text-xs text-gray-600 font-cairo">
+                          <div className="pt-2 border-t border-gray-200 dark:border-slate-700">
+                            <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 font-cairo">
                               <span>تكلفة الوحدة:</span>
-                              <span className="font-semibold text-gray-900">₪{(item.costPrice || 0).toFixed(2)}</span>
+                              <span className="font-semibold text-gray-900 dark:text-gray-100">₪{(item.costPrice || 0).toFixed(2)}</span>
                             </div>
                           </div>
                         )}
@@ -1406,30 +1406,30 @@ function ShopSalesFormContent() {
           </div>
 
           {/* Summary */}
-          <div className="border-t border-gray-200 pt-4">
+          <div className="border-t border-gray-200 dark:border-slate-700 pt-4">
             <div className="flex justify-end">
               <div className="w-full md:w-1/3 space-y-2">
-                <div className="flex justify-between text-sm text-gray-600 font-cairo">
+                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 font-cairo">
                   <span>المجموع الفرعي:</span>
                   <span className="font-semibold">₪{calculateSubtotal().toFixed(2)}</span>
                 </div>
                 {discount > 0 && (
-                  <div className="flex justify-between text-sm text-gray-600 font-cairo">
+                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 font-cairo">
                     <span>الخصم:</span>
-                    <span className="font-semibold text-red-600">-₪{discount.toFixed(2)}</span>
+                    <span className="font-semibold text-red-600 dark:text-red-400">-₪{discount.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-lg font-bold text-gray-900 font-cairo border-t border-gray-200 pt-2">
+                <div className="flex justify-between text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo border-t border-gray-200 dark:border-slate-700 pt-2">
                   <span>الإجمالي:</span>
                   <span>₪{calculateTotal().toFixed(2)}</span>
                 </div>
                 {showCosts && canViewCost && (
                   <>
-                    <div className="flex justify-between text-lg font-bold text-gray-900 font-cairo">
+                    <div className="flex justify-between text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo">
                       <span>إجمالي التكلفة:</span>
                       <span>₪{calculateCostTotal().toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-lg font-bold text-green-600 font-cairo border-t border-gray-200 pt-2">
+                    <div className="flex justify-between text-lg font-bold text-green-600 dark:text-green-400 font-cairo border-t border-gray-200 dark:border-slate-700 pt-2">
                       <span>الربح:</span>
                       <span>₪{calculateProfit().toFixed(2)}</span>
                     </div>
@@ -1440,17 +1440,17 @@ function ShopSalesFormContent() {
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
             <button
               onClick={() => router.push('/admin/shop-sales')}
-              className="w-full sm:w-auto px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold text-sm sm:text-base"
+              className="w-full sm:w-auto px-6 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo text-gray-900 dark:text-gray-100 font-bold text-sm sm:text-base"
             >
               إلغاء
             </button>
             <button
               onClick={handleSave}
               disabled={saving || details.length === 0 || !customerId}
-              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto text-sm sm:text-base"
+              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto text-sm sm:text-base"
             >
               {saving ? (
                 <>

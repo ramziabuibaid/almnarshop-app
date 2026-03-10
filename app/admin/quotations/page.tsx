@@ -283,14 +283,14 @@ export default function QuotationsPage() {
 
   const getStatusColor = (status: string) => {
     const statusColors: Record<string, string> = {
-      'مسودة': 'bg-gray-100 text-gray-800',
+      'مسودة': 'bg-gray-100 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200',
       'مقدم للزبون': 'bg-blue-100 text-blue-800',
       'مدفوع كلي أو جزئي تم الحجز': 'bg-yellow-100 text-yellow-800',
       'تم تسلم جزء من الطلبية': 'bg-orange-100 text-orange-800',
-      'مسلمة بالكامل': 'bg-green-100 text-green-800',
-      'ملغي': 'bg-red-100 text-red-800',
+      'مسلمة بالكامل': 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
+      'ملغي': 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
     };
-    return statusColors[status] || 'bg-gray-100 text-gray-800';
+    return statusColors[status] || 'bg-gray-100 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200';
   };
 
   // Apply client-side search and filters (like maintenance page)
@@ -342,8 +342,8 @@ export default function QuotationsPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 font-cairo">جاري التحميل...</p>
+            <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 font-cairo">جاري التحميل...</p>
           </div>
         </div>
       </AdminLayout>
@@ -355,14 +355,14 @@ export default function QuotationsPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <p className="text-red-600 text-lg mb-4 font-cairo">{error}</p>
+            <p className="text-red-600 dark:text-red-400 text-lg mb-4 font-cairo">{error}</p>
             <button
               onClick={() => {
                 loadFirstPage().catch((err) => {
                   setError(err?.message || 'فشل تحميل العروض السعرية');
                 });
               }}
-              className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
+              className="px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo"
             >
               إعادة المحاولة
             </button>
@@ -378,15 +378,15 @@ export default function QuotationsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cairo">العروض السعرية</h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base font-cairo">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 font-cairo">العروض السعرية</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm sm:text-base font-cairo">
               عرض وإدارة جميع العروض السعرية ({allQuotations.length.toLocaleString('en-US')} عرض محمل
               {loadingMore && <span className="text-blue-600"> - جاري تحميل المزيد...</span>})
             </p>
           </div>
           <button
             onClick={() => router.push('/admin/quotations/new')}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo w-full sm:w-auto text-sm sm:text-base"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo w-full sm:w-auto text-sm sm:text-base"
           >
             <Plus size={20} />
             <span>عرض سعري جديد</span>
@@ -394,21 +394,21 @@ export default function QuotationsPage() {
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-3 sm:p-4">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="flex-1 relative">
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
               <input
                 type="text"
                 placeholder="بحث برقم العرض، الزبون، الملاحظات، أو الحالة..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 font-cairo"
+                className="w-full pr-10 pl-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 font-cairo"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                   title="مسح البحث"
                 >
                   <X size={18} />
@@ -416,11 +416,11 @@ export default function QuotationsPage() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700 font-cairo whitespace-nowrap">فلترة:</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 font-cairo whitespace-nowrap">فلترة:</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="flex-1 sm:flex-none px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo"
+                className="flex-1 sm:flex-none px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-cairo"
               >
                 <option value="الكل">الكل</option>
                 {STATUS_OPTIONS.map((status) => (
@@ -444,45 +444,45 @@ export default function QuotationsPage() {
 
         {/* Quotations List */}
         {filteredQuotations.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-8 sm:p-12 text-center">
-            <FileText size={48} className="text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 text-base sm:text-lg font-cairo">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-8 sm:p-12 text-center">
+            <FileText size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg font-cairo">
               {searchQuery ? 'لم يتم العثور على عروض سعرية تطابق البحث' : 'لا توجد عروض سعرية'}
             </p>
           </div>
         ) : (
           <>
             {/* Desktop Table View */}
-            <div className="hidden md:block bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="hidden md:block bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
                     <tr>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">
                         # العرض
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">
                         التاريخ
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">
                         الزبون
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">
                         الحالة
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">
                         المبلغ الإجمالي
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">
                         الإجراءات
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200">
                     {paginatedQuotations.map((quotation, index) => (
-                      <tr key={quotation.QuotationID || `quotation-${index}`} className="hover:bg-gray-200 transition-colors">
+                      <tr key={quotation.QuotationID || `quotation-${index}`} className="hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900 font-cairo flex items-center gap-2">
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100 font-cairo flex items-center gap-2">
                             {quotation.QuotationID}
                             {quotation.is_groom_offer && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800" title={quotation.groom_offer_title || 'عرض عرسان مميز'}>
@@ -495,7 +495,7 @@ export default function QuotationsPage() {
                             if (userId && userMap.has(userId)) {
                               const username = userMap.get(userId);
                               return (
-                                <div className="text-xs text-gray-500 font-cairo mt-1">
+                                <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mt-1">
                                   {username}
                                 </div>
                               );
@@ -504,10 +504,10 @@ export default function QuotationsPage() {
                           })()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-600 font-cairo">
+                          <div className="text-sm text-gray-600 dark:text-gray-400 font-cairo">
                             <div>{formatDate(quotation.Date)}</div>
                             {quotation.CreatedAt && (
-                              <div className="text-xs text-gray-500 mt-0.5">{formatTime(quotation.CreatedAt)}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatTime(quotation.CreatedAt)}</div>
                             )}
                           </div>
                         </td>
@@ -528,22 +528,22 @@ export default function QuotationsPage() {
                                     window.open(`/admin/customers/${quotation.CustomerID}`, '_blank', 'noopener,noreferrer');
                                   }
                                 }}
-                                className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-cairo"
+                                className="text-sm text-blue-600 hover:text-blue-800 dark:text-white dark:hover:text-gray-300 hover:underline font-cairo"
                                 title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
                               >
                                 {quotation.customer?.name || quotation.CustomerID}
                               </button>
                               {quotation.customer?.shamelNo && (
-                                <div className="text-xs text-gray-500 font-cairo mt-1">
+                                <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mt-1">
                                   {quotation.customer.shamelNo}
                                 </div>
                               )}
                             </div>
                           ) : (
-                            <div className="text-sm text-gray-600 font-cairo">
+                            <div className="text-sm text-gray-600 dark:text-gray-400 font-cairo">
                               {quotation.customer?.name || '—'}
                               {quotation.customer?.shamelNo && (
-                                <div className="text-xs text-gray-500 font-cairo mt-1">
+                                <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mt-1">
                                   {quotation.customer.shamelNo}
                                 </div>
                               )}
@@ -556,10 +556,10 @@ export default function QuotationsPage() {
                               value={quotation.Status}
                               onChange={(e) => handleStatusChange(quotation.QuotationID, e.target.value)}
                               disabled={updatingStatusId === quotation.QuotationID}
-                              className={`px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900 cursor-pointer font-cairo transition-colors ${getStatusColor(quotation.Status)} ${updatingStatusId === quotation.QuotationID ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
+                              className={`px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 cursor-pointer font-cairo transition-colors ${getStatusColor(quotation.Status)} ${updatingStatusId === quotation.QuotationID ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
                             >
                               {STATUS_OPTIONS.map((status) => (
-                                <option key={status} value={status} className="bg-white text-gray-900">
+                                <option key={status} value={status} className="bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100">
                                   {status}
                                 </option>
                               ))}
@@ -571,7 +571,7 @@ export default function QuotationsPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-semibold text-gray-900 font-cairo">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo">
                             {formatCurrency(quotation.totalAmount || 0)}
                           </div>
                         </td>
@@ -595,17 +595,17 @@ export default function QuotationsPage() {
                               {printMenuOpen === quotation.QuotationID && (
                                 <>
                                   <div className="fixed inset-0 z-10" onClick={() => setPrintMenuOpen(null)} />
-                                  <div className="absolute right-0 top-full mt-1 py-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[180px]">
+                                  <div className="absolute right-0 top-full mt-1 py-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg z-20 min-w-[180px]">
                                     <button
                                       onClick={() => handlePrint(quotation.QuotationID, true)}
-                                      className="w-full px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-cairo"
+                                      className="w-full px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-cairo"
                                     >
                                       <Image size={14} />
                                       طباعة مع صور المنتجات
                                     </button>
                                     <button
                                       onClick={() => handlePrint(quotation.QuotationID, false)}
-                                      className="w-full px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-cairo"
+                                      className="w-full px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-cairo"
                                     >
                                       <Printer size={14} />
                                       طباعة عادية (رقم شامل)
@@ -640,7 +640,7 @@ export default function QuotationsPage() {
                               <button
                                 onClick={() => handleDelete(quotation.QuotationID)}
                                 disabled={deletingId === quotation.QuotationID}
-                                className="text-red-600 hover:text-red-900 flex items-center gap-1 font-cairo disabled:opacity-50"
+                                className="text-red-600 dark:text-red-400 hover:text-red-900 flex items-center gap-1 font-cairo disabled:opacity-50"
                               >
                                 <Trash2 size={16} />
                                 حذف
@@ -658,13 +658,13 @@ export default function QuotationsPage() {
             {/* Mobile Card View */}
             <div className="md:hidden space-y-3">
               {paginatedQuotations.map((quotation, index) => (
-                <div key={quotation.QuotationID || `quotation-${index}`} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                <div key={quotation.QuotationID || `quotation-${index}`} className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4 shadow-sm">
                   {/* Header Row */}
-                  <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
+                  <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200 dark:border-slate-700">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="text-base font-bold text-gray-900 font-cairo">#{quotation.QuotationID}</h3>
+                          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 font-cairo">#{quotation.QuotationID}</h3>
                           {quotation.is_groom_offer && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800" title={quotation.groom_offer_title || 'عرض عرسان مميز'}>
                               👑 عرض عرسان
@@ -679,7 +679,7 @@ export default function QuotationsPage() {
                           if (userId && userMap.has(userId)) {
                             const username = userMap.get(userId);
                             return (
-                              <div className="text-xs text-gray-500 font-cairo">
+                              <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo">
                                 {username}
                               </div>
                             );
@@ -688,7 +688,7 @@ export default function QuotationsPage() {
                         })()}
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <div className="text-lg font-bold text-gray-900 font-cairo mb-1">
+                        <div className="text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo mb-1">
                           {formatCurrency(quotation.totalAmount || 0)}
                         </div>
                       </div>
@@ -706,18 +706,18 @@ export default function QuotationsPage() {
                           }
                           router.push(`/admin/customers/${quotation.CustomerID}`);
                         }}
-                        className="text-blue-600 hover:text-blue-800 hover:underline font-semibold text-sm font-cairo text-right w-full"
+                        className="text-blue-600 hover:text-blue-800 dark:text-white dark:hover:text-gray-300 hover:underline font-semibold text-sm font-cairo text-right w-full"
                         title="فتح بروفايل الزبون"
                       >
                         {quotation.customer?.name || quotation.CustomerID}
                       </button>
                     ) : (
-                      <div className="text-sm text-gray-600 font-cairo">
+                      <div className="text-sm text-gray-600 dark:text-gray-400 font-cairo">
                         {quotation.customer?.name || '—'}
                       </div>
                     )}
                     {quotation.customer?.shamelNo && (
-                      <div className="text-xs text-gray-500 font-cairo mt-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mt-1">
                         {quotation.customer.shamelNo}
                       </div>
                     )}
@@ -725,11 +725,11 @@ export default function QuotationsPage() {
 
                   {/* Date */}
                   <div className="mb-3">
-                    <div className="text-xs text-gray-500 font-cairo mb-1">التاريخ</div>
-                    <div className="text-sm text-gray-900 font-cairo">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mb-1">التاريخ</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100 font-cairo">
                       {formatDate(quotation.Date)}
                       {quotation.CreatedAt && (
-                        <div className="text-xs text-gray-500 mt-0.5">{formatTime(quotation.CreatedAt)}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatTime(quotation.CreatedAt)}</div>
                       )}
                     </div>
                   </div>
@@ -737,15 +737,15 @@ export default function QuotationsPage() {
                   {/* Status (for accountant) */}
                   {canAccountant && (
                     <div className="mb-3">
-                      <div className="text-xs text-gray-500 font-cairo mb-1">الحالة</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mb-1">الحالة</div>
                       <select
                         value={quotation.Status}
                         onChange={(e) => handleStatusChange(quotation.QuotationID, e.target.value)}
                         disabled={updatingStatusId === quotation.QuotationID}
-                        className={`w-full px-3 py-2 text-sm font-semibold rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900 cursor-pointer font-cairo transition-colors ${getStatusColor(quotation.Status)} ${updatingStatusId === quotation.QuotationID ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
+                        className={`w-full px-3 py-2 text-sm font-semibold rounded-lg border border-gray-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 cursor-pointer font-cairo transition-colors ${getStatusColor(quotation.Status)} ${updatingStatusId === quotation.QuotationID ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
                       >
                         {STATUS_OPTIONS.map((status) => (
-                          <option key={status} value={status} className="bg-white text-gray-900">
+                          <option key={status} value={status} className="bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100">
                             {status}
                           </option>
                         ))}
@@ -754,18 +754,18 @@ export default function QuotationsPage() {
                   )}
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+                  <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-slate-700">
                     <div className="flex-1 relative">
                       <button
                         onClick={() => handlePrint(quotation.QuotationID)}
-                        className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-cairo"
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors font-cairo"
                       >
                         <Printer size={16} />
                         <span>طباعة</span>
                       </button>
                       <button
                         onClick={() => setPrintMenuOpen(printMenuOpen === quotation.QuotationID ? null : quotation.QuotationID)}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700"
                         title="خيارات الطباعة"
                       >
                         <ChevronDown size={14} className={printMenuOpen === quotation.QuotationID ? 'rotate-180' : ''} />
@@ -773,17 +773,17 @@ export default function QuotationsPage() {
                       {printMenuOpen === quotation.QuotationID && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setPrintMenuOpen(null)} />
-                          <div className="absolute right-0 bottom-full mb-1 py-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[200px]">
+                          <div className="absolute right-0 bottom-full mb-1 py-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg z-20 min-w-[200px]">
                             <button
                               onClick={() => handlePrint(quotation.QuotationID, true)}
-                              className="w-full px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-cairo"
+                              className="w-full px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-cairo"
                             >
                               <Image size={14} />
                               طباعة مع صور المنتجات
                             </button>
                             <button
                               onClick={() => handlePrint(quotation.QuotationID, false)}
-                              className="w-full px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-cairo"
+                              className="w-full px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-cairo"
                             >
                               <Printer size={14} />
                               طباعة عادية (رقم شامل)
@@ -818,7 +818,7 @@ export default function QuotationsPage() {
                       <button
                         onClick={() => handleDelete(quotation.QuotationID)}
                         disabled={deletingId === quotation.QuotationID}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {deletingId === quotation.QuotationID ? (
                           <Loader2 size={16} className="animate-spin" />
@@ -837,8 +837,8 @@ export default function QuotationsPage() {
 
         {/* Pagination */}
         {filteredQuotations.length > 0 && totalPages > 1 && (
-          <div className="bg-gray-50 border-t border-gray-200 px-3 sm:px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="text-xs sm:text-sm text-gray-700 font-cairo text-center sm:text-right">
+          <div className="bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700 px-3 sm:px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-cairo text-center sm:text-right">
               عرض <span className="font-semibold">{((currentPage - 1) * QUOTATIONS_PER_PAGE) + 1}</span> إلى{' '}
               <span className="font-semibold">
                 {Math.min(currentPage * QUOTATIONS_PER_PAGE, filteredQuotations.length)}
@@ -849,10 +849,10 @@ export default function QuotationsPage() {
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="الصفحة السابقة"
               >
-                <ChevronRight size={20} className="text-gray-600" />
+                <ChevronRight size={20} className="text-gray-600 dark:text-gray-400" />
               </button>
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -872,8 +872,8 @@ export default function QuotationsPage() {
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
                       className={`px-3 py-1 rounded-lg transition-colors text-sm font-cairo ${currentPage === pageNum
-                        ? 'bg-gray-900 text-white'
-                        : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
+                        ? 'bg-gray-900 dark:bg-slate-700 text-white'
+                        : 'border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
                         }`}
                     >
                       {pageNum}
@@ -884,10 +884,10 @@ export default function QuotationsPage() {
               <button
                 onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="الصفحة التالية"
               >
-                <ChevronLeft size={20} className="text-gray-600" />
+                <ChevronLeft size={20} className="text-gray-600 dark:text-gray-400" />
               </button>
             </div>
           </div>
@@ -900,12 +900,12 @@ export default function QuotationsPage() {
             onClick={() => setPrintOverlayQuotation(null)}
           >
             <div
-              className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+              className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
               style={{ minWidth: '120mm', maxHeight: '95vh' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-                <span className="text-sm font-cairo text-gray-700">معاينة الطباعة — عرض سعري</span>
+              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex-shrink-0">
+                <span className="text-sm font-cairo text-gray-700 dark:text-gray-300">معاينة الطباعة — عرض سعري</span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -918,19 +918,19 @@ export default function QuotationsPage() {
                   <button
                     type="button"
                     onClick={() => setPrintOverlayQuotation(null)}
-                    className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                    className="p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-gray-900 transition-colors"
                     aria-label="إغلاق"
                   >
                     <X size={20} />
                   </button>
                 </div>
               </div>
-              <div className="flex-1 overflow-auto bg-white min-h-0">
+              <div className="flex-1 overflow-auto bg-white dark:bg-slate-800 min-h-0">
                 <iframe
                   ref={printIframeRef}
                   src={`/admin/quotations/print/${printOverlayQuotation.id}${printOverlayQuotation.variant === 'image' ? '?variant=image&' : '?'}embed=1`}
                   title="طباعة العرض السعري"
-                  className="w-full border-0 bg-white"
+                  className="w-full border-0 bg-white dark:bg-slate-800"
                   style={{ minHeight: '70vh', height: '70vh' }}
                 />
               </div>

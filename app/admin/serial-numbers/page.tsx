@@ -91,11 +91,11 @@ export default function SerialNumbersPage() {
       case 'cash':
         return <Receipt size={18} className="text-blue-600" />;
       case 'shop_sales':
-        return <ShoppingCart size={18} className="text-green-600" />;
+        return <ShoppingCart size={18} className="text-green-600 dark:text-green-400" />;
       case 'warehouse_sales':
         return <Building2 size={18} className="text-purple-600" />;
       case 'quotation':
-        return <FileText size={18} className="text-orange-600" />;
+        return <FileText size={18} className="text-orange-600 dark:text-orange-400" />;
       default:
         return <FileText size={18} />;
     }
@@ -113,12 +113,12 @@ export default function SerialNumbersPage() {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      sold: 'bg-green-100 text-green-800',
+      sold: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
       returned: 'bg-yellow-100 text-yellow-800',
       warranty: 'bg-blue-100 text-blue-800',
-      damaged: 'bg-red-100 text-red-800',
+      damaged: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status] || 'bg-gray-100 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200';
   };
 
   return (
@@ -126,15 +126,15 @@ export default function SerialNumbersPage() {
       <div className="space-y-6 font-cairo" dir="rtl">
         {/* Header */}
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cairo">البحث عن الأرقام التسلسلية</h1>
-          <p className="text-gray-600 mt-1 text-sm sm:text-base font-cairo">ابحث عن رقم تسلسلي معين لتتبع القطعة</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 font-cairo">البحث عن الأرقام التسلسلية</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm sm:text-base font-cairo">ابحث عن رقم تسلسلي معين لتتبع القطعة</p>
         </div>
 
         {/* Search Bar */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative">
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
               <input
                 type="text"
                 value={searchQuery}
@@ -145,13 +145,13 @@ export default function SerialNumbersPage() {
                   }
                 }}
                 placeholder="أدخل الرقم التسلسلي للبحث..."
-                className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                className="w-full pr-10 pl-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
               />
             </div>
             <button
               onClick={handleSearch}
               disabled={loading || !searchQuery.trim()}
-              className="px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="px-6 py-3 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -170,9 +170,9 @@ export default function SerialNumbersPage() {
 
         {/* Results */}
         {results.length > 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 font-cairo">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+            <div className="p-4 border-b border-gray-200 dark:border-slate-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 font-cairo">
                 النتائج ({results.length})
               </h2>
             </div>
@@ -180,21 +180,21 @@ export default function SerialNumbersPage() {
               {results.map((result) => (
                 <div
                   key={result.serial_id}
-                  className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
                   onClick={() => handleViewDetails(result)}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <Package size={18} className="text-gray-600" />
-                        <span className="text-lg font-bold text-gray-900 font-cairo">
+                        <Package size={18} className="text-gray-600 dark:text-gray-400" />
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo">
                           {result.serial_no}
                         </span>
                         <span className={`px-2 py-1 rounded text-xs font-cairo ${getStatusColor(result.status)}`}>
                           {getStatusLabel(result.status)}
                         </span>
                       </div>
-                      <div className="space-y-1 text-sm text-gray-600 font-cairo">
+                      <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400 font-cairo">
                         {result.product_name && (
                           <div className="flex items-center gap-2">
                             <Package size={14} />
@@ -224,7 +224,7 @@ export default function SerialNumbersPage() {
                         e.stopPropagation();
                         handleViewDetails(result);
                       }}
-                      className="px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo text-sm flex items-center gap-2"
+                      className="px-3 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo text-sm flex items-center gap-2"
                     >
                       <Eye size={16} />
                       <span>عرض التفاصيل</span>
@@ -237,9 +237,9 @@ export default function SerialNumbersPage() {
         )}
 
         {searchQuery && !loading && results.length === 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-            <Package size={48} className="text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 font-cairo">لم يتم العثور على نتائج</p>
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-8 text-center">
+            <Package size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 font-cairo">لم يتم العثور على نتائج</p>
           </div>
         )}
 
@@ -259,19 +259,19 @@ export default function SerialNumbersPage() {
             }}
           >
             <div 
-              className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200" 
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-slate-700" 
               onClick={(e) => e.stopPropagation()} 
               dir="rtl"
             >
               <div className="p-6">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
-                  <h2 className="text-xl font-bold text-gray-900 font-cairo">تفاصيل الرقم التسلسلي</h2>
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-slate-700">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 font-cairo">تفاصيل الرقم التسلسلي</h2>
                   <button
                     onClick={() => {
                       setSelectedSerial(null);
                       setDetails(null);
                     }}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                     title="إغلاق"
                   >
                     <X size={20} />
@@ -280,12 +280,12 @@ export default function SerialNumbersPage() {
 
                 {loadingDetails ? (
                   <div className="flex items-center justify-center py-8">
-                    <Loader2 size={32} className="animate-spin text-gray-400" />
+                    <Loader2 size={32} className="animate-spin text-gray-400 dark:text-gray-500" />
                   </div>
                 ) : details ? (
                   <div className="space-y-4">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="text-2xl font-bold text-gray-900 font-cairo mb-2">{selectedSerial.serial_no}</div>
+                    <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 font-cairo mb-2">{selectedSerial.serial_no}</div>
                       <div className={`inline-block px-3 py-1 rounded text-sm font-cairo ${getStatusColor(selectedSerial.status)}`}>
                         {getStatusLabel(selectedSerial.status)}
                       </div>
@@ -293,45 +293,45 @@ export default function SerialNumbersPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1 font-cairo">المنتج</label>
-                        <div className="text-gray-900 font-bold font-cairo">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">المنتج</label>
+                        <div className="text-gray-900 dark:text-gray-100 font-bold font-cairo">
                           {details.product_name || 'غير معروف'} ({details.product_id})
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1 font-cairo">نوع الفاتورة</label>
-                        <div className="flex items-center gap-2 text-gray-900 font-bold font-cairo">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">نوع الفاتورة</label>
+                        <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100 font-bold font-cairo">
                           {getInvoiceTypeIcon(selectedSerial.invoice_type)}
                           {getInvoiceTypeLabel(selectedSerial.invoice_type)}
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1 font-cairo">رقم الفاتورة</label>
-                        <div className="text-gray-900 font-bold font-cairo">{selectedSerial.invoice_id}</div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">رقم الفاتورة</label>
+                        <div className="text-gray-900 dark:text-gray-100 font-bold font-cairo">{selectedSerial.invoice_id}</div>
                       </div>
                       {details.customer_name && (
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1 font-cairo">الزبون</label>
-                          <div className="text-gray-900 font-bold font-cairo">{details.customer_name}</div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">الزبون</label>
+                          <div className="text-gray-900 dark:text-gray-100 font-bold font-cairo">{details.customer_name}</div>
                         </div>
                       )}
                       {details.sale_date && (
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1 font-cairo">تاريخ البيع</label>
-                          <div className="text-gray-900 font-bold font-cairo">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">تاريخ البيع</label>
+                          <div className="text-gray-900 dark:text-gray-100 font-bold font-cairo">
                             {new Date(details.sale_date).toLocaleDateString('ar-EG', { numberingSystem: 'latn' })}
                           </div>
                         </div>
                       )}
                       {details.notes && (
                         <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1 font-cairo">ملاحظات</label>
-                          <div className="text-gray-900 font-cairo">{details.notes}</div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">ملاحظات</label>
+                          <div className="text-gray-900 dark:text-gray-100 font-cairo">{details.notes}</div>
                         </div>
                       )}
                     </div>
 
-                    <div className="pt-4 border-t border-gray-200">
+                    <div className="pt-4 border-t border-gray-200 dark:border-slate-700">
                       <button
                         onClick={() => {
                           // Navigate to invoice based on type
@@ -345,14 +345,14 @@ export default function SerialNumbersPage() {
                             router.push(`/admin/quotations/${selectedSerial.invoice_id}`);
                           }
                         }}
-                        className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
+                        className="px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo"
                       >
                         عرض الفاتورة
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-600 font-cairo">لا توجد تفاصيل</div>
+                  <div className="text-center py-8 text-gray-600 dark:text-gray-400 font-cairo">لا توجد تفاصيل</div>
                 )}
               </div>
             </div>

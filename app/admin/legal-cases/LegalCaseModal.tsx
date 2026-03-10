@@ -100,20 +100,20 @@ export default function LegalCaseModal({ isOpen, onClose, onSuccess, initialData
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col font-cairo" dir="rtl">
-                <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <FileText className="text-gray-600" size={24} />
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col font-cairo" dir="rtl">
+                <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between bg-gray-50 dark:bg-slate-800/50">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                        <FileText className="text-gray-600 dark:text-gray-400" size={24} />
                         {initialData ? 'تعديل الملف القضائي' : 'إضافة ملف قضائي جديد'}
                     </h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 p-1 rounded-full transition-colors">
+                    <button onClick={onClose} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:bg-gray-200 dark:hover:bg-slate-600 p-1 rounded-full transition-colors">
                         <X size={24} />
                     </button>
                 </div>
 
                 <div className="p-6 space-y-5 flex-1 overflow-y-auto">
                     {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg flex items-center gap-2">
                             <AlertCircle size={20} />
                             {error}
                         </div>
@@ -130,36 +130,36 @@ export default function LegalCaseModal({ isOpen, onClose, onSuccess, initialData
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">رقم القضية *</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">رقم القضية *</label>
                         <input
                             type="text"
                             value={caseNumber}
                             onChange={(e) => setCaseNumber(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100"
                             placeholder="مثال: 1234/2026"
                         />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">المبلغ الإجمالي *</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">المبلغ الإجمالي *</label>
                             <div className="relative">
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₪</span>
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-bold">₪</span>
                                 <input
                                     type="number"
                                     value={amount}
                                     onChange={(e) => setAmount(e.target.value)}
-                                    className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                                    className="w-full pr-10 pl-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100"
                                     placeholder="0.00"
                                 />
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">حالة الملف</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">حالة الملف</label>
                             <select
                                 value={status}
                                 onChange={(e) => setStatus(e.target.value as any)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100"
                             >
                                 <option value="Active">نشط</option>
                                 <option value="On Hold">معلق</option>
@@ -169,21 +169,21 @@ export default function LegalCaseModal({ isOpen, onClose, onSuccess, initialData
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">ملاحظات والتفاصيل</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ملاحظات والتفاصيل</label>
                         <textarea
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 min-h-[100px] text-gray-900"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 min-h-[100px] text-gray-900 dark:text-gray-100"
                             placeholder="تفاصيل وطبيعة الملف القضائي..."
                         />
                     </div>
                 </div>
 
-                <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+                <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex justify-end gap-3">
                     <button
                         onClick={onClose}
                         disabled={saving}
-                        className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors font-medium border border-gray-300"
+                        className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors font-medium border border-gray-300 dark:border-slate-600"
                     >
                         إلغاء
                     </button>

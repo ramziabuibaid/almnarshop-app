@@ -127,29 +127,29 @@ export default function GuestLinksPage() {
             <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6 font-cairo" dir="rtl">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                             <LinkIcon className="text-blue-600" />
                             إدارة دعوات الكتابة (الكُتاب الضيوف)
                         </h1>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             يمكنك من هنا إنشاء روابط سرية ومؤقتة تتيح لأشخاص من خارج الإدارة كتابة مقالات في الموقع دون إعطائهم أي صلاحيات أخرى.
                         </p>
                     </div>
                 </div>
 
                 {/* Create New Link Section */}
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4 border-b pb-2">إنشاء دعوة جديدة</h2>
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 border-b pb-2">إنشاء دعوة جديدة</h2>
                     <form onSubmit={handleCreateLink} className="flex flex-col sm:flex-row gap-3 items-end">
                         <div className="flex-1 w-full">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">اسم الكاتب (سيظهر تحت المقالات التي يكتبها)</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">اسم الكاتب (سيظهر تحت المقالات التي يكتبها)</label>
                             <input
                                 type="text"
                                 required
                                 value={newAuthorName}
                                 onChange={(e) => setNewAuthorName(e.target.value)}
                                 placeholder="مثال: أحمد، أو كاتب ضيف 1..."
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 font-medium"
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100 font-medium"
                             />
                         </div>
                         <button
@@ -175,22 +175,22 @@ export default function GuestLinksPage() {
                 </div>
 
                 {/* List of Links */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-right border-collapse">
                             <thead>
-                                <tr className="bg-gray-50 border-b border-gray-200">
-                                    <th className="p-4 font-semibold text-gray-900">اسم الكاتب</th>
-                                    <th className="p-4 font-semibold text-gray-900">تاريخ الإنشاء</th>
-                                    <th className="p-4 font-semibold text-gray-900 text-center">الحالة</th>
-                                    <th className="p-4 font-semibold text-gray-900">الرابط السري</th>
-                                    <th className="p-4 font-semibold text-gray-900 text-center">إجراءات</th>
+                                <tr className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
+                                    <th className="p-4 font-semibold text-gray-900 dark:text-gray-100">اسم الكاتب</th>
+                                    <th className="p-4 font-semibold text-gray-900 dark:text-gray-100">تاريخ الإنشاء</th>
+                                    <th className="p-4 font-semibold text-gray-900 dark:text-gray-100 text-center">الحالة</th>
+                                    <th className="p-4 font-semibold text-gray-900 dark:text-gray-100">الرابط السري</th>
+                                    <th className="p-4 font-semibold text-gray-900 dark:text-gray-100 text-center">إجراءات</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {links.map((link) => (
-                                    <tr key={link.id} className={`${!link.is_active ? 'bg-gray-50/50' : ''} hover:bg-gray-50 transition-colors`}>
-                                        <td className="p-4 font-bold text-gray-900 group">
+                                    <tr key={link.id} className={`${!link.is_active ? 'bg-gray-50 dark:bg-slate-800/50/50' : ''} hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors`}>
+                                        <td className="p-4 font-bold text-gray-900 dark:text-gray-100 group">
                                             {editingId === link.id ? (
                                                 <div className="flex items-center gap-2">
                                                     <input
@@ -204,10 +204,10 @@ export default function GuestLinksPage() {
                                                             if (e.key === 'Escape') handleEditCancel();
                                                         }}
                                                     />
-                                                    <button onClick={() => handleUpdateName(link.id)} className="text-green-600 hover:bg-green-50 p-1 rounded" title="حفظ">
+                                                    <button onClick={() => handleUpdateName(link.id)} className="text-green-600 dark:text-green-400 hover:bg-green-50 p-1 rounded" title="حفظ">
                                                         <Save size={16} />
                                                     </button>
-                                                    <button onClick={handleEditCancel} className="text-gray-500 hover:bg-gray-200 p-1 rounded" title="إلغاء">
+                                                    <button onClick={handleEditCancel} className="text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 p-1 rounded" title="إلغاء">
                                                         <X size={16} />
                                                     </button>
                                                 </div>
@@ -216,7 +216,7 @@ export default function GuestLinksPage() {
                                                     <span>{link.author_name}</span>
                                                     <button
                                                         onClick={() => handleEditStart(link)}
-                                                        className="text-gray-400 hover:text-blue-600 p-1 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                                        className="text-gray-400 dark:text-gray-500 hover:text-blue-600 p-1 rounded transition-colors opacity-0 group-hover:opacity-100"
                                                         title="تعديل الاسم"
                                                     >
                                                         <Edit2 size={14} />
@@ -224,13 +224,13 @@ export default function GuestLinksPage() {
                                                 </div>
                                             )}
                                         </td>
-                                        <td className="p-4 text-sm text-gray-600 font-medium">
+                                        <td className="p-4 text-sm text-gray-600 dark:text-gray-400 font-medium">
                                             {new Date(link.created_at).toLocaleDateString('en-GB')}
                                         </td>
                                         <td className="p-4 text-center">
                                             <button
                                                 onClick={() => handleToggleStatus(link.id, link.is_active)}
-                                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-colors border ${link.is_active ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200'}`}
+                                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-colors border ${link.is_active ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 hover:bg-green-200' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 hover:bg-red-200'}`}
                                                 title={link.is_active ? "الرابط فعال - انقر للتعطيل" : "الرابط معطل - انقر للتفعيل"}
                                             >
                                                 {link.is_active ? (
@@ -253,7 +253,7 @@ export default function GuestLinksPage() {
                                             <div className="flex items-center justify-center">
                                                 <button
                                                     onClick={() => handleDelete(link.id)}
-                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
                                                     title="حذف الدعوة نهائياً"
                                                 >
                                                     <Trash size={18} />
@@ -264,7 +264,7 @@ export default function GuestLinksPage() {
                                 ))}
                                 {links.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="p-10 text-center text-gray-500 bg-gray-50/50">
+                                        <td colSpan={5} className="p-10 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-slate-800/50/50">
                                             لا توجد روابط دعوة مضافة حالياً. أنشئ رابطاً جديداً بالاستعانة بالنموذج أعلاه.
                                         </td>
                                     </tr>

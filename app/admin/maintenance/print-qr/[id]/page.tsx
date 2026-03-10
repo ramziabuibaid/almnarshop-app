@@ -73,7 +73,7 @@ export default function MaintQrStickerPrintPage() {
     }
 
     if (error || !maintenanceData) {
-        return <div className="p-4 text-center text-red-600 font-cairo cursor-pointer" onClick={() => window.location.reload()}>خطأ: {error || 'فشل التحميل'} - انقر للتحديث</div>;
+        return <div className="p-4 text-center text-red-600 dark:text-red-400 font-cairo cursor-pointer" onClick={() => window.location.reload()}>خطأ: {error || 'فشل التحميل'} - انقر للتحديث</div>;
     }
 
     return (
@@ -143,7 +143,7 @@ export default function MaintQrStickerPrintPage() {
                 <QRCode value={qrLink} size={80} />
             </div>
 
-            <div className="info-section border-r border-gray-300 pr-1">
+            <div className="info-section border-r border-gray-300 dark:border-slate-600 pr-1">
                 <div className="customer-name">{maintenanceData.CustomerName || 'بدون اسم'}</div>
                 <div className="maint-number" dir="ltr">#{maintenanceData.MaintNo}</div>
             </div>

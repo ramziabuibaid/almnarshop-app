@@ -186,8 +186,8 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">جاري تحميل السجل...</p>
+            <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">جاري تحميل السجل...</p>
           </div>
         </div>
       </AdminLayout>
@@ -198,12 +198,12 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
     return (
       <AdminLayout>
         <div className="max-w-4xl mx-auto space-y-6" dir="rtl">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-700">{error || 'السجل غير موجود'}</p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-4">
+            <p className="text-red-700 dark:text-red-400">{error || 'السجل غير موجود'}</p>
           </div>
           <button
             onClick={() => router.push('/admin/maintenance')}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors"
           >
             <ArrowLeft size={20} />
             العودة للقائمة
@@ -221,13 +221,13 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/admin/maintenance')}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             >
-              <ArrowLeft size={20} className="text-gray-600" />
+              <ArrowLeft size={20} className="text-gray-600 dark:text-gray-400" />
             </button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">عرض سجل الصيانة</h1>
-              <p className="text-gray-500">#{record.MaintNo}</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">عرض سجل الصيانة</h1>
+              <p className="text-gray-500 dark:text-gray-400">#{record.MaintNo}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -240,20 +240,20 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   <MessageCircle size={20} />
                   إرسال واتساب
                 </button>
-                <div className="absolute left-0 top-full mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                <div className="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
                   <div className="p-2 space-y-1">
                     <button
                       onClick={() => handleWhatsApp('970')}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                     >
-                      <MessageCircle size={16} className="text-green-600" />
+                      <MessageCircle size={16} className="text-green-600 dark:text-green-400" />
                       <span className="flex-1">واتساب: 970</span>
                     </button>
                     <button
                       onClick={() => handleWhatsApp('972')}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                     >
-                      <MessageCircle size={16} className="text-green-600" />
+                      <MessageCircle size={16} className="text-green-600 dark:text-green-400" />
                       <span className="flex-1">واتساب: 972</span>
                     </button>
                   </div>
@@ -290,7 +290,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
             </button>
             <button
               onClick={() => router.push(`/admin/maintenance/edit/${record.MaintNo}`)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium"
             >
               <Edit size={20} />
               تعديل
@@ -299,13 +299,13 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
         </div>
 
         {/* Tabs */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="flex border-b border-gray-200" dir="rtl">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+          <div className="flex border-b border-gray-200 dark:border-slate-700" dir="rtl">
             <button
               onClick={() => setActiveTab('details')}
               className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors ${activeTab === 'details'
-                  ? 'text-gray-900 border-b-2 border-gray-900 bg-gray-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'text-gray-900 dark:text-gray-100 border-b-2 border-gray-900 bg-gray-50 dark:bg-slate-800/50'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 hover:bg-gray-50 dark:hover:bg-slate-700/50'
                 }`}
             >
               <Edit size={18} />
@@ -314,8 +314,8 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
             <button
               onClick={() => setActiveTab('history')}
               className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors ${activeTab === 'history'
-                  ? 'text-gray-900 border-b-2 border-gray-900 bg-gray-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'text-gray-900 dark:text-gray-100 border-b-2 border-gray-900 bg-gray-50 dark:bg-slate-800/50'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 hover:bg-gray-50 dark:hover:bg-slate-700/50'
                 }`}
             >
               <History size={18} />
@@ -328,72 +328,72 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
             <div className="p-6 space-y-6">
               {/* Customer Info */}
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">معلومات العميل</h2>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-slate-700 pb-2 mb-4">معلومات العميل</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">اسم العميل</label>
-                    <p className="text-gray-900 font-medium">{record.CustomerName || record.CustomerID}</p>
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">اسم العميل</label>
+                    <p className="text-gray-900 dark:text-gray-100 font-medium">{record.CustomerName || record.CustomerID}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">رقم العميل</label>
-                    <p className="text-gray-900">{record.CustomerID}</p>
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">رقم العميل</label>
+                    <p className="text-gray-900 dark:text-gray-100">{record.CustomerID}</p>
                   </div>
                 </div>
               </div>
 
               {/* Item Information */}
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">معلومات القطعة</h2>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-slate-700 pb-2 mb-4">معلومات القطعة</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">اسم القطعة</label>
-                    <p className="text-gray-900 font-medium">{record.ItemName}</p>
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">اسم القطعة</label>
+                    <p className="text-gray-900 dark:text-gray-100 font-medium">{record.ItemName}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">الموقع</label>
-                    <p className="text-gray-900">{record.Location}</p>
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">الموقع</label>
+                    <p className="text-gray-900 dark:text-gray-100">{record.Location}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">الشركة الكفيلة</label>
-                    <p className="text-gray-900">{record.Company || '—'}</p>
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">الشركة الكفيلة</label>
+                    <p className="text-gray-900 dark:text-gray-100">{record.Company || '—'}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">رقم السيريال</label>
-                    <p className="text-gray-900">{record.SerialNo || '—'}</p>
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">رقم السيريال</label>
+                    <p className="text-gray-900 dark:text-gray-100">{record.SerialNo || '—'}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">تحت الكفالة</label>
-                    <p className="text-gray-900">{record.UnderWarranty === 'YES' ? 'نعم' : 'لا'}</p>
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">تحت الكفالة</label>
+                    <p className="text-gray-900 dark:text-gray-100">{record.UnderWarranty === 'YES' ? 'نعم' : 'لا'}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">الحالة</label>
-                    <p className="text-gray-900 font-medium">{record.Status}</p>
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">الحالة</label>
+                    <p className="text-gray-900 dark:text-gray-100 font-medium">{record.Status}</p>
                   </div>
                   {record.CostAmount !== null && record.CostAmount !== undefined && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">مبلغ التكلفة</label>
-                      <p className="text-gray-900 font-medium">{record.CostAmount} ₪</p>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">مبلغ التكلفة</label>
+                      <p className="text-gray-900 dark:text-gray-100 font-medium">{record.CostAmount} ₪</p>
                     </div>
                   )}
                   {record.CostReason && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">سبب التكلفة</label>
-                      <p className="text-gray-900">{record.CostReason}</p>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">سبب التكلفة</label>
+                      <p className="text-gray-900 dark:text-gray-100">{record.CostReason}</p>
                     </div>
                   )}
                   {record.IsPaid !== undefined && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">تم الدفع</label>
-                      <p className="text-gray-900">{record.IsPaid ? 'نعم' : 'لا'}</p>
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">تم الدفع</label>
+                      <p className="text-gray-900 dark:text-gray-100">{record.IsPaid ? 'نعم' : 'لا'}</p>
                     </div>
                   )}
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">تاريخ الشراء</label>
-                    <p className="text-gray-900">{formatDate(record.DateOfPurchase)}</p>
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">تاريخ الشراء</label>
+                    <p className="text-gray-900 dark:text-gray-100">{formatDate(record.DateOfPurchase)}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">تاريخ الاستقبال</label>
-                    <p className="text-gray-900">{formatDate(record.DateOfReceive)}</p>
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">تاريخ الاستقبال</label>
+                    <p className="text-gray-900 dark:text-gray-100">{formatDate(record.DateOfReceive)}</p>
                   </div>
                 </div>
               </div>
@@ -401,19 +401,19 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
               {/* Problem Description */}
               {record.Problem && (
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">وصف المشكلة</h2>
-                  <p className="text-gray-900 whitespace-pre-wrap">{record.Problem}</p>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-slate-700 pb-2 mb-4">وصف المشكلة</h2>
+                  <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{record.Problem}</p>
                 </div>
               )}
 
               {/* Images */}
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">الصور</h2>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-slate-700 pb-2 mb-4">الصور</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {record.ImageOfItem && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-2">صورة القطعة</label>
-                      <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">صورة القطعة</label>
+                      <div className="relative w-full h-48 bg-gray-100 dark:bg-slate-700/50 rounded-lg overflow-hidden border border-gray-200 dark:border-slate-700">
                         <img
                           src={getImageUrl(record.ImageOfItem) || ''}
                           alt="صورة القطعة"
@@ -427,8 +427,8 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   )}
                   {record.ImageOfProblem && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-2">صورة المشكلة</label>
-                      <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">صورة المشكلة</label>
+                      <div className="relative w-full h-48 bg-gray-100 dark:bg-slate-700/50 rounded-lg overflow-hidden border border-gray-200 dark:border-slate-700">
                         <img
                           src={getImageUrl(record.ImageOfProblem) || ''}
                           alt="صورة المشكلة"
@@ -442,8 +442,8 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   )}
                   {record.ImageOfWarranty && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-2">صورة الكفالة</label>
-                      <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">صورة الكفالة</label>
+                      <div className="relative w-full h-48 bg-gray-100 dark:bg-slate-700/50 rounded-lg overflow-hidden border border-gray-200 dark:border-slate-700">
                         <img
                           src={getImageUrl(record.ImageOfWarranty) || ''}
                           alt="صورة الكفالة"
@@ -456,8 +456,8 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                     </div>
                   )}
                   {!record.ImageOfItem && !record.ImageOfProblem && !record.ImageOfWarranty && (
-                    <div className="col-span-3 text-center py-8 text-gray-500">
-                      <ImageIcon size={48} className="mx-auto mb-2 text-gray-300" />
+                    <div className="col-span-3 text-center py-8 text-gray-500 dark:text-gray-400">
+                      <ImageIcon size={48} className="mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                       <p>لا توجد صور</p>
                     </div>
                   )}
@@ -481,12 +481,12 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
           onClick={() => setPrintOverlayMaintNo(null)}
         >
           <div
-            className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+            className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
             style={{ minWidth: '120mm', maxHeight: '95vh' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-              <span className="text-sm font-cairo text-gray-700">معاينة الطباعة — معاملة صيانة</span>
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex-shrink-0">
+              <span className="text-sm font-cairo text-gray-700 dark:text-gray-300">معاينة الطباعة — معاملة صيانة</span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -499,19 +499,19 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                 <button
                   type="button"
                   onClick={() => setPrintOverlayMaintNo(null)}
-                  className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                  className="p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-gray-900 transition-colors"
                   aria-label="إغلاق"
                 >
                   <X size={20} />
                 </button>
               </div>
             </div>
-            <div className="flex-1 overflow-auto bg-white min-h-0">
+            <div className="flex-1 overflow-auto bg-white dark:bg-slate-800 min-h-0">
               <iframe
                 ref={printIframeRef}
                 src={`/admin/maintenance/print/${printOverlayMaintNo}?embed=1`}
                 title="طباعة معاملة الصيانة"
-                className="w-full border-0 bg-white"
+                className="w-full border-0 bg-white dark:bg-slate-800"
                 style={{ minHeight: '70vh', height: '70vh' }}
               />
             </div>
@@ -526,12 +526,12 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
           onClick={() => setPrintQrOverlayMaintNo(null)}
         >
           <div
-            className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+            className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
             style={{ minWidth: '120mm', maxHeight: '95vh' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-              <span className="text-sm font-cairo text-gray-700">معاينة طباعة — ملصق الباركود</span>
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex-shrink-0">
+              <span className="text-sm font-cairo text-gray-700 dark:text-gray-300">معاينة طباعة — ملصق الباركود</span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -544,19 +544,19 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                 <button
                   type="button"
                   onClick={() => setPrintQrOverlayMaintNo(null)}
-                  className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                  className="p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-gray-900 transition-colors"
                   aria-label="إغلاق"
                 >
                   <X size={20} />
                 </button>
               </div>
             </div>
-            <div className="flex-1 overflow-auto bg-white min-h-0 flex items-center justify-center bg-gray-100">
+            <div className="flex-1 overflow-auto bg-white dark:bg-slate-800 min-h-0 flex items-center justify-center bg-gray-100 dark:bg-slate-700/50">
               <iframe
                 ref={printQrIframeRef}
                 src={`/admin/maintenance/print-qr/${printQrOverlayMaintNo}?embed=1`}
                 title="طباعة ملصق الباركود"
-                className="border border-gray-300 shadow-sm bg-white"
+                className="border border-gray-300 dark:border-slate-600 shadow-sm bg-white dark:bg-slate-800"
                 style={{ width: '50mm', height: '25mm' }}
               />
             </div>

@@ -64,7 +64,7 @@ export function DataTable<TData, TValue>({
     if (typeof window === 'undefined' || !storageKey) {
       return defaultColumnVisibility;
     }
-    
+
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
@@ -75,7 +75,7 @@ export function DataTable<TData, TValue>({
     } catch (error) {
       console.error('[DataTable] Error loading column visibility from localStorage:', error);
     }
-    
+
     return defaultColumnVisibility;
   };
 
@@ -83,7 +83,8 @@ export function DataTable<TData, TValue>({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [internalColumnVisibility, setInternalColumnVisibility] = useState<VisibilityState>(getInitialColumnVisibility);
   const [activeFilterColumn, setActiveFilterColumn] = useState<string | null>(null);
-  
+  const [isColumnVisibilityOpen, setIsColumnVisibilityOpen] = useState(false);
+
   // Use external column visibility if provided, otherwise use internal state
   const columnVisibility = externalColumnVisibility ?? internalColumnVisibility;
   const setColumnVisibility = (visibility: VisibilityState | ((prev: VisibilityState) => VisibilityState)) => {
@@ -98,7 +99,7 @@ export function DataTable<TData, TValue>({
   // Save column visibility to localStorage whenever it changes
   useEffect(() => {
     if (typeof window === 'undefined' || !storageKey) return;
-    
+
     try {
       localStorage.setItem(storageKey, JSON.stringify(columnVisibility));
     } catch (error) {
@@ -179,90 +180,90 @@ export function DataTable<TData, TValue>({
       {/* Toolbar */}
       {!hideToolbar && (
         <div className="flex items-center justify-between gap-4 flex-wrap">
-        {/* Global Search */}
-        {enableGlobalSearch && (
-          <input
-            type="text"
-            placeholder={globalSearchPlaceholder}
-            value={globalSearchValue}
-            onChange={(e) => handleGlobalSearchChange(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 text-sm flex-1 min-w-[200px]"
-            dir="rtl"
-          />
-        )}
+          {/* Global Search */}
+          {enableGlobalSearch && (
+            <input
+              type="text"
+              placeholder={globalSearchPlaceholder}
+              value={globalSearchValue}
+              onChange={(e) => handleGlobalSearchChange(e.target.value)}
+              className="px-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 text-sm flex-1 min-w-[200px]"
+              dir="rtl"
+            />
+          )}
 
-        {/* Column Visibility Toggle */}
-        {enableColumnVisibility && (
-          <div className="relative">
-            <button
-              onClick={() => setIsColumnVisibilityOpen(!isColumnVisibilityOpen)}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
-            >
-              <Eye size={16} />
-              <span>الأعمدة / Columns</span>
-              {Object.values(columnVisibility).some((v) => !v) && (
-                <span className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full text-xs">
-                  {Object.values(columnVisibility).filter((v) => !v).length}
-                </span>
+          {/* Column Visibility Toggle */}
+          {enableColumnVisibility && (
+            <div className="relative">
+              <button
+                onClick={() => setIsColumnVisibilityOpen(!isColumnVisibilityOpen)}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200"
+              >
+                <Eye size={16} />
+                <span>الأعمدة / Columns</span>
+                {Object.values(columnVisibility).some((v) => !v) && (
+                  <span className="px-2 py-0.5 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-200 rounded-full text-xs">
+                    {Object.values(columnVisibility).filter((v) => !v).length}
+                  </span>
+                )}
+              </button>
+
+              {isColumnVisibilityOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setIsColumnVisibilityOpen(false)}
+                  />
+                  <div className="absolute left-0 top-full mt-2 w-64 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg shadow-lg z-20 p-3 max-h-96 overflow-y-auto" dir="rtl">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">إظهار/إخفاء الأعمدة</h3>
+                      <button
+                        onClick={() => setIsColumnVisibilityOpen(false)}
+                        className="p-1 hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-600 dark:text-gray-400 rounded"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {table
+                        .getAllColumns()
+                        .filter((column) => column.getCanHide())
+                        .map((column) => {
+                          const headerText = typeof column.columnDef.header === 'string'
+                            ? column.columnDef.header
+                            : column.id;
+                          return (
+                            <label
+                              key={column.id}
+                              className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 p-2 rounded"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={column.getIsVisible()}
+                                onChange={(e) => column.toggleVisibility(e.target.checked)}
+                                className="w-4 h-4 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-slate-600 rounded focus:ring-gray-900 dark:focus:ring-white"
+                              />
+                              <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">
+                                {headerText}
+                              </span>
+                              {column.getIsVisible() && <Check size={14} className="text-gray-600 dark:text-gray-400" />}
+                            </label>
+                          );
+                        })}
+                    </div>
+                  </div>
+                </>
               )}
-            </button>
-
-            {isColumnVisibilityOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setIsColumnVisibilityOpen(false)}
-                />
-                <div className="absolute left-0 top-full mt-2 w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-20 p-3 max-h-96 overflow-y-auto" dir="rtl">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-gray-900 text-sm">إظهار/إخفاء الأعمدة</h3>
-                    <button
-                      onClick={() => setIsColumnVisibilityOpen(false)}
-                      className="p-1 hover:bg-gray-100 rounded"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                  <div className="space-y-2">
-                    {table
-                      .getAllColumns()
-                      .filter((column) => column.getCanHide())
-                      .map((column) => {
-                        const headerText = typeof column.columnDef.header === 'string'
-                          ? column.columnDef.header
-                          : column.id;
-                        return (
-                          <label
-                            key={column.id}
-                            className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={column.getIsVisible()}
-                              onChange={(e) => column.toggleVisibility(e.target.checked)}
-                              className="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
-                            />
-                            <span className="text-sm text-gray-700 flex-1">
-                              {headerText}
-                            </span>
-                            {column.getIsVisible() && <Check size={14} className="text-gray-600" />}
-                          </label>
-                        );
-                      })}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+            </div>
+          )}
         </div>
       )}
 
       {/* Table Container with Sticky Header */}
-      <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+      <div className="border border-gray-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
-            <thead className="border-b border-gray-200">
+            <thead className="border-b border-gray-200 dark:border-slate-800">
               {table.getHeaderGroups().map((headerGroup) => (
                 <React.Fragment key={headerGroup.id}>
                   {/* Header Row */}
@@ -270,11 +271,10 @@ export function DataTable<TData, TValue>({
                     {headerGroup.headers.map((header) => (
                       <th
                         key={header.id}
-                        className={`px-3 py-2 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider bg-gray-50 ${
-                          header.column.getCanSort()
-                            ? 'cursor-pointer hover:bg-gray-100 select-none'
-                            : ''
-                        }`}
+                        className={`px-3 py-2 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-slate-800 ${header.column.getCanSort()
+                          ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 select-none'
+                          : ''
+                          }`}
                         style={{ minWidth: header.column.columnDef.minSize || '100px' }}
                         onClick={(e) => {
                           // Only sort if not clicking on search icon
@@ -290,23 +290,23 @@ export function DataTable<TData, TValue>({
                           {header.column.getCanSort() && (
                             <span className="flex flex-col">
                               {{
-                                asc: <ArrowUp size={12} className="text-gray-600" />,
-                                desc: <ArrowDown size={12} className="text-gray-600" />,
+                                asc: <ArrowUp size={12} className="text-gray-600 dark:text-gray-400" />,
+                                desc: <ArrowDown size={12} className="text-gray-600 dark:text-gray-400" />,
                               }[header.column.getIsSorted() as string] ?? (
-                                <ArrowUpDown size={12} className="text-gray-400 opacity-50" />
-                              )}
+                                  <ArrowUpDown size={12} className="text-gray-400 dark:text-gray-600 opacity-50" />
+                                )}
                             </span>
                           )}
                           {enableColumnFilters && header.column.getCanFilter() && (
                             <button
-                              className="search-icon-button p-1 hover:bg-gray-200 rounded transition-colors"
+                              className="search-icon-button p-1 hover:bg-gray-200 dark:hover:bg-slate-600 rounded transition-colors"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setActiveFilterColumn(activeFilterColumn === header.id ? null : header.id);
                               }}
                               title="بحث"
                             >
-                              <Search size={14} className={`text-gray-600 ${activeFilterColumn === header.id ? 'text-gray-900' : ''}`} />
+                              <Search size={14} className={`text-gray-600 dark:text-gray-400 ${activeFilterColumn === header.id ? 'text-gray-900 dark:text-white' : ''}`} />
                             </button>
                           )}
                         </div>
@@ -315,9 +315,9 @@ export function DataTable<TData, TValue>({
                   </tr>
                   {/* Filter Row - Show only for active column */}
                   {enableColumnFilters && activeFilterColumn && (
-                    <tr className="bg-gray-50 border-b border-gray-200">
+                    <tr className="bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
                       {headerGroup.headers.map((header) => (
-                        <th key={`filter-${header.id}`} className="px-3 py-2 bg-gray-50">
+                        <th key={`filter-${header.id}`} className="px-3 py-2 bg-gray-50 dark:bg-slate-800">
                           {header.column.getCanFilter() && activeFilterColumn === header.id ? (
                             <div className="flex items-center gap-2">
                               <input
@@ -325,7 +325,7 @@ export function DataTable<TData, TValue>({
                                 placeholder={`بحث في ${typeof header.column.columnDef.header === 'string' ? header.column.columnDef.header : header.id}...`}
                                 value={(header.column.getFilterValue() as string) ?? ''}
                                 onChange={(e) => header.column.setFilterValue(e.target.value)}
-                                className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-900 text-gray-900 placeholder:text-gray-400"
+                                className="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
                                 dir="rtl"
                                 onClick={(e) => e.stopPropagation()}
                                 autoFocus
@@ -336,10 +336,10 @@ export function DataTable<TData, TValue>({
                                   setActiveFilterColumn(null);
                                   header.column.setFilterValue('');
                                 }}
-                                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                className="p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
                                 title="إغلاق"
                               >
-                                <X size={14} className="text-gray-600" />
+                                <X size={14} className="text-gray-600 dark:text-gray-400" />
                               </button>
                             </div>
                           ) : (
@@ -352,12 +352,12 @@ export function DataTable<TData, TValue>({
                 </React.Fragment>
               ))}
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
+            <tbody className="divide-y divide-gray-200 dark:divide-slate-800 bg-white dark:bg-slate-900">
               {table.getRowModel().rows.length === 0 ? (
                 <tr>
                   <td
                     colSpan={columns.length}
-                    className="px-4 py-8 text-center text-gray-500 text-sm"
+                    className="px-4 py-8 text-center text-gray-500 dark:text-gray-400 text-sm"
                   >
                     لا توجد بيانات / No data
                   </td>
@@ -366,14 +366,13 @@ export function DataTable<TData, TValue>({
                 table.getRowModel().rows.map((row, rowIndex) => (
                   <tr
                     key={row.id}
-                    className={`hover:bg-gray-50 transition-colors ${
-                      rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
-                    }`}
+                    className={`hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors ${rowIndex % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-gray-50/50 dark:bg-slate-800/20'
+                      }`}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className="px-3 py-2 text-sm text-gray-900"
+                        className="px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
                         style={{ minWidth: cell.column.columnDef.minSize || '100px' }}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -387,14 +386,14 @@ export function DataTable<TData, TValue>({
         </div>
 
         {/* Pagination - Show sticky only when near bottom */}
-        <div className={`border-t border-gray-200 px-4 py-3 bg-gray-50 flex items-center justify-between flex-wrap gap-4 ${showStickyPagination ? 'sticky bottom-0 z-10 shadow-lg' : ''}`} dir="rtl">
+        <div className={`border-t border-gray-200 dark:border-slate-800 px-4 py-3 bg-gray-50 dark:bg-slate-900 flex items-center justify-between flex-wrap gap-4 ${showStickyPagination ? 'sticky bottom-0 z-10 shadow-lg' : ''}`} dir="rtl">
           <div className="flex items-center gap-2">
             <button
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm text-gray-900 font-medium"
+              className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm text-gray-900 dark:text-gray-100 font-medium"
             >
-              <ChevronRight size={16} className="text-gray-900" />
+              <ChevronRight size={16} className="text-gray-900 dark:text-gray-100" />
               السابق
             </button>
 
@@ -420,11 +419,10 @@ export function DataTable<TData, TValue>({
                     <button
                       key={pageNum}
                       onClick={() => table.setPageIndex(pageNum - 1)}
-                      className={`px-3 py-1.5 rounded-lg transition-colors text-sm font-medium ${
-                        currentPage === pageNum
-                          ? 'bg-gray-900 text-white'
-                          : 'border border-gray-300 hover:bg-gray-100 text-gray-900'
-                      }`}
+                      className={`px-3 py-1.5 rounded-lg transition-colors text-sm font-medium ${currentPage === pageNum
+                        ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                        : 'border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-900 dark:text-gray-100'
+                        }`}
                     >
                       {pageNum}
                     </button>
@@ -436,14 +434,14 @@ export function DataTable<TData, TValue>({
             <button
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm text-gray-900 font-medium"
+              className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm text-gray-900 dark:text-gray-100 font-medium"
             >
               التالي
-              <ChevronLeft size={16} className="text-gray-900" />
+              <ChevronLeft size={16} className="text-gray-900 dark:text-gray-100" />
             </button>
           </div>
 
-          <div className="flex items-center gap-4 text-sm text-gray-900 font-medium">
+          <div className="flex items-center gap-4 text-sm text-gray-900 dark:text-gray-300 font-medium">
             <span>
               صفحة {table.getState().pagination.pageIndex + 1} من{' '}
               {table.getPageCount() || 1}
@@ -453,7 +451,7 @@ export function DataTable<TData, TValue>({
               onChange={(e) => {
                 table.setPageSize(Number(e.target.value));
               }}
-              className="px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-900 text-sm text-gray-900 font-medium bg-white"
+              className="px-2 py-1 border border-gray-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-white text-sm text-gray-900 dark:text-gray-100 font-medium bg-white dark:bg-slate-800"
               dir="rtl"
             >
               {[10, 20, 50, 100, 200].map((size) => (

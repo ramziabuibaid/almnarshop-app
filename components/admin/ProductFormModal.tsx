@@ -418,19 +418,19 @@ export default function ProductFormModal({
       {/* Modal */}
       <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div
-          className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto"
+          className="bg-white dark:bg-slate-800 rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">
+          <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
               {product ? 'Edit Product' : 'Add New Product'}
             </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-700 rounded-full transition-colors"
             >
-              <X size={24} className="text-gray-600" />
+              <X size={24} className="text-gray-600 dark:text-gray-400" />
             </button>
           </div>
 
@@ -445,33 +445,33 @@ export default function ProductFormModal({
             <div className="space-y-6">
               {/* Identifiers Section */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Identifiers</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Identifiers</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Product ID *
                     </label>
                     <input
                       type="text"
                       value={formData.ProductID || ''}
                       onChange={(e) => handleChange('ProductID', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Shamel No
                     </label>
                     <input
                       type="text"
                       value={formData['Shamel No'] || ''}
                       onChange={(e) => handleChange('Shamel No', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Barcode
                     </label>
                     <div className="relative">
@@ -479,7 +479,7 @@ export default function ProductFormModal({
                         type="text"
                         value={formData.Barcode || ''}
                         onChange={(e) => handleChange('Barcode', e.target.value)}
-                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                         placeholder="أدخل الباركود أو اضغط على أيقونة الكاميرا"
                       />
                       <button
@@ -501,7 +501,7 @@ export default function ProductFormModal({
                     
                     {/* Camera Scanner View */}
                     {isScanningBarcode && (
-                      <div className="mt-4 p-4 bg-black border border-gray-200 rounded-lg">
+                      <div className="mt-4 p-4 bg-black border border-gray-200 dark:border-slate-700 rounded-lg">
                         <div className="flex items-center justify-between mb-3">
                           <div>
                             <p className="text-white text-sm font-medium mb-1">امسح الباركود بالكاميرا</p>
@@ -539,100 +539,100 @@ export default function ProductFormModal({
 
               {/* Basic Info Section */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Name *
                     </label>
                     <input
                       type="text"
                       value={formData.Name || ''}
                       onChange={(e) => handleChange('Name', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Type
                     </label>
                     <input
                       type="text"
                       value={formData.Type || ''}
                       onChange={(e) => handleChange('Type', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Brand
                     </label>
                     <input
                       type="text"
                       value={formData.Brand || ''}
                       onChange={(e) => handleChange('Brand', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Origin
                     </label>
                     <input
                       type="text"
                       value={formData.Origin || ''}
                       onChange={(e) => handleChange('Origin', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Warranty
                     </label>
                     <input
                       type="text"
                       value={formData.Warranty || ''}
                       onChange={(e) => handleChange('Warranty', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                     />
                   </div>
                 </div>
                 
                 {/* Serial Number Checkbox - More prominent */}
-                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <div className="flex items-center">
                     <input
                       type="checkbox"
                       id="is_serialized"
                       checked={formData.is_serialized || false}
                       onChange={(e) => handleChange('is_serialized', e.target.checked)}
-                      className="w-5 h-5 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
+                      className="w-5 h-5 text-gray-900 dark:text-white border-gray-300 dark:border-slate-600 rounded focus:ring-gray-900 dark:focus:ring-white"
                     />
-                    <label htmlFor="is_serialized" className="mr-3 text-sm font-semibold text-gray-900 cursor-pointer">
+                    <label htmlFor="is_serialized" className="mr-3 text-sm font-semibold text-gray-900 dark:text-white cursor-pointer">
                       المنتج له رقم تسلسلي (Serial Number)
                     </label>
                   </div>
-                  <p className="mt-2 text-xs text-gray-600 mr-8">
+                  <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 mr-8">
                     عند تفعيل هذا الخيار، سيتم طلب إدخال رقم تسلسلي لكل قطعة عند إضافة المنتج إلى الفواتير
                   </p>
                 </div>
 
                 {/* Store Visibility - Show/Hide in online store */}
-                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                   <div className="flex items-center">
                     <input
                       type="checkbox"
                       id="is_visible"
                       checked={formData.is_visible !== false}
                       onChange={(e) => handleChange('is_visible', e.target.checked)}
-                      className="w-5 h-5 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
+                      className="w-5 h-5 text-gray-900 dark:text-white border-gray-300 dark:border-slate-600 rounded focus:ring-gray-900 dark:focus:ring-white"
                     />
-                    <label htmlFor="is_visible" className="mr-3 text-sm font-semibold text-gray-900 cursor-pointer">
+                    <label htmlFor="is_visible" className="mr-3 text-sm font-semibold text-gray-900 dark:text-white cursor-pointer">
                       إظهار المنتج في المتجر الإلكتروني
                     </label>
                   </div>
-                  <p className="mt-2 text-xs text-gray-600 mr-8">
+                  <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 mr-8">
                     عند إلغاء التفعيل، سيتم إخفاء المنتج من المتجر الإلكتروني (الصفحة الرئيسية والبحث) ولكن يبقى ظاهراً في لوحة التحكم والفواتير
                   </p>
                 </div>
@@ -640,39 +640,39 @@ export default function ProductFormModal({
 
               {/* Specs Section */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Specifications</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Specifications</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Size
                     </label>
                     <input
                       type="text"
                       value={formData.Size || ''}
                       onChange={(e) => handleChange('Size', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Color
                     </label>
                     <input
                       type="text"
                       value={formData.Color || ''}
                       onChange={(e) => handleChange('Color', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Dimension
                     </label>
                     <input
                       type="text"
                       value={formData.Dimention || ''}
                       onChange={(e) => handleChange('Dimention', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                     />
                   </div>
                 </div>
@@ -680,14 +680,14 @@ export default function ProductFormModal({
 
               {/* Stock & Pricing Section */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Stock & Pricing</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Stock & Pricing</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Stock */}
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Stock</h4>
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Stock</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Warehouse (CS_War)
                         </label>
                         <input
@@ -697,11 +697,11 @@ export default function ProductFormModal({
                             const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
                             handleChange('CS_War', isNaN(value) ? 0 : value);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Shop (CS_Shop)
                         </label>
                         <input
@@ -711,7 +711,7 @@ export default function ProductFormModal({
                             const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
                             handleChange('CS_Shop', isNaN(value) ? 0 : value);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                         />
                       </div>
                     </div>
@@ -719,11 +719,11 @@ export default function ProductFormModal({
 
                   {/* Pricing */}
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Pricing (₪)</h4>
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Pricing (₪)</h4>
                     <div className="grid grid-cols-2 gap-4">
                       {canViewCost && (
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Cost Price
                           </label>
                           <input
@@ -732,12 +732,12 @@ export default function ProductFormModal({
                             step="0.01"
                             value={formData.CostPrice || 0}
                             onChange={(e) => handleChange('CostPrice', parseFloat(e.target.value) || 0)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                           />
                         </div>
                       )}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Sale Price *
                         </label>
                         <input
@@ -746,12 +746,12 @@ export default function ProductFormModal({
                           step="0.01"
                           value={formData.SalePrice || 0}
                           onChange={(e) => handleChange('SalePrice', parseFloat(e.target.value) || 0)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                           required
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           T1 Price
                         </label>
                         <input
@@ -760,11 +760,11 @@ export default function ProductFormModal({
                           step="0.01"
                           value={formData.T1Price || 0}
                           onChange={(e) => handleChange('T1Price', parseFloat(e.target.value) || 0)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           T2 Price
                         </label>
                         <input
@@ -773,7 +773,7 @@ export default function ProductFormModal({
                           step="0.01"
                           value={formData.T2Price || 0}
                           onChange={(e) => handleChange('T2Price', parseFloat(e.target.value) || 0)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                         />
                       </div>
                     </div>
@@ -783,7 +783,7 @@ export default function ProductFormModal({
 
               {/* Images Section */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Images</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Images</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <ImageUploadField
                     label="Image 1"
@@ -804,18 +804,18 @@ export default function ProductFormModal({
                     onUploadComplete={(filePath) => handleImageUpload('image 3', filePath)}
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   Note: New images may take a few minutes to appear on the storefront unless Cache is refreshed.
                 </p>
               </div>
             </div>
 
             {/* Footer Actions */}
-            <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+            <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                className="px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 dark:bg-slate-700/50 transition-colors font-medium"
                 disabled={isSubmitting}
               >
                 Cancel

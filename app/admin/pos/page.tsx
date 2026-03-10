@@ -213,26 +213,26 @@ export default function POSPage() {
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-right flex items-center justify-between text-sm text-gray-900"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white dark:bg-slate-800 text-right flex items-center justify-between text-sm text-gray-900 dark:text-gray-100"
         >
-          <span className={selectedOption ? 'text-gray-900 font-medium' : 'text-gray-500'}>
+          <span className={selectedOption ? 'text-gray-900 dark:text-gray-100 font-medium' : 'text-gray-500 dark:text-gray-400'}>
             {selectedOption || placeholder}
           </span>
-          <ChevronDown size={16} className={`text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown size={16} className={`text-gray-600 dark:text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
 
         {isOpen && (
-          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden" dir="rtl">
-            <div className="p-2 border-b border-gray-200">
+          <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg shadow-lg max-h-60 overflow-hidden" dir="rtl">
+            <div className="p-2 border-b border-gray-200 dark:border-slate-700">
               <div className="relative">
-                <Search size={16} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Search size={16} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 <input
                   type="text"
                   placeholder="بحث..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
-                  className="w-full pr-8 pl-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900 placeholder:text-gray-500"
+                  className="w-full pr-8 pl-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:text-gray-400"
                   autoFocus
                 />
               </div>
@@ -245,13 +245,13 @@ export default function POSPage() {
                   setIsOpen(false);
                   setSearchQuery('');
                 }}
-                className={`w-full text-right px-3 py-2 hover:bg-gray-100 transition-colors text-gray-900 ${!value ? 'bg-gray-100 font-medium' : ''
+                className={`w-full text-right px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-gray-900 dark:text-gray-100 ${!value ? 'bg-gray-100 dark:bg-slate-700/50 font-medium' : ''
                   }`}
               >
                 {placeholder}
               </button>
               {filteredOptions.length === 0 ? (
-                <div className="px-3 py-2 text-sm text-gray-600 text-right">لا توجد نتائج</div>
+                <div className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 text-right">لا توجد نتائج</div>
               ) : (
                 filteredOptions.map((option: string, index: number) => (
                   <button
@@ -262,7 +262,7 @@ export default function POSPage() {
                       setIsOpen(false);
                       setSearchQuery('');
                     }}
-                    className={`w-full text-right px-3 py-2 hover:bg-gray-100 transition-colors text-gray-900 ${value === option ? 'bg-gray-100 font-medium' : ''
+                    className={`w-full text-right px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-gray-900 dark:text-gray-100 ${value === option ? 'bg-gray-100 dark:bg-slate-700/50 font-medium' : ''
                       }`}
                   >
                     {option}
@@ -1506,24 +1506,45 @@ export default function POSPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <Lock size={48} className="text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg mb-2 font-cairo">ليس لديك صلاحية لإنشاء فواتير POS</p>
-            <p className="text-gray-500 text-sm font-cairo">يرجى التواصل مع المشرف للحصول على الصلاحية</p>
+            <Lock size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 text-lg mb-2 font-cairo">ليس لديك صلاحية لإنشاء فواتير POS</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm font-cairo">يرجى التواصل مع المشرف للحصول على الصلاحية</p>
           </div>
         </div>
       </AdminLayout>
     );
   }
 
+  // Custom Pay Button for the top navigation header
+  const headerPayButton = (
+    <button
+      onClick={handlePayAndPrint}
+      disabled={cart.length === 0 || isProcessing}
+      className="h-9 px-3 sm:px-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 active:scale-[0.98] transition-all duration-200 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-cairo shadow-sm shrink-0"
+    >
+      {isProcessing ? (
+        <>
+          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+          <span className="hidden sm:inline">المعالجة...</span>
+        </>
+      ) : (
+        <>
+          <Printer size={16} />
+          <span className="hidden sm:inline">دفع وطباعة</span>
+        </>
+      )}
+    </button>
+  );
+
   return (
-    <AdminLayout>
-      <div className="h-screen flex flex-col no-print overflow-hidden bg-gray-50" dir="rtl" style={{ height: '100vh', maxHeight: '100vh' }}>
+    <AdminLayout headerAction={headerPayButton}>
+      <div className="h-screen flex flex-col no-print overflow-hidden bg-gray-50 dark:bg-slate-900" dir="rtl" style={{ height: '100vh', maxHeight: '100vh' }}>
 
         {/* Main Content - Responsive Layout */}
         <div ref={resizeContainerRef} className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0 relative">
           {/* Right Side - Catalog */}
           <div
-            className={`${showCartOnMobile ? 'hidden' : 'flex'} lg:flex flex-col bg-white min-h-0`}
+            className={`${showCartOnMobile ? 'hidden' : 'flex'} lg:flex flex-col bg-white dark:bg-slate-800 min-h-0`}
             style={isDesktop ? {
               width: `${catalogWidth}%`,
               minWidth: '20%',
@@ -1531,7 +1552,7 @@ export default function POSPage() {
             } : {}}
           >
             {/* Search and Filters */}
-            <div className="p-4 lg:p-6 bg-white border-b border-gray-300 flex-shrink-0 shadow-md border-l border-gray-300">
+            <div className="p-4 lg:p-6 bg-white dark:bg-slate-800 border-b border-gray-300 dark:border-slate-600 flex-shrink-0 shadow-md border-l border-gray-300 dark:border-slate-600">
               {/* Barcode Input Row */}
               <div className="flex flex-col lg:flex-row gap-3 mb-4">
                 {/* Barcode Input (Separate) */}
@@ -1551,7 +1572,7 @@ export default function POSPage() {
                     autoCorrect="off"
                     autoCapitalize="off"
                     spellCheck={false}
-                    className="w-full pr-12 pl-4 py-3 border-2 border-blue-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm lg:text-base font-mono shadow-sm"
+                    className="w-full pr-12 pl-4 py-3 border-2 border-blue-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 text-sm lg:text-base font-mono shadow-sm"
                     autoFocus
                     disabled={isScanning}
                   />
@@ -1580,13 +1601,13 @@ export default function POSPage() {
 
                 {/* Search Input (Text only, no barcode) */}
                 <div className="flex-1 relative">
-                  <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
                   <input
                     type="text"
                     placeholder="بحث بالاسم أو رقم الصنف..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pr-12 pl-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-gray-900 text-sm lg:text-base font-cairo shadow-sm"
+                    className="w-full pr-12 pl-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-gray-900 dark:text-gray-100 text-sm lg:text-base font-cairo shadow-sm"
                   />
                 </div>
               </div>
@@ -1764,15 +1785,15 @@ export default function POSPage() {
             )}
 
             {/* Products Grid */}
-            <div className="flex-1 overflow-y-auto p-4 lg:p-6 min-h-0 bg-gray-50" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="flex-1 overflow-y-auto p-4 lg:p-6 min-h-0 bg-gray-50 dark:bg-slate-900" style={{ WebkitOverflowScrolling: 'touch' }}>
               {isLoadingProducts ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                   {[...Array(12)].map((_, index) => (
-                    <div key={index} className="bg-white rounded-lg border border-gray-200 p-2 sm:p-3 animate-pulse">
-                      <div className="aspect-square bg-gray-200 rounded-lg mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded mb-1"></div>
-                      <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                    <div key={index} className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-2 sm:p-3 animate-pulse">
+                      <div className="aspect-square bg-gray-200 dark:bg-slate-700 rounded-lg mb-2"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded mb-2"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded mb-1"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-2/3"></div>
                     </div>
                   ))}
                 </div>
@@ -1791,9 +1812,9 @@ export default function POSPage() {
                             setShowCartOnMobile(true);
                           }
                         }}
-                        className="group bg-white rounded-xl border border-gray-200 p-2 sm:p-3 cursor-pointer hover:shadow-xl hover:border-blue-400 hover:-translate-y-1 active:scale-[0.98] transition-all duration-200 font-cairo"
+                        className="group bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-2 sm:p-3 cursor-pointer hover:shadow-xl hover:border-blue-400 hover:-translate-y-1 active:scale-[0.98] transition-all duration-200 font-cairo"
                       >
-                        <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg mb-2 flex items-center justify-center overflow-hidden border border-gray-200 group-hover:border-blue-300 transition-colors relative">
+                        <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700/50 rounded-lg mb-2 flex items-center justify-center overflow-hidden border border-gray-200 dark:border-slate-700 group-hover:border-blue-300 transition-colors relative">
                           {imageUrl ? (
                             <Image
                               src={imageUrl}
@@ -1810,42 +1831,42 @@ export default function POSPage() {
                             />
                           ) : null}
                           {imageUrl ? (
-                            <div className="w-full h-full bg-gray-100 flex items-center justify-center hidden">
+                            <div className="w-full h-full bg-gray-100 dark:bg-slate-700/50 flex items-center justify-center hidden">
                               <ShoppingCart size={24} className="text-gray-400" />
                             </div>
                           ) : (
                             <ShoppingCart size={24} className="text-gray-400" />
                           )}
                         </div>
-                        <h3 className="font-medium text-xs lg:text-sm text-gray-900 mb-1.5 line-clamp-3 font-cairo min-h-[3rem] leading-tight">
+                        <h3 className="font-medium text-xs lg:text-sm text-gray-900 dark:text-gray-100 mb-1.5 line-clamp-3 font-cairo min-h-[3rem] leading-tight">
                           {product.Name || product.name || 'غير معروف'}
                         </h3>
                         {/* Stock Information */}
                         <div className="flex items-center gap-2 mb-1.5 text-xs font-cairo">
                           {(product.CS_Shop !== undefined && product.CS_Shop !== null) && (
                             <div className="flex items-center gap-1">
-                              <span className="text-gray-500">المحل:</span>
-                              <span className={`font-bold px-1.5 py-0.5 rounded text-xs ${(product.CS_Shop || 0) > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+                              <span className="text-gray-500 dark:text-gray-400">المحل:</span>
+                              <span className={`font-bold px-1.5 py-0.5 rounded text-xs ${(product.CS_Shop || 0) > 0 ? 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20' : 'text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20'
                                 }`}>{product.CS_Shop || 0}</span>
                             </div>
                           )}
                           {(product.CS_War !== undefined && product.CS_War !== null) && (
                             <div className="flex items-center gap-1">
-                              <span className="text-gray-500">المخزن:</span>
-                              <span className={`font-bold px-1.5 py-0.5 rounded text-xs ${(product.CS_War || 0) > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+                              <span className="text-gray-500 dark:text-gray-400">المخزن:</span>
+                              <span className={`font-bold px-1.5 py-0.5 rounded text-xs ${(product.CS_War || 0) > 0 ? 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20' : 'text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20'
                                 }`}>{product.CS_War || 0}</span>
                             </div>
                           )}
                           {(reservedQuantities[product.ProductID || product.id || product.product_id]?.total || 0) > 0 && (
                             <div className="flex items-center gap-1 w-full mt-1">
-                              <span className="text-gray-500">محجوز:</span>
+                              <span className="text-gray-500 dark:text-gray-400">محجوز:</span>
                               <span className="font-bold px-1.5 py-0.5 rounded text-xs text-orange-700 bg-orange-50 w-full text-center">
                                 {reservedQuantities[product.ProductID || product.id || product.product_id].total}
                               </span>
                             </div>
                           )}
                         </div>
-                        <div className="flex items-center justify-between pt-1.5 border-t border-gray-200">
+                        <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-slate-700">
                           <div className="flex flex-col items-start">
                             {(() => {
                               const originalParsed = parseFloat(String(product.originalPrice || 0));
@@ -1856,11 +1877,11 @@ export default function POSPage() {
                               return (
                                 <>
                                   {hasDiscount && (
-                                    <span className="text-[10px] text-gray-400 line-through">
+                                    <span className="text-[10px] text-gray-400 dark:text-gray-500 line-through">
                                       ₪{originalParsed.toFixed(2)}
                                     </span>
                                   )}
-                                  <p className={`text-sm lg:text-base font-bold font-cairo ${hasDiscount ? 'text-red-600' : 'text-blue-600'}`}>
+                                  <p className={`text-sm lg:text-base font-bold font-cairo ${hasDiscount ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
                                     ₪{priceToDisplay.toFixed(2)}
                                   </p>
                                 </>
@@ -1879,7 +1900,7 @@ export default function POSPage() {
 
           {/* Resize Handle - Desktop Only */}
           <div
-            className={`hidden lg:block absolute top-0 bottom-0 w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize transition-colors z-10 ${isResizing ? 'bg-blue-500' : ''
+            className={`hidden lg:block absolute top-0 bottom-0 w-1 bg-gray-300 dark:bg-slate-600 hover:bg-blue-500 cursor-col-resize transition-colors z-10 ${isResizing ? 'bg-blue-500' : ''
               }`}
             style={{
               right: `${catalogWidth}%`,
@@ -1890,14 +1911,14 @@ export default function POSPage() {
               setIsResizing(true);
             }}
           >
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-12 bg-gray-300 hover:bg-blue-500 rounded flex items-center justify-center">
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-12 bg-gray-300 dark:bg-slate-600 hover:bg-blue-500 rounded flex items-center justify-center">
               <div className="w-0.5 h-6 bg-gray-500"></div>
             </div>
           </div>
 
           {/* Left Side - Invoice/Cart */}
           <div
-            className={`${showCartOnMobile ? 'flex' : 'hidden'} lg:flex flex-col bg-white min-h-0 border-r border-gray-300 shadow-xl`}
+            className={`${showCartOnMobile ? 'flex' : 'hidden'} lg:flex flex-col bg-white dark:bg-slate-800 min-h-0 border-r border-gray-300 dark:border-slate-600 shadow-xl`}
             style={isDesktop ? {
               width: `${100 - catalogWidth}%`,
               minWidth: '20%',
@@ -1905,10 +1926,10 @@ export default function POSPage() {
             } : {}}
           >
             {/* Mobile Header - Close Button Only */}
-            <div className="lg:hidden p-3 border-b border-gray-200 flex-shrink-0">
+            <div className="lg:hidden p-3 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
               <button
                 onClick={() => setShowCartOnMobile(false)}
-                className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 title="إغلاق السلة"
               >
                 <X size={20} />
@@ -1919,11 +1940,11 @@ export default function POSPage() {
             <div className="flex-1 overflow-y-auto p-4 lg:p-5 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
               {cart.length === 0 ? (
                 <div className="text-center py-12 lg:py-16">
-                  <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                    <ShoppingCart size={40} className="text-gray-400" />
+                  <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 dark:bg-slate-700/50 rounded-full flex items-center justify-center">
+                    <ShoppingCart size={40} className="text-gray-400 dark:text-gray-500" />
                   </div>
-                  <p className="text-gray-600 font-cairo text-lg">السلة فارغة</p>
-                  <p className="text-gray-500 font-cairo text-sm mt-2">أضف منتجات من الكتالوج</p>
+                  <p className="text-gray-600 dark:text-gray-400 font-cairo text-lg">السلة فارغة</p>
+                  <p className="text-gray-500 dark:text-gray-400 font-cairo text-sm mt-2">أضف منتجات من الكتالوج</p>
                 </div>
               ) : (
                 <div className="space-y-3 lg:space-y-4">
@@ -1934,13 +1955,13 @@ export default function POSPage() {
                     return (
                       <div
                         key={item.productID}
-                        className="bg-white rounded-lg p-3 sm:p-4 border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
+                        className="bg-white dark:bg-slate-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:border-slate-600 hover:shadow-sm transition-all"
                       >
                         {/* Desktop View */}
                         <div className="hidden lg:block">
                           <div className="flex items-start gap-3 mb-3">
                             {imageUrl ? (
-                              <div className="relative w-16 h-16 rounded-lg border border-gray-200 flex-shrink-0 overflow-hidden">
+                              <div className="relative w-16 h-16 rounded-lg border border-gray-200 dark:border-slate-700 flex-shrink-0 overflow-hidden">
                                 <Image
                                   src={imageUrl}
                                   alt={item.name}
@@ -1956,20 +1977,20 @@ export default function POSPage() {
                                 />
                               </div>
                             ) : (
-                              <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                <span className="text-gray-400 text-xs">—</span>
+                              <div className="w-16 h-16 bg-gray-100 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
+                                <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <h3 className="text-sm font-semibold text-gray-900 font-cairo">{item.name}</h3>
+                                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo">{item.name}</h3>
                                 {product?.campaignPrice && parseFloat(String(product.campaignPrice)) < parseFloat(String(product.originalPrice)) && (
                                   <span className="text-[10px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded border border-red-200">
                                     عرض
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-gray-500 font-cairo mb-2">#{item.productID}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 font-cairo mb-2">#{item.productID}</p>
                               {/* Serial Numbers Display - Show if product is serialized OR if there are existing serials */}
                               {(item.isSerialized === true || (item.serialNos && item.serialNos.length > 0)) && (
                                 <div className="mt-2 space-y-1.5">
@@ -2009,7 +2030,7 @@ export default function POSPage() {
                                           )
                                         }
                                         placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                                        className="flex-1 px-2 py-1.5 border rounded text-xs text-gray-900 font-mono border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+                                        className="flex-1 px-2 py-1.5 border rounded text-xs text-gray-900 dark:text-gray-100 font-mono border-gray-300 dark:border-slate-600 focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
                                         isRequired={item.isSerialized}
                                       />
                                     );
@@ -2019,21 +2040,21 @@ export default function POSPage() {
                             </div>
                             <button
                               onClick={() => removeFromCart(item.productID)}
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition-colors flex-shrink-0"
+                              className="text-red-500 hover:text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-900/20 p-1.5 rounded transition-colors flex-shrink-0"
                               title="حذف"
                             >
                               <Trash2 size={18} />
                             </button>
                           </div>
 
-                          <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-200">
+                          <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-200 dark:border-slate-700">
                             {/* Quantity Controls */}
                             <div className="flex items-center gap-2">
-                              <label className="text-xs text-gray-600 font-cairo whitespace-nowrap">الكمية:</label>
+                              <label className="text-xs text-gray-600 dark:text-gray-400 font-cairo whitespace-nowrap">الكمية:</label>
                               <div className="flex items-center gap-1">
                                 <button
                                   onClick={() => updateQuantity(item.productID, item.quantity - 1)}
-                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 active:bg-gray-200 dark:bg-slate-700 transition-colors"
                                 >
                                   <Minus size={14} />
                                 </button>
@@ -2042,11 +2063,11 @@ export default function POSPage() {
                                   value={item.quantity}
                                   onChange={(e) => updateQuantity(item.productID, parseFloat(e.target.value) || 0)}
                                   onFocus={(e) => e.target.select()}
-                                  className="w-16 text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                  className="w-16 text-center border border-gray-300 dark:border-slate-600 rounded-lg py-1.5 text-sm text-gray-900 dark:text-gray-100 font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
                                 />
                                 <button
                                   onClick={() => updateQuantity(item.productID, item.quantity + 1)}
-                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 active:bg-gray-200 dark:bg-slate-700 transition-colors"
                                 >
                                   <Plus size={14} />
                                 </button>
@@ -2055,22 +2076,22 @@ export default function POSPage() {
 
                             {/* Price Input */}
                             <div className="flex items-center gap-2">
-                              <label className="text-xs text-gray-600 font-cairo whitespace-nowrap">السعر:</label>
+                              <label className="text-xs text-gray-600 dark:text-gray-400 font-cairo whitespace-nowrap">السعر:</label>
                               <input
                                 type="number"
                                 value={item.unitPrice}
                                 onChange={(e) => updatePrice(item.productID, parseFloat(e.target.value) || 0)}
                                 step="0.01"
                                 min="0"
-                                className="w-24 text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                className="w-24 text-center border border-gray-300 dark:border-slate-600 rounded-lg py-1.5 text-sm text-gray-900 dark:text-gray-100 font-bold focus:outline-none focus:ring-2 focus:ring-blue-400"
                                 placeholder="السعر"
                               />
                             </div>
 
                             {/* Total */}
                             <div className="flex items-center gap-2">
-                              <label className="text-xs text-gray-600 font-cairo whitespace-nowrap">الإجمالي:</label>
-                              <p className="text-base font-bold text-gray-900 font-cairo min-w-[80px] text-left">₪{item.total.toFixed(2)}</p>
+                              <label className="text-xs text-gray-600 dark:text-gray-400 font-cairo whitespace-nowrap">الإجمالي:</label>
+                              <p className="text-base font-bold text-gray-900 dark:text-gray-100 font-cairo min-w-[80px] text-left">₪{item.total.toFixed(2)}</p>
                             </div>
                           </div>
                         </div>
@@ -2079,7 +2100,7 @@ export default function POSPage() {
                         <div className="md:hidden space-y-2">
                           <div className="flex items-start gap-3">
                             {imageUrl ? (
-                              <div className="relative w-16 h-16 rounded border border-gray-200 flex-shrink-0 overflow-hidden">
+                              <div className="relative w-16 h-16 rounded border border-gray-200 dark:border-slate-700 flex-shrink-0 overflow-hidden">
                                 <Image
                                   src={imageUrl}
                                   alt={item.name}
@@ -2095,21 +2116,21 @@ export default function POSPage() {
                                 />
                               </div>
                             ) : (
-                              <div className="w-16 h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                <span className="text-gray-400 text-xs">—</span>
+                              <div className="w-16 h-16 bg-gray-100 dark:bg-slate-700/50 rounded border border-gray-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
+                                <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
                               <div className="flex flex-wrap items-center gap-2 mb-1">
-                                <h3 className="text-sm font-semibold text-gray-900 font-cairo line-clamp-2">{item.name}</h3>
+                                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo line-clamp-2">{item.name}</h3>
                                 {product?.campaignPrice && parseFloat(String(product.campaignPrice)) < parseFloat(String(product.originalPrice)) && (
                                   <span className="text-[10px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded border border-red-200 whitespace-nowrap">
                                     عرض
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-gray-500 font-cairo mb-1">#{item.productID}</p>
-                              <div className="text-lg font-bold text-gray-900 font-cairo mb-2">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 font-cairo mb-1">#{item.productID}</p>
+                              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo mb-2">
                                 ₪{item.total.toFixed(2)}
                               </div>
                               {/* Serial Numbers Display */}
@@ -2151,7 +2172,7 @@ export default function POSPage() {
                                           )
                                         }
                                         placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                                        className="flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm border-gray-300"
+                                        className="flex-1 px-3 py-2 border rounded-lg text-gray-900 dark:text-gray-100 font-mono text-sm border-gray-300 dark:border-slate-600"
                                         isRequired={item.isSerialized}
                                         dataMobile
                                       />
@@ -2162,7 +2183,7 @@ export default function POSPage() {
                             </div>
                             <button
                               onClick={() => removeFromCart(item.productID)}
-                              className="text-red-500 hover:text-red-700 transition-colors flex-shrink-0 p-1"
+                              className="text-red-500 hover:text-red-700 dark:text-red-300 transition-colors flex-shrink-0 p-1"
                               title="حذف"
                             >
                               <Trash2 size={18} />
@@ -2171,11 +2192,11 @@ export default function POSPage() {
 
                           <div className="grid grid-cols-2 gap-2 mb-2">
                             <div>
-                              <label className="block text-xs text-gray-600 mb-1 font-cairo">الكمية</label>
+                              <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 font-cairo">الكمية</label>
                               <div className="flex items-center gap-1">
                                 <button
                                   onClick={() => updateQuantity(item.productID, item.quantity - 1)}
-                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 dark:bg-slate-700 transition-colors"
                                 >
                                   <Minus size={14} />
                                 </button>
@@ -2184,18 +2205,18 @@ export default function POSPage() {
                                   value={item.quantity}
                                   onChange={(e) => updateQuantity(item.productID, parseFloat(e.target.value) || 0)}
                                   onFocus={(e) => e.target.select()}
-                                  className="flex-1 text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold"
+                                  className="flex-1 text-center border border-gray-300 dark:border-slate-600 rounded-lg py-1.5 text-sm text-gray-900 dark:text-gray-100 font-bold"
                                 />
                                 <button
                                   onClick={() => updateQuantity(item.productID, item.quantity + 1)}
-                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 dark:bg-slate-700 transition-colors"
                                 >
                                   <Plus size={14} />
                                 </button>
                               </div>
                             </div>
                             <div>
-                              <label className="block text-xs text-gray-600 mb-1 font-cairo">سعر الوحدة</label>
+                              <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 font-cairo">سعر الوحدة</label>
                               <input
                                 type="number"
                                 value={item.unitPrice}
@@ -2203,7 +2224,7 @@ export default function POSPage() {
                                 onFocus={(e) => e.target.select()}
                                 step="0.01"
                                 min="0"
-                                className="w-full text-center border border-gray-300 rounded-lg py-1.5 text-sm text-gray-900 font-bold"
+                                className="w-full text-center border border-gray-300 dark:border-slate-600 rounded-lg py-1.5 text-sm text-gray-900 dark:text-gray-100 font-bold"
                                 placeholder="السعر"
                               />
                             </div>
@@ -2217,27 +2238,27 @@ export default function POSPage() {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-200 p-4 lg:p-5 space-y-3 flex-shrink-0 bg-gradient-to-t from-gray-50 to-white">
+            <div className="border-t border-gray-200 dark:border-slate-700 p-4 lg:p-5 space-y-3 flex-shrink-0 bg-gradient-to-t from-gray-50 to-white dark:from-slate-900 dark:to-slate-800">
               {/* Totals */}
-              <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-4 border border-gray-200 shadow-sm space-y-3">
+              <div className="bg-gradient-to-br from-gray-50 to-white dark:from-slate-900 dark:to-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 shadow-sm space-y-3">
                 <div className="flex justify-between items-center text-sm font-cairo">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-gray-600">المجموع الفرعي:</span>
+                    <span className="text-gray-600 dark:text-gray-400">المجموع الفرعي:</span>
                     {cart.length > 0 && (
-                      <span className="text-xs text-gray-500 font-cairo">({cart.length} عنصر)</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-cairo">({cart.length} عنصر)</span>
                     )}
                     {/* Notes Button */}
                     <div className="relative">
                       {!notes.trim() ? (
                         <button
                           onClick={() => setShowNotesInput(true)}
-                          className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-cairo"
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:text-blue-300 hover:underline font-cairo"
                         >
                           + إضافة ملاحظة
                         </button>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500 font-cairo max-w-[150px] truncate" title={notes}>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 font-cairo max-w-[150px] truncate" title={notes}>
                             {notes}
                           </span>
                           <button
@@ -2245,7 +2266,7 @@ export default function POSPage() {
                               setNotes('');
                               setShowNotesInput(true);
                             }}
-                            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                            className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-400 transition-colors"
                             title="تعديل الملاحظة"
                           >
                             <X size={12} />
@@ -2255,7 +2276,7 @@ export default function POSPage() {
                       {/* Notes Input Popup */}
                       {showNotesInput && (
                         <div className="absolute bottom-full left-0 mb-2 w-64 z-10">
-                          <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-3">
+                          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 p-3">
                             <textarea
                               value={notes}
                               onChange={(e) => setNotes(e.target.value)}
@@ -2269,7 +2290,7 @@ export default function POSPage() {
                               }}
                               placeholder="ملاحظات اختيارية..."
                               rows={3}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-sm font-cairo text-gray-900 resize-none"
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-sm font-cairo text-gray-900 dark:text-gray-100 resize-none"
                               autoFocus
                             />
                             <div className="flex justify-end gap-2 mt-2">
@@ -2278,7 +2299,7 @@ export default function POSPage() {
                                   setNotes('');
                                   setShowNotesInput(false);
                                 }}
-                                className="text-xs px-2 py-1 text-gray-600 hover:text-gray-800 font-cairo"
+                                className="text-xs px-2 py-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:text-gray-200 font-cairo"
                               >
                                 حذف
                               </button>
@@ -2294,13 +2315,13 @@ export default function POSPage() {
                       )}
                     </div>
                   </div>
-                  <span className="font-bold text-gray-900">₪{subtotal.toFixed(2)}</span>
+                  <span className="font-bold text-gray-900 dark:text-gray-100">₪{subtotal.toFixed(2)}</span>
                 </div>
 
                 {/* Discount Input - Inline */}
-                <div className="flex justify-between items-center text-sm font-cairo border-t border-gray-200 pt-2">
+                <div className="flex justify-between items-center text-sm font-cairo border-t border-gray-200 dark:border-slate-700 pt-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-600">الخصم:</span>
+                    <span className="text-gray-600 dark:text-gray-400">الخصم:</span>
                     {showDiscountInput ? (
                       <div className="flex items-center gap-2">
                         <input
@@ -2320,12 +2341,12 @@ export default function POSPage() {
                           placeholder="0.00"
                           min="0"
                           step="0.01"
-                          className="w-24 px-2 py-1 border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-bold text-gray-900"
+                          className="w-24 px-2 py-1 border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-bold text-gray-900 dark:text-gray-100"
                           autoFocus
                         />
                         <button
                           onClick={() => setShowDiscountInput(false)}
-                          className="text-gray-400 hover:text-gray-600"
+                          className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-400"
                         >
                           <X size={14} />
                         </button>
@@ -2334,8 +2355,8 @@ export default function POSPage() {
                       <button
                         onClick={() => setShowDiscountInput(true)}
                         className={`text-xs px-2 py-0.5 rounded ${discount > 0
-                          ? 'text-red-600 bg-red-50 hover:bg-red-100'
-                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                          ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100'
+                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
                           } transition-colors font-cairo`}
                       >
                         {discount > 0 ? `-₪${discount.toFixed(2)}` : '+ إضافة خصم'}
@@ -2343,19 +2364,19 @@ export default function POSPage() {
                     )}
                   </div>
                   {discount > 0 && (
-                    <span className="font-bold text-red-600">-₪{discount.toFixed(2)}</span>
+                    <span className="font-bold text-red-600 dark:text-red-400">-₪{discount.toFixed(2)}</span>
                   )}
                 </div>
 
-                <div className="flex justify-between items-center text-lg lg:text-xl font-bold border-t-2 border-gray-300 pt-3 font-cairo">
-                  <span className="text-gray-900">الصافي للدفع:</span>
-                  <span className="text-green-600">₪{netTotal.toFixed(2)}</span>
+                <div className="flex justify-between items-center text-lg lg:text-xl font-bold border-t-2 border-gray-300 dark:border-slate-600 pt-3 font-cairo">
+                  <span className="text-gray-900 dark:text-gray-100">الصافي للدفع:</span>
+                  <span className="text-green-600 dark:text-green-400">₪{netTotal.toFixed(2)}</span>
                 </div>
               </div>
 
               {/* Payment Method Selection */}
               <div className="mb-4">
-                <span className="text-sm font-bold text-gray-700 font-cairo block mb-2">طريقة الدفع:</span>
+                <span className="text-sm font-bold text-gray-700 dark:text-gray-300 font-cairo block mb-2">طريقة الدفع:</span>
                 <div className="grid grid-cols-3 gap-2">
                   {(['Cash', 'Visa', 'Receivable'] as const).map((method) => {
                     const label = method === 'Cash' ? 'نقداً' : method === 'Visa' ? 'فيزا' : 'ذمة مالية';
@@ -2369,8 +2390,8 @@ export default function POSPage() {
                           }
                         }}
                         className={`py-2 px-1 text-sm rounded-lg border font-cairo font-bold transition-all ${paymentMethod === method
-                          ? 'bg-blue-50 border-blue-500 text-blue-700'
-                          : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-700 dark:text-blue-300'
+                          : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700/50 dark:bg-slate-900'
                           }`}
                       >
                         {label}
@@ -2380,15 +2401,15 @@ export default function POSPage() {
                 </div>
                 {paymentMethod === 'Receivable' && (
                   <div className="mt-3">
-                    <span className="text-xs font-bold text-gray-700 font-cairo block mb-2">اختر الزبون:</span>
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 font-cairo block mb-2">اختر الزبون:</span>
                     {selectedCustomerId ? (
-                      <div className="flex justify-between items-center p-2 border border-gray-200 rounded-lg bg-gray-50">
-                        <span className="text-sm font-bold text-gray-900 font-cairo truncate pl-2" title={customers.find(c => (c.id || c.customer_id || c.CustomerID) === selectedCustomerId)?.name || ''}>
+                      <div className="flex justify-between items-center p-2 border border-gray-200 dark:border-slate-700 rounded-lg bg-gray-50 dark:bg-slate-900">
+                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100 font-cairo truncate pl-2" title={customers.find(c => (c.id || c.customer_id || c.CustomerID) === selectedCustomerId)?.name || ''}>
                           {customers.find(c => (c.id || c.customer_id || c.CustomerID) === selectedCustomerId)?.name || ''}
                         </span>
                         <button
                           onClick={() => setShowCustomerModal(true)}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-cairo font-bold whitespace-nowrap"
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 font-cairo font-bold whitespace-nowrap"
                         >
                           تغيير الزبون
                         </button>
@@ -2396,7 +2417,7 @@ export default function POSPage() {
                     ) : (
                       <button
                         onClick={() => setShowCustomerModal(true)}
-                        className="w-full p-2 border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg text-sm font-bold font-cairo transition-colors flex justify-center items-center gap-2"
+                        className="w-full p-2 border border-blue-300 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg text-sm font-bold font-cairo transition-colors flex justify-center items-center gap-2"
                       >
                         <Search size={16} />
                         <span>البحث عن زبون</span>
@@ -2406,24 +2427,6 @@ export default function POSPage() {
                 )}
               </div>
 
-              {/* Pay Button */}
-              <button
-                onClick={handlePayAndPrint}
-                disabled={cart.length === 0 || isProcessing}
-                className="w-full py-4 lg:py-5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 active:scale-[0.98] transition-all duration-200 font-bold text-base lg:text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-green-600 disabled:hover:to-green-700 flex items-center justify-center gap-3 font-cairo shadow-lg shadow-green-600/20"
-              >
-                {isProcessing ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                    <span>جاري المعالجة...</span>
-                  </>
-                ) : (
-                  <>
-                    <Printer size={22} />
-                    <span>دفع وطباعة</span>
-                  </>
-                )}
-              </button>
             </div>
           </div>
         </div>
@@ -2453,12 +2456,12 @@ export default function POSPage() {
           onClick={() => setPrintOverlayInvoiceId(null)}
         >
           <div
-            className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+            className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
             style={{ width: '105mm', minHeight: '148mm', maxHeight: '90vh' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-              <span className="text-sm font-cairo text-gray-700">معاينة الطباعة</span>
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 flex-shrink-0">
+              <span className="text-sm font-cairo text-gray-700 dark:text-gray-300">معاينة الطباعة</span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -2471,19 +2474,19 @@ export default function POSPage() {
                 <button
                   type="button"
                   onClick={() => setPrintOverlayInvoiceId(null)}
-                  className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                  className="p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 dark:bg-slate-700 hover:text-gray-900 dark:text-gray-100 transition-colors"
                   aria-label="إغلاق"
                 >
                   <X size={20} />
                 </button>
               </div>
             </div>
-            <div className="flex-1 overflow-auto bg-white min-h-0">
+            <div className="flex-1 overflow-auto bg-white dark:bg-slate-800 min-h-0">
               <iframe
                 ref={printIframeRef}
                 src={`/admin/invoices/print/${printOverlayInvoiceId}?embed=1`}
                 title="طباعة الفاتورة"
-                className="w-full border-0 bg-white"
+                className="w-full border-0 bg-white dark:bg-slate-800"
                 style={{ width: '105mm', minHeight: '148mm', height: '70vh' }}
               />
             </div>
@@ -2494,13 +2497,13 @@ export default function POSPage() {
       {/* Customer Selection Modal */}
       {showCustomerModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden transform transition-all">
-            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-gray-900 text-lg font-cairo">اختر الزبون (ذمة مالية)</h3>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden transform transition-all">
+            <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900">
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg font-cairo">اختر الزبون (ذمة مالية)</h3>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setIsCustomerModalOpen(true)}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors font-cairo text-sm font-bold"
+                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg transition-colors font-cairo text-sm font-bold"
                   title="إضافة زبون جديد"
                 >
                   <Plus size={16} />
@@ -2508,7 +2511,7 @@ export default function POSPage() {
                 </button>
                 <button
                   onClick={() => setShowCustomerModal(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors"
+                  className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 dark:bg-slate-700 rounded-full transition-colors"
                   title="إغلاق"
                 >
                   <X size={20} />
@@ -2516,21 +2519,21 @@ export default function POSPage() {
               </div>
             </div>
 
-            <div className="p-4 border-b border-gray-100">
+            <div className="p-4 border-b border-gray-100 dark:border-slate-800">
               <div className="relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
                 <input
                   type="text"
                   placeholder="ابحث عن زبون بالاسم، رقم الهاتف، أو رقم الهوية..."
                   value={customerSearchQuery}
                   onChange={(e) => setCustomerSearchQuery(e.target.value)}
-                  className="w-full pr-10 pl-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-cairo text-sm text-gray-900 font-bold placeholder:text-gray-500 placeholder:font-normal"
+                  className="w-full pr-10 pl-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-cairo text-sm text-gray-900 dark:text-gray-100 font-bold placeholder:text-gray-500 dark:text-gray-400 placeholder:font-normal"
                   autoFocus
                 />
               </div>
             </div>
 
-            <div className="overflow-y-auto flex-1 p-2 bg-gray-50/50">
+            <div className="overflow-y-auto flex-1 p-2 bg-gray-50 dark:bg-slate-900/50">
               {customers
                 .filter(c => {
                   const searchWords = customerSearchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
@@ -2551,39 +2554,39 @@ export default function POSPage() {
                       setShowCustomerModal(false);
                       setCustomerSearchQuery('');
                     }}
-                    className="w-full text-right p-3 hover:bg-white bg-transparent rounded-xl border-b border-gray-100 last:border-0 transition-all flex flex-col group hover:shadow-sm"
+                    className="w-full text-right p-3 hover:bg-white dark:hover:bg-slate-800 dark:bg-slate-800 bg-transparent rounded-xl border-b border-gray-100 dark:border-slate-800 last:border-0 transition-all flex flex-col group hover:shadow-sm"
                   >
                     <div className="flex justify-between items-start w-full gap-2">
-                       <div className="flex flex-col gap-1 items-start">
-                         <div className="font-bold text-sm text-gray-900 font-cairo group-hover:text-blue-700 transition-colors text-right">
-                           {c.name || c.Name}
-                         </div>
-                         <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                           {c.phone && (
-                             <span className="text-xs text-gray-500 font-cairo bg-gray-100 px-1.5 py-0.5 rounded">
-                               {c.phone}
-                             </span>
-                           )}
-                           {(c.customer_id || c.CustomerID || c.id) && (
-                             <span className="text-xs text-blue-600 font-cairo bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100" title="رقم الزبون (النظام)">
-                               #{c.customer_id || c.CustomerID || c.id}
-                             </span>
-                           )}
-                           {c.external_id && (
-                             <span className="text-xs text-purple-600 font-cairo bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100" title="رقم الشامل">
-                               شامل: {c.external_id}
-                             </span>
-                           )}
-                         </div>
-                       </div>
-                       
-                       {/* Balance display */}
-                       <div className="flex flex-col items-end shrink-0">
-                         <span className="text-[10px] text-gray-500 font-cairo mb-0.5">الرصيد</span>
-                         <span dir="ltr" className={`text-sm font-bold font-cairo ${(c.balance || 0) < 0 ? 'text-red-600' : (c.balance || 0) > 0 ? 'text-green-600' : 'text-gray-700'}`}>
-                           {(c.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₪
-                         </span>
-                       </div>
+                      <div className="flex flex-col gap-1 items-start">
+                        <div className="font-bold text-sm text-gray-900 dark:text-gray-100 font-cairo group-hover:text-blue-700 dark:text-blue-300 transition-colors text-right">
+                          {c.name || c.Name}
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                          {c.phone && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400 font-cairo bg-gray-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded">
+                              {c.phone}
+                            </span>
+                          )}
+                          {(c.customer_id || c.CustomerID || c.id) && (
+                            <span className="text-xs text-blue-600 dark:text-blue-400 font-cairo bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-900/50" title="رقم الزبون (النظام)">
+                              #{c.customer_id || c.CustomerID || c.id}
+                            </span>
+                          )}
+                          {c.external_id && (
+                            <span className="text-xs text-purple-600 font-cairo bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100" title="رقم الشامل">
+                              شامل: {c.external_id}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Balance display */}
+                      <div className="flex flex-col items-end shrink-0">
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400 font-cairo mb-0.5">الرصيد</span>
+                        <span dir="ltr" className={`text-sm font-bold font-cairo ${(c.balance || 0) < 0 ? 'text-red-600 dark:text-red-400' : (c.balance || 0) > 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                          {(c.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₪
+                        </span>
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -2599,7 +2602,7 @@ export default function POSPage() {
 
                 return searchWords.every((word) => searchableText.includes(word));
               }).length === 0 && (
-                  <div className="text-center py-12 text-gray-500 font-cairo">
+                  <div className="text-center py-12 text-gray-500 dark:text-gray-400 font-cairo">
                     <div className="text-4xl mb-3 opacity-20">🔍</div>
                     <div className="font-bold">لا يوجد زبائن مطابقة</div>
                     <div className="text-xs mt-1">جرب البحث بكلمات مختلفة</div>

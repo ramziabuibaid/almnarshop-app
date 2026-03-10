@@ -101,13 +101,13 @@ export default function PaymentsModal({ isOpen, onClose, caseId }: PaymentsModal
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col font-cairo" dir="rtl">
-                <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <DollarSign className="text-green-600" size={24} />
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col font-cairo" dir="rtl">
+                <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between bg-gray-50 dark:bg-slate-800/50">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                        <DollarSign className="text-green-600 dark:text-green-400" size={24} />
                         دفعات الملف القضائي
                     </h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 p-1 rounded-full transition-colors">
+                    <button onClick={onClose} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:bg-gray-200 dark:hover:bg-slate-600 p-1 rounded-full transition-colors">
                         <X size={24} />
                     </button>
                 </div>
@@ -115,7 +115,7 @@ export default function PaymentsModal({ isOpen, onClose, caseId }: PaymentsModal
                 <div className="flex-1 overflow-y-auto p-0">
                     {loading && !legalCase ? (
                         <div className="flex items-center justify-center h-48">
-                            <Loader2 size={32} className="animate-spin text-gray-400" />
+                            <Loader2 size={32} className="animate-spin text-gray-400 dark:text-gray-500" />
                         </div>
                     ) : (
                         <div className="flex flex-col h-full">
@@ -131,58 +131,58 @@ export default function PaymentsModal({ isOpen, onClose, caseId }: PaymentsModal
                                 </div>
                                 <div className="flex gap-4">
                                     <div className="text-center">
-                                        <div className="text-xs text-gray-500">الإجمالي</div>
-                                        <div className="font-bold text-gray-900">₪{legalCase?.total_amount.toLocaleString()}</div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">الإجمالي</div>
+                                        <div className="font-bold text-gray-900 dark:text-gray-100">₪{legalCase?.total_amount.toLocaleString()}</div>
                                     </div>
                                     <div className="text-center">
-                                        <div className="text-xs text-green-600">المدفوع</div>
-                                        <div className="font-bold text-green-700">₪{legalCase?.paid_amount?.toLocaleString() || 0}</div>
+                                        <div className="text-xs text-green-600 dark:text-green-400">المدفوع</div>
+                                        <div className="font-bold text-green-700 dark:text-green-400">₪{legalCase?.paid_amount?.toLocaleString() || 0}</div>
                                     </div>
                                     <div className="text-center">
                                         <div className="text-xs text-red-500">المتبقي</div>
-                                        <div className="font-bold text-red-600">₪{legalCase?.remaining_amount?.toLocaleString() || 0}</div>
+                                        <div className="font-bold text-red-600 dark:text-red-400">₪{legalCase?.remaining_amount?.toLocaleString() || 0}</div>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="p-4 flex-1">
                                 {error && (
-                                    <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2 text-sm">
+                                    <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg flex items-center gap-2 text-sm">
                                         <AlertCircle size={18} />
                                         {error}
                                     </div>
                                 )}
 
                                 {/* Add Payment Form */}
-                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-                                    <h4 className="font-bold text-sm text-gray-700 mb-3">إضافة دفعة جديدة</h4>
+                                <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-lg p-4 mb-6">
+                                    <h4 className="font-bold text-sm text-gray-700 dark:text-gray-300 mb-3">إضافة دفعة جديدة</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                         <div>
-                                            <label className="block text-xs text-gray-500 mb-1">المبلغ</label>
+                                            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">المبلغ</label>
                                             <input
                                                 type="number"
                                                 value={amount}
                                                 onChange={(e) => setAmount(e.target.value)}
-                                                className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 text-sm"
+                                                className="w-full px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded focus:ring-1 focus:ring-blue-500 text-sm"
                                                 placeholder="0.00"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs text-gray-500 mb-1">التاريخ</label>
+                                            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">التاريخ</label>
                                             <input
                                                 type="date"
                                                 value={paymentDate}
                                                 onChange={(e) => setPaymentDate(e.target.value)}
-                                                className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 text-sm"
+                                                className="w-full px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded focus:ring-1 focus:ring-blue-500 text-sm"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs text-gray-500 mb-1">ملاحظات (اختياري)</label>
+                                            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">ملاحظات (اختياري)</label>
                                             <input
                                                 type="text"
                                                 value={notes}
                                                 onChange={(e) => setNotes(e.target.value)}
-                                                className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 text-sm"
+                                                className="w-full px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded focus:ring-1 focus:ring-blue-500 text-sm"
                                                 placeholder="رقم إيصال..."
                                             />
                                         </div>
@@ -199,24 +199,24 @@ export default function PaymentsModal({ isOpen, onClose, caseId }: PaymentsModal
 
                                 {/* Payments List */}
                                 <div>
-                                    <h4 className="font-bold text-sm text-gray-700 mb-3 flex items-center gap-2">
+                                    <h4 className="font-bold text-sm text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                                         <History size={16} />
                                         سجل الدفعات السابقة
                                     </h4>
                                     {legalCase?.payments && legalCase.payments.length > 0 ? (
                                         <div className="space-y-2">
                                             {legalCase.payments.map((payment) => (
-                                                <div key={payment.id} className="border border-gray-200 rounded p-3 flex items-center justify-between hover:bg-gray-50">
+                                                <div key={payment.id} className="border border-gray-200 dark:border-slate-700 rounded p-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-700/50">
                                                     <div>
-                                                        <div className="font-bold text-green-700 text-lg flex items-center gap-1">
+                                                        <div className="font-bold text-green-700 dark:text-green-400 text-lg flex items-center gap-1">
                                                             ₪{Number(payment.amount).toLocaleString()}
                                                         </div>
-                                                        <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1">
                                                             <Calendar size={12} />
                                                             {new Date(payment.payment_date).toLocaleDateString('ar-EG')}
                                                         </div>
                                                         {payment.notes && (
-                                                            <div className="text-sm text-gray-600 mt-1 bg-gray-100 px-2 py-0.5 rounded inline-flex items-center gap-1">
+                                                            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 bg-gray-100 dark:bg-slate-700/50 px-2 py-0.5 rounded inline-flex items-center gap-1">
                                                                 <FileText size={12} />
                                                                 {payment.notes}
                                                             </div>
@@ -225,7 +225,7 @@ export default function PaymentsModal({ isOpen, onClose, caseId }: PaymentsModal
                                                     <button
                                                         onClick={() => handleDeletePayment(payment.id)}
                                                         disabled={loading}
-                                                        className="text-red-500 hover:text-red-700 p-2 bg-red-50 rounded-full transition-colors disabled:opacity-50"
+                                                        className="text-red-500 hover:text-red-700 p-2 bg-red-50 dark:bg-red-900/20 rounded-full transition-colors disabled:opacity-50"
                                                         title="حذف الدفعة"
                                                     >
                                                         <Trash2 size={16} />
@@ -234,7 +234,7 @@ export default function PaymentsModal({ isOpen, onClose, caseId }: PaymentsModal
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className="text-center py-8 text-gray-400 border border-dashed border-gray-300 rounded-lg">
+                                        <div className="text-center py-8 text-gray-400 dark:text-gray-500 border border-dashed border-gray-300 dark:border-slate-600 rounded-lg">
                                             لا توجد دفعات مسجلة لهذا الملف بعد
                                         </div>
                                     )}

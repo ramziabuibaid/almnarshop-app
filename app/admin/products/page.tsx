@@ -66,18 +66,18 @@ const MobileProductCard = React.memo(({
   const reservedQty = reservedData?.total || 0;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+    <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700 rounded-lg p-4 shadow-sm">
       {/* Header with Image and Basic Info */}
       <div className="flex items-start gap-3 mb-3">
         {/* Product Image */}
         <button
           type="button"
           onClick={() => hasAnyImage && onImageClick?.(product)}
-          className={`w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center relative ${hasAnyImage ? 'cursor-pointer hover:ring-2 hover:ring-gray-400 transition-shadow' : 'cursor-default'}`}
+          className={`w-20 h-20 bg-gray-100 dark:bg-slate-700 dark:bg-slate-700/50 dark:bg-slate-700/50 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center relative ${hasAnyImage ? 'cursor-pointer hover:ring-2 hover:ring-gray-400 transition-shadow' : 'cursor-default'}`}
           title={hasAnyImage ? 'انقر لعرض الصور' : undefined}
         >
           {hasImageError || !imageUrl ? (
-            <ImageIcon size={24} className="text-gray-300" />
+            <ImageIcon size={24} className="text-gray-300 dark:text-gray-600 dark:text-gray-400 dark:text-gray-600 dark:text-gray-400" />
           ) : (
             <Image
               src={imageUrl}
@@ -99,34 +99,34 @@ const MobileProductCard = React.memo(({
                 {productId ? (
                   <button
                     onClick={() => router.push(`/admin/products/${productId}`)}
-                    className="text-base font-bold text-gray-900 hover:text-blue-600 hover:underline text-right break-words"
+                    className="text-base font-bold text-gray-900 dark:text-white hover:text-blue-600 hover:underline text-right break-words"
                   >
                     {product.name || product.Name || 'N/A'}
                   </button>
                 ) : (
-                  <div className="text-base font-bold text-gray-900 text-right break-words">
+                  <div className="text-base font-bold text-gray-900 dark:text-white text-right break-words">
                     {product.name || product.Name || 'N/A'}
                   </div>
                 )}
               </div>
               <div className="flex-shrink-0 mr-2 flex flex-col items-end">
                 {hasDiscount && (
-                  <span className="text-xs text-gray-400 line-through">
+                  <span className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 line-through">
                     ₪{originalParsed.toFixed(2)}
                   </span>
                 )}
-                <span className={`text-lg font-bold whitespace-nowrap ${hasDiscount ? 'text-red-600' : 'text-gray-900'}`}>
+                <span className={`text-lg font-bold whitespace-nowrap ${hasDiscount ? 'text-red-600 dark:text-red-400 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
                   ₪{parseFloat(String(price)).toFixed(2)}
                 </span>
                 {hasDiscount && (
-                  <span className="text-[10px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded mt-0.5">
+                  <span className="text-[10px] bg-red-100 dark:bg-red-900/30 dark:bg-red-900/30 text-red-800 dark:text-red-300 dark:text-red-300 px-1.5 py-0.5 rounded mt-0.5">
                     في العرض
                   </span>
                 )}
               </div>
             </div>
             {product.brand || product.Brand ? (
-              <div className="text-xs text-gray-500 text-right">
+              <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400 text-right">
                 {product.brand || product.Brand}
               </div>
             ) : null}
@@ -135,17 +135,17 @@ const MobileProductCard = React.memo(({
           {/* Product ID and Barcode */}
           <div className="flex flex-wrap items-center gap-2 mt-2">
             {productId && (
-              <span className="text-xs font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded">
+              <span className="text-xs font-mono text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400 bg-gray-50 dark:bg-slate-700/50 dark:bg-slate-800/50 dark:bg-slate-800/50 px-2 py-0.5 rounded">
                 {productId}
               </span>
             )}
             {product['Shamel No'] && (
-              <span className="text-xs text-gray-600 bg-gray-50 px-2 py-0.5 rounded">
+              <span className="text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400 bg-gray-50 dark:bg-slate-700/50 dark:bg-slate-800/50 dark:bg-slate-800/50 px-2 py-0.5 rounded">
                 شامل: {product['Shamel No']}
               </span>
             )}
             {(product.barcode || product.Barcode) && (
-              <span className="text-xs font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded">
+              <span className="text-xs font-mono text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400 bg-gray-50 dark:bg-slate-700/50 dark:bg-slate-800/50 dark:bg-slate-800/50 px-2 py-0.5 rounded">
                 {product.barcode || product.Barcode}
               </span>
             )}
@@ -155,27 +155,27 @@ const MobileProductCard = React.memo(({
 
       {/* Stock Information */}
       {(warehouseStock !== null || shopStock !== null) && (
-        <div className="mb-3 p-2 bg-gray-50 rounded-lg">
-          <div className="text-xs text-gray-600 mb-1">المخزون</div>
+        <div className="mb-3 p-2 bg-gray-50 dark:bg-slate-700/50 dark:bg-slate-800/50 dark:bg-slate-800/50 rounded-lg">
+          <div className="text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400 mb-1">المخزون</div>
           <div className="flex items-center gap-3 flex-wrap">
             {warehouseStock !== null && (
               <div className="flex items-center gap-1">
-                <Warehouse size={14} className="text-gray-400" />
-                <span className="text-xs text-gray-700">
-                  مخزن: <span className={`font-semibold ${warehouseStock > 0 ? 'text-green-700' : 'text-red-700'}`}>{warehouseStock}</span>
+                <Warehouse size={14} className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400" />
+                <span className="text-xs text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-300">
+                  مخزن: <span className={`font-semibold ${warehouseStock > 0 ? 'text-green-700 dark:text-green-400 dark:text-green-400' : 'text-red-700 dark:text-red-400 dark:text-red-400'}`}>{warehouseStock}</span>
                 </span>
               </div>
             )}
             {shopStock !== null && (
               <div className="flex items-center gap-1">
-                <Store size={14} className="text-gray-400" />
-                <span className="text-xs text-gray-700">
-                  محل: <span className={`font-semibold ${shopStock > 0 ? 'text-green-700' : 'text-red-700'}`}>{shopStock}</span>
+                <Store size={14} className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400" />
+                <span className="text-xs text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-300">
+                  محل: <span className={`font-semibold ${shopStock > 0 ? 'text-green-700 dark:text-green-400 dark:text-green-400' : 'text-red-700 dark:text-red-400 dark:text-red-400'}`}>{shopStock}</span>
                 </span>
               </div>
             )}
             {totalStock > 0 && (
-              <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded">
+              <span className="text-xs font-semibold text-green-700 dark:text-green-400 dark:text-green-400 bg-green-50 dark:bg-green-900/20 dark:bg-green-900/20 px-2 py-0.5 rounded">
                 المجموع: {totalStock}
               </span>
             )}
@@ -183,7 +183,7 @@ const MobileProductCard = React.memo(({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onReservedClick?.(product, reservedData); }}
-                className="text-xs font-semibold text-orange-700 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 hover:bg-orange-100 transition-colors cursor-pointer w-fit mt-1"
+                className="text-xs font-semibold text-orange-700 dark:text-orange-400 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 dark:bg-orange-900/20 px-2 py-0.5 rounded border border-orange-100 dark:border-orange-900/30 dark:border-orange-900/30 hover:bg-orange-100 transition-colors cursor-pointer w-fit mt-1"
                 title="عرض تفاصيل الحجوزات"
               >
                 محجوز: {reservedQty}
@@ -194,31 +194,31 @@ const MobileProductCard = React.memo(({
       )}
 
       {/* Additional Info */}
-      <div className="grid grid-cols-2 gap-2 mb-3 text-xs text-gray-600">
+      <div className="grid grid-cols-2 gap-2 mb-3 text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">
         {product.type || product.Type ? (
           <div>
-            <span className="text-gray-500">النوع:</span> {product.type || product.Type}
+            <span className="text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">النوع:</span> {product.type || product.Type}
           </div>
         ) : null}
         {product.Origin ? (
           <div>
-            <span className="text-gray-500">المنشأ:</span> {product.Origin}
+            <span className="text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">المنشأ:</span> {product.Origin}
           </div>
         ) : null}
         {product.Warranty ? (
           <div>
-            <span className="text-gray-500">الضمان:</span> {product.Warranty}
+            <span className="text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">الضمان:</span> {product.Warranty}
           </div>
         ) : null}
         {costPrice !== null && (
           <div>
-            <span className="text-gray-500">التكلفة:</span> <span className="font-semibold">₪{parseFloat(String(costPrice)).toFixed(2)}</span>
+            <span className="text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">التكلفة:</span> <span className="font-semibold">₪{parseFloat(String(costPrice)).toFixed(2)}</span>
           </div>
         )}
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+      <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700">
         {(() => {
           const productId = product.ProductID || product.id || '';
           const isVisible = product.is_visible !== false && product.isVisible !== false;
@@ -227,7 +227,7 @@ const MobileProductCard = React.memo(({
             <button
               onClick={() => handleToggleVisibility(product)}
               disabled={isToggling}
-              className={`px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm ${isVisible ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-amber-600 bg-amber-50 hover:bg-amber-100'
+              className={`px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm ${isVisible ? 'text-green-600 dark:text-green-400 dark:text-green-400 bg-green-50 dark:bg-green-900/20 dark:bg-green-900/20 hover:bg-green-100' : 'text-amber-600 dark:text-amber-400 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 dark:bg-amber-900/20 hover:bg-amber-100'
                 } disabled:opacity-50`}
               title={isVisible ? 'إخفاء من المتجر' : 'إظهار في المتجر'}
             >
@@ -237,7 +237,7 @@ const MobileProductCard = React.memo(({
         })()}
         <button
           onClick={() => handleEdit(product)}
-          className="flex-1 px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2 transition-colors text-sm"
+          className="flex-1 px-3 py-2 bg-gray-900 dark:bg-slate-700 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 dark:hover:bg-slate-600 flex items-center justify-center gap-2 transition-colors text-sm"
         >
           <Edit size={16} />
           <span>تعديل</span>
@@ -842,11 +842,11 @@ export default function ProductsManagerPage() {
             <button
               type="button"
               onClick={() => hasAnyImage && openImageLightbox(product, 0)}
-              className={`w-16 h-16 bg-gray-100 rounded-lg overflow-hidden relative flex items-center justify-center ${hasAnyImage ? 'cursor-pointer hover:ring-2 hover:ring-gray-400 transition-shadow' : 'cursor-default'}`}
+              className={`w-16 h-16 bg-gray-100 dark:bg-slate-700 dark:bg-slate-700/50 dark:bg-slate-700/50 rounded-lg overflow-hidden relative flex items-center justify-center ${hasAnyImage ? 'cursor-pointer hover:ring-2 hover:ring-gray-400 transition-shadow' : 'cursor-default'}`}
               title={hasAnyImage ? 'انقر لعرض الصور' : undefined}
             >
               {hasImageError || !imageUrl ? (
-                <ImageIcon size={24} className="text-gray-300" />
+                <ImageIcon size={24} className="text-gray-300 dark:text-gray-600 dark:text-gray-400 dark:text-gray-600 dark:text-gray-400" />
               ) : (
                 <Image
                   src={imageUrl}
@@ -887,15 +887,15 @@ export default function ProductsManagerPage() {
                       router.push(`/admin/products/${productId}`);
                     }
                   }}
-                  className="text-left font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                  className="text-left font-bold text-blue-600 dark:text-white hover:text-blue-800 dark:hover:text-gray-300 hover:underline cursor-pointer"
                   title="عرض بروفايل المنتج (اضغط Command/Ctrl لفتح في نافذة جديدة)"
                 >
                   {name}
                 </button>
               ) : (
-                <div className="font-medium text-gray-900">{name}</div>
+                <div className="font-bold text-gray-900 dark:text-white">{name}</div>
               )}
-              {brand && <div className="text-xs text-gray-500 mt-1">{brand}</div>}
+              {brand && <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400 mt-1">{brand}</div>}
             </div>
           );
         },
@@ -912,11 +912,11 @@ export default function ProductsManagerPage() {
           const shamelNo = product['Shamel No'] || '';
           return (
             <div className="flex flex-col gap-1">
-              <div className="text-sm text-gray-900 font-mono">
+              <div className="text-sm text-gray-900 dark:text-white font-mono">
                 {productId}
               </div>
               {shamelNo && (
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">
                   شامل: {shamelNo}
                 </div>
               )}
@@ -950,7 +950,7 @@ export default function ProductsManagerPage() {
                       () => handleSaveBarcode(product),
                       handleCancelEditBarcode
                     )}
-                    className="flex-1 min-w-0 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 font-mono"
+                    className="flex-1 min-w-0 px-2 py-1.5 text-sm border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white dark:focus:ring-gray-100 dark:focus:ring-gray-100 focus:border-transparent text-gray-900 dark:text-white font-mono"
                     placeholder="أدخل الباركود"
                     autoFocus
                     disabled={isSaving}
@@ -959,7 +959,7 @@ export default function ProductsManagerPage() {
                     type="button"
                     onClick={(e) => handleSaveBarcode(product, e)}
                     disabled={isSaving}
-                    className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50 shrink-0"
+                    className="p-1.5 text-green-600 dark:text-green-400 dark:text-green-400 hover:bg-green-50 rounded transition-colors disabled:opacity-50 shrink-0"
                     title="حفظ"
                   >
                     {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
@@ -968,7 +968,7 @@ export default function ProductsManagerPage() {
                     type="button"
                     onClick={handleCancelEditBarcode}
                     disabled={isSaving}
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50 shrink-0"
+                    className="p-1.5 text-red-600 dark:text-red-400 dark:text-red-400 hover:bg-red-50 rounded transition-colors disabled:opacity-50 shrink-0"
                     title="إلغاء"
                   >
                     <X size={16} />
@@ -976,13 +976,13 @@ export default function ProductsManagerPage() {
                 </>
               ) : (
                 <div className="flex items-center gap-2 group min-w-0 flex-1">
-                  <span className="text-sm text-gray-900 font-mono truncate min-w-0">
-                    {barcode || <span className="text-gray-400">—</span>}
+                  <span className="text-sm text-gray-900 dark:text-white font-mono truncate min-w-0">
+                    {barcode || <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400">—</span>}
                   </span>
                   <button
                     type="button"
                     onClick={(e) => handleStartEditBarcode(product, e)}
-                    className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                    className="p-1.5 text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-700 dark:hover:bg-slate-700 rounded transition-colors shrink-0 opacity-0 group-hover:opacity-100"
                     title="تعديل الباركود"
                   >
                     <Edit2 size={14} />
@@ -1004,9 +1004,9 @@ export default function ProductsManagerPage() {
           const product = row.original;
           const shamelNo = product['Shamel No'] || '';
           return shamelNo ? (
-            <div className="text-sm text-gray-900">{shamelNo}</div>
+            <div className="text-sm text-gray-900 dark:text-white">{shamelNo}</div>
           ) : (
-            <span className="text-gray-400 text-sm">—</span>
+            <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>
           );
         },
       },
@@ -1023,11 +1023,11 @@ export default function ProductsManagerPage() {
           return (
             <div className="flex items-center justify-center">
               {isSerialized ? (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 dark:bg-green-900/30 text-green-800 dark:text-green-300 dark:text-green-300">
                   نعم
                 </span>
               ) : (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 dark:bg-slate-700/50 dark:bg-slate-700/50 text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">
                   لا
                 </span>
               )}
@@ -1051,13 +1051,13 @@ export default function ProductsManagerPage() {
           return (
             <div className="flex flex-col">
               {hasDiscount && (
-                <span className="text-[10px] text-gray-400 line-through">
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 line-through">
                   ₪{originalParsed.toFixed(2)}
                 </span>
               )}
-              <div className={`text-sm font-semibold ${hasDiscount ? 'text-red-600' : 'text-gray-900'}`}>
+              <div className={`text-sm font-semibold ${hasDiscount ? 'text-red-600 dark:text-red-400 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
                 ₪{parseFloat(String(price)).toFixed(2)}
-                {hasDiscount && <span className="mr-1 text-[9px] bg-red-100 text-red-800 px-1 rounded">عرض</span>}
+                {hasDiscount && <span className="mr-1 text-[9px] bg-red-100 dark:bg-red-900/30 dark:bg-red-900/30 text-red-800 dark:text-red-300 dark:text-red-300 px-1 rounded">عرض</span>}
               </div>
             </div>
           );
@@ -1073,12 +1073,12 @@ export default function ProductsManagerPage() {
         minSize: 120,
         cell: ({ row }) => {
           const product = row.original;
-          if (!canViewCost) return <span className="text-gray-400 text-sm">—</span>;
+          if (!canViewCost) return <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>;
           const costPrice = product.CostPrice;
           return costPrice !== undefined && costPrice !== null && String(costPrice) !== '' ? (
-            <div className="text-sm text-gray-600">₪{parseFloat(String(costPrice)).toFixed(2)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">₪{parseFloat(String(costPrice)).toFixed(2)}</div>
           ) : (
-            <span className="text-gray-400 text-sm">—</span>
+            <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>
           );
         },
       },
@@ -1092,9 +1092,9 @@ export default function ProductsManagerPage() {
           const product = row.original;
           const t1Price = product.T1Price;
           return t1Price !== undefined && t1Price !== null && String(t1Price) !== '' ? (
-            <div className="text-sm text-gray-600">₪{parseFloat(String(t1Price)).toFixed(2)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">₪{parseFloat(String(t1Price)).toFixed(2)}</div>
           ) : (
-            <span className="text-gray-400 text-sm">—</span>
+            <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>
           );
         },
       },
@@ -1108,9 +1108,9 @@ export default function ProductsManagerPage() {
           const product = row.original;
           const t2Price = product.T2Price;
           return t2Price !== undefined && t2Price !== null && String(t2Price) !== '' ? (
-            <div className="text-sm text-gray-600">₪{parseFloat(String(t2Price)).toFixed(2)}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">₪{parseFloat(String(t2Price)).toFixed(2)}</div>
           ) : (
-            <span className="text-gray-400 text-sm">—</span>
+            <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>
           );
         },
       },
@@ -1129,29 +1129,29 @@ export default function ProductsManagerPage() {
           const reservedQty = reservedData?.total || 0;
 
           if (warehouseStock === null && shopStock === null && reservedQty === 0) {
-            return <span className="text-gray-400 text-sm">—</span>;
+            return <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>;
           }
 
           return (
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">
               <div className="flex flex-col gap-1">
                 {warehouseStock !== null && (
-                  <span className="text-xs text-gray-500">
-                    م: <span className={`font-medium ${warehouseStock > 0 ? 'text-green-700' : 'text-red-700'
+                  <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">
+                    م: <span className={`font-medium ${warehouseStock > 0 ? 'text-green-700 dark:text-green-400 dark:text-green-400' : 'text-red-700 dark:text-red-400 dark:text-red-400'
                       }`}>{warehouseStock}</span>
                   </span>
                 )}
                 {shopStock !== null && (
-                  <span className="text-xs text-gray-500">
-                    مح: <span className={`font-medium ${shopStock > 0 ? 'text-green-700' : 'text-red-700'
+                  <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">
+                    مح: <span className={`font-medium ${shopStock > 0 ? 'text-green-700 dark:text-green-400 dark:text-green-400' : 'text-red-700 dark:text-red-400 dark:text-red-400'
                       }`}>{shopStock}</span>
                   </span>
                 )}
                 {(warehouseStock || 0) + (shopStock || 0) > 0 && (
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-medium mt-1 ${total > 0
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
+                      ? 'bg-green-100 dark:bg-green-900/30 dark:bg-green-900/30 text-green-800 dark:text-green-300 dark:text-green-300'
+                      : 'bg-red-100 dark:bg-red-900/30 dark:bg-red-900/30 text-red-800 dark:text-red-300 dark:text-red-300'
                       }`}
                   >
                     المجموع: {total}
@@ -1161,7 +1161,7 @@ export default function ProductsManagerPage() {
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setSelectedReservedProduct({ id: product.ProductID || product.id || '', name: product.name || product.Name || '', data: reservedData }); }}
-                    className="px-2 py-1 flex items-center justify-center rounded border border-orange-100 text-xs font-semibold bg-orange-50 text-orange-700 mt-1 w-fit hover:bg-orange-100 transition-colors cursor-pointer"
+                    className="px-2 py-1 flex items-center justify-center rounded border border-orange-100 dark:border-orange-900/30 dark:border-orange-900/30 text-xs font-semibold bg-orange-50 dark:bg-orange-900/20 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 dark:text-orange-400 mt-1 w-fit hover:bg-orange-100 transition-colors cursor-pointer"
                     title="عرض تفاصيل الحجوزات"
                   >
                     محجوز: {reservedQty}
@@ -1185,24 +1185,24 @@ export default function ProductsManagerPage() {
         cell: ({ row }) => {
           const product = row.original;
           const dateStr = product.last_restocked_at || product.LastRestockedAt || product.created_at;
-          if (!dateStr) return <span className="text-gray-400 text-sm">—</span>;
+          if (!dateStr) return <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>;
           try {
             const date = new Date(dateStr);
-            if (isNaN(date.getTime())) return <span className="text-gray-400 text-sm">—</span>;
+            if (isNaN(date.getTime())) return <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>;
             const now = new Date();
             const diffMs = now.getTime() - date.getTime();
             const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
             const formatted = date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', numberingSystem: 'latn' });
             return (
               <div className="text-sm" title={formatted}>
-                <div className="text-gray-900">{formatted}</div>
+                <div className="text-gray-900 dark:text-white">{formatted}</div>
                 {diffDays >= 0 && diffDays <= 15 && (
-                  <span className="text-xs text-green-600 font-medium">جديد</span>
+                  <span className="text-xs text-green-600 dark:text-green-400 dark:text-green-400 font-medium">جديد</span>
                 )}
               </div>
             );
           } catch {
-            return <span className="text-gray-400 text-sm">—</span>;
+            return <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>;
           }
         },
       },
@@ -1216,9 +1216,9 @@ export default function ProductsManagerPage() {
           const product = row.original;
           const type = product.type || product.Type || '';
           return type ? (
-            <div className="text-sm text-gray-900">{type}</div>
+            <div className="text-sm text-gray-900 dark:text-white">{type}</div>
           ) : (
-            <span className="text-gray-400 text-sm">—</span>
+            <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>
           );
         },
       },
@@ -1232,9 +1232,9 @@ export default function ProductsManagerPage() {
           const product = row.original;
           const brand = product.brand || product.Brand || '';
           return brand ? (
-            <div className="text-sm text-gray-900">{brand}</div>
+            <div className="text-sm text-gray-900 dark:text-white">{brand}</div>
           ) : (
-            <span className="text-gray-400 text-sm">—</span>
+            <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>
           );
         },
       },
@@ -1248,9 +1248,9 @@ export default function ProductsManagerPage() {
           const product = row.original;
           const origin = product.Origin || '';
           return origin ? (
-            <div className="text-sm text-gray-900">{origin}</div>
+            <div className="text-sm text-gray-900 dark:text-white">{origin}</div>
           ) : (
-            <span className="text-gray-400 text-sm">—</span>
+            <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>
           );
         },
       },
@@ -1264,9 +1264,9 @@ export default function ProductsManagerPage() {
           const product = row.original;
           const warranty = product.Warranty || '';
           return warranty ? (
-            <div className="text-sm text-gray-900">{warranty}</div>
+            <div className="text-sm text-gray-900 dark:text-white">{warranty}</div>
           ) : (
-            <span className="text-gray-400 text-sm">—</span>
+            <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>
           );
         },
       },
@@ -1280,9 +1280,9 @@ export default function ProductsManagerPage() {
           const product = row.original;
           const size = product.size || product.Size || '';
           return size ? (
-            <div className="text-sm text-gray-900">{size}</div>
+            <div className="text-sm text-gray-900 dark:text-white">{size}</div>
           ) : (
-            <span className="text-gray-400 text-sm">—</span>
+            <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>
           );
         },
       },
@@ -1296,9 +1296,9 @@ export default function ProductsManagerPage() {
           const product = row.original;
           const color = product.color || product.Color || '';
           return color ? (
-            <div className="text-sm text-gray-900">{color}</div>
+            <div className="text-sm text-gray-900 dark:text-white">{color}</div>
           ) : (
-            <span className="text-gray-400 text-sm">—</span>
+            <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>
           );
         },
       },
@@ -1312,9 +1312,9 @@ export default function ProductsManagerPage() {
           const product = row.original;
           const dimension = product.Dimention || '';
           return dimension ? (
-            <div className="text-sm text-gray-900">{dimension}</div>
+            <div className="text-sm text-gray-900 dark:text-white">{dimension}</div>
           ) : (
-            <span className="text-gray-400 text-sm">—</span>
+            <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm">—</span>
           );
         },
       },
@@ -1336,8 +1336,8 @@ export default function ProductsManagerPage() {
                 onClick={(e) => { e.stopPropagation(); handleToggleVisibility(product); }}
                 disabled={isToggling}
                 className={`p-2 rounded-lg transition-colors ${isVisible
-                  ? 'text-green-600 hover:bg-green-50'
-                  : 'text-amber-600 hover:bg-amber-50'
+                  ? 'text-green-600 dark:text-green-400 dark:text-green-400 hover:bg-green-50'
+                  : 'text-amber-600 dark:text-amber-400 dark:text-amber-400 hover:bg-amber-50'
                   } disabled:opacity-50`}
                 title={isVisible ? 'إخفاء من المتجر' : 'إظهار في المتجر'}
               >
@@ -1351,14 +1351,14 @@ export default function ProductsManagerPage() {
               </button>
               <button
                 onClick={() => handleEdit(product)}
-                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-700 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 title="Edit Product"
               >
                 <Edit size={18} />
               </button>
               <button
                 onClick={() => handleGenerateAd(product)}
-                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-700 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 title="Generate Marketing Ad"
               >
                 <Sparkles size={18} />
@@ -1366,7 +1366,7 @@ export default function ProductsManagerPage() {
               {canAccountant && (
                 <button
                   onClick={() => handleDeleteClick(product)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  className="p-2 text-red-600 dark:text-red-400 dark:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
                   title="Delete Product"
                 >
                   <Trash size={18} />
@@ -1463,8 +1463,8 @@ export default function ProductsManagerPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">المنتجات</h1>
-                <p className="text-sm sm:text-base text-gray-600 mt-1">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">المنتجات</h1>
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400 mt-1">
                   إدارة مخزون المنتجات ({products.length} منتج)
                 </p>
               </div>
@@ -1473,7 +1473,7 @@ export default function ProductsManagerPage() {
                   <button
                     onClick={refreshFromDatabase}
                     disabled={loading}
-                    className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700 disabled:opacity-50"
+                    className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 dark:bg-slate-700/50 dark:hover:bg-slate-700/50 dark:hover:bg-slate-700/50 transition-colors font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-300 disabled:opacity-50"
                     title="تحديث كاش المنتجات من قاعدة البيانات (يُحدّث القائمة لجميع زوار المتجر)"
                   >
                     <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
@@ -1482,7 +1482,7 @@ export default function ProductsManagerPage() {
                 )}
                 <button
                   onClick={handleAddNew}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 dark:bg-slate-700 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 dark:hover:bg-slate-600 transition-colors font-medium"
                 >
                   <Plus size={20} />
                   <span>إضافة منتج جديد</span>
@@ -1496,20 +1496,20 @@ export default function ProductsManagerPage() {
                 <div className="flex-1 relative">
                   <Search
                     size={18}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400"
                   />
                   <input
                     type="text"
                     placeholder="البحث بالاسم، الرمز، الباركود، أو العلامة التجارية..."
                     value={searchInput}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 text-sm sm:text-base"
+                    className="w-full pr-10 pl-3 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white dark:focus:ring-gray-100 dark:focus:ring-gray-100 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 dark:text-gray-400 dark:placeholder:text-gray-400 dark:placeholder:text-gray-400 text-sm sm:text-base"
                     dir="rtl"
                   />
                   {searchInput && (
                     <button
                       onClick={() => handleSearchChange('')}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:text-gray-300"
                     >
                       <X size={18} />
                     </button>
@@ -1525,12 +1525,12 @@ export default function ProductsManagerPage() {
                       onClick={() => {
                         setIsColumnVisibilityOpen(!isColumnVisibilityOpen);
                       }}
-                      className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors text-sm font-medium text-gray-700 whitespace-nowrap cursor-pointer"
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 dark:bg-slate-700/50 dark:hover:bg-slate-700/50 dark:hover:bg-slate-700/50 active:bg-gray-100 dark:bg-slate-700 transition-colors text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-300 whitespace-nowrap cursor-pointer"
                     >
                       <Eye size={16} />
                       <span>الأعمدة</span>
                       {Object.values(columnVisibility).some((v) => !v) && (
-                        <span className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full text-xs">
+                        <span className="px-2 py-0.5 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-300 rounded-full text-xs">
                           {Object.values(columnVisibility).filter((v) => !v).length}
                         </span>
                       )}
@@ -1543,16 +1543,16 @@ export default function ProductsManagerPage() {
                           onClick={() => setIsColumnVisibilityOpen(false)}
                         />
                         <div
-                          className="absolute left-0 top-full mt-2 w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-[100] p-3 max-h-96 overflow-y-auto"
+                          className="absolute left-0 top-full mt-2 w-64 bg-white dark:bg-slate-800 dark:bg-slate-800 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg shadow-lg z-[100] p-3 max-h-96 overflow-y-auto"
                           dir="rtl"
                           onClick={(e) => e.stopPropagation()}
                           style={{ position: 'absolute' }}
                         >
                           <div className="flex items-center justify-between mb-3">
-                            <h3 className="font-semibold text-gray-900 text-sm">إظهار/إخفاء الأعمدة</h3>
+                            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">إظهار/إخفاء الأعمدة</h3>
                             <button
                               onClick={() => setIsColumnVisibilityOpen(false)}
-                              className="p-1 hover:bg-gray-100 rounded"
+                              className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-700 dark:hover:bg-slate-700 rounded"
                             >
                               <X size={16} />
                             </button>
@@ -1574,7 +1574,7 @@ export default function ProductsManagerPage() {
                                 return (
                                   <label
                                     key={columnId}
-                                    className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                                    className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 dark:bg-slate-700/50 dark:hover:bg-slate-700/50 dark:hover:bg-slate-700/50 p-2 rounded"
                                   >
                                     <input
                                       type="checkbox"
@@ -1592,12 +1592,12 @@ export default function ProductsManagerPage() {
                                           }
                                         }
                                       }}
-                                      className="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
+                                      className="w-4 h-4 text-gray-900 dark:text-white border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded focus:ring-gray-900 dark:focus:ring-white dark:focus:ring-gray-100 dark:focus:ring-gray-100"
                                     />
-                                    <span className="text-sm text-gray-700 flex-1">
+                                    <span className="text-sm text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-300 flex-1">
                                       {headerText}
                                     </span>
-                                    {isVisible && <Check size={14} className="text-gray-600" />}
+                                    {isVisible && <Check size={14} className="text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400" />}
                                   </label>
                                 );
                               })}
@@ -1615,14 +1615,14 @@ export default function ProductsManagerPage() {
         {/* Desktop Table View */}
         <div className="hidden md:block">
           {loading ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-              <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">جاري التحميل...</p>
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700 p-12 text-center">
+              <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">جاري التحميل...</p>
             </div>
           ) : filteredProducts.length === 0 && !searchQuery ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-              <Package size={48} className="text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">لا توجد منتجات</p>
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700 p-12 text-center">
+              <Package size={48} className="text-gray-300 dark:text-gray-600 dark:text-gray-400 dark:text-gray-600 dark:text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400 text-lg">لا توجد منتجات</p>
             </div>
           ) : (
             <DataTable
@@ -1647,19 +1647,19 @@ export default function ProductsManagerPage() {
         {/* Mobile Card View */}
         <div className="md:hidden space-y-3">
           {loading ? (
-            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-              <div className="flex items-center justify-center gap-2 text-gray-500">
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700 rounded-lg p-8 text-center">
+              <div className="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">
                 <Loader2 className="animate-spin" size={20} />
                 <span>جاري التحميل...</span>
               </div>
             </div>
           ) : filteredProducts.length === 0 ? (
-            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center text-gray-500">
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700 rounded-lg p-8 text-center text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">
               {searchQuery ? 'لا توجد نتائج للبحث' : 'لا توجد منتجات'}
             </div>
           ) : isPending ? (
-            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-              <div className="flex items-center justify-center gap-2 text-gray-500">
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700 rounded-lg p-8 text-center">
+              <div className="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">
                 <Loader2 className="animate-spin" size={20} />
                 <span>جاري البحث...</span>
               </div>
@@ -1691,21 +1691,21 @@ export default function ProductsManagerPage() {
 
               {/* Mobile Pagination */}
               {totalMobilePages > 1 && (
-                <div className="flex items-center justify-between gap-4 pt-4 pb-2 border-t border-gray-200 bg-white sticky bottom-0 z-10">
+                <div className="flex items-center justify-between gap-4 pt-4 pb-2 border-t border-gray-200 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 sticky bottom-0 z-10">
                   <button
                     onClick={() => setMobilePage((prev) => Math.max(1, prev - 1))}
                     disabled={mobilePage === 1}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-gray-900"
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-700 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-gray-900 dark:text-white"
                   >
                     <ChevronRight size={16} />
                     السابق
                   </button>
 
-                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-300">
                     <span className="font-medium">
                       صفحة {mobilePage} من {totalMobilePages}
                     </span>
-                    <span className="text-gray-500">
+                    <span className="text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">
                       ({filteredProducts.length} منتج)
                     </span>
                   </div>
@@ -1713,7 +1713,7 @@ export default function ProductsManagerPage() {
                   <button
                     onClick={() => setMobilePage((prev) => Math.min(totalMobilePages, prev + 1))}
                     disabled={mobilePage === totalMobilePages}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-gray-900"
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-700 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-gray-900 dark:text-white"
                   >
                     التالي
                     <ChevronLeft size={16} />
@@ -1727,28 +1727,28 @@ export default function ProductsManagerPage() {
         {/* Delete confirmation modal */}
         {deleteTarget && (
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" dir="rtl">
-            <div className="bg-white w-full max-w-lg rounded-lg shadow-2xl p-6 relative">
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 w-full max-w-lg rounded-lg shadow-2xl p-6 relative">
               <button
                 onClick={closeDeleteModal}
-                className="absolute top-3 left-3 p-2 rounded-full hover:bg-gray-100"
+                className="absolute top-3 left-3 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-700 dark:hover:bg-slate-700"
               >
                 <X size={20} />
               </button>
 
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">حذف المنتج</h3>
-              <p className="text-sm text-gray-600 mb-4">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">حذف المنتج</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400 mb-4">
                 هل أنت متأكد من حذف المنتج "{deleteTarget.Name || deleteTarget.name || deleteTarget.ProductID}"؟
                 سيتم منع الحذف إذا كان المنتج مستخدمًا في الفواتير أو العروض.
               </p>
 
               {deleteState.error && (
-                <div className="mb-3 p-3 rounded-lg bg-red-50 text-red-700 text-sm border border-red-200">
+                <div className="mb-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 dark:bg-red-900/20 text-red-700 dark:text-red-400 dark:text-red-400 text-sm border border-red-200">
                   {deleteState.error}
                 </div>
               )}
 
               {deleteState.status === 'deleted' && (
-                <div className="mb-3 p-3 rounded-lg bg-green-50 text-green-700 text-sm border border-green-200">
+                <div className="mb-3 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 dark:bg-green-900/20 text-green-700 dark:text-green-400 dark:text-green-400 text-sm border border-green-200">
                   تم حذف المنتج بنجاح.
                 </div>
               )}
@@ -1771,7 +1771,7 @@ export default function ProductsManagerPage() {
                   {deleteState.references.quotations.length > 0 && (
                     <div>عروض سعرية: {deleteState.references.quotations.join(', ')}</div>
                   )}
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">
                     عدّل الفواتير أو استبدل المنتج بمنتج آخر ثم حاول الحذف مجددًا.
                   </p>
                 </div>
@@ -1787,7 +1787,7 @@ export default function ProductsManagerPage() {
                 </button>
                 <button
                   onClick={closeDeleteModal}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 dark:bg-slate-700/50 dark:hover:bg-slate-700/50 dark:hover:bg-slate-700/50"
                   disabled={deleteState.loading}
                 >
                   إلغاء
@@ -1843,7 +1843,7 @@ export default function ProductsManagerPage() {
         >
           <button
             onClick={(e) => { e.stopPropagation(); closeImageLightbox(); }}
-            className="absolute top-4 right-4 z-10 p-2 bg-white/90 hover:bg-white rounded-full text-gray-900 transition-all shadow-lg"
+            className="absolute top-4 right-4 z-10 p-2 bg-white dark:bg-slate-800 dark:bg-slate-800/90 hover:bg-white dark:bg-slate-800 rounded-full text-gray-900 dark:text-white transition-all shadow-lg"
             title="إغلاق (ESC)"
           >
             <X size={24} />
@@ -1855,7 +1855,7 @@ export default function ProductsManagerPage() {
                   e.stopPropagation();
                   setLightboxImageIndex((prev) => (prev === 0 ? lightboxProductImages.length - 1 : prev - 1));
                 }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/90 hover:bg-white rounded-full text-gray-900 transition-all shadow-lg"
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-white dark:bg-slate-800 dark:bg-slate-800/90 hover:bg-white dark:bg-slate-800 rounded-full text-gray-900 dark:text-white transition-all shadow-lg"
                 title="الصورة السابقة (←)"
               >
                 <ChevronRight size={28} />
@@ -1865,7 +1865,7 @@ export default function ProductsManagerPage() {
                   e.stopPropagation();
                   setLightboxImageIndex((prev) => (prev === lightboxProductImages.length - 1 ? 0 : prev + 1));
                 }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/90 hover:bg-white rounded-full text-gray-900 transition-all shadow-lg"
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-white dark:bg-slate-800 dark:bg-slate-800/90 hover:bg-white dark:bg-slate-800 rounded-full text-gray-900 dark:text-white transition-all shadow-lg"
                 title="الصورة التالية (→)"
               >
                 <ChevronLeft size={28} />
@@ -1890,7 +1890,7 @@ export default function ProductsManagerPage() {
                 <button
                   key={idx}
                   onClick={() => setLightboxImageIndex(idx)}
-                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all hover:opacity-100 bg-white ${lightboxImageIndex === idx ? 'border-white shadow-lg opacity-100' : 'border-white/50 opacity-70'
+                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all hover:opacity-100 bg-white dark:bg-slate-800 dark:bg-slate-800 ${lightboxImageIndex === idx ? 'border-white shadow-lg opacity-100' : 'border-white/50 opacity-70'
                     }`}
                 >
                   <img src={img} alt="" className="w-full h-full object-contain" />
@@ -1903,24 +1903,24 @@ export default function ProductsManagerPage() {
       {/* Reserved Quotations Modal */}
       {selectedReservedProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setSelectedReservedProduct(null)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50/50">
+          <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-slate-700/50 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-700/50 dark:bg-slate-800/50 dark:bg-slate-800/50/50">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">تفاصيل الحجوزات للمنتج</h3>
-                <p className="text-sm text-gray-500 mt-0.5">{selectedReservedProduct.name}</p>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">تفاصيل الحجوزات للمنتج</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400 mt-0.5">{selectedReservedProduct.name}</p>
               </div>
               <button
                 onClick={() => setSelectedReservedProduct(null)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-700 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
 
             <div className="p-4 flex-1 overflow-y-auto">
-              <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
-                <span className="text-sm font-medium text-gray-600">إجمالي الكمية المحجوزة:</span>
-                <span className="text-sm font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100">
+              <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100 dark:border-slate-700/50 dark:border-slate-700/50">
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">إجمالي الكمية المحجوزة:</span>
+                <span className="text-sm font-bold text-orange-600 dark:text-orange-400 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 dark:bg-orange-900/20 px-3 py-1 rounded-full border border-orange-100 dark:border-orange-900/30 dark:border-orange-900/30">
                   {selectedReservedProduct.data?.total || 0}
                 </span>
               </div>
@@ -1931,17 +1931,17 @@ export default function ProductsManagerPage() {
                     const content = (
                       <>
                         <div className="flex flex-col gap-1 items-start">
-                          <span className={`text-sm font-semibold text-gray-900 ${canAccessQuotations ? 'group-hover:text-blue-700 transition-colors' : ''}`}>عرض السعر: {detail.id}</span>
+                          <span className={`text-sm font-semibold text-gray-900 dark:text-white ${canAccessQuotations ? 'group-hover:text-blue-700 transition-colors' : ''}`}>عرض السعر: {detail.id}</span>
                           {detail.customerName && (
-                            <span className="text-xs font-medium text-gray-600">الزبون: {detail.customerName}</span>
+                            <span className="text-xs font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">الزبون: {detail.customerName}</span>
                           )}
                           {canAccessQuotations && (
-                            <span className="text-xs text-gray-400">انقر لفتح وتعديل العرض</span>
+                            <span className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400">انقر لفتح وتعديل العرض</span>
                           )}
                         </div>
-                        <div className={`flex flex-col items-center justify-center bg-gray-100 ${canAccessQuotations ? 'group-hover:bg-white' : ''} rounded-md px-3 py-1.5 min-w-[3rem]`}>
-                          <span className="text-[10px] text-gray-400 mb-0.5">الكمية</span>
-                          <span className="text-sm font-bold text-gray-900">{detail.quantity}</span>
+                        <div className={`flex flex-col items-center justify-center bg-gray-100 dark:bg-slate-700 dark:bg-slate-700/50 dark:bg-slate-700/50 ${canAccessQuotations ? 'group-hover:bg-white dark:bg-slate-800' : ''} rounded-md px-3 py-1.5 min-w-[3rem]`}>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 mb-0.5">الكمية</span>
+                          <span className="text-sm font-bold text-gray-900 dark:text-white">{detail.quantity}</span>
                         </div>
                       </>
                     );
@@ -1953,14 +1953,14 @@ export default function ProductsManagerPage() {
                           setSelectedReservedProduct(null);
                           router.push(`/admin/quotations/${detail.id}`);
                         }}
-                        className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-sm transition-all text-right group"
+                        className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700 hover:border-blue-300 hover:bg-blue-50 hover:shadow-sm transition-all text-right group"
                       >
                         {content}
                       </button>
                     ) : (
                       <div
                         key={idx}
-                        className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 text-right opacity-80"
+                        className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50 dark:bg-slate-800/50 dark:bg-slate-800/50 text-right opacity-80"
                       >
                         {content}
                       </div>
@@ -1968,16 +1968,16 @@ export default function ProductsManagerPage() {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500 text-sm">
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400 text-sm">
                   لا توجد تفاصيل متاحة.
                 </div>
               )}
             </div>
 
-            <div className="p-4 border-t border-gray-100 bg-gray-50">
+            <div className="p-4 border-t border-gray-100 dark:border-slate-700/50 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-700/50 dark:bg-slate-800/50 dark:bg-slate-800/50">
               <button
                 onClick={() => setSelectedReservedProduct(null)}
-                className="w-full py-2.5 px-4 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium text-sm"
+                className="w-full py-2.5 px-4 bg-gray-900 dark:bg-slate-700 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 dark:hover:bg-slate-600 transition-colors font-medium text-sm"
               >
                 إغلاق
               </button>

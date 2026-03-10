@@ -440,7 +440,7 @@ export default function ShopCashBoxPage() {
     return (
       <AdminLayout>
         <div className="p-6 text-center">
-          <p className="text-red-600">ليس لديك صلاحية للوصول إلى هذه الصفحة</p>
+          <p className="text-red-600 dark:text-red-400">ليس لديك صلاحية للوصول إلى هذه الصفحة</p>
         </div>
       </AdminLayout>
     );
@@ -863,8 +863,8 @@ export default function ShopCashBoxPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">جاري تحميل بيانات الصندوق...</p>
+            <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">جاري تحميل بيانات الصندوق...</p>
           </div>
         </div>
       </AdminLayout>
@@ -877,8 +877,8 @@ export default function ShopCashBoxPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cairo">صندوق المحل</h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base font-cairo">سجل مالي مستمر للمحل</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 font-cairo">صندوق المحل</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm sm:text-base font-cairo">سجل مالي مستمر للمحل</p>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
@@ -922,8 +922,8 @@ export default function ShopCashBoxPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
-            <p className="text-red-700 text-sm sm:text-base font-cairo">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-3 sm:p-4">
+            <p className="text-red-700 dark:text-red-400 text-sm sm:text-base font-cairo">{error}</p>
           </div>
         )}
 
@@ -952,13 +952,13 @@ export default function ShopCashBoxPage() {
         )}
 
         {/* أزرار سريعة */}
-        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
-          <p className="text-xs sm:text-sm text-gray-500 mb-2 font-cairo">أزرار سريعة</p>
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-2 font-cairo">أزرار سريعة</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={openQuickPaymentToWarehouse}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-amber-100 text-amber-900 border border-amber-300 rounded-lg hover:bg-amber-200 transition-colors text-sm font-medium font-cairo"
+              className="inline-flex items-center gap-2 px-3 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors text-sm font-medium font-cairo"
               title="سند صرف إلى المخزن - زبون CUS-1003 (افتراضي: كامل النقدي والشيكات)"
             >
               <ArrowDown size={16} />
@@ -967,7 +967,7 @@ export default function ShopCashBoxPage() {
             <button
               type="button"
               onClick={openQuickReceiptForInvoicesTotal}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-lg hover:bg-emerald-200 transition-colors text-sm font-medium font-cairo"
+              className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors text-sm font-medium font-cairo"
               title="سند قبض - مجموع الفواتير النقدية لليوم - زبون CUS-0896"
             >
               <ArrowUp size={16} />
@@ -976,7 +976,7 @@ export default function ShopCashBoxPage() {
             <button
               type="button"
               onClick={() => openQuickPayment('CUS-0778')}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-rose-100 text-rose-900 border border-rose-300 rounded-lg hover:bg-rose-200 transition-colors text-sm font-medium font-cairo"
+              className="inline-flex items-center gap-2 px-3 py-2 bg-rose-100 dark:bg-rose-900/30 text-rose-900 dark:text-rose-300 border border-rose-300 dark:border-rose-800 rounded-lg hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors text-sm font-medium font-cairo"
               title="سند صرف فيزا - زبون CUS-0778"
             >
               <ArrowDown size={16} />
@@ -986,23 +986,23 @@ export default function ShopCashBoxPage() {
         </div>
 
         {/* Search Bar */}
-        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-3 sm:p-4">
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="flex-1 relative">
-              <Search size={18} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 sm:w-5 sm:h-5" />
+              <Search size={18} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 sm:w-5 sm:h-5" />
               <input
                 type="text"
                 placeholder="البحث عن سند..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-3 sm:px-4 py-2 pr-9 sm:pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 text-sm sm:text-base font-cairo"
+                className="w-full px-3 sm:px-4 py-2 pr-9 sm:pr-10 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 text-sm sm:text-base font-cairo"
                 dir="rtl"
               />
             </div>
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="p-2 text-gray-600 hover:text-gray-900 transition-colors flex-shrink-0"
+                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 transition-colors flex-shrink-0"
                 title="مسح البحث"
               >
                 <X size={18} className="sm:w-5 sm:h-5" />
@@ -1010,29 +1010,29 @@ export default function ShopCashBoxPage() {
             )}
           </div>
           {searchQuery && (
-            <div className="mt-2 text-xs sm:text-sm text-gray-600 font-cairo">
+            <div className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-cairo">
               تم العثور على <span className="font-semibold">{transactionsWithBalance.length}</span> سند
             </div>
           )}
           {transactionsWithBalance.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-200 flex flex-wrap items-center gap-2 font-cairo">
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700 flex flex-wrap items-center gap-2 font-cairo">
               <button
                 type="button"
                 onClick={selectAllOnPage}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+                className="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 text-gray-700 dark:text-gray-300"
               >
                 تحديد كل الصفحة
               </button>
               <button
                 type="button"
                 onClick={clearPrintSelection}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+                className="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 text-gray-700 dark:text-gray-300"
               >
                 إلغاء التحديد
               </button>
               {selectedForPrint.size > 0 && (
                 <>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
                     تم تحديد <span className="font-semibold">{selectedForPrint.size}</span> سند
                   </span>
                   <button
@@ -1051,9 +1051,9 @@ export default function ShopCashBoxPage() {
 
         {/* Transactions */}
         {transactionsWithBalance.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-8 sm:p-12 text-center">
-            <Wallet size={40} className="sm:w-12 sm:h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 text-base sm:text-lg font-cairo">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-8 sm:p-12 text-center">
+            <Wallet size={40} className="sm:w-12 sm:h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg font-cairo">
               {searchQuery ? 'لم يتم العثور على سندات تطابق البحث' : 'لا توجد معاملات مالية'}
             </p>
           </div>
@@ -1073,68 +1073,68 @@ export default function ShopCashBoxPage() {
                 const username = userId && userMap.has(userId) ? userMap.get(userId) : null;
 
                 return (
-                  <div key={tx.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <div key={tx.id} className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4 shadow-sm">
                     {/* Header Row */}
-                    <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
+                    <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200 dark:border-slate-700">
                       <div className="flex items-center gap-2 flex-shrink-0 pt-0.5">
                         <input
                           type="checkbox"
                           checked={selectedForPrint.has(getSelectKey(tx))}
                           onChange={() => toggleSelectForPrint(tx)}
-                          className="rounded border-gray-300"
+                          className="rounded border-gray-300 dark:border-slate-600"
                           title="تحديد للطباعة"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-base font-bold text-gray-900 font-cairo">
+                          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 font-cairo">
                             #{tx.receipt_id || tx.payment_id || tx.id || '—'}
                           </h3>
                           {tx.direction === 'in' ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 font-cairo">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-cairo">
                               <ArrowUp size={12} />
                               قبض
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 font-cairo">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 font-cairo">
                               <ArrowDown size={12} />
                               صرف
                             </span>
                           )}
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-cairo ${tx.isSettled
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                              : 'bg-gray-100 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200'
                               }`}
                           >
                             {tx.isSettled ? 'مرحلة' : 'غير مرحلة'}
                           </span>
                         </div>
                         {username && (
-                          <div className="text-xs text-gray-500 font-cairo">{username}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo">{username}</div>
                         )}
                       </div>
                     </div>
 
                     {/* Date */}
                     <div className="mb-3">
-                      <div className="text-xs text-gray-500 font-cairo mb-1">التاريخ</div>
-                      <div className="text-sm text-gray-900 font-cairo">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mb-1">التاريخ</div>
+                      <div className="text-sm text-gray-900 dark:text-gray-100 font-cairo">
                         {formatDate(tx.date)}
                         {tx.created_at && (
-                          <div className="text-xs text-gray-500 mt-0.5">{formatTime(tx.created_at)}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatTime(tx.created_at)}</div>
                         )}
                       </div>
                     </div>
 
                     {/* Customer */}
                     <div className="mb-3">
-                      <div className="text-xs text-gray-500 font-cairo mb-1">الزبون</div>
-                      <div className="text-sm text-gray-900 font-cairo">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mb-1">الزبون</div>
+                      <div className="text-sm text-gray-900 dark:text-gray-100 font-cairo">
                         {customerId ? (
                           <button
                             onClick={() => router.push(`/admin/customers/${customerId}`)}
-                            className="text-blue-600 hover:text-blue-800 hover:underline transition-colors font-cairo"
+                            className="text-blue-600 hover:text-blue-800 dark:text-white dark:hover:text-gray-300 hover:underline transition-colors font-cairo"
                           >
                             {customerName}
                           </button>
@@ -1142,7 +1142,7 @@ export default function ShopCashBoxPage() {
                           <div>{customerName}</div>
                         )}
                         {shamelNo && (
-                          <div className="text-[10px] text-gray-400 mt-0.5 leading-none font-cairo">
+                          <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 leading-none font-cairo">
                             {shamelNo}
                           </div>
                         )}
@@ -1151,38 +1151,38 @@ export default function ShopCashBoxPage() {
 
                     {/* Amounts */}
                     <div className="mb-3">
-                      <div className="text-xs text-gray-500 font-cairo mb-1">المبالغ</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mb-1">المبالغ</div>
                       <div className="space-y-1">
                         {tx.direction === 'in' ? (
                           <>
                             {tx.cash_amount > 0 && (
-                              <div className="text-sm font-semibold text-green-700 font-cairo">
+                              <div className="text-sm font-semibold text-green-700 dark:text-green-400 font-cairo">
                                 نقدي: {formatCurrency(tx.cash_amount)}
                               </div>
                             )}
                             {tx.check_amount > 0 && (
-                              <div className="text-sm font-semibold text-green-700 font-cairo">
+                              <div className="text-sm font-semibold text-green-700 dark:text-green-400 font-cairo">
                                 شيك: {formatCurrency(tx.check_amount)}
                               </div>
                             )}
                             {tx.cash_amount === 0 && tx.check_amount === 0 && (
-                              <span className="text-gray-400 text-sm font-cairo">—</span>
+                              <span className="text-gray-400 dark:text-gray-500 text-sm font-cairo">—</span>
                             )}
                           </>
                         ) : (
                           <>
                             {tx.cash_amount > 0 && (
-                              <div className="text-sm font-semibold text-red-700 font-cairo">
+                              <div className="text-sm font-semibold text-red-700 dark:text-red-400 font-cairo">
                                 نقدي: {formatCurrency(tx.cash_amount)}
                               </div>
                             )}
                             {tx.check_amount > 0 && (
-                              <div className="text-sm font-semibold text-red-700 font-cairo">
+                              <div className="text-sm font-semibold text-red-700 dark:text-red-400 font-cairo">
                                 شيك: {formatCurrency(tx.check_amount)}
                               </div>
                             )}
                             {tx.cash_amount === 0 && tx.check_amount === 0 && (
-                              <span className="text-gray-400 text-sm font-cairo">—</span>
+                              <span className="text-gray-400 dark:text-gray-500 text-sm font-cairo">—</span>
                             )}
                           </>
                         )}
@@ -1193,14 +1193,14 @@ export default function ShopCashBoxPage() {
                     {canViewBalance && (
                       <div className="mb-3 grid grid-cols-2 gap-2">
                         <div>
-                          <div className="text-xs text-gray-500 font-cairo mb-1">الرصيد النقدي</div>
-                          <div className={`text-sm font-semibold font-cairo ${tx.cash_balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mb-1">الرصيد النقدي</div>
+                          <div className={`text-sm font-semibold font-cairo ${tx.cash_balance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400'}`}>
                             {formatCurrency(tx.cash_balance)}
                           </div>
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500 font-cairo mb-1">رصيد الشيكات</div>
-                          <div className={`text-sm font-semibold font-cairo ${tx.check_balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mb-1">رصيد الشيكات</div>
+                          <div className={`text-sm font-semibold font-cairo ${tx.check_balance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400'}`}>
                             {formatCurrency(tx.check_balance)}
                           </div>
                         </div>
@@ -1210,15 +1210,15 @@ export default function ShopCashBoxPage() {
                     {/* Notes */}
                     {tx.notes && tx.notes.trim() && (
                       <div className="mb-3">
-                        <div className="text-xs text-gray-500 font-cairo mb-1">ملاحظات</div>
-                        <div className="text-xs text-gray-600 bg-blue-50 rounded px-2 py-1 border-r-2 border-blue-300 font-cairo">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mb-1">ملاحظات</div>
+                        <div className="text-xs text-gray-600 dark:text-gray-300 bg-blue-50 dark:bg-slate-700/50 rounded px-2 py-1 border-r-2 border-blue-300 dark:border-slate-500 font-cairo">
                           {tx.notes}
                         </div>
                       </div>
                     )}
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+                    <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-slate-700">
                       <button
                         onClick={() => {
                           if (isMobilePrint()) {
@@ -1229,14 +1229,14 @@ export default function ShopCashBoxPage() {
                           if (tx.receipt_id) setPrintOverlaySlip({ type: 'receipt', id: tx.receipt_id });
                           else if (tx.payment_id) setPrintOverlaySlip({ type: 'payment', id: tx.payment_id });
                         }}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
                         title="طباعة"
                       >
                         <Printer size={18} />
                       </button>
                       <button
                         onClick={() => handleShareToWhatsApp(tx)}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 rounded-lg transition-colors"
                         title="مشاركة عبر واتساب"
                       >
                         <MessageSquare size={18} />
@@ -1294,8 +1294,8 @@ export default function ShopCashBoxPage() {
                         }}
                         disabled={tx.isSettled}
                         className={`p-2 rounded-lg transition-colors ${tx.isSettled
-                          ? 'text-gray-400 cursor-not-allowed opacity-50'
-                          : 'text-gray-600 hover:bg-gray-100'
+                          ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
                           }`}
                         title={tx.isSettled ? 'لا يمكن تعديل سند مرحلة' : 'تعديل'}
                       >
@@ -1305,7 +1305,7 @@ export default function ShopCashBoxPage() {
                         <button
                           onClick={() => handleMarkAsSettled(tx)}
                           disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="تغيير إلى مرحلة"
                         >
                           {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
@@ -1319,7 +1319,7 @@ export default function ShopCashBoxPage() {
                         <button
                           onClick={() => handleMarkAsUnsettled(tx)}
                           disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
-                          className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-2 text-orange-600 dark:text-orange-400 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="إعادة إلى غير مرحلة"
                         >
                           {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
@@ -1331,7 +1331,7 @@ export default function ShopCashBoxPage() {
                       )}
                       <button
                         onClick={() => handleDelete(tx)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
                         title="حذف"
                       >
                         <Trash2 size={18} />
@@ -1343,10 +1343,10 @@ export default function ShopCashBoxPage() {
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden md:block bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="hidden md:block bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
                     <tr>
                       <th className="px-2 py-3 text-center w-10">
                         <input
@@ -1356,54 +1356,54 @@ export default function ShopCashBoxPage() {
                             if (e.target.checked) selectAllOnPage();
                             else clearPrintSelection();
                           }}
-                          className="rounded border-gray-300"
+                          className="rounded border-gray-300 dark:border-slate-600"
                           title="تحديد كل الصفحة"
                         />
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         رقم السند
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         التاريخ
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         النوع
                       </th>
-                      <th colSpan={2} className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th colSpan={2} className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         البيان/الطرف
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         المبالغ
                       </th>
                       {canViewBalance && (
                         <>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                             الرصيد النقدي
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                             رصيد الشيكات
                           </th>
                         </>
                       )}
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         الإجراءات
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {paginatedTransactions.map((tx) => (
-                      <tr key={tx.id} className="hover:bg-gray-200 transition-colors">
+                      <tr key={tx.id} className="hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
                         <td className="px-2 py-3 text-center w-10 align-middle">
                           <input
                             type="checkbox"
                             checked={selectedForPrint.has(getSelectKey(tx))}
                             onChange={() => toggleSelectForPrint(tx)}
-                            className="rounded border-gray-300"
+                            className="rounded border-gray-300 dark:border-slate-600"
                             title="تحديد للطباعة"
                           />
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div className="font-medium text-gray-900 font-cairo">
+                          <div className="font-medium text-gray-900 dark:text-gray-100 font-cairo">
                             {tx.receipt_id || tx.payment_id || tx.id || '—'}
                           </div>
                           {(() => {
@@ -1411,7 +1411,7 @@ export default function ShopCashBoxPage() {
                             if (userId && userMap.has(userId)) {
                               const username = userMap.get(userId);
                               return (
-                                <div className="text-xs text-gray-500 mt-1 font-cairo">
+                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-cairo">
                                   {username}
                                 </div>
                               );
@@ -1420,30 +1420,30 @@ export default function ShopCashBoxPage() {
                           })()}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div className="text-gray-600 font-cairo">
+                          <div className="text-gray-600 dark:text-gray-400 font-cairo">
                             <div>{formatDate(tx.date)}</div>
                             {tx.created_at && (
-                              <div className="text-xs text-gray-500 mt-0.5 font-cairo">{formatTime(tx.created_at)}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-cairo">{formatTime(tx.created_at)}</div>
                             )}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex flex-col gap-1.5 items-end">
                             {tx.direction === 'in' ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                                 <ArrowUp size={12} />
                                 قبض
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
                                 <ArrowDown size={12} />
                                 صرف
                               </span>
                             )}
                             <span
                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${tx.isSettled
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                : 'bg-gray-100 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200'
                                 }`}
                             >
                               {tx.isSettled ? 'مرحلة' : 'غير مرحلة'}
@@ -1451,7 +1451,7 @@ export default function ShopCashBoxPage() {
                           </div>
                         </td>
                         <td colSpan={2} className="px-4 py-3 text-right">
-                          <div className="text-gray-900">
+                          <div className="text-gray-900 dark:text-gray-100">
                             {(() => {
                               const customerId = tx.customer_id || tx.related_party || '';
                               const customerName = customerId && customerMap.has(customerId)
@@ -1478,7 +1478,7 @@ export default function ShopCashBoxPage() {
                                           window.open(`/admin/customers/${customerId}`, '_blank', 'noopener,noreferrer');
                                         }
                                       }}
-                                      className="text-blue-600 hover:text-blue-800 hover:underline transition-colors text-right font-medium"
+                                      className="text-blue-600 hover:text-blue-800 dark:text-white dark:hover:text-gray-300 hover:underline transition-colors text-right font-medium"
                                       title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
                                     >
                                       {customerName}
@@ -1487,7 +1487,7 @@ export default function ShopCashBoxPage() {
                                     <div>{customerName}</div>
                                   )}
                                   {shamelNo && (
-                                    <div className="text-[10px] text-gray-400 mt-0.5 leading-none">
+                                    <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 leading-none">
                                       {shamelNo}
                                     </div>
                                   )}
@@ -1501,30 +1501,30 @@ export default function ShopCashBoxPage() {
                             {tx.direction === 'in' ? (
                               <>
                                 {tx.cash_amount > 0 && (
-                                  <div className="text-sm font-semibold text-green-700">
+                                  <div className="text-sm font-semibold text-green-700 dark:text-green-400">
                                     نقدي: {formatCurrency(tx.cash_amount)}
                                   </div>
                                 )}
                                 {tx.check_amount > 0 && (
-                                  <div className="text-sm font-semibold text-green-700">
+                                  <div className="text-sm font-semibold text-green-700 dark:text-green-400">
                                     شيك: {formatCurrency(tx.check_amount)}
                                   </div>
                                 )}
-                                {tx.cash_amount === 0 && tx.check_amount === 0 && <span className="text-gray-400">—</span>}
+                                {tx.cash_amount === 0 && tx.check_amount === 0 && <span className="text-gray-400 dark:text-gray-500">—</span>}
                               </>
                             ) : (
                               <>
                                 {tx.cash_amount > 0 && (
-                                  <div className="text-sm font-semibold text-red-700">
+                                  <div className="text-sm font-semibold text-red-700 dark:text-red-400">
                                     نقدي: {formatCurrency(tx.cash_amount)}
                                   </div>
                                 )}
                                 {tx.check_amount > 0 && (
-                                  <div className="text-sm font-semibold text-red-700">
+                                  <div className="text-sm font-semibold text-red-700 dark:text-red-400">
                                     شيك: {formatCurrency(tx.check_amount)}
                                   </div>
                                 )}
-                                {tx.cash_amount === 0 && tx.check_amount === 0 && <span className="text-gray-400">—</span>}
+                                {tx.cash_amount === 0 && tx.check_amount === 0 && <span className="text-gray-400 dark:text-gray-500">—</span>}
                               </>
                             )}
                           </div>
@@ -1532,12 +1532,12 @@ export default function ShopCashBoxPage() {
                         {canViewBalance ? (
                           <>
                             <td className="px-4 py-3 text-right align-top">
-                              <div className={`font-semibold ${tx.cash_balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
+                              <div className={`font-semibold ${tx.cash_balance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400'}`}>
                                 {formatCurrency(tx.cash_balance)}
                               </div>
                             </td>
                             <td className="px-4 py-3 text-right align-top">
-                              <div className={`font-semibold ${tx.check_balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
+                              <div className={`font-semibold ${tx.check_balance >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600 dark:text-red-400'}`}>
                                 {formatCurrency(tx.check_balance)}
                               </div>
                             </td>
@@ -1554,14 +1554,14 @@ export default function ShopCashBoxPage() {
                                       if (tx.receipt_id) setPrintOverlaySlip({ type: 'receipt', id: tx.receipt_id });
                                       else if (tx.payment_id) setPrintOverlaySlip({ type: 'payment', id: tx.payment_id });
                                     }}
-                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
                                     title="طباعة"
                                   >
                                     <Printer size={18} />
                                   </button>
                                   <button
                                     onClick={() => handleShareToWhatsApp(tx)}
-                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                    className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 rounded-lg transition-colors"
                                     title="مشاركة عبر واتساب"
                                   >
                                     <MessageSquare size={18} />
@@ -1621,8 +1621,8 @@ export default function ShopCashBoxPage() {
                                     }}
                                     disabled={tx.isSettled}
                                     className={`p-2 rounded-lg transition-colors ${tx.isSettled
-                                      ? 'text-gray-400 cursor-not-allowed opacity-50'
-                                      : 'text-gray-600 hover:bg-gray-100'
+                                      ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
+                                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
                                       }`}
                                     title={tx.isSettled ? 'لا يمكن تعديل سند مرحلة' : 'تعديل'}
                                   >
@@ -1632,7 +1632,7 @@ export default function ShopCashBoxPage() {
                                     <button
                                       onClick={() => handleMarkAsSettled(tx)}
                                       disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
-                                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                       title="تغيير إلى مرحلة"
                                     >
                                       {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
@@ -1646,7 +1646,7 @@ export default function ShopCashBoxPage() {
                                     <button
                                       onClick={() => handleMarkAsUnsettled(tx)}
                                       disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
-                                      className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      className="p-2 text-orange-600 dark:text-orange-400 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                       title="إعادة إلى غير مرحلة"
                                     >
                                       {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
@@ -1658,14 +1658,14 @@ export default function ShopCashBoxPage() {
                                   )}
                                   <button
                                     onClick={() => handleDelete(tx)}
-                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
                                     title="حذف"
                                   >
                                     <Trash2 size={18} />
                                   </button>
                                 </div>
                                 {tx.notes && tx.notes.trim() && (
-                                  <div className="text-xs text-gray-600 max-w-full leading-tight mt-1">
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 max-w-full leading-tight mt-1">
                                     {tx.notes}
                                   </div>
                                 )}
@@ -1686,7 +1686,7 @@ export default function ShopCashBoxPage() {
                                     if (tx.receipt_id) setPrintOverlaySlip({ type: 'receipt', id: tx.receipt_id });
                                     else if (tx.payment_id) setPrintOverlaySlip({ type: 'payment', id: tx.payment_id });
                                   }}
-                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
                                   title="طباعة"
                                 >
                                   <Printer size={18} />
@@ -1744,8 +1744,8 @@ export default function ShopCashBoxPage() {
                                   }}
                                   disabled={tx.isSettled}
                                   className={`p-2 rounded-lg transition-colors ${tx.isSettled
-                                    ? 'text-gray-400 cursor-not-allowed opacity-50'
-                                    : 'text-gray-600 hover:bg-gray-100'
+                                    ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
+                                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
                                     }`}
                                   title={tx.isSettled ? 'لا يمكن تعديل سند مرحلة' : 'تعديل'}
                                 >
@@ -1755,7 +1755,7 @@ export default function ShopCashBoxPage() {
                                   <button
                                     onClick={() => handleMarkAsSettled(tx)}
                                     disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
-                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     title="تغيير إلى مرحلة"
                                   >
                                     {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
@@ -1769,7 +1769,7 @@ export default function ShopCashBoxPage() {
                                   <button
                                     onClick={() => handleMarkAsUnsettled(tx)}
                                     disabled={updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id)}
-                                    className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="p-2 text-orange-600 dark:text-orange-400 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     title="إعادة إلى غير مرحلة"
                                   >
                                     {updatingSettlement && updatingTransactionId === (tx.receipt_id || tx.payment_id) ? (
@@ -1781,15 +1781,15 @@ export default function ShopCashBoxPage() {
                                 )}
                                 <button
                                   onClick={() => handleDelete(tx)}
-                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
                                   title="حذف"
                                 >
                                   <Trash2 size={18} />
                                 </button>
                               </div>
                               {tx.notes && tx.notes.trim() && (
-                                <div className="text-[10px] text-gray-600 bg-blue-50 rounded px-2 py-1 border-r-2 border-blue-300 max-w-full">
-                                  <span className="font-medium text-gray-700">ملاحظات:</span> <span className="text-gray-600">{tx.notes}</span>
+                                <div className="text-[10px] text-gray-600 dark:text-gray-400 bg-blue-50 rounded px-2 py-1 border-r-2 border-blue-300 max-w-full">
+                                  <span className="font-medium text-gray-700 dark:text-gray-300">ملاحظات:</span> <span className="text-gray-600 dark:text-gray-400">{tx.notes}</span>
                                 </div>
                               )}
                             </div>
@@ -1803,8 +1803,8 @@ export default function ShopCashBoxPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="bg-gray-50 border-t border-gray-200 px-3 sm:px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="text-xs sm:text-sm text-gray-700 font-cairo">
+                <div className="bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700 px-3 sm:px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-cairo">
                     عرض <span className="font-semibold">{startIndex + 1}</span> إلى{' '}
                     <span className="font-semibold">
                       {Math.min(endIndex, transactionsWithBalance.length)}
@@ -1815,10 +1815,10 @@ export default function ShopCashBoxPage() {
                     <button
                       onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
-                      className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="الصفحة السابقة"
                     >
-                      <ChevronRight size={18} className="sm:w-5 sm:h-5 text-gray-600" />
+                      <ChevronRight size={18} className="sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400" />
                     </button>
                     <div className="flex items-center gap-1">
                       {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -1838,8 +1838,8 @@ export default function ShopCashBoxPage() {
                             key={pageNum}
                             onClick={() => setCurrentPage(pageNum)}
                             className={`px-2 sm:px-3 py-1 rounded-lg transition-colors text-xs sm:text-sm font-cairo ${currentPage === pageNum
-                              ? 'bg-gray-900 text-white'
-                              : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
+                              ? 'bg-gray-900 dark:bg-slate-700 text-white'
+                              : 'border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
                               }`}
                           >
                             {pageNum}
@@ -1850,10 +1850,10 @@ export default function ShopCashBoxPage() {
                     <button
                       onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                       disabled={currentPage === totalPages}
-                      className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="الصفحة التالية"
                     >
-                      <ChevronLeft size={18} className="sm:w-5 sm:h-5 text-gray-600" />
+                      <ChevronLeft size={18} className="sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400" />
                     </button>
                   </div>
                 </div>
@@ -1883,9 +1883,9 @@ export default function ShopCashBoxPage() {
               }}
             />
             <div className="fixed inset-0 md:right-64 z-[101] flex items-center justify-center p-2 sm:p-4">
-              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[95vh] overflow-y-auto border border-gray-200 flex flex-col" dir="rtl" onClick={(e) => e.stopPropagation()}>
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between flex-shrink-0">
-                  <h2 className="text-lg sm:text-2xl font-bold text-gray-900 font-cairo">
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[95vh] overflow-y-auto border border-gray-200 dark:border-slate-700 flex flex-col" dir="rtl" onClick={(e) => e.stopPropagation()}>
+                <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between flex-shrink-0">
+                  <h2 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100 font-cairo">
                     {editingTransaction ? 'تعديل سند قبض' : 'إضافة سند قبض جديد'}
                   </h2>
                   <button
@@ -1903,16 +1903,16 @@ export default function ShopCashBoxPage() {
                         setEditingTransaction(null);
                       }
                     }}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                     disabled={isSubmitting}
                   >
-                    <X size={24} className="text-gray-500" />
+                    <X size={24} className="text-gray-500 dark:text-gray-400" />
                   </button>
                 </div>
                 <form onSubmit={handleReceiptSubmit} className="p-3 sm:p-6 space-y-4 flex-1 overflow-y-auto">
                   {formError && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
-                      <p className="text-red-700 text-sm sm:text-base font-cairo">{formError}</p>
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-3 sm:p-4">
+                      <p className="text-red-700 dark:text-red-400 text-sm sm:text-base font-cairo">{formError}</p>
                     </div>
                   )}
                   <CustomerSelect
@@ -1923,20 +1923,20 @@ export default function ShopCashBoxPage() {
                     required
                   />
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2 font-cairo">
+                    <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 font-cairo">
                       التاريخ <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
                       value={formData.date}
                       onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 text-sm sm:text-base font-cairo"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 text-sm sm:text-base font-cairo"
                       required
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2 font-cairo">
+                      <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 font-cairo">
                         المبلغ النقدي (₪)
                       </label>
                       <input
@@ -1945,12 +1945,12 @@ export default function ShopCashBoxPage() {
                         min="0"
                         value={formData.cash_amount}
                         onChange={(e) => setFormData({ ...formData, cash_amount: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 text-sm sm:text-base font-cairo"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 text-sm sm:text-base font-cairo"
                         placeholder="0.00"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2 font-cairo">
+                      <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 font-cairo">
                         المبلغ بالشيك (₪)
                       </label>
                       <input
@@ -1959,20 +1959,20 @@ export default function ShopCashBoxPage() {
                         min="0"
                         value={formData.check_amount}
                         onChange={(e) => setFormData({ ...formData, check_amount: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 text-sm sm:text-base font-cairo"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 text-sm sm:text-base font-cairo"
                         placeholder="0.00"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2 font-cairo">
+                    <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 font-cairo">
                       ملاحظات
                     </label>
                     <textarea
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 resize-none text-sm sm:text-base font-cairo"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 resize-none text-sm sm:text-base font-cairo"
                     />
                   </div>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-4">
@@ -1993,14 +1993,14 @@ export default function ShopCashBoxPage() {
                         }
                       }}
                       disabled={isSubmitting}
-                      className="w-full sm:flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 font-cairo text-sm sm:text-base"
+                      className="w-full sm:flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-medium disabled:opacity-50 font-cairo text-sm sm:text-base"
                     >
                       إلغاء
                     </button>
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full sm:flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-cairo text-sm sm:text-base"
+                      className="w-full sm:flex-1 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-cairo text-sm sm:text-base"
                     >
                       {isSubmitting ? (
                         <>
@@ -2042,9 +2042,9 @@ export default function ShopCashBoxPage() {
               }}
             />
             <div className="fixed inset-0 md:right-64 z-[101] flex items-center justify-center p-2 sm:p-4">
-              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[95vh] overflow-y-auto border border-gray-200 flex flex-col" dir="rtl" onClick={(e) => e.stopPropagation()}>
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between flex-shrink-0">
-                  <h2 className="text-lg sm:text-2xl font-bold text-gray-900 font-cairo">
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[95vh] overflow-y-auto border border-gray-200 dark:border-slate-700 flex flex-col" dir="rtl" onClick={(e) => e.stopPropagation()}>
+                <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between flex-shrink-0">
+                  <h2 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100 font-cairo">
                     {editingTransaction ? 'تعديل سند دفع' : 'إضافة سند دفع جديد'}
                   </h2>
                   <button
@@ -2062,16 +2062,16 @@ export default function ShopCashBoxPage() {
                         setEditingTransaction(null);
                       }
                     }}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                     disabled={isSubmitting}
                   >
-                    <X size={24} className="text-gray-500" />
+                    <X size={24} className="text-gray-500 dark:text-gray-400" />
                   </button>
                 </div>
                 <form onSubmit={handlePaymentSubmit} className="p-3 sm:p-6 space-y-4 flex-1 overflow-y-auto">
                   {formError && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
-                      <p className="text-red-700 text-sm sm:text-base font-cairo">{formError}</p>
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-3 sm:p-4">
+                      <p className="text-red-700 dark:text-red-400 text-sm sm:text-base font-cairo">{formError}</p>
                     </div>
                   )}
                   <CustomerSelect
@@ -2082,20 +2082,20 @@ export default function ShopCashBoxPage() {
                     required
                   />
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2 font-cairo">
+                    <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 font-cairo">
                       التاريخ <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
                       value={formData.date}
                       onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 text-sm sm:text-base font-cairo"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 text-sm sm:text-base font-cairo"
                       required
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2 font-cairo">
+                      <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 font-cairo">
                         المبلغ النقدي (₪)
                       </label>
                       <input
@@ -2104,12 +2104,12 @@ export default function ShopCashBoxPage() {
                         min="0"
                         value={formData.cash_amount}
                         onChange={(e) => setFormData({ ...formData, cash_amount: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 text-sm sm:text-base font-cairo"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 text-sm sm:text-base font-cairo"
                         placeholder="0.00"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2 font-cairo">
+                      <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 font-cairo">
                         المبلغ بالشيك (₪)
                       </label>
                       <input
@@ -2118,20 +2118,20 @@ export default function ShopCashBoxPage() {
                         min="0"
                         value={formData.check_amount}
                         onChange={(e) => setFormData({ ...formData, check_amount: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 text-sm sm:text-base font-cairo"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 text-sm sm:text-base font-cairo"
                         placeholder="0.00"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2 font-cairo">
+                    <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 font-cairo">
                       ملاحظات
                     </label>
                     <textarea
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 resize-none text-sm sm:text-base font-cairo"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 resize-none text-sm sm:text-base font-cairo"
                     />
                   </div>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-4">
@@ -2152,14 +2152,14 @@ export default function ShopCashBoxPage() {
                         }
                       }}
                       disabled={isSubmitting}
-                      className="w-full sm:flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 font-cairo text-sm sm:text-base"
+                      className="w-full sm:flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-medium disabled:opacity-50 font-cairo text-sm sm:text-base"
                     >
                       إلغاء
                     </button>
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full sm:flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-cairo text-sm sm:text-base"
+                      className="w-full sm:flex-1 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-cairo text-sm sm:text-base"
                     >
                       {isSubmitting ? (
                         <>
@@ -2188,12 +2188,12 @@ export default function ShopCashBoxPage() {
             onClick={() => setPrintOverlaySlip(null)}
           >
             <div
-              className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+              className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
               style={{ width: '105mm', minHeight: '148mm', maxHeight: '90vh' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-                <span className="text-sm font-cairo text-gray-700">
+              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex-shrink-0">
+                <span className="text-sm font-cairo text-gray-700 dark:text-gray-300">
                   معاينة الطباعة — {printOverlaySlip.type === 'receipt' ? 'سند قبض' : 'سند صرف'}
                 </span>
                 <div className="flex items-center gap-2">
@@ -2208,14 +2208,14 @@ export default function ShopCashBoxPage() {
                   <button
                     type="button"
                     onClick={() => setPrintOverlaySlip(null)}
-                    className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                    className="p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-gray-900 transition-colors"
                     aria-label="إغلاق"
                   >
                     <X size={20} />
                   </button>
                 </div>
               </div>
-              <div className="flex-1 overflow-auto bg-white min-h-0">
+              <div className="flex-1 overflow-auto bg-white dark:bg-slate-800 min-h-0">
                 <iframe
                   ref={printSlipIframeRef}
                   src={
@@ -2224,7 +2224,7 @@ export default function ShopCashBoxPage() {
                       : `/admin/payments/print/${printOverlaySlip.id}?embed=1`
                   }
                   title={printOverlaySlip.type === 'receipt' ? 'طباعة سند قبض' : 'طباعة سند صرف'}
-                  className="w-full border-0 bg-white"
+                  className="w-full border-0 bg-white dark:bg-slate-800"
                   style={{ width: '105mm', minHeight: '148mm', height: '70vh' }}
                 />
               </div>
@@ -2240,12 +2240,12 @@ export default function ShopCashBoxPage() {
             onClick={() => setPrintOverlayBatchIds(null)}
           >
             <div
-              className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+              className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
               style={{ minWidth: '120mm', minHeight: '200px', maxHeight: '95vh' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-                <span className="text-sm font-cairo text-gray-700">
+              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex-shrink-0">
+                <span className="text-sm font-cairo text-gray-700 dark:text-gray-300">
                   معاينة الطباعة — {printOverlayBatchIds.length} سند
                 </span>
                 <div className="flex items-center gap-2">
@@ -2260,19 +2260,19 @@ export default function ShopCashBoxPage() {
                   <button
                     type="button"
                     onClick={() => setPrintOverlayBatchIds(null)}
-                    className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                    className="p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-gray-900 transition-colors"
                     aria-label="إغلاق"
                   >
                     <X size={20} />
                   </button>
                 </div>
               </div>
-              <div className="flex-1 overflow-auto bg-white min-h-0">
+              <div className="flex-1 overflow-auto bg-white dark:bg-slate-800 min-h-0">
                 <iframe
                   ref={printBatchIframeRef}
                   src={`/admin/shop-finance/cash-box/print-batch?ids=${encodeURIComponent(printOverlayBatchIds.join(','))}&embed=1`}
                   title="طباعة السندات المحددة"
-                  className="w-full border-0 bg-white"
+                  className="w-full border-0 bg-white dark:bg-slate-800"
                   style={{ minHeight: '80vh', height: '80vh' }}
                 />
               </div>

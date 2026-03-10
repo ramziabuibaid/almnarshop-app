@@ -754,8 +754,8 @@ export default function EditInvoicePage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 font-cairo">جاري تحميل الفاتورة...</p>
+            <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 font-cairo">جاري تحميل الفاتورة...</p>
           </div>
         </div>
       </AdminLayout>
@@ -767,10 +767,10 @@ export default function EditInvoicePage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <p className="text-red-600 text-lg mb-4 font-cairo">{error}</p>
+            <p className="text-red-600 dark:text-red-400 text-lg mb-4 font-cairo">{error}</p>
             <button
               onClick={() => router.push('/admin/invoices')}
-              className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
+              className="px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo"
             >
               العودة إلى القائمة
             </button>
@@ -786,8 +786,8 @@ export default function EditInvoicePage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">تعديل الفاتورة</h1>
-            <p className="text-gray-600 mt-1">رقم الفاتورة: {invoiceId}</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">تعديل الفاتورة</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">رقم الفاتورة: {invoiceId}</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button
@@ -810,7 +810,7 @@ export default function EditInvoicePage() {
             </button>
             <button
               onClick={() => router.push('/admin/invoices')}
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo"
+              className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo"
             >
               <ArrowRight size={18} />
               العودة
@@ -828,7 +828,7 @@ export default function EditInvoicePage() {
             <button
               onClick={handleSave}
               disabled={saving || details.length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-cairo"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-cairo"
             >
               {saving ? (
                 <>
@@ -846,28 +846,28 @@ export default function EditInvoicePage() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600 font-cairo">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-4">
+            <p className="text-red-600 dark:text-red-400 font-cairo">{error}</p>
           </div>
         )}
 
         {/* Invoice Info */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">
                 الملاحظات
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-cairo"
                 rows={3}
                 placeholder="أضف ملاحظات..."
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">
                 الخصم (₪)
               </label>
               <input
@@ -876,21 +876,21 @@ export default function EditInvoicePage() {
                 onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
                 step="1"
                 onWheel={(e) => e.currentTarget.blur()}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-cairo"
               />
             </div>
           </div>
         </div>
 
         {/* Items Table */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900 font-cairo">الأصناف</h2>
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+          <div className="p-4 border-b border-gray-200 dark:border-slate-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 font-cairo">الأصناف</h2>
           </div>
 
           {/* Barcode Scanner - Always visible */}
-          <div className="p-4 bg-gray-50 border-b border-gray-200">
-            <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
+          <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
             <BarcodeScannerInput
               onProductFound={(product) => {
                 handleAddProduct(product, 1);
@@ -902,10 +902,10 @@ export default function EditInvoicePage() {
           </div>
           
           {/* Add Product Button */}
-          <div className="p-4 bg-gray-50 border-b border-gray-200">
+          <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
             <button
               onClick={() => setShowAddProduct(!showAddProduct)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo w-full sm:w-auto"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo w-full sm:w-auto"
             >
               <Plus size={18} />
               إضافة منتج
@@ -914,9 +914,9 @@ export default function EditInvoicePage() {
 
           {/* Add Product Form */}
           {showAddProduct && (
-            <div className="p-4 bg-gray-50 border-b border-gray-200">
+            <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
               <div className="relative mb-4" ref={productDropdownRef}>
-                <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">اختر منتج</label>
                 <div className="relative">
                   <input
                     type="text"
@@ -927,10 +927,10 @@ export default function EditInvoicePage() {
                     }}
                     onFocus={() => setIsProductDropdownOpen(true)}
                     placeholder="ابحث عن منتج..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
                   />
                   {isProductDropdownOpen && filteredProducts.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                       {filteredProducts.map((product) => {
                         const imageUrl = product.Image || product.image || '';
                         return (
@@ -954,27 +954,27 @@ export default function EditInvoicePage() {
                               alert('خطأ: المنتج لا يحتوي على معرف صالح');
                             }
                           }}
-                          className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
+                          className="w-full text-right px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-900 dark:text-gray-100 font-cairo"
                         >
                           <div className="flex items-center gap-3">
                             {imageUrl ? (
                               <img
                                 src={imageUrl}
                                 alt={product.Name || product.name}
-                                className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
+                                className="w-12 h-12 object-contain rounded border border-gray-200 dark:border-slate-700 flex-shrink-0"
                                 onError={(e) => {
                                   e.currentTarget.style.display = 'none';
                                 }}
                               />
                             ) : (
-                              <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                <span className="text-gray-400 text-xs">—</span>
+                              <div className="w-12 h-12 bg-gray-100 dark:bg-slate-700/50 rounded border border-gray-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
+                                <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
                               <div className="flex flex-col gap-1">
                                 <span className="text-right text-sm font-medium">{product.Name || product.name}</span>
-                                <span className="text-right text-xs text-gray-600 font-light" dir="rtl">
+                                <span className="text-right text-xs text-gray-600 dark:text-gray-400 font-light" dir="rtl">
                                   ₪{product.SalePrice || product.sale_price || product.price || 0} • محل: {product.CS_Shop || product.cs_shop || 0} • مخزن: {product.CS_War || product.cs_war || 0}
                                 </span>
                               </div>
@@ -989,7 +989,7 @@ export default function EditInvoicePage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الكمية</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">الكمية</label>
                   <input
                     type="number"
                     step="1"
@@ -997,11 +997,11 @@ export default function EditInvoicePage() {
                     onChange={(e) => setNewProductQuantity(parseFloat(e.target.value) || 1)}
                     onWheel={(e) => e.currentTarget.blur()}
                     onFocus={(e) => e.target.select()}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">سعر الوحدة</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">سعر الوحدة</label>
                   <input
                     type="number"
                     step="1"
@@ -1009,14 +1009,14 @@ export default function EditInvoicePage() {
                     onChange={(e) => setNewProductPrice(parseFloat(e.target.value) || 0)}
                     onWheel={(e) => e.currentTarget.blur()}
                     onFocus={(e) => e.target.select()}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
                   />
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleAddProduct}
-                  className="flex-1 sm:flex-none px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo text-sm sm:text-base"
+                  className="flex-1 sm:flex-none px-4 py-2.5 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo text-sm sm:text-base"
                 >
                   إضافة
                 </button>
@@ -1027,7 +1027,7 @@ export default function EditInvoicePage() {
                     setSelectedProduct(null);
                     setProductSearchQuery('');
                   }}
-                  className="flex-1 sm:flex-none px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold text-sm sm:text-base"
+                  className="flex-1 sm:flex-none px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo text-gray-900 dark:text-gray-100 font-bold text-sm sm:text-base"
                 >
                   إلغاء
                 </button>
@@ -1037,32 +1037,32 @@ export default function EditInvoicePage() {
 
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
                 <tr>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">
                     رقم الشامل
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">
                     البيان
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">
                     الكمية
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">
                     السعر
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">
                     المبلغ
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">
                     الإجراءات
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200">
                 {details.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500 font-cairo">
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400 font-cairo">
                       لا توجد أصناف
                     </td>
                   </tr>
@@ -1072,24 +1072,24 @@ export default function EditInvoicePage() {
                     const product = products.find(p => (p.ProductID || p.id || p.product_id) === item.productID);
                     const imageUrl = item.productImage || product?.Image || product?.image || '';
                     return (
-                    <tr key={item.detailID || `item-${index}`} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-cairo">
+                    <tr key={item.detailID || `item-${index}`} className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 font-cairo">
                         {item.barcode || item.productID || '—'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 font-cairo align-top">
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 font-cairo align-top">
                         <div className="flex items-start gap-2">
                           {imageUrl ? (
                             <img
                               src={imageUrl}
                               alt={item.productName}
-                              className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
+                              className="w-10 h-10 object-contain rounded border border-gray-200 dark:border-slate-700 flex-shrink-0"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
                               }}
                             />
                           ) : (
-                            <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                              <span className="text-gray-400 text-xs">—</span>
+                            <div className="w-10 h-10 bg-gray-100 dark:bg-slate-700/50 rounded border border-gray-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
+                              <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
@@ -1130,10 +1130,10 @@ export default function EditInvoicePage() {
                                         data-serial-index={serialIndex}
                                         data-detail-id={item.detailID}
                                         placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                                        className={`w-full px-2 py-1 border rounded text-gray-900 font-mono text-xs ${
+                                        className={`w-full px-2 py-1 border rounded text-gray-900 dark:text-gray-100 font-mono text-xs ${
                                           isRequired
                                             ? 'border-yellow-400 bg-yellow-50'
-                                            : 'border-gray-300'
+                                            : 'border-gray-300 dark:border-slate-600'
                                         }`}
                                       />
                                       <SerialNumberScanner
@@ -1195,7 +1195,7 @@ export default function EditInvoicePage() {
                           onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
                           step="1"
                           onWheel={(e) => e.currentTarget.blur()}
-                          className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo text-sm"
+                          className="w-20 px-2 py-1 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-cairo text-sm"
                         />
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap align-top">
@@ -1205,16 +1205,16 @@ export default function EditInvoicePage() {
                           onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
                           step="1"
                           onWheel={(e) => e.currentTarget.blur()}
-                          className="w-24 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo text-sm"
+                          className="w-24 px-2 py-1 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-cairo text-sm"
                         />
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 font-cairo align-top">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo align-top">
                         {formatCurrency(item.quantity * item.unitPrice)}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap align-top">
                         <button
                           onClick={() => handleRemoveItem(item.detailID)}
-                          className="text-red-600 hover:text-red-900 font-cairo"
+                          className="text-red-600 dark:text-red-400 hover:text-red-900 font-cairo"
                         >
                           <Trash2 size={18} />
                         </button>
@@ -1229,22 +1229,22 @@ export default function EditInvoicePage() {
         </div>
 
         {/* Summary */}
-        <div className="bg-gray-50 rounded-lg border border-gray-200 p-6">
+        <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600 font-cairo">المجموع:</span>
-                <span className="font-semibold text-gray-900 font-cairo">{formatCurrency(subtotal)}</span>
+                <span className="text-gray-600 dark:text-gray-400 font-cairo">المجموع:</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100 font-cairo">{formatCurrency(subtotal)}</span>
               </div>
               {discount > 0 && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600 font-cairo">الخصم:</span>
-                  <span className="font-semibold text-red-600 font-cairo">-{formatCurrency(discount)}</span>
+                  <span className="text-gray-600 dark:text-gray-400 font-cairo">الخصم:</span>
+                  <span className="font-semibold text-red-600 dark:text-red-400 font-cairo">-{formatCurrency(discount)}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between pt-2 border-t border-gray-300">
-                <span className="text-lg font-bold text-gray-900 font-cairo">الصافي للدفع:</span>
-                <span className="text-lg font-bold text-gray-900 font-cairo">{formatCurrency(netTotal)}</span>
+              <div className="flex items-center justify-between pt-2 border-t border-gray-300 dark:border-slate-600">
+                <span className="text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo">الصافي للدفع:</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo">{formatCurrency(netTotal)}</span>
               </div>
             </div>
           </div>
@@ -1253,17 +1253,17 @@ export default function EditInvoicePage() {
         {/* Copy as Shop/Warehouse Invoice Modal */}
         {showCopyModal && copyTarget && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" dir="rtl">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col overflow-visible">
-              <div className="p-4 border-b border-gray-200 flex-shrink-0">
-                <h2 className="text-lg font-bold text-gray-900 font-cairo">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col overflow-visible">
+              <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo">
                   {copyTarget === 'shop' ? 'نسخ الفاتورة كفاتورة محل' : 'نسخ الفاتورة كفاتورة مخزن'}
                 </h2>
-                <p className="text-sm text-gray-600 font-cairo mt-1">اختر اسم الزبون</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-cairo mt-1">اختر اسم الزبون</p>
               </div>
               <div className="p-4 flex-1 overflow-visible min-h-0">
                 {copyMessage ? (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                    <p className="text-green-700 font-cairo text-sm">{copyMessage}</p>
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-lg p-4 mb-4">
+                    <p className="text-green-700 dark:text-green-400 font-cairo text-sm">{copyMessage}</p>
                     <div className="flex gap-2 mt-3">
                       <a
                         href={copyTarget === 'shop' ? '/admin/shop-sales' : '/admin/warehouse-sales'}
@@ -1275,7 +1275,7 @@ export default function EditInvoicePage() {
                   </div>
                 ) : (
                   <div className="relative" ref={copyCustomerDropdownRef}>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الزبون</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">الزبون</label>
                     <input
                       type="text"
                       value={copySelectedCustomer ? (copySelectedCustomer.name || copySelectedCustomer.Name || '') : copyCustomerSearchQuery}
@@ -1295,17 +1295,17 @@ export default function EditInvoicePage() {
                         if (!copySelectedCustomer) setIsCopyCustomerDropdownOpen(true);
                       }}
                       placeholder="ابحث عن زبون..."
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-cairo"
                     />
                     {isCopyCustomerDropdownOpen && (
-                      <div className="absolute z-[100] top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                      <div className="absolute z-[100] top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
                         {customers.length === 0 ? (
-                          <div className="px-4 py-3 text-sm text-gray-500 font-cairo flex items-center gap-2">
+                          <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 font-cairo flex items-center gap-2">
                             <Loader2 size={18} className="animate-spin flex-shrink-0" />
                             جاري تحميل الزبائن...
                           </div>
                         ) : filteredCopyCustomers.length === 0 ? (
-                          <div className="px-4 py-3 text-sm text-gray-500 font-cairo">
+                          <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 font-cairo">
                             لا توجد نتائج
                           </div>
                         ) : (
@@ -1319,7 +1319,7 @@ export default function EditInvoicePage() {
                                 setCopyCustomerSearchQuery('');
                                 setIsCopyCustomerDropdownOpen(false);
                               }}
-                              className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
+                              className="w-full text-right px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-900 dark:text-gray-100 font-cairo"
                             >
                               {customer.name || customer.Name} ({customer.customer_id || customer.CustomerID || customer.id})
                             </button>
@@ -1330,7 +1330,7 @@ export default function EditInvoicePage() {
                   </div>
                 )}
               </div>
-              <div className="p-4 border-t border-gray-200 flex gap-2 justify-end flex-shrink-0">
+              <div className="p-4 border-t border-gray-200 dark:border-slate-700 flex gap-2 justify-end flex-shrink-0">
                 {copyMessage ? (
                   <button
                     onClick={() => {
@@ -1338,7 +1338,7 @@ export default function EditInvoicePage() {
                       setCopyTarget(null);
                       setCopyMessage(null);
                     }}
-                    className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-cairo"
+                    className="px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 font-cairo"
                   >
                     إغلاق
                   </button>
@@ -1352,14 +1352,14 @@ export default function EditInvoicePage() {
                         setCopySelectedCustomer(null);
                         setCopyMessage(null);
                       }}
-                      className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-cairo text-gray-900"
+                      className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 font-cairo text-gray-900 dark:text-gray-100"
                     >
                       إلغاء
                     </button>
                     <button
                       onClick={handleCopyAsInvoice}
                       disabled={!copyCustomerId || copyConverting !== null}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed font-cairo"
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed font-cairo"
                     >
                       {copyConverting ? (
                         <>

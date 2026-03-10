@@ -511,8 +511,8 @@ export default function EditOrderPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 font-cairo">جاري تحميل الطلبية...</p>
+            <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 font-cairo">جاري تحميل الطلبية...</p>
           </div>
         </div>
       </AdminLayout>
@@ -524,10 +524,10 @@ export default function EditOrderPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <p className="text-red-600 text-lg mb-4 font-cairo">{error}</p>
+            <p className="text-red-600 dark:text-red-400 text-lg mb-4 font-cairo">{error}</p>
             <button
               onClick={() => router.push('/admin/orders')}
-              className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
+              className="px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo"
             >
               العودة إلى القائمة
             </button>
@@ -543,10 +543,10 @@ export default function EditOrderPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cairo">تعديل الطلبية</h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base font-cairo">رقم الطلبية: {orderId}</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 font-cairo">تعديل الطلبية</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm sm:text-base font-cairo">رقم الطلبية: {orderId}</p>
             {order && (
-              <div className="mt-2 text-xs sm:text-sm text-gray-500 font-cairo">
+              <div className="mt-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-cairo">
                 <p>العميل: {order.CustomerName}</p>
                 <p>الهاتف: {order.CustomerPhone}</p>
               </div>
@@ -556,7 +556,7 @@ export default function EditOrderPage() {
             <button
               onClick={() => setShowCosts((prev) => !prev)}
               disabled={!canViewCost}
-              className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+              className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {showCosts ? <EyeOff size={18} /> : <Eye size={18} />}
               <span className="sm:hidden">{showCosts ? 'إخفاء' : 'إظهار'} التكلفة</span>
@@ -579,7 +579,7 @@ export default function EditOrderPage() {
             </button>
             <button
               onClick={() => router.push('/admin/orders')}
-              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-sm sm:text-base"
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo text-sm sm:text-base"
             >
               <ArrowRight size={18} />
               <span>العودة</span>
@@ -588,36 +588,36 @@ export default function EditOrderPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600 font-cairo">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-4">
+            <p className="text-red-600 dark:text-red-400 font-cairo">{error}</p>
           </div>
         )}
         {convertMessage && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <p className="text-green-700 font-cairo">{convertMessage}</p>
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-lg p-4">
+            <p className="text-green-700 dark:text-green-400 font-cairo">{convertMessage}</p>
           </div>
         )}
 
         {/* Form */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Basic Info */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الملاحظات</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">الملاحظات</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
                 placeholder="أضف ملاحظات..."
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الحالة</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">الحالة</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
               >
                 <option value="Pending">قيد الانتظار</option>
                 <option value="Processing">قيد المعالجة</option>
@@ -626,14 +626,14 @@ export default function EditOrderPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الخصم (₪)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">الخصم (₪)</label>
               <input
                 type="number"
                 value={discount}
                 onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
                 step="1"
                 onWheel={(e) => e.currentTarget.blur()}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
               />
             </div>
           </div>
@@ -641,10 +641,10 @@ export default function EditOrderPage() {
           {/* Products */}
           <div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900 font-cairo">الأصناف</h2>
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 font-cairo">الأصناف</h2>
               <button
                 onClick={() => setShowAddProduct(true)}
-                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo w-full sm:w-auto text-sm sm:text-base"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo w-full sm:w-auto text-sm sm:text-base"
               >
                 <Plus size={20} />
                 <span>إضافة منتج</span>
@@ -652,9 +652,9 @@ export default function EditOrderPage() {
             </div>
 
             {showAddProduct && (
-              <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="mb-4 p-3 sm:p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700">
                 <div className="relative mb-4" ref={productDropdownRef}>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">اختر منتج</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -665,10 +665,10 @@ export default function EditOrderPage() {
                       }}
                       onFocus={() => setIsProductDropdownOpen(true)}
                       placeholder="ابحث عن منتج..."
-                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold text-sm sm:text-base"
+                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold text-sm sm:text-base"
                     />
                     {isProductDropdownOpen && filteredProducts.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                         {filteredProducts.map((product) => (
                           <button
                             key={product.ProductID || product.id || product.product_id}
@@ -679,11 +679,11 @@ export default function EditOrderPage() {
                               setIsProductDropdownOpen(false);
                               setProductSearchQuery(product.Name || product.name || '');
                             }}
-                            className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
+                            className="w-full text-right px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-900 dark:text-gray-100 font-cairo"
                           >
                             <div className="flex flex-col gap-1">
                               <span className="text-right text-sm font-medium">{product.Name || product.name}</span>
-                              <span className="text-right text-xs text-gray-600 font-light" dir="rtl">
+                              <span className="text-right text-xs text-gray-600 dark:text-gray-400 font-light" dir="rtl">
                                 ₪{product.SalePrice || product.sale_price || product.price || 0} • محل: {product.CS_Shop || product.cs_shop || 0} • مخزن: {product.CS_War || product.cs_war || 0}
                               </span>
                             </div>
@@ -695,7 +695,7 @@ export default function EditOrderPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الكمية</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">الكمية</label>
                     <input
                       type="number"
                       step="1"
@@ -703,11 +703,11 @@ export default function EditOrderPage() {
                       onChange={(e) => setNewProductQuantity(parseFloat(e.target.value) || 1)}
                       onWheel={(e) => e.currentTarget.blur()}
                       onFocus={(e) => e.target.select()}
-                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold text-sm sm:text-base"
+                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold text-sm sm:text-base"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">سعر الوحدة</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">سعر الوحدة</label>
                     <input
                       type="number"
                       step="1"
@@ -715,14 +715,14 @@ export default function EditOrderPage() {
                       onChange={(e) => setNewProductPrice(parseFloat(e.target.value) || 0)}
                       onWheel={(e) => e.currentTarget.blur()}
                       onFocus={(e) => e.target.select()}
-                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold text-sm sm:text-base"
+                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold text-sm sm:text-base"
                     />
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <button
                     onClick={handleAddProduct}
-                    className="flex-1 sm:flex-none px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo text-sm sm:text-base"
+                    className="flex-1 sm:flex-none px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo text-sm sm:text-base"
                   >
                     إضافة
                   </button>
@@ -732,7 +732,7 @@ export default function EditOrderPage() {
                       setSelectedProductId('');
                       setProductSearchQuery('');
                     }}
-                    className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold text-sm sm:text-base"
+                    className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo text-gray-900 dark:text-gray-100 font-bold text-sm sm:text-base"
                   >
                     إلغاء
                   </button>
@@ -741,28 +741,28 @@ export default function EditOrderPage() {
             )}
 
             {details.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 font-cairo">لا توجد أصناف</div>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400 font-cairo">لا توجد أصناف</div>
             ) : (
               <>
                 {/* Desktop Table View */}
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
                       <tr>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">المنتج</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الكمية</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">سعر الوحدة</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">المنتج</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">الكمية</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">سعر الوحدة</th>
                         {showCosts && canViewCost && (
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
                         )}
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الإجمالي</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">إجراءات</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">الإجمالي</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">إجراءات</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200">
                       {details.map((item, index) => (
                         <tr key={item.detailID || index}>
-                          <td className="px-4 py-3 text-sm text-gray-900 font-cairo">{item.productName || '—'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 font-cairo">{item.productName || '—'}</td>
                           <td className="px-4 py-3">
                             <input
                               type="number"
@@ -770,7 +770,7 @@ export default function EditOrderPage() {
                               value={item.quantity}
                               onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
                               onWheel={(e) => e.currentTarget.blur()}
-                              className="w-20 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
+                              className="w-20 px-2 py-1 border border-gray-300 dark:border-slate-600 rounded text-gray-900 dark:text-gray-100 font-bold"
                             />
                           </td>
                           <td className="px-4 py-3">
@@ -780,21 +780,21 @@ export default function EditOrderPage() {
                               value={item.unitPrice}
                               onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
                               onWheel={(e) => e.currentTarget.blur()}
-                              className="w-24 px-2 py-1 border border-gray-300 rounded text-gray-900 font-bold"
+                              className="w-24 px-2 py-1 border border-gray-300 dark:border-slate-600 rounded text-gray-900 dark:text-gray-100 font-bold"
                             />
                           </td>
                           {showCosts && canViewCost && (
-                            <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo">
+                            <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo">
                               ₪{(item.costPrice || 0).toFixed(2)}
                             </td>
                           )}
-                          <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-cairo">
+                          <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo">
                             ₪{(item.quantity * item.unitPrice).toFixed(2)}
                           </td>
                           <td className="px-4 py-3">
                             <button
                               onClick={() => handleRemoveItem(item.detailID)}
-                              className="text-red-600 hover:text-red-900 font-cairo"
+                              className="text-red-600 dark:text-red-400 hover:text-red-900 font-cairo"
                             >
                               <Trash2 size={18} />
                             </button>
@@ -808,24 +808,24 @@ export default function EditOrderPage() {
                 {/* Mobile Card View */}
                 <div className="md:hidden space-y-3">
                   {details.map((item, index) => (
-                    <div key={item.detailID || index} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <div key={item.detailID || index} className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-lg p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-semibold text-gray-900 font-cairo mb-1">{item.productName || '—'}</h3>
-                          <div className="text-base font-bold text-gray-900 font-cairo">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo mb-1">{item.productName || '—'}</h3>
+                          <div className="text-base font-bold text-gray-900 dark:text-gray-100 font-cairo">
                             ₪{(item.quantity * item.unitPrice).toFixed(2)}
                           </div>
                         </div>
                         <button
                           onClick={() => handleRemoveItem(item.detailID)}
-                          className="text-red-600 hover:text-red-900 p-1 flex-shrink-0"
+                          className="text-red-600 dark:text-red-400 hover:text-red-900 p-1 flex-shrink-0"
                         >
                           <Trash2 size={18} />
                         </button>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs text-gray-600 mb-1 font-cairo">الكمية</label>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 font-cairo">الكمية</label>
                           <input
                             type="number"
                             step="1"
@@ -833,11 +833,11 @@ export default function EditOrderPage() {
                             onChange={(e) => handleUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
                             onWheel={(e) => e.currentTarget.blur()}
                             onFocus={(e) => e.target.select()}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-gray-100 font-bold text-sm"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-600 mb-1 font-cairo">سعر الوحدة</label>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 font-cairo">سعر الوحدة</label>
                           <input
                             type="number"
                             step="1"
@@ -845,13 +845,13 @@ export default function EditOrderPage() {
                             onChange={(e) => handleUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
                             onWheel={(e) => e.currentTarget.blur()}
                             onFocus={(e) => e.target.select()}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-gray-100 font-bold text-sm"
                           />
                         </div>
                       </div>
                       {showCosts && canViewCost && (
-                        <div className="mt-2 pt-2 border-t border-gray-200">
-                          <div className="text-xs text-gray-600 font-cairo">تكلفة الوحدة: <span className="font-semibold text-gray-900">₪{(item.costPrice || 0).toFixed(2)}</span></div>
+                        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-slate-700">
+                          <div className="text-xs text-gray-600 dark:text-gray-400 font-cairo">تكلفة الوحدة: <span className="font-semibold text-gray-900 dark:text-gray-100">₪{(item.costPrice || 0).toFixed(2)}</span></div>
                         </div>
                       )}
                     </div>
@@ -862,36 +862,36 @@ export default function EditOrderPage() {
           </div>
 
           {/* Summary */}
-          <div className="border-t border-gray-200 pt-3 sm:pt-4">
+          <div className="border-t border-gray-200 dark:border-slate-700 pt-3 sm:pt-4">
             <div className="flex justify-end">
               <div className="w-full sm:w-full md:w-1/3 space-y-2">
-                <div className="flex justify-between text-sm text-gray-600 font-cairo">
+                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 font-cairo">
                   <span>المجموع الفرعي:</span>
                   <span className="font-semibold">₪{calculateSubtotal().toFixed(2)}</span>
                 </div>
                 {showCosts && canViewCost && (
-                  <div className="flex justify-between text-sm text-gray-600 font-cairo">
+                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 font-cairo">
                     <span>إجمالي التكلفة الفرعي:</span>
-                    <span className="font-semibold text-gray-900">₪{calculateCostSubtotal().toFixed(2)}</span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">₪{calculateCostSubtotal().toFixed(2)}</span>
                   </div>
                 )}
                 {discount > 0 && (
-                  <div className="flex justify-between text-sm text-gray-600 font-cairo">
+                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 font-cairo">
                     <span>الخصم:</span>
-                    <span className="font-semibold text-red-600">-₪{discount.toFixed(2)}</span>
+                    <span className="font-semibold text-red-600 dark:text-red-400">-₪{discount.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-lg font-bold text-gray-900 font-cairo border-t border-gray-200 pt-2">
+                <div className="flex justify-between text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo border-t border-gray-200 dark:border-slate-700 pt-2">
                   <span>الصافي للدفع:</span>
                   <span>₪{calculateTotal().toFixed(2)}</span>
                 </div>
                 {showCosts && canViewCost && (
                   <>
-                    <div className="flex justify-between text-lg font-bold text-gray-900 font-cairo">
+                    <div className="flex justify-between text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo">
                       <span>إجمالي التكلفة بعد الخصم:</span>
                       <span>₪{calculateCostTotal().toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-lg font-bold text-green-600 font-cairo border-t border-gray-200 pt-2">
+                    <div className="flex justify-between text-lg font-bold text-green-600 dark:text-green-400 font-cairo border-t border-gray-200 dark:border-slate-700 pt-2">
                       <span>الربح:</span>
                       <span>₪{calculateProfit().toFixed(2)}</span>
                     </div>
@@ -902,17 +902,17 @@ export default function EditOrderPage() {
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4 pt-4 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4 pt-4 border-t border-gray-200 dark:border-slate-700">
             <button
               onClick={() => router.push('/admin/orders')}
-              className="w-full sm:w-auto px-4 sm:px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold text-sm sm:text-base"
+              className="w-full sm:w-auto px-4 sm:px-6 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo text-gray-900 dark:text-gray-100 font-bold text-sm sm:text-base"
             >
               إلغاء
             </button>
             <button
               onClick={handleSave}
               disabled={saving || details.length === 0}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-6 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {saving ? (
                 <>
@@ -932,14 +932,14 @@ export default function EditOrderPage() {
         {/* Customer Selection Modal */}
         {showCustomerSelectModal && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4" dir="rtl">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col">
               {/* Header */}
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 z-10 flex-shrink-0">
+              <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 z-10 flex-shrink-0">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 font-cairo">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 font-cairo">
                     اختر الزبون للتحويل
                   </h2>
-                  <p className="text-sm text-gray-600 mt-1 font-cairo">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 font-cairo">
                     لم يتم العثور على الزبون في قاعدة البيانات. يرجى اختيار زبون أو إضافة زبون جديد.
                   </p>
                 </div>
@@ -950,26 +950,26 @@ export default function EditOrderPage() {
                     setSelectedCustomerId('');
                     setCustomerSearchQuery('');
                   }}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
                   disabled={converting !== null}
                 >
-                  <X size={20} className="text-gray-600" />
+                  <X size={20} className="text-gray-600 dark:text-gray-400" />
                 </button>
               </div>
 
               {/* Search */}
-              <div className="p-3 sm:p-4 border-b border-gray-200 flex-shrink-0">
+              <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
                 <div className="relative">
                   <Search
                     size={18}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
                   />
                   <input
                     type="text"
                     placeholder="ابحث عن زبون..."
                     value={customerSearchQuery}
                     onChange={(e) => setCustomerSearchQuery(e.target.value)}
-                    className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo text-sm sm:text-base"
+                    className="w-full pr-10 pl-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-cairo text-sm sm:text-base"
                     dir="rtl"
                   />
                 </div>
@@ -978,7 +978,7 @@ export default function EditOrderPage() {
               {/* Customer List */}
               <div className="overflow-y-auto flex-1 p-3 sm:p-4 min-h-0">
                 {filteredCustomersForSelect.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500 font-cairo">
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400 font-cairo">
                     {customerSearchQuery ? 'لا توجد نتائج' : 'لا يوجد زبائن'}
                   </div>
                 ) : (
@@ -993,14 +993,14 @@ export default function EditOrderPage() {
                           onClick={() => setSelectedCustomerId(customerID)}
                           className={`w-full text-right px-4 py-3 border-2 rounded-lg transition-colors font-cairo ${
                             isSelected
-                              ? 'border-gray-900 bg-gray-50'
-                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                              ? 'border-gray-900 bg-gray-50 dark:bg-slate-800/50'
+                              : 'border-gray-200 dark:border-slate-700 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50'
                           }`}
                         >
-                          <div className="text-sm font-semibold text-gray-900">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                             {customer.Name || customer.name || 'بدون اسم'}
                           </div>
-                          <div className="text-xs text-gray-600 mt-1">
+                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                             {customerID}
                             {customer.Phone || customer.phone ? ` - ${customer.Phone || customer.phone}` : ''}
                             {customer.Email || customer.email ? ` - ${customer.Email || customer.email}` : ''}
@@ -1013,10 +1013,10 @@ export default function EditOrderPage() {
               </div>
 
               {/* Actions */}
-              <div className="sticky bottom-0 bg-white border-t border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 flex-shrink-0">
+              <div className="sticky bottom-0 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 flex-shrink-0">
                 <button
                   onClick={handleAddNewCustomer}
-                  className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 text-sm sm:text-base"
+                  className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo text-gray-900 dark:text-gray-100 text-sm sm:text-base"
                 >
                   <Plus size={18} />
                   <span>إضافة زبون جديد</span>
@@ -1030,7 +1030,7 @@ export default function EditOrderPage() {
                       setSelectedCustomerId('');
                       setCustomerSearchQuery('');
                     }}
-                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 text-sm sm:text-base"
+                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo text-gray-900 dark:text-gray-100 text-sm sm:text-base"
                     disabled={converting !== null}
                   >
                     إلغاء
@@ -1038,7 +1038,7 @@ export default function EditOrderPage() {
                   <button
                     onClick={handleCustomerSelected}
                     disabled={!selectedCustomerId || converting !== null}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                   >
                     {converting !== null ? (
                       <>

@@ -42,8 +42,8 @@ export default function NotificationsPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   // Check permission
-  const canViewDashboard = admin?.is_super_admin || 
-    admin?.permissions?.viewNotifications === true || 
+  const canViewDashboard = admin?.is_super_admin ||
+    admin?.permissions?.viewNotifications === true ||
     admin?.permissions?.dashboardAndNotifications === true;
 
   useLayoutEffect(() => {
@@ -60,7 +60,7 @@ export default function NotificationsPage() {
 
   const loadNotifications = async () => {
     if (!canViewDashboard) return;
-    
+
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -91,7 +91,7 @@ export default function NotificationsPage() {
       const response = await fetch(`/api/admin/notifications/${notificationId}/read`, {
         method: 'POST',
       });
-      
+
       if (response.ok) {
         setNotifications((prev) =>
           prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
@@ -109,7 +109,7 @@ export default function NotificationsPage() {
       const response = await fetch('/api/admin/notifications/read-all', {
         method: 'POST',
       });
-      
+
       if (response.ok) {
         setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
       }
@@ -127,7 +127,7 @@ export default function NotificationsPage() {
       case 'delete':
         return <AlertCircle className="w-5 h-5 text-red-500" />;
       default:
-        return <Activity className="w-5 h-5 text-gray-500" />;
+        return <Activity className="w-5 h-5 text-gray-500 dark:text-gray-400" />;
     }
   };
 
@@ -163,25 +163,25 @@ export default function NotificationsPage() {
   const getNotificationUrl = async (notification: Notification): Promise<string | null> => {
     const { table_name, record_name } = notification;
     console.log('[Dashboard] Getting URL for notification:', { table_name, record_name });
-    
+
     switch (table_name) {
       case 'shop_sales_invoices':
         return '/admin/shop-sales';
-      
+
       case 'warehouse_sales_invoices':
         return '/admin/warehouse-sales';
-      
+
       case 'shop_receipts':
       case 'shop_payments':
         return '/admin/shop-finance/cash-box';
-      
+
       case 'warehouse_receipts':
       case 'warehouse_payments':
         return '/admin/warehouse-finance/cash-box';
-      
+
       case 'maintenance':
         return '/admin/maintenance';
-      
+
       case 'customers':
         // record_name should be customer_id (format: CUS-XXXX-YYY)
         console.log('[Dashboard] Customer notification, record_name:', record_name);
@@ -212,10 +212,10 @@ export default function NotificationsPage() {
         }
         // If not found, return customers list page
         return '/admin/customers';
-      
+
       case 'products':
         return '/admin/products';
-      
+
       default:
         return null;
     }
@@ -224,11 +224,11 @@ export default function NotificationsPage() {
   const handleNotificationClick = async (notification: Notification, event: React.MouseEvent) => {
     // Check if Ctrl (Windows) or Command (Mac) is pressed
     const openInNewTab = event.ctrlKey || event.metaKey;
-    
+
     if (!notification.is_read) {
       await markAsRead(notification.id);
     }
-    
+
     const url = await getNotificationUrl(notification);
     if (url) {
       if (openInNewTab) {
@@ -252,7 +252,7 @@ export default function NotificationsPage() {
       if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
       if (diffHours < 24) return `منذ ${diffHours} ساعة`;
       if (diffDays < 7) return `منذ ${diffDays} يوم`;
-      
+
       return formatDate(dateString);
     } catch {
       return dateString;
@@ -293,8 +293,8 @@ export default function NotificationsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">الإشعارات</h1>
-            <p className="text-gray-600 mt-1">سجل جميع الأنشطة في النظام</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">الإشعارات</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">سجل جميع الأنشطة في النظام</p>
           </div>
           <div className="flex items-center gap-3">
             {unreadCount > 0 && (
@@ -308,7 +308,7 @@ export default function NotificationsPage() {
             )}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors flex items-center gap-2"
             >
               <Filter size={18} />
               {showFilters ? 'إخفاء' : 'عرض'} الفلاتر
@@ -318,10 +318,10 @@ export default function NotificationsPage() {
 
         {/* Filters */}
         {showFilters && (
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   المستخدم
                 </label>
                 <input
@@ -329,17 +329,17 @@ export default function NotificationsPage() {
                   value={filters.user_name}
                   onChange={(e) => setFilters({ ...filters, user_name: e.target.value })}
                   placeholder="اسم المستخدم"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   نوع الإجراء
                 </label>
                 <select
                   value={filters.type}
                   onChange={(e) => setFilters({ ...filters, type: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
                 >
                   <option value="">الكل</option>
                   <option value="create">إنشاء</option>
@@ -348,25 +348,25 @@ export default function NotificationsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   من تاريخ
                 </label>
                 <input
                   type="date"
                   value={filters.startDate}
                   onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   إلى تاريخ
                 </label>
                 <input
                   type="date"
                   value={filters.endDate}
                   onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
                 />
               </div>
             </div>
@@ -376,7 +376,7 @@ export default function NotificationsPage() {
                   setFilters({ user_name: '', type: '', startDate: '', endDate: '' });
                   setShowFilters(false);
                 }}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900 flex items-center gap-2"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 flex items-center gap-2"
               >
                 <X size={18} />
                 مسح الفلاتر
@@ -387,29 +387,29 @@ export default function NotificationsPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">إجمالي الإشعارات</p>
-                <p className="text-2xl font-bold text-gray-900">{notifications.length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">إجمالي الإشعارات</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{notifications.length}</p>
               </div>
               <Activity className="w-8 h-8 text-blue-500" />
             </div>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">غير مقروء</p>
-                <p className="text-2xl font-bold text-red-600">{unreadCount}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">غير مقروء</p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{unreadCount}</p>
               </div>
               <AlertCircle className="w-8 h-8 text-red-500" />
             </div>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">مقروء</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">مقروء</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                   {notifications.length - unreadCount}
                 </p>
               </div>
@@ -419,22 +419,21 @@ export default function NotificationsPage() {
         </div>
 
         {/* Activity Feed */}
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">سجل الأنشطة</h2>
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
+          <div className="p-4 border-b border-gray-200 dark:border-slate-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">سجل الأنشطة</h2>
           </div>
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-gray-200 dark:divide-slate-700">
             {loading ? (
-              <div className="p-8 text-center text-gray-500">جاري التحميل...</div>
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">جاري التحميل...</div>
             ) : filteredNotifications.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">لا توجد إشعارات</div>
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">لا توجد إشعارات</div>
             ) : (
               filteredNotifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
-                    !notification.is_read ? 'bg-blue-50' : ''
-                  }`}
+                  className={`p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer ${!notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                    }`}
                   onClick={(e) => handleNotificationClick(notification, e)}
                 >
                   <div className="flex items-start gap-4">
@@ -442,10 +441,10 @@ export default function NotificationsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             {notification.message}
                           </p>
-                          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
                             <span className="flex items-center gap-1">
                               <User className="w-3 h-3" />
                               {notification.user_name}
@@ -454,10 +453,10 @@ export default function NotificationsPage() {
                               <Calendar className="w-3 h-3" />
                               {formatTime(notification.created_at)}
                             </span>
-                            <span className="px-2 py-0.5 bg-gray-100 rounded">
+                            <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700/50 rounded">
                               {getTableLabel(notification.table_name)}
                             </span>
-                            <span className="px-2 py-0.5 bg-gray-100 rounded">
+                            <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700/50 rounded">
                               {getTypeLabel(notification.type)}
                             </span>
                           </div>
@@ -469,7 +468,7 @@ export default function NotificationsPage() {
                               await markAsRead(notification.id);
                             }}
                             disabled={markingAsRead === notification.id}
-                            className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors disabled:opacity-50"
+                            className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50"
                           >
                             {markingAsRead === notification.id ? '...' : 'تعليم كمقروء'}
                           </button>

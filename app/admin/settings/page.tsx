@@ -68,11 +68,11 @@ export default function SettingsPage() {
     return (
         <AdminLayout>
             <div className="max-w-4xl mx-auto space-y-6" dir="rtl">
-                <h1 className="text-2xl font-bold text-gray-800 mb-6">إعدادات المتجر</h1>
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-6">إعدادات المتجر</h1>
 
                 {/* Status Message */}
                 {status && (
-                    <div className={`p-4 rounded-lg flex items-center gap-2 ${status.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                    <div className={`p-4 rounded-lg flex items-center gap-2 ${status.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
                         }`}>
                         {status.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
                         <span>{status.message}</span>
@@ -80,10 +80,10 @@ export default function SettingsPage() {
                 )}
 
                 {/* Announcement Bar Settings */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="p-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-                        <Megaphone className="text-gray-500" size={20} />
-                        <h2 className="font-semibold text-gray-900">شريط الإعلانات (أعلى الصفحة)</h2>
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/50 flex items-center gap-2">
+                        <Megaphone className="text-gray-500 dark:text-gray-400" size={20} />
+                        <h2 className="font-semibold text-gray-900 dark:text-gray-100">شريط الإعلانات (أعلى الصفحة)</h2>
                     </div>
                     <div className="p-6 space-y-4">
                         <div className="flex items-center gap-3 mb-4">
@@ -94,18 +94,18 @@ export default function SettingsPage() {
                                 onChange={(e) => handleChange('announcement_active', e.target.checked)}
                                 className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
                             />
-                            <label htmlFor="announcement_active" className="text-gray-700 font-medium cursor-pointer">
+                            <label htmlFor="announcement_active" className="text-gray-700 dark:text-gray-300 font-medium cursor-pointer">
                                 تفعيل شريط الإعلانات
                             </label>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">نص الإعلان</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نص الإعلان</label>
                             <input
                                 type="text"
                                 value={settings.announcement_text}
                                 onChange={(e) => handleChange('announcement_text', e.target.value)}
                                 placeholder="مثال: خصم 20% على جميع المنتجات لفترة محدودة!"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-right text-gray-900"
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-right text-gray-900 dark:text-gray-100"
                                 dir="rtl"
                             />
                         </div>
@@ -113,42 +113,42 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Hero Section Settings */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="p-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-                        <LayoutDashboard className="text-gray-500" size={20} />
-                        <h2 className="font-semibold text-gray-900">واجهة المتجر (Hero Section)</h2>
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/50 flex items-center gap-2">
+                        <LayoutDashboard className="text-gray-500 dark:text-gray-400" size={20} />
+                        <h2 className="font-semibold text-gray-900 dark:text-gray-100">واجهة المتجر (Hero Section)</h2>
                     </div>
                     <div className="p-6 space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">العنوان الرئيسي</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">العنوان الرئيسي</label>
                             <input
                                 type="text"
                                 value={settings.hero_title}
                                 onChange={(e) => handleChange('hero_title', e.target.value)}
                                 placeholder="مثال: اكتشف تشكيلة الخريف الجديدة"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-right text-gray-900"
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-right text-gray-900 dark:text-gray-100"
                                 dir="rtl"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">الوصف الفرعي</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الوصف الفرعي</label>
                             <textarea
                                 value={settings.hero_description}
                                 onChange={(e) => handleChange('hero_description', e.target.value)}
                                 placeholder="مثال: تسوق أحدث المنتجات بأسعار منافسة..."
                                 rows={3}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-right text-gray-900"
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-right text-gray-900 dark:text-gray-100"
                                 dir="rtl"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">نص الزر</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نص الزر</label>
                             <input
                                 type="text"
                                 value={settings.hero_button_text}
                                 onChange={(e) => handleChange('hero_button_text', e.target.value)}
                                 placeholder="مثال: تسوق الآن"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-right text-gray-900"
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-right text-gray-900 dark:text-gray-100"
                                 dir="rtl"
                             />
                         </div>
@@ -156,15 +156,15 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Working Hours Card */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="p-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-                        <Clock className="text-gray-500" size={20} />
-                        <h2 className="font-semibold text-gray-900">أوقات الدوام</h2>
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/50 flex items-center gap-2">
+                        <Clock className="text-gray-500 dark:text-gray-400" size={20} />
+                        <h2 className="font-semibold text-gray-900 dark:text-gray-100">أوقات الدوام</h2>
                     </div>
 
                     <div className="p-6 space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 نص أوقات الدوام (يظهر في الصفحة الرئيسية)
                             </label>
                             <input
@@ -172,17 +172,17 @@ export default function SettingsPage() {
                                 value={settings.working_hours}
                                 onChange={(e) => handleChange('working_hours', e.target.value)}
                                 placeholder="مثال: من الساعة 8:30 صباحاً - 6:00 مساءً"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-right text-gray-900"
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-right text-gray-900 dark:text-gray-100"
                                 dir="rtl"
                             />
-                            <p className="text-xs text-gray-500 mt-2">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                 يمكنك تغيير هذا النص في أي وقت (مثلاً: التوقيت الشتوي/الصيفي).
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+                <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-700/50 flex justify-end">
                     <button
                         onClick={handleSave}
                         disabled={saving || loading}

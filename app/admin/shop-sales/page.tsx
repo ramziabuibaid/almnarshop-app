@@ -152,7 +152,7 @@ export default function ShopSalesPage() {
         if (e.data?.title) document.title = e.data.title;
         try {
           printIframeRef.current.contentWindow.print();
-        } catch (_) {}
+        } catch (_) { }
         setTimeout(() => { document.title = prevTitle; }, 500);
       }
     };
@@ -183,7 +183,7 @@ export default function ShopSalesPage() {
       details: [], // Will be loaded
     });
     setViewLoading(true);
-    
+
     // Load full invoice data in background
     try {
       const fullInvoice = await getShopSalesInvoice(invoice.InvoiceID);
@@ -206,7 +206,7 @@ export default function ShopSalesPage() {
 
   const handleMarkAsSettled = async () => {
     if (!viewing.invoice) return;
-    
+
     const invoiceId = viewing.invoice.InvoiceID || viewing.invoice.invoice_id;
     if (!invoiceId) return;
 
@@ -220,7 +220,7 @@ export default function ShopSalesPage() {
         details: fullInvoice?.Items || [],
       });
       // Update local state immediately (optimistic update like maintenance page)
-      setAllInvoices(prev => prev.map(inv => 
+      setAllInvoices(prev => prev.map(inv =>
         inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'مرحلة' } : inv
       ));
     } catch (err: any) {
@@ -240,7 +240,7 @@ export default function ShopSalesPage() {
     try {
       await updateShopSalesInvoiceSign(invoiceId, 'مرحلة');
       // Update local state immediately
-      setAllInvoices(prev => prev.map(inv => 
+      setAllInvoices(prev => prev.map(inv =>
         inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'مرحلة' } : inv
       ));
     } catch (err: any) {
@@ -261,7 +261,7 @@ export default function ShopSalesPage() {
     try {
       await updateShopSalesInvoiceSign(invoiceId, 'غير مرحلة');
       // Update local state immediately
-      setAllInvoices(prev => prev.map(inv => 
+      setAllInvoices(prev => prev.map(inv =>
         inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'غير مرحلة' } : inv
       ));
     } catch (err: any) {
@@ -283,7 +283,7 @@ export default function ShopSalesPage() {
     try {
       await updateShopSalesInvoiceStatus(invoice.InvoiceID, newStatus);
       // Update local state immediately (optimistic update like maintenance page)
-      setAllInvoices(prev => prev.map(inv => 
+      setAllInvoices(prev => prev.map(inv =>
         inv.InvoiceID === invoice.InvoiceID ? { ...inv, Status: newStatus } : inv
       ));
     } catch (err: any) {
@@ -343,14 +343,14 @@ export default function ShopSalesPage() {
         .trim()
         .split(/\s+/)
         .filter(word => word.length > 0);
-      
+
       filtered = filtered.filter((invoice) => {
         const invoiceId = String(invoice.InvoiceID || '').toLowerCase();
         const customerName = String(invoice.CustomerName || '').toLowerCase();
         const customerId = String(invoice.CustomerID || '').toLowerCase();
-        
+
         const searchableText = `${invoiceId} ${customerName} ${customerId}`;
-        
+
         return searchWords.every(word => searchableText.includes(word));
       });
     }
@@ -385,9 +385,9 @@ export default function ShopSalesPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <Lock size={48} className="text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg mb-2 font-cairo">ليس لديك صلاحية للوصول إلى صفحة فواتير مبيعات المحل</p>
-            <p className="text-gray-500 text-sm font-cairo">يرجى التواصل مع المشرف للحصول على الصلاحية</p>
+            <Lock size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 text-lg mb-2 font-cairo">ليس لديك صلاحية للوصول إلى صفحة فواتير مبيعات المحل</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm font-cairo">يرجى التواصل مع المشرف للحصول على الصلاحية</p>
           </div>
         </div>
       </AdminLayout>
@@ -399,8 +399,8 @@ export default function ShopSalesPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">جاري تحميل الفواتير...</p>
+            <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">جاري تحميل الفواتير...</p>
           </div>
         </div>
       </AdminLayout>
@@ -413,15 +413,15 @@ export default function ShopSalesPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cairo">فواتير مبيعات المحل</h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base font-cairo">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 font-cairo">فواتير مبيعات المحل</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm sm:text-base font-cairo">
               إدارة فواتير مبيعات المحل ({allInvoices.length.toLocaleString('en-US')} فاتورة محملة
               {loadingMore && <span className="text-blue-600"> - جاري تحميل المزيد...</span>})
             </p>
           </div>
           <button
             onClick={() => router.push('/admin/shop-sales/new')}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium w-full sm:w-auto text-sm sm:text-base font-cairo"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium w-full sm:w-auto text-sm sm:text-base font-cairo"
           >
             <Plus size={20} />
             <span>إضافة فاتورة جديدة</span>
@@ -430,31 +430,31 @@ export default function ShopSalesPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-700">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-4">
+            <p className="text-red-700 dark:text-red-400">{error}</p>
           </div>
         )}
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-3 sm:p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {/* Search */}
             <div className="relative flex-1">
               <Search
                 size={20}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
               />
               <input
                 type="text"
                 placeholder="بحث برقم الفاتورة أو اسم العميل أو رقم الزبون..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500"
+                className="w-full pr-10 pl-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                   title="مسح البحث"
                 >
                   <X size={18} />
@@ -467,62 +467,62 @@ export default function ShopSalesPage() {
               <select
                 value={signFilter}
                 onChange={(e) => setSignFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 appearance-none pr-8"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 appearance-none pr-8"
               >
                 <option value="all">جميع حالات الترحيل</option>
                 <option value="مرحلة">مرحلة</option>
                 <option value="غير مرحلة">غير مرحلة</option>
               </select>
-              <ChevronDown size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <ChevronDown size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
             </div>
           </div>
         </div>
 
         {/* Invoices Table */}
         {filteredInvoices.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-8 sm:p-12 text-center">
-            <FileText size={48} className="text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 text-base sm:text-lg font-cairo">لا توجد فواتير</p>
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-8 sm:p-12 text-center">
+            <FileText size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg font-cairo">لا توجد فواتير</p>
           </div>
         ) : (
           <>
             {/* Desktop Table View */}
-            <div className="hidden md:block bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="hidden md:block bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
                     <tr>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         رقم الفاتورة
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         العميل
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         التاريخ
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         الترحيل
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         الإجمالي
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         الإجراءات
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {paginatedInvoices.map((invoice) => (
-                      <tr key={invoice.InvoiceID} className="hover:bg-gray-200 transition-colors">
+                      <tr key={invoice.InvoiceID} className="hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
                         <td className="px-4 py-3 text-right">
-                          <div className="font-medium text-gray-900 font-cairo">{invoice.InvoiceID}</div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100 font-cairo">{invoice.InvoiceID}</div>
                           {(() => {
                             const userId = invoice.created_by || invoice.createdBy || invoice.user_id || '';
                             if (userId && userMap.has(userId)) {
                               const username = userMap.get(userId);
                               return (
-                                <div className="text-xs text-gray-500 mt-1 font-cairo">
+                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-cairo">
                                   {username}
                                 </div>
                               );
@@ -548,44 +548,43 @@ export default function ShopSalesPage() {
                                 window.open(`/admin/customers/${invoice.CustomerID}`, '_blank', 'noopener,noreferrer');
                               }
                             }}
-                            className="text-blue-600 hover:text-blue-800 hover:underline font-medium font-cairo"
+                            className="text-blue-600 hover:text-blue-800 dark:text-white dark:hover:text-gray-300 hover:underline font-medium font-cairo"
                             title="فتح بروفايل الزبون (Ctrl+Click أو Shift+Click لفتح في تبويب جديد)"
                           >
                             {invoice.CustomerName || invoice.CustomerID}
                           </button>
                           {invoice.CustomerShamelNo && (
-                            <div className="text-xs text-gray-500 font-cairo mt-1">
+                            <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mt-1">
                               {invoice.CustomerShamelNo}
                             </div>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div className="text-gray-600 font-cairo">
+                          <div className="text-gray-600 dark:text-gray-400 font-cairo">
                             <div>{formatDate(invoice.Date)}</div>
-                          {invoice.CreatedAt && (
-                              <div className="text-xs text-gray-500 mt-0.5">{formatTime(invoice.CreatedAt)}</div>
-                          )}
+                            {invoice.CreatedAt && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatTime(invoice.CreatedAt)}</div>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${
-                              invoice.AccountantSign === 'مرحلة'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${invoice.AccountantSign === 'مرحلة'
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                : 'bg-gray-100 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200'
+                              }`}
                           >
                             {invoice.AccountantSign === 'مرحلة' ? 'مرحلة' : 'غير مرحلة'}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div className="font-semibold text-gray-900 font-cairo">{formatCurrency(invoice.TotalAmount)}</div>
+                          <div className="font-semibold text-gray-900 dark:text-gray-100 font-cairo">{formatCurrency(invoice.TotalAmount)}</div>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center gap-2 justify-end">
                             <button
                               onClick={() => handleViewInvoice(invoice)}
-                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                              className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                               title="عرض"
                             >
                               <Eye size={18} />
@@ -593,11 +592,10 @@ export default function ShopSalesPage() {
                             <button
                               onClick={() => handleEditInvoice(invoice)}
                               disabled={invoice.AccountantSign === 'مرحلة'}
-                              className={`p-2 rounded-lg transition-colors ${
-                                invoice.AccountantSign === 'مرحلة'
-                                  ? 'text-gray-400 cursor-not-allowed opacity-50'
-                                  : 'text-gray-600 hover:bg-gray-100'
-                              }`}
+                              className={`p-2 rounded-lg transition-colors ${invoice.AccountantSign === 'مرحلة'
+                                  ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
+                                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+                                }`}
                               title={invoice.AccountantSign === 'مرحلة' ? 'لا يمكن تعديل فاتورة مرحلة' : 'تعديل'}
                             >
                               <Edit size={18} />
@@ -606,7 +604,7 @@ export default function ShopSalesPage() {
                               <button
                                 onClick={() => handleMarkAsSettledFromTable(invoice)}
                                 disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
-                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="تغيير إلى مرحلة"
                               >
                                 {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
@@ -620,7 +618,7 @@ export default function ShopSalesPage() {
                               <button
                                 onClick={() => handleMarkAsUnsettled(invoice)}
                                 disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
-                                className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="p-2 text-orange-600 dark:text-orange-400 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="إعادة إلى غير مرحلة"
                               >
                                 {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
@@ -632,7 +630,7 @@ export default function ShopSalesPage() {
                             )}
                             <button
                               onClick={() => handlePrintInvoice(invoice)}
-                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                              className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                               title="طباعة"
                             >
                               <Printer size={18} />
@@ -649,18 +647,17 @@ export default function ShopSalesPage() {
             {/* Mobile Card View */}
             <div className="md:hidden space-y-3">
               {paginatedInvoices.map((invoice) => (
-                <div key={invoice.InvoiceID} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                <div key={invoice.InvoiceID} className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4 shadow-sm">
                   {/* Header Row */}
-                  <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
+                  <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200 dark:border-slate-700">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-base font-bold text-gray-900 font-cairo">#{invoice.InvoiceID}</h3>
+                        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 font-cairo">#{invoice.InvoiceID}</h3>
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-cairo ${
-                            invoice.AccountantSign === 'مرحلة'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-cairo ${invoice.AccountantSign === 'مرحلة'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                              : 'bg-gray-100 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200'
+                            }`}
                         >
                           {invoice.AccountantSign === 'مرحلة' ? 'مرحلة' : 'غير مرحلة'}
                         </span>
@@ -670,7 +667,7 @@ export default function ShopSalesPage() {
                         if (userId && userMap.has(userId)) {
                           const username = userMap.get(userId);
                           return (
-                            <div className="text-xs text-gray-500 font-cairo">
+                            <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo">
                               {username}
                             </div>
                           );
@@ -679,7 +676,7 @@ export default function ShopSalesPage() {
                       })()}
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <div className="text-lg font-bold text-gray-900 font-cairo mb-1">
+                      <div className="text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo mb-1">
                         {formatCurrency(invoice.TotalAmount)}
                       </div>
                     </div>
@@ -695,13 +692,13 @@ export default function ShopSalesPage() {
                         }
                         router.push(`/admin/customers/${invoice.CustomerID}`);
                       }}
-                      className="text-blue-600 hover:text-blue-800 hover:underline font-semibold text-sm font-cairo text-right w-full"
+                      className="text-blue-600 hover:text-blue-800 dark:text-white dark:hover:text-gray-300 hover:underline font-semibold text-sm font-cairo text-right w-full"
                       title="فتح بروفايل الزبون"
                     >
                       {invoice.CustomerName || invoice.CustomerID}
                     </button>
                     {invoice.CustomerShamelNo && (
-                      <div className="text-xs text-gray-500 font-cairo mt-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mt-1">
                         {invoice.CustomerShamelNo}
                       </div>
                     )}
@@ -709,20 +706,20 @@ export default function ShopSalesPage() {
 
                   {/* Date */}
                   <div className="mb-3">
-                    <div className="text-xs text-gray-500 font-cairo mb-1">التاريخ</div>
-                    <div className="text-sm text-gray-900 font-cairo">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mb-1">التاريخ</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100 font-cairo">
                       {formatDate(invoice.Date)}
                       {invoice.CreatedAt && (
-                        <div className="text-xs text-gray-500 mt-0.5">{formatTime(invoice.CreatedAt)}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatTime(invoice.CreatedAt)}</div>
                       )}
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+                  <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-slate-700">
                     <button
                       onClick={() => handleViewInvoice(invoice)}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-cairo"
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors font-cairo"
                     >
                       <Eye size={16} />
                       <span>عرض</span>
@@ -730,11 +727,10 @@ export default function ShopSalesPage() {
                     <button
                       onClick={() => handleEditInvoice(invoice)}
                       disabled={invoice.AccountantSign === 'مرحلة'}
-                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors font-cairo ${
-                        invoice.AccountantSign === 'مرحلة'
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors font-cairo ${invoice.AccountantSign === 'مرحلة'
+                          ? 'bg-gray-100 dark:bg-slate-700/50 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
                           : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                      }`}
+                        }`}
                       title={invoice.AccountantSign === 'مرحلة' ? 'لا يمكن تعديل فاتورة مرحلة' : 'تعديل'}
                     >
                       <Edit size={16} />
@@ -742,7 +738,7 @@ export default function ShopSalesPage() {
                     </button>
                     <button
                       onClick={() => handlePrintInvoice(invoice)}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-cairo"
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors font-cairo"
                     >
                       <Printer size={16} />
                       <span>طباعة</span>
@@ -751,7 +747,7 @@ export default function ShopSalesPage() {
                       <button
                         onClick={() => handleMarkAsSettledFromTable(invoice)}
                         disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="تغيير إلى مرحلة"
                       >
                         {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
@@ -765,7 +761,7 @@ export default function ShopSalesPage() {
                       <button
                         onClick={() => handleMarkAsUnsettled(invoice)}
                         disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
-                        className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 text-orange-600 dark:text-orange-400 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="إعادة إلى غير مرحلة"
                       >
                         {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
@@ -782,8 +778,8 @@ export default function ShopSalesPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="bg-gray-50 border-t border-gray-200 px-3 sm:px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="text-xs sm:text-sm text-gray-700 font-cairo text-center sm:text-right">
+              <div className="bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700 px-3 sm:px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-cairo text-center sm:text-right">
                   عرض <span className="font-semibold">{((currentPage - 1) * INVOICES_PER_PAGE) + 1}</span> إلى{' '}
                   <span className="font-semibold">
                     {Math.min(currentPage * INVOICES_PER_PAGE, filteredInvoices.length)}
@@ -794,10 +790,10 @@ export default function ShopSalesPage() {
                   <button
                     onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title="الصفحة السابقة"
                   >
-                    <ChevronRight size={20} className="text-gray-600" />
+                    <ChevronRight size={20} className="text-gray-600 dark:text-gray-400" />
                   </button>
                   <div className="flex items-center gap-1">
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -811,16 +807,15 @@ export default function ShopSalesPage() {
                       } else {
                         pageNum = currentPage - 2 + i;
                       }
-                      
+
                       return (
                         <button
                           key={pageNum}
                           onClick={() => setCurrentPage(pageNum)}
-                          className={`px-3 py-1 rounded-lg transition-colors text-sm font-cairo ${
-                            currentPage === pageNum
-                              ? 'bg-gray-900 text-white'
-                              : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
-                          }`}
+                          className={`px-3 py-1 rounded-lg transition-colors text-sm font-cairo ${currentPage === pageNum
+                              ? 'bg-gray-900 dark:bg-slate-700 text-white'
+                              : 'border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                            }`}
                         >
                           {pageNum}
                         </button>
@@ -830,10 +825,10 @@ export default function ShopSalesPage() {
                   <button
                     onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
-                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title="الصفحة التالية"
                   >
-                    <ChevronLeft size={20} className="text-gray-600" />
+                    <ChevronLeft size={20} className="text-gray-600 dark:text-gray-400" />
                   </button>
                 </div>
               </div>
@@ -843,21 +838,21 @@ export default function ShopSalesPage() {
 
         {/* Modal عرض الفاتورة */}
         {viewing.invoice && (
-          <div 
-            className="fixed inset-0 md:right-64 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4" 
+          <div
+            className="fixed inset-0 md:right-64 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4"
             dir="rtl"
             onClick={closeView}
           >
-            <div 
-              className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-hidden border border-gray-200 flex flex-col"
+            <div
+              className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-hidden border border-gray-200 dark:border-slate-700 flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3 sm:px-4 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3 sm:px-4 py-3 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex-shrink-0">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base sm:text-lg font-bold text-gray-900 font-cairo">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo">
                     معاينة الفاتورة: {viewing.invoice.InvoiceID || viewing.invoice.invoice_id}
                   </h3>
-                  <p className="text-xs sm:text-sm text-gray-600 font-cairo">
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-cairo">
                     التاريخ: {formatDate(viewing.invoice.Date || viewing.invoice.date)}
                   </p>
                 </div>
@@ -907,7 +902,7 @@ export default function ShopSalesPage() {
                             invoice: fullInvoice,
                             details: fullInvoice?.Items || [],
                           });
-                          setAllInvoices(prev => prev.map(inv => 
+                          setAllInvoices(prev => prev.map(inv =>
                             inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'غير مرحلة' } : inv
                           ));
                         } catch (err: any) {
@@ -932,7 +927,7 @@ export default function ShopSalesPage() {
                   )}
                   <button
                     onClick={closeView}
-                    className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
+                    className="px-3 py-1.5 text-sm bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo"
                   >
                     إغلاق
                   </button>
@@ -940,13 +935,13 @@ export default function ShopSalesPage() {
               </div>
 
               <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 overflow-y-auto flex-1">
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs sm:text-sm text-gray-700 font-cairo">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-cairo">
                   <div>
-                    <div className="text-gray-500">رقم الفاتورة</div>
+                    <div className="text-gray-500 dark:text-gray-400">رقم الفاتورة</div>
                     <div className="font-semibold">{viewing.invoice.InvoiceID || viewing.invoice.invoice_id}</div>
                   </div>
                   <div>
-                    <div className="text-gray-500">العميل</div>
+                    <div className="text-gray-500 dark:text-gray-400">العميل</div>
                     {viewing.invoice.CustomerID ? (
                       <button
                         onClick={(e) => {
@@ -972,14 +967,13 @@ export default function ShopSalesPage() {
                     )}
                   </div>
                   <div>
-                    <div className="text-gray-500">حالة الترحيل</div>
+                    <div className="text-gray-500 dark:text-gray-400">حالة الترحيل</div>
                     <div className="font-semibold">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          viewing.invoice.AccountantSign === 'مرحلة'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${viewing.invoice.AccountantSign === 'مرحلة'
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                            : 'bg-gray-100 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200'
+                          }`}
                       >
                         {viewing.invoice.AccountantSign || 'غير مرحلة'}
                       </span>
@@ -987,17 +981,17 @@ export default function ShopSalesPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs sm:text-sm text-gray-700 font-cairo">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-cairo">
                   <div>
-                    <div className="text-gray-500">الخصم</div>
+                    <div className="text-gray-500 dark:text-gray-400">الخصم</div>
                     <div className="font-semibold">{formatCurrency(viewing.invoice.Discount || viewing.invoice.discount || 0)}</div>
                   </div>
                   <div>
-                    <div className="text-gray-500">المجموع</div>
+                    <div className="text-gray-500 dark:text-gray-400">المجموع</div>
                     <div className="font-semibold">{formatCurrency(viewing.invoice.Subtotal || viewing.invoice.subtotal || 0)}</div>
                   </div>
                   <div>
-                    <div className="text-gray-500">الصافي</div>
+                    <div className="text-gray-500 dark:text-gray-400">الصافي</div>
                     <div className="font-semibold">
                       {formatCurrency(viewing.invoice.TotalAmount || viewing.invoice.total_amount || 0)}
                     </div>
@@ -1005,21 +999,21 @@ export default function ShopSalesPage() {
                 </div>
 
                 {viewing.invoice.Notes && (
-                  <div className="text-sm text-gray-700 font-cairo">
-                    <span className="text-gray-500">ملاحظات: </span>
+                  <div className="text-sm text-gray-700 dark:text-gray-300 font-cairo">
+                    <span className="text-gray-500 dark:text-gray-400">ملاحظات: </span>
                     {viewing.invoice.Notes}
                   </div>
                 )}
 
-                <div className="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
+                <div className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden overflow-x-auto">
                   <table className="w-full text-xs sm:text-sm min-w-[500px]">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
                       <tr>
-                        <th className="px-3 py-2 text-right font-semibold text-gray-700">#</th>
-                        <th className="px-3 py-2 text-right font-semibold text-gray-700">الصنف</th>
-                        <th className="px-3 py-2 text-right font-semibold text-gray-700">الكمية</th>
-                        <th className="px-3 py-2 text-right font-semibold text-gray-700">السعر</th>
-                        <th className="px-3 py-2 text-right font-semibold text-gray-700">المبلغ</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">#</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">الصنف</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">الكمية</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">السعر</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">المبلغ</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1027,22 +1021,22 @@ export default function ShopSalesPage() {
                         <tr>
                           <td colSpan={5} className="px-3 py-8 text-center">
                             <div className="flex flex-col items-center justify-center gap-2">
-                              <Loader2 size={32} className="animate-spin text-gray-400" />
-                              <p className="text-sm text-gray-600 font-cairo">جاري التحميل...</p>
+                              <Loader2 size={32} className="animate-spin text-gray-400 dark:text-gray-500" />
+                              <p className="text-sm text-gray-600 dark:text-gray-400 font-cairo">جاري التحميل...</p>
                             </div>
                           </td>
                         </tr>
                       ) : (viewing.details || []).length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-3 py-4 text-center text-gray-500 font-cairo">
+                          <td colSpan={5} className="px-3 py-4 text-center text-gray-500 dark:text-gray-400 font-cairo">
                             لا توجد بنود للعرض
                           </td>
                         </tr>
                       ) : (
                         (viewing.details || []).map((item, idx) => (
-                          <tr key={item.DetailsID || item.details_id || idx} className="border-b border-gray-100">
-                            <td className="px-3 py-2 text-right text-gray-800 font-cairo">{idx + 1}</td>
-                            <td className="px-3 py-2 text-right text-gray-800">
+                          <tr key={item.DetailsID || item.details_id || idx} className="border-b border-gray-100 dark:border-slate-700/50">
+                            <td className="px-3 py-2 text-right text-gray-800 dark:text-gray-200 font-cairo">{idx + 1}</td>
+                            <td className="px-3 py-2 text-right text-gray-800 dark:text-gray-200">
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -1060,18 +1054,18 @@ export default function ShopSalesPage() {
                                 {item.ProductName || item.productName || item.product_name || item.Name || item.name || '—'}
                               </button>
                               {(item.notes || item.Notes) && String(item.notes || item.Notes).trim() && (
-                                <p className="text-xs text-red-600 mt-1 font-cairo italic">
+                                <p className="text-xs text-red-600 dark:text-red-400 mt-1 font-cairo italic">
                                   {item.notes || item.Notes}
                                 </p>
                               )}
                             </td>
-                            <td className="px-3 py-2 text-right text-gray-800 font-cairo">
+                            <td className="px-3 py-2 text-right text-gray-800 dark:text-gray-200 font-cairo">
                               {item.Quantity || item.quantity || 0}
                             </td>
-                            <td className="px-3 py-2 text-right text-gray-800 font-cairo">
+                            <td className="px-3 py-2 text-right text-gray-800 dark:text-gray-200 font-cairo">
                               {formatCurrency(item.UnitPrice || item.unit_price || 0)}
                             </td>
-                            <td className="px-3 py-2 text-right text-gray-800 font-semibold font-cairo">
+                            <td className="px-3 py-2 text-right text-gray-800 dark:text-gray-200 font-semibold font-cairo">
                               {formatCurrency(
                                 (item.Quantity || item.quantity || 0) * (item.UnitPrice || item.unit_price || 0)
                               )}
@@ -1094,12 +1088,12 @@ export default function ShopSalesPage() {
             onClick={() => setPrintOverlayInvoiceId(null)}
           >
             <div
-              className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+              className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
               style={{ minWidth: '120mm', maxHeight: '95vh' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-                <span className="text-sm font-cairo text-gray-700">معاينة الطباعة — فاتورة محل</span>
+              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex-shrink-0">
+                <span className="text-sm font-cairo text-gray-700 dark:text-gray-300">معاينة الطباعة — فاتورة محل</span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -1112,19 +1106,19 @@ export default function ShopSalesPage() {
                   <button
                     type="button"
                     onClick={() => setPrintOverlayInvoiceId(null)}
-                    className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                    className="p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-gray-900 transition-colors"
                     aria-label="إغلاق"
                   >
                     <X size={20} />
                   </button>
                 </div>
               </div>
-              <div className="flex-1 overflow-auto bg-white min-h-0">
+              <div className="flex-1 overflow-auto bg-white dark:bg-slate-800 min-h-0">
                 <iframe
                   ref={printIframeRef}
                   src={`/admin/shop-sales/print/${printOverlayInvoiceId}?embed=1`}
                   title="طباعة فاتورة المحل"
-                  className="w-full border-0 bg-white"
+                  className="w-full border-0 bg-white dark:bg-slate-800"
                   style={{ minHeight: '70vh', height: '70vh' }}
                 />
               </div>

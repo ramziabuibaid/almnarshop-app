@@ -618,22 +618,22 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
   // Get status badge color
   const getStatusColor = (status: string) => {
     const statusColors: Record<string, string> = {
-      'موجودة في المحل وجاهزة للتسليم': 'bg-blue-100 text-blue-800',
-      'موجودة في المخزن وجاهزة للتسليم': 'bg-purple-100 text-purple-800',
-      'موجودة في الشركة': 'bg-yellow-100 text-yellow-800',
-      'جاهزة للتسليم للزبون من المحل': 'bg-green-100 text-green-800',
-      'جاهزة للتسليم للزبون من المخزن': 'bg-green-100 text-green-800',
-      'سلمت للزبون': 'bg-gray-100 text-gray-800',
-      'تم ارجاعها للشركة وخصمها للزبون': 'bg-red-100 text-red-800',
+      'موجودة في المحل وجاهزة للتسليم': 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+      'موجودة في المخزن وجاهزة للتسليم': 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300',
+      'موجودة في الشركة': 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300',
+      'جاهزة للتسليم للزبون من المحل': 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
+      'جاهزة للتسليم للزبون من المخزن': 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
+      'سلمت للزبون': 'bg-gray-100 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200',
+      'تم ارجاعها للشركة وخصمها للزبون': 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
     };
-    return statusColors[status] || 'bg-gray-100 text-gray-800';
+    return statusColors[status] || 'bg-gray-100 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200';
   };
 
   // Get row background color based on status and date
   const getRowBackgroundColor = (record: MaintenanceRecord) => {
     // If delivered to customer, green background
     if (record.Status === 'سلمت للزبون') {
-      return 'bg-green-50 hover:bg-green-100';
+      return 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100';
     }
 
     // If not delivered and more than 2 weeks have passed since receive date
@@ -649,7 +649,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
 
           // More than 14 days (2 weeks)
           if (daysDifference > 14) {
-            return 'bg-red-50 hover:bg-red-100';
+            return 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100';
           }
         }
       } catch (error) {
@@ -659,7 +659,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
     }
 
     // Default background
-    return 'hover:bg-gray-50';
+    return 'hover:bg-gray-50 dark:hover:bg-slate-700/50';
   };
 
   const filteredAndSortedRecords = useMemo(() => {
@@ -758,8 +758,8 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 font-cairo">جاري تحميل سجلات الصيانة...</p>
+            <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 font-cairo">جاري تحميل سجلات الصيانة...</p>
           </div>
         </div>
       </AdminLayout>
@@ -772,8 +772,8 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cairo">الصيانة</h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base font-cairo">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 font-cairo">الصيانة</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm sm:text-base font-cairo">
               إدارة سجلات الصيانة ({filteredAndSortedRecords.length} سجل)
             </p>
           </div>
@@ -787,7 +787,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
             </button>
             <button
               onClick={() => router.push('/admin/maintenance/new')}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium font-cairo text-sm sm:text-base"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium font-cairo text-sm sm:text-base"
             >
               <Plus size={20} />
               <span>إضافة سجل صيانة</span>
@@ -797,30 +797,30 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
-            <p className="text-red-700 text-sm sm:text-base font-cairo">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-3 sm:p-4">
+            <p className="text-red-700 dark:text-red-400 text-sm sm:text-base font-cairo">{error}</p>
           </div>
         )}
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 space-y-3 sm:space-y-4">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-3 sm:p-4 space-y-3 sm:space-y-4">
           {/* Search Bar */}
           <div className="relative">
             <Search
               size={20}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
             />
             <input
               type="text"
               placeholder="بحث برقم الصيانة أو اسم العميل أو القطعة أو الرقم التسلسلي..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 font-cairo text-sm sm:text-base"
+              className="w-full pr-10 pl-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 font-cairo text-sm sm:text-base"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <X size={18} />
               </button>
@@ -831,11 +831,11 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {/* Status Filter */}
             <div className="relative">
-              <label className="block text-xs font-medium text-gray-700 mb-1 font-cairo">الحالة</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">الحالة</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 appearance-none pr-8 text-sm font-cairo"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 appearance-none pr-8 text-sm font-cairo"
               >
                 <option value="all">جميع الحالات</option>
                 {statusOptions.map((status) => (
@@ -844,31 +844,31 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   </option>
                 ))}
               </select>
-              <ChevronDown size={16} className="absolute left-3 bottom-2.5 text-gray-400 pointer-events-none" />
+              <ChevronDown size={16} className="absolute left-3 bottom-2.5 text-gray-400 dark:text-gray-500 pointer-events-none" />
             </div>
 
             {/* Location Filter */}
             <div className="relative">
-              <label className="block text-xs font-medium text-gray-700 mb-1 font-cairo">الموقع</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">الموقع</label>
               <select
                 value={locationFilter}
                 onChange={(e) => setLocationFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 appearance-none pr-8 text-sm font-cairo"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 appearance-none pr-8 text-sm font-cairo"
               >
                 <option value="all">جميع المواقع</option>
                 <option value="المحل">المحل</option>
                 <option value="المخزن">المخزن</option>
               </select>
-              <ChevronDown size={16} className="absolute left-3 bottom-2.5 text-gray-400 pointer-events-none" />
+              <ChevronDown size={16} className="absolute left-3 bottom-2.5 text-gray-400 dark:text-gray-500 pointer-events-none" />
             </div>
 
             {/* Company Filter */}
             <div className="relative">
-              <label className="block text-xs font-medium text-gray-700 mb-1 font-cairo">الشركة</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">الشركة</label>
               <select
                 value={companyFilter}
                 onChange={(e) => setCompanyFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 appearance-none pr-8 text-sm font-cairo"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 appearance-none pr-8 text-sm font-cairo"
               >
                 <option value="all">جميع الشركات</option>
                 {companyOptions.map((company) => (
@@ -877,14 +877,14 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   </option>
                 ))}
               </select>
-              <ChevronDown size={16} className="absolute left-3 bottom-2.5 text-gray-400 pointer-events-none" />
+              <ChevronDown size={16} className="absolute left-3 bottom-2.5 text-gray-400 dark:text-gray-500 pointer-events-none" />
             </div>
           </div>
 
           {/* Active Filters */}
           {(statusFilter !== 'all' || locationFilter !== 'all' || companyFilter !== 'all' || searchQuery) && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-gray-600 font-cairo">الفلاتر النشطة:</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400 font-cairo">الفلاتر النشطة:</span>
               {statusFilter !== 'all' && (
                 <button
                   onClick={() => setStatusFilter('all')}
@@ -906,7 +906,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
               {companyFilter !== 'all' && (
                 <button
                   onClick={() => setCompanyFilter('all')}
-                  className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded text-xs hover:bg-green-200 transition-colors font-cairo"
+                  className="flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded text-xs hover:bg-green-200 transition-colors font-cairo"
                 >
                   {companyFilter}
                   <X size={12} />
@@ -915,7 +915,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs hover:bg-gray-200 transition-colors font-cairo"
+                  className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200 rounded text-xs hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors font-cairo"
                 >
                   بحث: {searchQuery.substring(0, 20)}
                   <X size={12} />
@@ -928,7 +928,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   setCompanyFilter('all');
                   setSearchQuery('');
                 }}
-                className="px-2 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors font-cairo"
+                className="px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:text-red-700 hover:bg-red-50 rounded transition-colors font-cairo"
               >
                 إزالة الكل
               </button>
@@ -938,9 +938,9 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
 
         {/* Records List */}
         {filteredAndSortedRecords.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-8 sm:p-12 text-center">
-            <Wrench size={48} className="text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 text-base sm:text-lg font-cairo">لا توجد سجلات صيانة</p>
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-8 sm:p-12 text-center">
+            <Wrench size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg font-cairo">لا توجد سجلات صيانة</p>
             {(statusFilter !== 'all' || locationFilter !== 'all' || companyFilter !== 'all' || searchQuery) && (
               <button
                 onClick={() => {
@@ -949,7 +949,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   setCompanyFilter('all');
                   setSearchQuery('');
                 }}
-                className="mt-4 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors font-cairo"
+                className="mt-4 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors font-cairo"
               >
                 إزالة جميع الفلاتر
               </button>
@@ -995,10 +995,10 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
             )}
 
             {/* Desktop Table View */}
-            <div className="hidden md:block bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="hidden md:block bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
                     <tr>
                       <th className="px-4 py-3 text-right">
                         <div className="flex items-center">
@@ -1009,29 +1009,29 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                               if (e.target.checked) selectAllOnPage();
                               else clearPrintSelection();
                             }}
-                            className="w-4 h-4 text-gray-900 bg-gray-100 border-gray-300 rounded focus:ring-gray-900 focus:ring-2 cursor-pointer"
+                            className="w-4 h-4 text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-slate-700/50 border-gray-300 dark:border-slate-600 rounded focus:ring-gray-900 dark:focus:ring-gray-100 focus:ring-2 cursor-pointer"
                           />
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         رقم الصيانة
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         العميل
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         اسم القطعة
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         الموقع
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         تاريخ الاستقبال
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         الحالة
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider font-cairo">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         الإجراءات
                       </th>
                     </tr>
@@ -1046,14 +1046,14 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                                 type="checkbox"
                                 checked={selectedForPrint.has(record.MaintNo)}
                                 onChange={() => toggleSelectForPrint(record.MaintNo)}
-                                className="w-4 h-4 text-gray-900 bg-gray-100 border-gray-300 rounded focus:ring-gray-900 focus:ring-2 cursor-pointer"
+                                className="w-4 h-4 text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-slate-700/50 border-gray-300 dark:border-slate-600 rounded focus:ring-gray-900 dark:focus:ring-gray-100 focus:ring-2 cursor-pointer"
                               />
                             </div>
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <div className="font-medium text-gray-900 font-cairo">{record.MaintNo}</div>
+                            <div className="font-medium text-gray-900 dark:text-gray-100 font-cairo">{record.MaintNo}</div>
                             {userMap.get(record.created_by || record.createdBy || record.user_id || '') && (
-                              <div className="text-xs text-gray-500 mt-1 font-cairo">
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-cairo">
                                 {userMap.get(record.created_by || record.createdBy || record.user_id || '')}
                               </div>
                             )}
@@ -1068,7 +1068,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                                   router.push(`/admin/customers/${record.CustomerID}`);
                                 }
                               }}
-                              className="text-gray-900 hover:text-gray-900 hover:underline font-medium transition-colors text-right font-cairo"
+                              className="text-gray-900 dark:text-gray-100 hover:text-gray-900 hover:underline font-medium transition-colors text-right font-cairo"
                               title="عرض بروفايل العميل"
                             >
                               {record.CustomerName || record.CustomerID}
@@ -1076,7 +1076,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex items-center gap-2">
-                              <div className="text-gray-900 font-cairo">{record.ItemName}</div>
+                              <div className="text-gray-900 dark:text-gray-100 font-cairo">{record.ItemName}</div>
                               {record.CostAmount !== null && record.CostAmount !== undefined && record.CostAmount > 0 && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-800 rounded-full text-xs font-medium font-cairo" title={`تكلفة الصيانة: ${record.CostAmount} ₪`}>
                                   <DollarSign size={12} />
@@ -1085,23 +1085,23 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                               )}
                             </div>
                             {record.Company && (
-                              <div className="text-xs text-gray-500 mt-1 font-cairo">
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-cairo">
                                 {record.Company}
                               </div>
                             )}
                             {record.CostReason && (
-                              <div className="text-xs text-orange-600 mt-1 font-cairo" title={record.CostReason}>
+                              <div className="text-xs text-orange-600 dark:text-orange-400 mt-1 font-cairo" title={record.CostReason}>
                                 {record.CostReason.length > 30 ? `${record.CostReason.substring(0, 30)}...` : record.CostReason}
                               </div>
                             )}
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <div className="text-gray-600 font-cairo">{record.Location}</div>
+                            <div className="text-gray-600 dark:text-gray-400 font-cairo">{record.Location}</div>
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <div className="text-gray-600 font-cairo">{formatDate(record.DateOfReceive)}</div>
+                            <div className="text-gray-600 dark:text-gray-400 font-cairo">{formatDate(record.DateOfReceive)}</div>
                             {record.CreatedAt && (
-                              <div className="text-xs text-gray-500 mt-1 font-cairo">
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-cairo">
                                 {formatTime(record.CreatedAt)}
                               </div>
                             )}
@@ -1118,7 +1118,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                                       key={idx}
                                       onClick={() => handleStatusChangeClick(record.MaintNo, action.newStatus, action.label)}
                                       disabled={updatingStatus === record.MaintNo}
-                                      className={`text-xs px-2.5 py-1 border border-gray-300 rounded-md hover:bg-gray-100 hover:border-gray-400 transition-colors text-gray-900 font-medium font-cairo ${updatingStatus === record.MaintNo ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                                      className={`text-xs px-2.5 py-1 border border-gray-300 dark:border-slate-600 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 hover:border-gray-400 transition-colors text-gray-900 dark:text-gray-100 font-medium font-cairo ${updatingStatus === record.MaintNo ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                                         }`}
                                       title={action.newStatus}
                                     >
@@ -1128,7 +1128,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                                 </div>
                               )}
                               {updatingStatus === record.MaintNo && (
-                                <div className="flex items-center gap-1 text-xs text-gray-500 font-cairo">
+                                <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 font-cairo">
                                   <Loader2 size={12} className="animate-spin" />
                                   <span>جاري التحديث...</span>
                                 </div>
@@ -1139,7 +1139,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                             <div className="flex items-center gap-2 justify-end">
                               <button
                                 onClick={() => toggleRowExpansion(record.MaintNo)}
-                                className={`p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors ${expandedRows.has(record.MaintNo) ? 'bg-gray-100' : ''
+                                className={`p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors ${expandedRows.has(record.MaintNo) ? 'bg-gray-100 dark:bg-slate-700/50' : ''
                                   }`}
                                 title="عرض السجل التاريخي"
                               >
@@ -1152,25 +1152,25 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                               {shouldShowWhatsApp(record.Status) && (
                                 <div className="relative group">
                                   <button
-                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                    className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 rounded-lg transition-colors"
                                     title="إرسال واتساب"
                                   >
                                     <MessageCircle size={18} />
                                   </button>
-                                  <div className="absolute left-0 top-full mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                                  <div className="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
                                     <div className="p-2 space-y-1">
                                       <button
                                         onClick={() => handleWhatsApp(record, '970')}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-cairo"
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors font-cairo"
                                       >
-                                        <MessageCircle size={16} className="text-green-600" />
+                                        <MessageCircle size={16} className="text-green-600 dark:text-green-400" />
                                         <span className="flex-1">واتساب: 970</span>
                                       </button>
                                       <button
                                         onClick={() => handleWhatsApp(record, '972')}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-cairo"
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors font-cairo"
                                       >
-                                        <MessageCircle size={16} className="text-green-600" />
+                                        <MessageCircle size={16} className="text-green-600 dark:text-green-400" />
                                         <span className="flex-1">واتساب: 972</span>
                                       </button>
                                     </div>
@@ -1179,28 +1179,28 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                               )}
                               <button
                                 onClick={() => handlePrintRecord(record)}
-                                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                                 title="طباعة"
                               >
                                 <Printer size={18} />
                               </button>
                               <button
                                 onClick={() => handlePrintQrRecord(record)}
-                                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                                 title="طباعة الباركود"
                               >
                                 <ScanLine size={18} />
                               </button>
                               <button
                                 onClick={() => handleViewRecord(record)}
-                                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                                 title="عرض"
                               >
                                 <Eye size={18} />
                               </button>
                               <button
                                 onClick={() => handleEditRecord(record)}
-                                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                                 title="تعديل"
                               >
                                 <Edit size={18} />
@@ -1210,19 +1210,19 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                         </tr>
                         {expandedRows.has(record.MaintNo) && (
                           <tr className="bg-gradient-to-b from-gray-50 to-white">
-                            <td colSpan={7} className="px-4 sm:px-6 py-4 border-t-2 border-gray-300">
+                            <td colSpan={7} className="px-4 sm:px-6 py-4 border-t-2 border-gray-300 dark:border-slate-600">
                               <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-top-2 duration-200" dir="rtl">
-                                <div className="flex items-center justify-between mb-3 sm:mb-4 pb-3 border-b border-gray-300">
+                                <div className="flex items-center justify-between mb-3 sm:mb-4 pb-3 border-b border-gray-300 dark:border-slate-600">
                                   <div className="flex items-center gap-2">
-                                    <div className="p-1.5 bg-gray-900 rounded-lg">
+                                    <div className="p-1.5 bg-gray-900 dark:bg-slate-700 rounded-lg">
                                       <History size={14} className="text-white" />
                                     </div>
-                                    <h3 className="text-xs sm:text-sm font-bold text-gray-900 font-cairo">السجل التاريخي</h3>
-                                    <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full font-cairo">#{record.MaintNo}</span>
+                                    <h3 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 font-cairo">السجل التاريخي</h3>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full font-cairo">#{record.MaintNo}</span>
                                   </div>
                                   <button
                                     onClick={() => toggleRowExpansion(record.MaintNo)}
-                                    className="text-xs text-gray-500 hover:text-gray-700 transition-colors font-cairo"
+                                    className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 transition-colors font-cairo"
                                   >
                                     إخفاء
                                   </button>
@@ -1244,31 +1244,31 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
             {/* Mobile Card View */}
             <div className="md:hidden space-y-3">
               {paginatedRecords.map((record) => (
-                <div key={record.MaintNo} className={`bg-white border rounded-lg p-4 shadow-sm ${getRowBackgroundColor(record)}`}>
+                <div key={record.MaintNo} className={`bg-white dark:bg-slate-800 border rounded-lg p-4 shadow-sm ${getRowBackgroundColor(record)}`}>
 
                   {/* Header Row: Selection, ID and Status */}
-                  <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
+                  <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200 dark:border-slate-700">
                     <div className="flex items-center gap-3 w-full">
                       <input
                         type="checkbox"
                         checked={selectedForPrint.has(record.MaintNo)}
                         onChange={() => toggleSelectForPrint(record.MaintNo)}
-                        className="w-4 h-4 text-gray-900 bg-gray-100 border-gray-300 rounded focus:ring-gray-900 focus:ring-2 cursor-pointer mt-0.5"
+                        className="w-4 h-4 text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-slate-700/50 border-gray-300 dark:border-slate-600 rounded focus:ring-gray-900 dark:focus:ring-gray-100 focus:ring-2 cursor-pointer mt-0.5"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center justify-between gap-1 w-full">
                           <div className="flex items-center gap-2">
-                            <h3 className="text-base font-bold text-gray-900 font-cairo">#{record.MaintNo}</h3>
+                            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 font-cairo">#{record.MaintNo}</h3>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-cairo ${getStatusColor(record.Status)}`}>
                               {record.Status}
                             </span>
                           </div>
-                          <div className="text-xs text-gray-500 font-cairo flex-shrink-0">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo flex-shrink-0">
                             {formatDate(record.DateOfReceive)}
                           </div>
                         </div>
                         {userMap.get(record.created_by || record.createdBy || record.user_id || '') && (
-                          <div className="text-xs text-gray-500 font-cairo mt-1">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mt-1">
                             {userMap.get(record.created_by || record.createdBy || record.user_id || '')}
                           </div>
                         )}
@@ -1288,21 +1288,21 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                       {record.CustomerName || record.CustomerID}
                     </button>
                     {(record as any).CustomerPhone && (
-                      <div className="text-xs text-gray-500 font-cairo mt-1" dir="ltr">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mt-1" dir="ltr">
                         {fixPhoneNumber((record as any).CustomerPhone)}
                       </div>
                     )}
                   </div>
 
                   {/* Date & Location Grid */}
-                  <div className="grid grid-cols-2 gap-3 mb-3 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                  <div className="grid grid-cols-2 gap-3 mb-3 bg-gray-50 dark:bg-slate-800/50 p-2 rounded-lg border border-gray-100 dark:border-slate-700/50">
                     <div>
-                      <div className="text-xs text-gray-500 font-cairo mb-1">الموقع</div>
-                      <div className="text-sm font-semibold text-gray-900 font-cairo">{record.Location || '—'}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mb-1">الموقع</div>
+                      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo">{record.Location || '—'}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-gray-500 font-cairo mb-1">تاريخ الإنشاء</div>
-                      <div className="text-sm font-semibold text-gray-900 font-cairo">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mb-1">تاريخ الإنشاء</div>
+                      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo">
                         {record.CreatedAt ? formatTime(record.CreatedAt) : '—'}
                       </div>
                     </div>
@@ -1311,26 +1311,26 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   {/* Item Description block */}
                   <div className="mb-3">
                     <div className="flex items-center justify-between mb-1">
-                      <div className="text-xs text-gray-500 font-cairo">اسم القطعة</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo">اسم القطعة</div>
                       {record.CostAmount !== null && record.CostAmount !== undefined && record.CostAmount > 0 && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-800 rounded-full text-xs font-bold font-cairo">
                           {record.CostAmount} ₪
                         </span>
                       )}
                     </div>
-                    <div className="text-sm font-semibold text-gray-900 font-cairo">{record.ItemName}</div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo">{record.ItemName}</div>
                     {(record.Company || record.CostReason) && (
                       <div className="mt-1 flex flex-col gap-0.5">
-                        {record.Company && <div className="text-xs font-medium text-gray-600 font-cairo">{record.Company}</div>}
-                        {record.CostReason && <div className="text-xs text-orange-600 font-cairo">{record.CostReason}</div>}
+                        {record.Company && <div className="text-xs font-medium text-gray-600 dark:text-gray-400 font-cairo">{record.Company}</div>}
+                        {record.CostReason && <div className="text-xs text-orange-600 dark:text-orange-400 font-cairo">{record.CostReason}</div>}
                       </div>
                     )}
                   </div>
 
                   {/* Status Actions */}
                   {getActionButtons(record.Status, record.MaintNo).length > 0 && (
-                    <div className="mb-3 pt-3 border-t border-gray-200">
-                      <div className="text-xs text-gray-500 font-cairo mb-2 flex justify-between items-center">
+                    <div className="mb-3 pt-3 border-t border-gray-200 dark:border-slate-700">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 font-cairo mb-2 flex justify-between items-center">
                         <span>إجراءات الحالة</span>
                         {updatingStatus === record.MaintNo && (
                           <div className="flex items-center gap-1 text-xs text-blue-600 font-cairo animate-pulse">
@@ -1356,12 +1356,12 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   )}
 
                   {/* Primary & Secondary Actions */}
-                  <div className="pt-3 border-t border-gray-200">
+                  <div className="pt-3 border-t border-gray-200 dark:border-slate-700">
                     {/* Primary Row */}
                     <div className="flex gap-2 w-full mb-2">
                       <button
                         onClick={() => handleViewRecord(record)}
-                        className="flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-cairo font-bold"
+                        className="flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors font-cairo font-bold"
                       >
                         <Eye size={16} />
                         <span>عرض</span>
@@ -1377,7 +1377,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                         onClick={() => toggleRowExpansion(record.MaintNo)}
                         className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 text-sm rounded-lg transition-colors font-cairo font-bold ${expandedRows.has(record.MaintNo)
                           ? 'bg-gray-800 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          : 'bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
                           }`}
                       >
                         <History size={16} />
@@ -1388,21 +1388,21 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                     <div className="flex justify-start gap-2">
                       <button
                         onClick={() => handlePrintRecord(record)}
-                        className="p-2 bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-2 bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                         title="طباعة الحجم الطبيعي"
                       >
                         <Printer size={18} />
                       </button>
                       <button
                         onClick={() => handlePrintQrRecord(record)}
-                        className="p-2 bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-2 bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                         title="طباعة الباركود"
                       >
                         <ScanLine size={18} />
                       </button>
                       {shouldShowWhatsApp(record.Status) && (
                         <button
-                          className="p-2 bg-green-50 border border-green-200 text-green-600 hover:bg-green-100 rounded-lg transition-colors ml-auto"
+                          className="p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 text-green-600 dark:text-green-400 hover:bg-green-100 rounded-lg transition-colors ml-auto"
                           onClick={() => handleWhatsApp(record, '970')}
                           title="إرسال واتساب"
                         >
@@ -1414,20 +1414,20 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
 
                   {/* Expanded Timeline Block */}
                   {expandedRows.has(record.MaintNo) && (
-                    <div className="mt-3 pt-3 border-t border-gray-200 animate-in fade-in slide-in-from-top-2">
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700 animate-in fade-in slide-in-from-top-2">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <History size={14} className="text-gray-500" />
-                          <h4 className="text-xs font-bold text-gray-900 font-cairo">سجل التتبع</h4>
+                          <History size={14} className="text-gray-500 dark:text-gray-400" />
+                          <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 font-cairo">سجل التتبع</h4>
                         </div>
                         <button
                           onClick={() => toggleRowExpansion(record.MaintNo)}
-                          className="text-xs text-gray-500 hover:text-gray-900 bg-gray-100 px-2 py-1 rounded"
+                          className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 bg-gray-100 dark:bg-slate-700/50 px-2 py-1 rounded"
                         >
                           إغلاق
                         </button>
                       </div>
-                      <div className="max-h-64 overflow-y-auto bg-gray-50 rounded-lg p-2">
+                      <div className="max-h-64 overflow-y-auto bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2">
                         <MaintenanceTimeline maintNo={record.MaintNo} />
                       </div>
                     </div>
@@ -1440,16 +1440,16 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
             {/* Pagination */}
             {
               totalPages > 1 && (
-                <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+                <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-3 sm:p-4">
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <div className="text-xs sm:text-sm text-gray-600 font-cairo text-center sm:text-right">
+                    <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 font-cairo text-center sm:text-right">
                       عرض {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedRecords.length)} من {filteredAndSortedRecords.length} سجل
                     </div>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                         disabled={currentPage === 1}
-                        className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <ChevronRight size={20} />
                       </button>
@@ -1470,8 +1470,8 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                               key={pageNum}
                               onClick={() => setCurrentPage(pageNum)}
                               className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors font-cairo ${currentPage === pageNum
-                                ? 'bg-gray-900 text-white'
-                                : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                ? 'bg-gray-900 dark:bg-slate-700 text-white'
+                                : 'border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50'
                                 }`}
                             >
                               {pageNum}
@@ -1482,7 +1482,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                       <button
                         onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                         disabled={currentPage === totalPages}
-                        className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <ChevronLeft size={20} />
                       </button>
@@ -1498,19 +1498,19 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
         {
           statusChangeModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" dir="rtl">
-              <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6 space-y-3 sm:space-y-4 max-h-[95vh] overflow-y-auto">
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900 font-cairo">تغيير الحالة</h3>
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6 space-y-3 sm:space-y-4 max-h-[95vh] overflow-y-auto">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white dark:text-gray-100 font-cairo">تغيير الحالة</h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">من</label>
-                    <p className="text-sm sm:text-base text-gray-900 bg-gray-50 px-3 py-2 rounded-lg font-cairo">{statusChangeModal.currentStatus}</p>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">من</label>
+                    <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-slate-800/50 px-3 py-2 rounded-lg font-cairo">{statusChangeModal.currentStatus}</p>
                   </div>
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">إلى</label>
-                    <p className="text-sm sm:text-base text-gray-900 bg-blue-50 px-3 py-2 rounded-lg font-medium font-cairo">{statusChangeModal.newStatus}</p>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">إلى</label>
+                    <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 bg-blue-50 px-3 py-2 rounded-lg font-medium font-cairo">{statusChangeModal.newStatus}</p>
                   </div>
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">
                       ملاحظة (اختياري)
                     </label>
                     <textarea
@@ -1518,7 +1518,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                       onChange={(e) => setStatusChangeNote(e.target.value)}
                       placeholder="أضف ملاحظة حول هذا التغيير..."
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 resize-y font-cairo text-sm sm:text-base"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 resize-y font-cairo text-sm sm:text-base"
                     />
                   </div>
                   {statusChangeModal.currentStatus === 'موجودة في الشركة' &&
@@ -1526,7 +1526,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                       statusChangeModal.newStatus === 'جاهزة للتسليم للزبون من المخزن') && (
                       <>
                         <div>
-                          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">
+                          <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">
                             مبلغ التكلفة (₪)
                           </label>
                           <input
@@ -1536,11 +1536,11 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                             value={statusChangeCostAmount}
                             onChange={(e) => setStatusChangeCostAmount(e.target.value)}
                             placeholder="0.00"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-cairo text-sm sm:text-base"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-cairo text-sm sm:text-base"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 font-cairo">
+                          <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">
                             سبب التكلفة (اختياري)
                           </label>
                           <textarea
@@ -1548,23 +1548,23 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                             onChange={(e) => setStatusChangeCostReason(e.target.value)}
                             placeholder="وصف سبب التكلفة..."
                             rows={2}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 resize-y font-cairo text-sm sm:text-base"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 resize-y font-cairo text-sm sm:text-base"
                           />
                         </div>
                       </>
                     )}
                 </div>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
                   <button
                     onClick={handleStatusChangeCancel}
-                    className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium font-cairo text-sm sm:text-base"
+                    className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-medium font-cairo text-sm sm:text-base"
                   >
                     إلغاء
                   </button>
                   <button
                     onClick={handleStatusChangeConfirm}
                     disabled={updatingStatus === statusChangeModal.maintNo}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed font-cairo text-sm sm:text-base"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed font-cairo text-sm sm:text-base"
                   >
                     {updatingStatus === statusChangeModal.maintNo ? (
                       <>
@@ -1590,14 +1590,14 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
               onClick={closeViewModal}
             >
               <div
-                className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col"
+                className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 z-10 flex-shrink-0">
+                <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 z-10 flex-shrink-0">
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 font-cairo">عرض سجل الصيانة</h2>
-                    <p className="text-sm text-gray-600 font-cairo">#{viewingRecord.MaintNo}</p>
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white dark:text-gray-100 font-cairo">عرض سجل الصيانة</h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 font-cairo">#{viewingRecord.MaintNo}</p>
                   </div>
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     {shouldShowWhatsApp(viewingRecord.Status) && viewingRecordFull && (
@@ -1641,27 +1641,27 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                     </button>
                     <button
                       onClick={() => router.push(`/admin/maintenance/edit/${viewingRecord.MaintNo}`)}
-                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo"
                     >
                       <Edit size={16} />
                       <span className="hidden sm:inline">تعديل</span>
                     </button>
                     <button
                       onClick={closeViewModal}
-                      className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                     >
-                      <X size={20} className="text-gray-600" />
+                      <X size={20} className="text-gray-600 dark:text-gray-400" />
                     </button>
                   </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-gray-200 flex-shrink-0" dir="rtl">
+                <div className="flex border-b border-gray-200 dark:border-slate-700 flex-shrink-0" dir="rtl">
                   <button
                     onClick={() => setViewActiveTab('details')}
                     className={`flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 font-medium transition-colors text-xs sm:text-sm font-cairo ${viewActiveTab === 'details'
-                      ? 'text-gray-900 border-b-2 border-gray-900 bg-gray-50'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      ? 'text-gray-900 dark:text-gray-100 border-b-2 border-gray-900 bg-gray-50 dark:bg-slate-800/50'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 hover:bg-gray-50 dark:hover:bg-slate-700/50'
                       }`}
                   >
                     <Edit size={16} />
@@ -1670,8 +1670,8 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   <button
                     onClick={() => setViewActiveTab('history')}
                     className={`flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 font-medium transition-colors text-xs sm:text-sm font-cairo ${viewActiveTab === 'history'
-                      ? 'text-gray-900 border-b-2 border-gray-900 bg-gray-50'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      ? 'text-gray-900 dark:text-gray-100 border-b-2 border-gray-900 bg-gray-50 dark:bg-slate-800/50'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 hover:bg-gray-50 dark:hover:bg-slate-700/50'
                       }`}
                   >
                     <History size={16} />
@@ -1683,16 +1683,16 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                 <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0">
                   {loadingViewRecord ? (
                     <div className="flex items-center justify-center py-12">
-                      <Loader2 size={32} className="animate-spin text-gray-400" />
+                      <Loader2 size={32} className="animate-spin text-gray-400 dark:text-gray-500" />
                     </div>
                   ) : viewActiveTab === 'details' && viewingRecordFull ? (
                     <div className="space-y-4 sm:space-y-6">
                       {/* Customer Info */}
                       <div>
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-3 sm:mb-4 font-cairo">معلومات العميل</h3>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-slate-700 pb-2 mb-3 sm:mb-4 font-cairo">معلومات العميل</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">اسم العميل</label>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 font-cairo">اسم العميل</label>
                             <button
                               onClick={() => {
                                 if (window.event && (window.event as any).ctrlKey) {
@@ -1701,73 +1701,73 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                                   router.push(`/admin/customers/${viewingRecordFull.CustomerID}`);
                                 }
                               }}
-                              className="text-sm sm:text-base text-gray-900 font-medium hover:underline font-cairo"
+                              className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-medium hover:underline font-cairo"
                             >
                               {viewingRecordFull.CustomerName || viewingRecordFull.CustomerID}
                             </button>
                           </div>
                           <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">رقم العميل</label>
-                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.CustomerID}</p>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 font-cairo">رقم العميل</label>
+                            <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-cairo">{viewingRecordFull.CustomerID}</p>
                           </div>
                         </div>
                       </div>
 
                       {/* Item Information */}
                       <div>
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-3 sm:mb-4 font-cairo">معلومات القطعة</h3>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-slate-700 pb-2 mb-3 sm:mb-4 font-cairo">معلومات القطعة</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">اسم القطعة</label>
-                            <p className="text-sm sm:text-base text-gray-900 font-medium font-cairo">{viewingRecordFull.ItemName}</p>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 font-cairo">اسم القطعة</label>
+                            <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-medium font-cairo">{viewingRecordFull.ItemName}</p>
                           </div>
                           <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">الموقع</label>
-                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.Location}</p>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 font-cairo">الموقع</label>
+                            <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-cairo">{viewingRecordFull.Location}</p>
                           </div>
                           <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">الشركة الكفيلة</label>
-                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.Company || '—'}</p>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 font-cairo">الشركة الكفيلة</label>
+                            <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-cairo">{viewingRecordFull.Company || '—'}</p>
                           </div>
                           <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">رقم السيريال</label>
-                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.SerialNo || '—'}</p>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 font-cairo">رقم السيريال</label>
+                            <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-cairo">{viewingRecordFull.SerialNo || '—'}</p>
                           </div>
                           <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">تحت الكفالة</label>
-                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.UnderWarranty === 'YES' ? 'نعم' : 'لا'}</p>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 font-cairo">تحت الكفالة</label>
+                            <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-cairo">{viewingRecordFull.UnderWarranty === 'YES' ? 'نعم' : 'لا'}</p>
                           </div>
                           <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">الحالة</label>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 font-cairo">الحالة</label>
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-cairo ${getStatusColor(viewingRecordFull.Status)}`}>
                               {viewingRecordFull.Status}
                             </span>
                           </div>
                           {viewingRecordFull.CostAmount !== null && viewingRecordFull.CostAmount !== undefined && (
                             <div>
-                              <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">مبلغ التكلفة</label>
-                              <p className="text-sm sm:text-base text-gray-900 font-medium font-cairo">{viewingRecordFull.CostAmount} ₪</p>
+                              <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 font-cairo">مبلغ التكلفة</label>
+                              <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-medium font-cairo">{viewingRecordFull.CostAmount} ₪</p>
                             </div>
                           )}
                           {viewingRecordFull.CostReason && (
                             <div>
-                              <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">سبب التكلفة</label>
-                              <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.CostReason}</p>
+                              <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 font-cairo">سبب التكلفة</label>
+                              <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-cairo">{viewingRecordFull.CostReason}</p>
                             </div>
                           )}
                           {viewingRecordFull.IsPaid !== undefined && (
                             <div>
-                              <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">تم الدفع</label>
-                              <p className="text-sm sm:text-base text-gray-900 font-cairo">{viewingRecordFull.IsPaid ? 'نعم' : 'لا'}</p>
+                              <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 font-cairo">تم الدفع</label>
+                              <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-cairo">{viewingRecordFull.IsPaid ? 'نعم' : 'لا'}</p>
                             </div>
                           )}
                           <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">تاريخ الشراء</label>
-                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{formatDate(viewingRecordFull.DateOfPurchase)}</p>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 font-cairo">تاريخ الشراء</label>
+                            <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-cairo">{formatDate(viewingRecordFull.DateOfPurchase)}</p>
                           </div>
                           <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1 font-cairo">تاريخ الاستقبال</label>
-                            <p className="text-sm sm:text-base text-gray-900 font-cairo">{formatDate(viewingRecordFull.DateOfReceive)}</p>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 font-cairo">تاريخ الاستقبال</label>
+                            <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 font-cairo">{formatDate(viewingRecordFull.DateOfReceive)}</p>
                           </div>
                         </div>
                       </div>
@@ -1775,19 +1775,19 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                       {/* Problem Description */}
                       {viewingRecordFull.Problem && (
                         <div>
-                          <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-3 sm:mb-4 font-cairo">وصف المشكلة</h3>
-                          <p className="text-sm sm:text-base text-gray-900 whitespace-pre-wrap font-cairo">{viewingRecordFull.Problem}</p>
+                          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-slate-700 pb-2 mb-3 sm:mb-4 font-cairo">وصف المشكلة</h3>
+                          <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap font-cairo">{viewingRecordFull.Problem}</p>
                         </div>
                       )}
 
                       {/* Images */}
                       <div>
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-3 sm:mb-4 font-cairo">الصور</h3>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-slate-700 pb-2 mb-3 sm:mb-4 font-cairo">الصور</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                           {viewingRecordFull.ImageOfItem && (
                             <div>
-                              <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-2 font-cairo">صورة القطعة</label>
-                              <div className="relative w-full h-40 sm:h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                              <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 font-cairo">صورة القطعة</label>
+                              <div className="relative w-full h-40 sm:h-48 bg-gray-100 dark:bg-slate-700/50 rounded-lg overflow-hidden border border-gray-200 dark:border-slate-700">
                                 <img
                                   src={getImageUrl(viewingRecordFull.ImageOfItem) || ''}
                                   alt="صورة القطعة"
@@ -1801,8 +1801,8 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                           )}
                           {viewingRecordFull.ImageOfProblem && (
                             <div>
-                              <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-2 font-cairo">صورة المشكلة</label>
-                              <div className="relative w-full h-40 sm:h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                              <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 font-cairo">صورة المشكلة</label>
+                              <div className="relative w-full h-40 sm:h-48 bg-gray-100 dark:bg-slate-700/50 rounded-lg overflow-hidden border border-gray-200 dark:border-slate-700">
                                 <img
                                   src={getImageUrl(viewingRecordFull.ImageOfProblem) || ''}
                                   alt="صورة المشكلة"
@@ -1816,8 +1816,8 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                           )}
                           {viewingRecordFull.ImageOfWarranty && (
                             <div>
-                              <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-2 font-cairo">صورة الكفالة</label>
-                              <div className="relative w-full h-40 sm:h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                              <label className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 font-cairo">صورة الكفالة</label>
+                              <div className="relative w-full h-40 sm:h-48 bg-gray-100 dark:bg-slate-700/50 rounded-lg overflow-hidden border border-gray-200 dark:border-slate-700">
                                 <img
                                   src={getImageUrl(viewingRecordFull.ImageOfWarranty) || ''}
                                   alt="صورة الكفالة"
@@ -1830,8 +1830,8 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                             </div>
                           )}
                           {!viewingRecordFull.ImageOfItem && !viewingRecordFull.ImageOfProblem && !viewingRecordFull.ImageOfWarranty && (
-                            <div className="col-span-full text-center py-8 text-gray-500 font-cairo">
-                              <ImageIcon size={48} className="mx-auto mb-2 text-gray-300" />
+                            <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400 font-cairo">
+                              <ImageIcon size={48} className="mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                               <p className="text-sm">لا توجد صور</p>
                             </div>
                           )}
@@ -1857,12 +1857,12 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
               onClick={() => setPrintOverlayMaintNo(null)}
             >
               <div
-                className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+                className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
                 style={{ minWidth: '120mm', maxHeight: '95vh' }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-                  <span className="text-sm font-cairo text-gray-700">معاينة الطباعة — معاملة صيانة</span>
+                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex-shrink-0">
+                  <span className="text-sm font-cairo text-gray-700 dark:text-gray-300">معاينة الطباعة — معاملة صيانة</span>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -1875,19 +1875,19 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                     <button
                       type="button"
                       onClick={() => setPrintOverlayMaintNo(null)}
-                      className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                      className="p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-gray-900 transition-colors"
                       aria-label="إغلاق"
                     >
                       <X size={20} />
                     </button>
                   </div>
                 </div>
-                <div className="flex-1 overflow-auto bg-white min-h-0">
+                <div className="flex-1 overflow-auto bg-white dark:bg-slate-800 min-h-0">
                   <iframe
                     ref={printIframeRef}
                     src={`/admin/maintenance/print/${printOverlayMaintNo}?embed=1`}
                     title="طباعة معاملة الصيانة"
-                    className="w-full border-0 bg-white"
+                    className="w-full border-0 bg-white dark:bg-slate-800"
                     style={{ minHeight: '70vh', height: '70vh' }}
                   />
                 </div>
@@ -1904,12 +1904,12 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
               onClick={() => setPrintQrOverlayMaintNo(null)}
             >
               <div
-                className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+                className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
                 style={{ minWidth: '120mm', maxHeight: '95vh' }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-                  <span className="text-sm font-cairo text-gray-700">معاينة طباعة — ملصق الباركود</span>
+                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex-shrink-0">
+                  <span className="text-sm font-cairo text-gray-700 dark:text-gray-300">معاينة طباعة — ملصق الباركود</span>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -1922,19 +1922,19 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                     <button
                       type="button"
                       onClick={() => setPrintQrOverlayMaintNo(null)}
-                      className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                      className="p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-gray-900 transition-colors"
                       aria-label="إغلاق"
                     >
                       <X size={20} />
                     </button>
                   </div>
                 </div>
-                <div className="flex-1 overflow-auto bg-white min-h-0 flex items-center justify-center bg-gray-100">
+                <div className="flex-1 overflow-auto bg-white dark:bg-slate-800 min-h-0 flex items-center justify-center bg-gray-100 dark:bg-slate-700/50">
                   <iframe
                     ref={printQrIframeRef}
                     src={`/admin/maintenance/print-qr/${printQrOverlayMaintNo}?embed=1`}
                     title="طباعة ملصق الباركود"
-                    className="border border-gray-300 shadow-sm bg-white"
+                    className="border border-gray-300 dark:border-slate-600 shadow-sm bg-white dark:bg-slate-800"
                     style={{ width: '50mm', height: '25mm' }}
                   />
                 </div>
@@ -1952,11 +1952,11 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
               onClick={() => setPrintBatchA6OverlayMaintNos(null)}
             >
               <div
-                className="relative bg-white rounded-lg shadow-xl flex flex-col w-full max-w-4xl h-[95vh] overflow-hidden"
+                className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl flex flex-col w-full max-w-4xl h-[95vh] overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-                  <div className="flex items-center gap-2 text-gray-700 font-cairo">
+                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex-shrink-0">
+                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-cairo">
                     <Printer size={16} />
                     <span className="text-sm">معاينة طباعة — {printBatchA6OverlayMaintNos.length} تذكرة صيانة محددة (A6)</span>
                   </div>
@@ -1972,19 +1972,19 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                     <button
                       type="button"
                       onClick={() => setPrintBatchA6OverlayMaintNos(null)}
-                      className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                      className="p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-gray-900 transition-colors"
                       aria-label="إغلاق"
                     >
                       <X size={20} />
                     </button>
                   </div>
                 </div>
-                <div className="flex-1 overflow-auto bg-gray-100 min-h-0 flex justify-center">
+                <div className="flex-1 overflow-auto bg-gray-100 dark:bg-slate-700/50 min-h-0 flex justify-center">
                   <iframe
                     ref={printBatchA6IframeRef}
                     src={`/admin/maintenance/print-batch?embed=1&ids=${encodeURIComponent(printBatchA6OverlayMaintNos.join(','))}`}
                     title="طباعة تذاكر صيانة"
-                    className="w-full h-full shadow-lg max-w-[105mm] border-x border-gray-300 bg-white"
+                    className="w-full h-full shadow-lg max-w-[105mm] border-x border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800"
                   />
                 </div>
               </div>
@@ -2000,12 +2000,12 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
               onClick={() => setPrintBatchQrOverlayMaintNos(null)}
             >
               <div
-                className="relative bg-white rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
+                className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl flex flex-col max-w-full max-h-full overflow-hidden"
                 style={{ minWidth: '120mm', maxHeight: '95vh' }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-                  <div className="flex items-center gap-2 text-gray-700 font-cairo">
+                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex-shrink-0">
+                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-cairo">
                     <ScanLine size={16} />
                     <span className="text-sm">معاينة طباعة — {printBatchQrOverlayMaintNos.length} ملصق باركود محدد (50x25)</span>
                   </div>
@@ -2021,19 +2021,19 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                     <button
                       type="button"
                       onClick={() => setPrintBatchQrOverlayMaintNos(null)}
-                      className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                      className="p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-gray-900 transition-colors"
                       aria-label="إغلاق"
                     >
                       <X size={20} />
                     </button>
                   </div>
                 </div>
-                <div className="flex-1 overflow-auto bg-gray-100 min-h-0 flex justify-center items-center">
+                <div className="flex-1 overflow-auto bg-gray-100 dark:bg-slate-700/50 min-h-0 flex justify-center items-center">
                   <iframe
                     ref={printBatchQrIframeRef}
                     src={`/admin/maintenance/print-qr-batch?embed=1&ids=${encodeURIComponent(printBatchQrOverlayMaintNos.join(','))}`}
                     title="طباعة ملصقات الباركود"
-                    className="shadow-md bg-white border border-gray-300"
+                    className="shadow-md bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600"
                     style={{ width: '50mm', height: '25mm' }}
                   />
                 </div>

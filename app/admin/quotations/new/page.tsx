@@ -121,32 +121,32 @@ function SortableTableRow({
       ref={setNodeRef}
       {...attributes}
       style={style}
-      className={`bg-white ${isDragging ? 'shadow-lg opacity-50' : ''}`}
+      className={`bg-white dark:bg-slate-800 ${isDragging ? 'shadow-lg opacity-50' : ''}`}
     >
       <td
         {...listeners}
         className="px-2 py-3 w-8 cursor-grab active:cursor-grabbing"
         title="اسحب لإعادة الترتيب"
       >
-        <div className="text-gray-400 hover:text-gray-600 p-1 flex items-center justify-center">
+        <div className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 p-1 flex items-center justify-center">
           <GripVertical size={16} />
         </div>
       </td>
-      <td className="px-3 py-3 text-sm text-gray-900 font-cairo min-w-[200px] align-top">
+      <td className="px-3 py-3 text-sm text-gray-900 dark:text-gray-100 font-cairo min-w-[200px] align-top">
         <div className="space-y-2">
           <div className="flex items-start gap-2">
             {imageUrl ? (
               <img
                 src={imageUrl}
                 alt={item.productName}
-                className="w-10 h-10 object-contain rounded border border-gray-200 flex-shrink-0"
+                className="w-10 h-10 object-contain rounded border border-gray-200 dark:border-slate-700 flex-shrink-0"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
               />
             ) : (
-              <div className="w-10 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                <span className="text-gray-400 text-xs">—</span>
+              <div className="w-10 h-10 bg-gray-100 dark:bg-slate-700/50 rounded border border-gray-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
+                <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
               </div>
             )}
             <div className="flex-1 min-w-0">
@@ -194,9 +194,9 @@ function SortableTableRow({
                           data-serial-index={serialIndex}
                           data-detail-id={item.detailID}
                           placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                          className={`w-full px-2 py-1 border rounded text-gray-900 font-mono text-xs ${isRequired
+                          className={`w-full px-2 py-1 border rounded text-gray-900 dark:text-gray-100 font-mono text-xs ${isRequired
                             ? 'border-yellow-400 bg-yellow-50'
-                            : 'border-gray-300'
+                            : 'border-gray-300 dark:border-slate-600'
                             }`}
                         />
                         <SerialNumberScanner
@@ -249,7 +249,7 @@ function SortableTableRow({
             onChange={(e) => onUpdateNotes(item.detailID, e.target.value)}
             placeholder="ملاحظات..."
             rows={1}
-            className="w-full px-2 py-1 text-xs border border-gray-300 rounded text-gray-900 font-cairo resize-none"
+            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-slate-600 rounded text-gray-900 dark:text-gray-100 font-cairo resize-none"
           />
         </div>
       </td>
@@ -260,7 +260,7 @@ function SortableTableRow({
           value={item.quantity}
           onChange={(e) => onUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
           onWheel={(e) => e.currentTarget.blur()}
-          className="w-16 px-2 py-1.5 border border-gray-300 rounded text-gray-900 font-bold text-sm"
+          className="w-16 px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded text-gray-900 dark:text-gray-100 font-bold text-sm"
         />
       </td>
       <td className="px-3 py-3 text-center align-top">
@@ -270,27 +270,27 @@ function SortableTableRow({
           value={item.unitPrice}
           onChange={(e) => onUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
           onWheel={(e) => e.currentTarget.blur()}
-          className="w-20 px-2 py-1.5 border border-gray-300 rounded text-gray-900 font-bold text-sm"
+          className="w-20 px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded text-gray-900 dark:text-gray-100 font-bold text-sm"
         />
       </td>
       {showCosts && canViewCost && (
-        <td className="px-3 py-3 text-sm font-semibold text-gray-900 font-cairo text-center align-top">
+        <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo text-center align-top">
           ₪{(item.costPrice || 0).toFixed(2)}
         </td>
       )}
-      <td className={`px-3 py-3 text-sm font-semibold font-cairo text-center align-top ${item.isGift ? 'text-green-600' : 'text-gray-900'
+      <td className={`px-3 py-3 text-sm font-semibold font-cairo text-center align-top ${item.isGift ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'
         }`}>
         ₪{(item.quantity * item.unitPrice).toFixed(2)}
         {item.isGift && (
-          <span className="text-xs text-green-600 mr-1 block">(هدية)</span>
+          <span className="text-xs text-green-600 dark:text-green-400 mr-1 block">(هدية)</span>
         )}
       </td>
       <td className="px-3 py-3 text-center align-top">
         <button
           onClick={() => onToggleGift(item.detailID)}
           className={`p-1.5 rounded-lg transition-colors ${item.isGift
-            ? 'bg-green-100 text-green-700 hover:bg-green-200'
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200'
+            : 'bg-gray-100 dark:bg-slate-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600'
             }`}
           title={item.isGift ? 'إلغاء تحديد كهدية' : 'تحديد كهدية'}
         >
@@ -300,7 +300,7 @@ function SortableTableRow({
       <td className="px-3 py-3 text-center align-top">
         <button
           onClick={() => onRemoveItem(item.detailID)}
-          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
           title="حذف المنتج"
         >
           <Trash2 size={16} />
@@ -337,29 +337,29 @@ function CardRow({
   const imageUrl = item.productImage && item.productImage.trim() !== '' ? item.productImage.trim() : '';
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 mb-3 shadow-sm">
+    <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4 mb-3 shadow-sm">
       <div className="flex items-start gap-3 mb-3">
         {imageUrl ? (
           <img
             src={imageUrl}
             alt={item.productName}
-            className="w-16 h-16 object-contain rounded border border-gray-200 flex-shrink-0"
+            className="w-16 h-16 object-contain rounded border border-gray-200 dark:border-slate-700 flex-shrink-0"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
             }}
           />
         ) : (
-          <div className="w-16 h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-            <span className="text-gray-400 text-xs">—</span>
+          <div className="w-16 h-16 bg-gray-100 dark:bg-slate-700/50 rounded border border-gray-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
+            <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-gray-900 font-cairo mb-1">{item.productName}</h3>
-          <div className={`text-lg font-bold font-cairo mb-2 ${item.isGift ? 'text-green-600' : 'text-gray-900'
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo mb-1">{item.productName}</h3>
+          <div className={`text-lg font-bold font-cairo mb-2 ${item.isGift ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'
             }`}>
             ₪{(item.quantity * item.unitPrice).toFixed(2)}
             {item.isGift && (
-              <span className="text-xs text-green-600 mr-1">(هدية)</span>
+              <span className="text-xs text-green-600 dark:text-green-400 mr-1">(هدية)</span>
             )}
           </div>
           {/* Serial Numbers Display */}
@@ -406,9 +406,9 @@ function CardRow({
                       data-detail-id={item.detailID}
                       data-mobile="true"
                       placeholder={item.isSerialized ? `سيريال ${serialIndex + 1} (مطلوب)` : `سيريال ${serialIndex + 1} (اختياري)`}
-                      className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 font-mono text-sm ${isRequired
+                      className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 dark:text-gray-100 font-mono text-sm ${isRequired
                         ? 'border-yellow-400 bg-yellow-50'
-                        : 'border-gray-300'
+                        : 'border-gray-300 dark:border-slate-600'
                         }`}
                     />
                     <SerialNumberScanner
@@ -459,7 +459,7 @@ function CardRow({
 
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div>
-          <label className="block text-xs text-gray-600 mb-1 font-cairo">الكمية</label>
+          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 font-cairo">الكمية</label>
           <input
             type="number"
             step="1"
@@ -467,11 +467,11 @@ function CardRow({
             onChange={(e) => onUpdateQuantity(item.detailID, parseFloat(e.target.value) || 0)}
             onWheel={(e) => e.currentTarget.blur()}
             onFocus={(e) => e.target.select()}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-gray-100 font-bold text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-600 mb-1 font-cairo">سعر الوحدة</label>
+          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 font-cairo">سعر الوحدة</label>
           <input
             type="number"
             step="1"
@@ -479,37 +479,37 @@ function CardRow({
             onChange={(e) => onUpdatePrice(item.detailID, parseFloat(e.target.value) || 0)}
             onWheel={(e) => e.currentTarget.blur()}
             onFocus={(e) => e.target.select()}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 font-bold text-sm"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-gray-100 font-bold text-sm"
           />
         </div>
       </div>
 
       {showCosts && canViewCost && (
         <div className="mb-3">
-          <label className="block text-xs text-gray-600 mb-1 font-cairo">تكلفة الوحدة</label>
-          <div className="text-sm font-semibold text-gray-900 font-cairo">
+          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 font-cairo">تكلفة الوحدة</label>
+          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 font-cairo">
             ₪{(item.costPrice || 0).toFixed(2)}
           </div>
         </div>
       )}
 
       <div className="mb-3">
-        <label className="block text-xs text-gray-600 mb-1 font-cairo">ملاحظات</label>
+        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 font-cairo">ملاحظات</label>
         <textarea
           value={item.notes || ''}
           onChange={(e) => onUpdateNotes(item.detailID, e.target.value)}
           placeholder="ملاحظات..."
           rows={2}
-          className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg text-gray-900 font-cairo resize-none"
+          className="w-full px-3 py-2 text-xs border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-gray-100 font-cairo resize-none"
         />
       </div>
 
-      <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-200">
+      <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-200 dark:border-slate-700">
         <button
           onClick={() => onToggleGift(item.detailID)}
           className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-cairo ${item.isGift
-            ? 'bg-green-100 text-green-700 hover:bg-green-200'
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200'
+            : 'bg-gray-100 dark:bg-slate-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600'
             }`}
         >
           <Gift size={16} />
@@ -517,7 +517,7 @@ function CardRow({
         </button>
         <button
           onClick={() => onRemoveItem(item.detailID)}
-          className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm font-cairo"
+          className="flex items-center gap-2 px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 rounded-lg transition-colors text-sm font-cairo"
         >
           <Trash2 size={16} />
           <span>حذف</span>
@@ -1193,8 +1193,8 @@ function QuotationsFormContent() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 font-cairo">جاري التحميل...</p>
+            <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 font-cairo">جاري التحميل...</p>
           </div>
         </div>
       </AdminLayout>
@@ -1207,20 +1207,20 @@ function QuotationsFormContent() {
         {/* Header */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">عرض سعري جديد</h1>
-            <p className="text-gray-600 mt-1">إنشاء عرض سعري جديد</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">عرض سعري جديد</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">إنشاء عرض سعري جديد</p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCosts((prev) => !prev)}
               disabled={!canViewCost}
-              className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo text-gray-900 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {showCosts ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
             <button
               onClick={() => router.push('/admin/quotations')}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo text-gray-900 dark:text-gray-100 font-bold"
             >
               <ArrowLeft size={20} />
               إلغاء
@@ -1229,31 +1229,31 @@ function QuotationsFormContent() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600 font-cairo">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-4">
+            <p className="text-red-600 dark:text-red-400 font-cairo">{error}</p>
           </div>
         )}
 
         {/* Form */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">التاريخ</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">التاريخ</label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
               />
             </div>
             <div className="relative" ref={customerDropdownRef}>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700 font-cairo">الزبون</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 font-cairo">الزبون</label>
                 <button
                   type="button"
                   onClick={() => setIsCustomerModalOpen(true)}
-                  className="flex items-center gap-1 px-2 py-1 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors font-cairo"
+                  className="flex items-center gap-1 px-2 py-1 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors font-cairo"
                   title="إضافة زبون جديد"
                 >
                   <UserPlus size={16} />
@@ -1282,10 +1282,10 @@ function QuotationsFormContent() {
                     }
                   }}
                   placeholder="ابحث عن زبون..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
                 />
                 {isCustomerDropdownOpen && filteredCustomers.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                     {filteredCustomers.map((customer) => (
                       <button
                         key={customer.customer_id || customer.CustomerID || customer.id}
@@ -1296,14 +1296,14 @@ function QuotationsFormContent() {
                           setCustomerSearchQuery('');
                           setIsCustomerDropdownOpen(false);
                         }}
-                        className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
+                        className="w-full text-right px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-900 dark:text-gray-100 font-cairo"
                       >
                         <div className="flex items-center justify-between">
                           <span className="flex-1 text-right">
                             {customer.name || customer.Name} ({customer.customer_id || customer.CustomerID || customer.id})
                           </span>
                           {canViewBalances && (
-                            <span className="text-sm text-gray-500 mr-2" dir="ltr">
+                            <span className="text-sm text-gray-500 dark:text-gray-400 mr-2" dir="ltr">
                               رصيد: ₪{((customer.balance || customer.Balance || 0)).toFixed(2)}
                             </span>
                           )}
@@ -1314,10 +1314,10 @@ function QuotationsFormContent() {
                 )}
               </div>
               {selectedCustomer && canViewBalances && (
-                <div className="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="mt-2 p-2 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700">
                   <div className="flex items-center justify-between text-sm font-cairo">
-                    <span className="text-gray-600">الرصيد:</span>
-                    <span className={`font-semibold ${(selectedCustomer.balance || selectedCustomer.Balance || 0) > 0 ? 'text-red-600' : (selectedCustomer.balance || selectedCustomer.Balance || 0) < 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                    <span className="text-gray-600 dark:text-gray-400">الرصيد:</span>
+                    <span className={`font-semibold ${(selectedCustomer.balance || selectedCustomer.Balance || 0) > 0 ? 'text-red-600 dark:text-red-400' : (selectedCustomer.balance || selectedCustomer.Balance || 0) < 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
                       ₪{((selectedCustomer.balance || selectedCustomer.Balance || 0)).toFixed(2)}
                     </span>
                   </div>
@@ -1325,11 +1325,11 @@ function QuotationsFormContent() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الحالة</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">الحالة</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
               >
                 {STATUS_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>
@@ -1339,21 +1339,21 @@ function QuotationsFormContent() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الخصم الخاص</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">الخصم الخاص</label>
               <input
                 type="number"
                 step="1"
                 value={specialDiscountAmount}
                 onChange={(e) => setSpecialDiscountAmount(parseFloat(e.target.value) || 0)}
                 onWheel={(e) => e.currentTarget.blur()}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">
                 خصم الهدايا
                 {calculatedGiftDiscount > 0 && (
-                  <span className="text-xs text-green-600 mr-2">(محسوب تلقائياً)</span>
+                  <span className="text-xs text-green-600 dark:text-green-400 mr-2">(محسوب تلقائياً)</span>
                 )}
               </label>
               <input
@@ -1363,12 +1363,12 @@ function QuotationsFormContent() {
                 onChange={(e) => setGiftDiscountAmount(parseFloat(e.target.value) || 0)}
                 onWheel={(e) => e.currentTarget.blur()}
                 disabled={calculatedGiftDiscount > 0}
-                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold ${calculatedGiftDiscount > 0 ? 'bg-gray-100 cursor-not-allowed' : ''
+                className={`w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold ${calculatedGiftDiscount > 0 ? 'bg-gray-100 dark:bg-slate-700/50 cursor-not-allowed' : ''
                   }`}
                 title={calculatedGiftDiscount > 0 ? 'يتم الحساب تلقائياً من الأصناف المحددة كهدايا' : ''}
               />
               {calculatedGiftDiscount > 0 && (
-                <p className="text-xs text-gray-500 mt-1 font-cairo">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-cairo">
                   يتم حساب قيمة الهدايا تلقائياً من الأصناف المحددة كهدايا
                 </p>
               )}
@@ -1376,22 +1376,22 @@ function QuotationsFormContent() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الملاحظات</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">الملاحظات</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
             />
           </div>
 
           {/* Products */}
           <div>
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 font-cairo mb-4">المنتجات</h2>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 font-cairo mb-4">المنتجات</h2>
 
             {/* Barcode Scanner - Always visible */}
-            <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
+            <div className="mb-4 p-3 sm:p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
               <BarcodeScannerInput
                 onProductFound={(product) => {
                   handleAddProduct(product, 1);
@@ -1406,7 +1406,7 @@ function QuotationsFormContent() {
             <div className="mb-4">
               <button
                 onClick={() => setShowAddProduct(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo text-sm sm:text-base w-full sm:w-auto justify-center"
+                className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo text-sm sm:text-base w-full sm:w-auto justify-center"
               >
                 <Plus size={18} />
                 <span>إضافة منتج</span>
@@ -1414,10 +1414,10 @@ function QuotationsFormContent() {
             </div>
 
             {showAddProduct && (
-              <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="mb-4 p-3 sm:p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700">
 
                 <div className="relative mb-4" ref={productDropdownRef}>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">اختر منتج</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">اختر منتج</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -1428,10 +1428,10 @@ function QuotationsFormContent() {
                       }}
                       onFocus={() => setIsProductDropdownOpen(true)}
                       placeholder="ابحث عن منتج..."
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold"
                     />
                     {isProductDropdownOpen && filteredProducts.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                         {filteredProducts.map((product) => {
                           const imageUrl = product.Image || product.image || '';
                           return (
@@ -1455,27 +1455,27 @@ function QuotationsFormContent() {
                                   alert('خطأ: المنتج لا يحتوي على معرف صالح');
                                 }
                               }}
-                              className="w-full text-right px-4 py-2 hover:bg-gray-100 text-gray-900 font-cairo"
+                              className="w-full text-right px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-900 dark:text-gray-100 font-cairo"
                             >
                               <div className="flex items-center gap-3">
                                 {imageUrl ? (
                                   <img
                                     src={imageUrl}
                                     alt={product.Name || product.name}
-                                    className="w-12 h-12 object-contain rounded border border-gray-200 flex-shrink-0"
+                                    className="w-12 h-12 object-contain rounded border border-gray-200 dark:border-slate-700 flex-shrink-0"
                                     onError={(e) => {
                                       e.currentTarget.style.display = 'none';
                                     }}
                                   />
                                 ) : (
-                                  <div className="w-12 h-12 bg-gray-100 rounded border border-gray-200 flex items-center justify-center flex-shrink-0">
-                                    <span className="text-gray-400 text-xs">—</span>
+                                  <div className="w-12 h-12 bg-gray-100 dark:bg-slate-700/50 rounded border border-gray-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
                                   </div>
                                 )}
                                 <div className="flex-1 min-w-0">
                                   <div className="flex flex-col gap-1">
                                     <span className="text-right text-sm font-medium">{product.Name || product.name}</span>
-                                    <span className="text-right text-xs text-gray-600 font-light flex items-center gap-2 justify-end flex-wrap" dir="rtl">
+                                    <span className="text-right text-xs text-gray-600 dark:text-gray-400 font-light flex items-center gap-2 justify-end flex-wrap" dir="rtl">
                                       <span>₪{product.SalePrice || product.sale_price || product.price || 0}</span>
                                       <span>•</span>
                                       <span>محل: {product.CS_Shop || product.cs_shop || 0}</span>
@@ -1484,7 +1484,7 @@ function QuotationsFormContent() {
                                       {(reservedQuantities[product.ProductID || product.id || product.product_id]?.total || 0) > 0 && (
                                         <>
                                           <span>•</span>
-                                          <span className="text-orange-600 font-semibold bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100">
+                                          <span className="text-orange-600 dark:text-orange-400 font-semibold bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded border border-orange-100 dark:border-orange-900/30">
                                             محجوز: {reservedQuantities[product.ProductID || product.id || product.product_id].total}
                                           </span>
                                         </>
@@ -1502,7 +1502,7 @@ function QuotationsFormContent() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">الكمية</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">الكمية</label>
                     <input
                       type="number"
                       step="1"
@@ -1510,11 +1510,11 @@ function QuotationsFormContent() {
                       onChange={(e) => setNewProductQuantity(parseFloat(e.target.value) || 1)}
                       onWheel={(e) => e.currentTarget.blur()}
                       onFocus={(e) => e.target.select()}
-                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold text-sm sm:text-base"
+                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold text-sm sm:text-base"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">سعر الوحدة</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">سعر الوحدة</label>
                     <input
                       type="number"
                       step="1"
@@ -1522,14 +1522,14 @@ function QuotationsFormContent() {
                       onChange={(e) => setNewProductPrice(parseFloat(e.target.value) || 0)}
                       onWheel={(e) => e.currentTarget.blur()}
                       onFocus={(e) => e.target.select()}
-                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 font-bold text-sm sm:text-base"
+                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 font-bold text-sm sm:text-base"
                     />
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <button
                     onClick={handleAddProduct}
-                    className="flex-1 sm:flex-none px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo text-sm sm:text-base"
+                    className="flex-1 sm:flex-none px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo text-sm sm:text-base"
                   >
                     إضافة
                   </button>
@@ -1539,7 +1539,7 @@ function QuotationsFormContent() {
                       setSelectedProductId('');
                       setProductSearchQuery('');
                     }}
-                    className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold text-sm sm:text-base"
+                    className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo text-gray-900 dark:text-gray-100 font-bold text-sm sm:text-base"
                   >
                     إلغاء
                   </button>
@@ -1548,7 +1548,7 @@ function QuotationsFormContent() {
             )}
 
             {details.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 font-cairo">لا توجد منتجات</div>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400 font-cairo">لا توجد منتجات</div>
             ) : (
               <>
                 {/* Desktop Table View with Drag and Drop */}
@@ -1563,21 +1563,21 @@ function QuotationsFormContent() {
                       strategy={verticalListSortingStrategy}
                     >
                       <table className="w-full">
-                        <thead className="bg-gray-50 border-b border-gray-200">
+                        <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
                           <tr>
-                            <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo w-8"></th>
-                            <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo min-w-[200px]">المنتج</th>
-                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الكمية</th>
-                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">سعر الوحدة</th>
+                            <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo w-8"></th>
+                            <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo min-w-[200px]">المنتج</th>
+                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">الكمية</th>
+                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">سعر الوحدة</th>
                             {showCosts && canViewCost && (
-                              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
+                              <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">تكلفة الوحدة</th>
                             )}
-                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">الإجمالي</th>
-                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">هدية</th>
-                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-cairo">إجراءات</th>
+                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">الإجمالي</th>
+                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">هدية</th>
+                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider font-cairo">إجراءات</th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200">
                           {details.map((item, index) => (
                             <SortableTableRow
                               key={item.detailID || `temp-${index}`}
@@ -1622,42 +1622,42 @@ function QuotationsFormContent() {
           </div>
 
           {/* Summary */}
-          <div className="border-t border-gray-200 pt-4">
+          <div className="border-t border-gray-200 dark:border-slate-700 pt-4">
             <div className="flex justify-end">
               <div className="w-full sm:w-auto sm:min-w-[280px] space-y-2">
-                <div className="flex justify-between text-sm text-gray-600 font-cairo">
+                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 font-cairo">
                   <span>المجموع الفرعي:</span>
                   <span className="font-semibold">₪{calculateSubtotal().toFixed(2)}</span>
                 </div>
                 {specialDiscountAmount > 0 && (
-                  <div className="flex justify-between text-sm text-gray-600 font-cairo">
+                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 font-cairo">
                     <span>الخصم الخاص:</span>
-                    <span className="font-semibold text-red-600">-₪{specialDiscountAmount.toFixed(2)}</span>
+                    <span className="font-semibold text-red-600 dark:text-red-400">-₪{specialDiscountAmount.toFixed(2)}</span>
                   </div>
                 )}
                 {giftDiscountAmount > 0 && (
-                  <div className="flex justify-between text-sm text-gray-600 font-cairo">
+                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 font-cairo">
                     <span>خصم الهدايا:</span>
-                    <span className="font-semibold text-red-600">-₪{giftDiscountAmount.toFixed(2)}</span>
+                    <span className="font-semibold text-red-600 dark:text-red-400">-₪{giftDiscountAmount.toFixed(2)}</span>
                   </div>
                 )}
                 {(specialDiscountAmount > 0 || giftDiscountAmount > 0) && (
-                  <div className="flex justify-between text-sm text-gray-600 font-cairo">
+                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 font-cairo">
                     <span>نسبة الخصم:</span>
-                    <span className="font-semibold text-green-600">{calculateDiscountPercentage().toFixed(2)}%</span>
+                    <span className="font-semibold text-green-600 dark:text-green-400">{calculateDiscountPercentage().toFixed(2)}%</span>
                   </div>
                 )}
-                <div className="flex justify-between text-lg font-bold text-gray-900 font-cairo border-t border-gray-200 pt-2">
+                <div className="flex justify-between text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo border-t border-gray-200 dark:border-slate-700 pt-2">
                   <span>الإجمالي:</span>
                   <span>₪{calculateTotal().toFixed(2)}</span>
                 </div>
                 {showCosts && canViewCost && (
                   <>
-                    <div className="flex justify-between text-lg font-bold text-gray-900 font-cairo">
+                    <div className="flex justify-between text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo">
                       <span>إجمالي التكلفة:</span>
                       <span>₪{calculateCostTotal().toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-lg font-bold text-green-600 font-cairo border-t border-gray-200 pt-2">
+                    <div className="flex justify-between text-lg font-bold text-green-600 dark:text-green-400 font-cairo border-t border-gray-200 dark:border-slate-700 pt-2">
                       <span>الربح:</span>
                       <span>₪{calculateProfit().toFixed(2)}</span>
                     </div>
@@ -1668,17 +1668,17 @@ function QuotationsFormContent() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200 dark:border-slate-700">
             <button
               onClick={() => router.push('/admin/quotations')}
-              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-cairo text-gray-900 font-bold"
+              className="px-6 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-cairo text-gray-900 dark:text-gray-100 font-bold"
             >
               إلغاء
             </button>
             <button
               onClick={handleSave}
               disabled={saving || details.length === 0}
-              className="flex items-center gap-2 px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-6 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? (
                 <>

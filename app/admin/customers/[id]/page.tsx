@@ -412,31 +412,31 @@ export default function CustomerProfilePage() {
         };
       case 'receipt':
         return {
-          bg: 'bg-green-50',
-          text: 'text-green-700',
+          bg: 'bg-green-50 dark:bg-green-900/20',
+          text: 'text-green-700 dark:text-green-400',
           border: 'border-green-300',
-          iconBg: 'bg-green-100',
+          iconBg: 'bg-green-100 dark:bg-green-900/30',
         };
       case 'payment':
         return {
-          bg: 'bg-red-50',
-          text: 'text-red-700',
+          bg: 'bg-red-50 dark:bg-red-900/20',
+          text: 'text-red-700 dark:text-red-400',
           border: 'border-red-300',
-          iconBg: 'bg-red-100',
+          iconBg: 'bg-red-100 dark:bg-red-900/30',
         };
       case 'interaction':
         return {
-          bg: 'bg-orange-50',
-          text: 'text-orange-700',
+          bg: 'bg-orange-50 dark:bg-orange-900/20',
+          text: 'text-orange-700 dark:text-orange-400',
           border: 'border-orange-300',
           iconBg: 'bg-orange-100',
         };
       default:
         return {
-          bg: 'bg-gray-50',
-          text: 'text-gray-700',
-          border: 'border-gray-300',
-          iconBg: 'bg-gray-100',
+          bg: 'bg-gray-50 dark:bg-slate-800/50',
+          text: 'text-gray-700 dark:text-gray-300',
+          border: 'border-gray-300 dark:border-slate-600',
+          iconBg: 'bg-gray-100 dark:bg-slate-700/50',
         };
     }
   };
@@ -455,23 +455,23 @@ export default function CustomerProfilePage() {
       case 'fulfilled':
       case 'paid':
         return {
-          bg: 'bg-green-50',
-          text: 'text-green-700',
+          bg: 'bg-green-50 dark:bg-green-900/20',
+          text: 'text-green-700 dark:text-green-400',
           border: 'border-green-400',
-          iconBg: 'bg-green-100',
+          iconBg: 'bg-green-100 dark:bg-green-900/30',
         };
       case 'archived':
       case 'closed':
         return {
-          bg: 'bg-gray-50',
-          text: 'text-gray-700',
+          bg: 'bg-gray-50 dark:bg-slate-800/50',
+          text: 'text-gray-700 dark:text-gray-300',
           border: 'border-gray-400',
-          iconBg: 'bg-gray-100',
+          iconBg: 'bg-gray-100 dark:bg-slate-700/50',
         };
       default:
         return {
-          bg: 'bg-orange-50',
-          text: 'text-orange-700',
+          bg: 'bg-orange-50 dark:bg-orange-900/20',
+          text: 'text-orange-700 dark:text-orange-400',
           border: 'border-orange-400',
           iconBg: 'bg-orange-100',
         };
@@ -630,8 +630,8 @@ export default function CustomerProfilePage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Loading customer profile...</p>
+            <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">Loading customer profile...</p>
           </div>
         </div>
       </AdminLayout>
@@ -643,10 +643,10 @@ export default function CustomerProfilePage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <p className="text-red-600 text-lg mb-4">{error || 'Customer not found'}</p>
+            <p className="text-red-600 dark:text-red-400 text-lg mb-4">{error || 'Customer not found'}</p>
             <button
               onClick={() => router.push('/admin/customers')}
-              className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+              className="px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors"
             >
               Back to Customers
             </button>
@@ -657,8 +657,8 @@ export default function CustomerProfilePage() {
   }
 
   const balance = customer.Balance || customer.balance || 0;
-  const balanceColor = balance > 0 ? 'bg-red-50 border-red-200' : balance < 0 ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200';
-  const balanceTextColor = balance > 0 ? 'text-red-600' : balance < 0 ? 'text-green-600' : 'text-gray-600';
+  const balanceColor = balance > 0 ? 'bg-red-50 dark:bg-red-900/20 border-red-200' : balance < 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-200' : 'bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700';
+  const balanceTextColor = balance > 0 ? 'text-red-600 dark:text-red-400' : balance < 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400';
 
   return (
     <AdminLayout>
@@ -670,13 +670,13 @@ export default function CustomerProfilePage() {
             <div className="flex items-center gap-4 flex-1 w-full">
             <button
               onClick={() => router.push('/admin/customers')}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors flex-shrink-0"
             >
-              <ArrowLeft size={20} className="text-gray-600" />
+              <ArrowLeft size={20} className="text-gray-600 dark:text-gray-400" />
             </button>
               <div className="flex-1 min-w-0">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Customer Profile</h1>
-                <p className="text-gray-600 mt-1 text-sm md:text-base">View customer history and manage interactions</p>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">Customer Profile</h1>
+                <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm md:text-base">View customer history and manage interactions</p>
             </div>
           </div>
             {/* Customer Search */}
@@ -684,7 +684,7 @@ export default function CustomerProfilePage() {
               <div className="relative">
                 <Search
                   size={18}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
                 />
                 <input
                   type="text"
@@ -695,7 +695,7 @@ export default function CustomerProfilePage() {
                     setIsCustomerSearchOpen(true);
                   }}
                   onFocus={() => setIsCustomerSearchOpen(true)}
-                  className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900 placeholder:text-gray-500"
+                  className="w-full pr-10 pl-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                   dir="rtl"
                 />
                 {customerSearchQuery && (
@@ -705,15 +705,15 @@ export default function CustomerProfilePage() {
                       setCustomerSearchQuery('');
                       setIsCustomerSearchOpen(false);
                     }}
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded"
                   >
-                    <X size={14} className="text-gray-400" />
+                    <X size={14} className="text-gray-400 dark:text-gray-500" />
                   </button>
                 )}
               </div>
               {/* Search Results Dropdown */}
               {isCustomerSearchOpen && customerSearchQuery.trim() && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden">
+                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg shadow-lg max-h-80 overflow-hidden">
                   <div className="overflow-y-auto max-h-80" dir="rtl">
                     {(() => {
                       const searchWords = customerSearchQuery
@@ -732,7 +732,7 @@ export default function CustomerProfilePage() {
                       
                       if (filtered.length === 0) {
                         return (
-                          <div className="p-4 text-center text-gray-500 text-sm">
+                          <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
                             لا توجد نتائج
                           </div>
                         );
@@ -755,15 +755,15 @@ export default function CustomerProfilePage() {
                                   setIsCustomerSearchOpen(false);
                                 }}
                                 disabled={isCurrent}
-                                className={`w-full text-right px-4 py-2 hover:bg-gray-50 transition-colors ${
-                                  isCurrent ? 'bg-gray-100 font-medium opacity-60 cursor-not-allowed' : ''
+                                className={`w-full text-right px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors ${
+                                  isCurrent ? 'bg-gray-100 dark:bg-slate-700/50 font-medium opacity-60 cursor-not-allowed' : ''
                                 }`}
                               >
-                                <div className="text-sm text-gray-900">
+                                <div className="text-sm text-gray-900 dark:text-gray-100">
                                   {customer.Name || customer.name || 'بدون اسم'}
-                                  {isCurrent && <span className="text-xs text-gray-500 mr-2">(الحالي)</span>}
+                                  {isCurrent && <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">(الحالي)</span>}
                                 </div>
-                                <div className="text-xs text-gray-500">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
                                   {id} {customer.Phone || customer.phone ? `- ${customer.Phone || customer.phone}` : ''}
                                 </div>
                               </button>
@@ -782,7 +782,7 @@ export default function CustomerProfilePage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleOpenInteractionModal}
-              className="px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium flex items-center gap-1.5 flex-shrink-0"
+              className="px-3 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors text-sm font-medium flex items-center gap-1.5 flex-shrink-0"
               title="إجراء تواصل"
             >
               <Phone size={16} />
@@ -863,7 +863,7 @@ export default function CustomerProfilePage() {
           {/* Left Sidebar - Customer Card */}
           <div className="lg:col-span-1 space-y-4">
             {/* Customer Info Card */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
               {/* Photo */}
               <div className="flex justify-center mb-4">
                 <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center">
@@ -874,19 +874,19 @@ export default function CustomerProfilePage() {
                       className="w-full h-full rounded-full object-cover"
                     />
                   ) : (
-                    <User size={48} className="text-gray-400" />
+                    <User size={48} className="text-gray-400 dark:text-gray-500" />
                   )}
                 </div>
               </div>
 
               {/* Name */}
-              <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 text-center mb-2">
                 {customer.Name || customer.name || 'N/A'}
               </h2>
 
               {/* Phone */}
               {customer.Phone || customer.phone ? (
-                <div className="flex items-center justify-center gap-2 text-gray-600 mb-2">
+                <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400 mb-2">
                   <Phone size={16} />
                   <PhoneActions phone={customer.Phone || customer.phone} />
                 </div>
@@ -894,7 +894,7 @@ export default function CustomerProfilePage() {
 
               {/* Address */}
               {customer.Address || customer.address ? (
-                <div className="flex items-start justify-center gap-2 text-gray-600 mb-4">
+                <div className="flex items-start justify-center gap-2 text-gray-600 dark:text-gray-400 mb-4">
                   <MapPin size={16} className="mt-0.5 flex-shrink-0" />
                   <p className="text-sm text-center">{customer.Address || customer.address}</p>
                 </div>
@@ -903,7 +903,7 @@ export default function CustomerProfilePage() {
               {/* Type Badge */}
               {customer.Type || customer.type ? (
                 <div className="flex justify-center mb-4">
-                  <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">
+                  <span className="px-3 py-1 bg-gray-100 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200 rounded-full text-sm font-medium">
                     {customer.Type || customer.type}
                   </span>
                 </div>
@@ -914,11 +914,11 @@ export default function CustomerProfilePage() {
             {canViewBalances && (
               <div className={`${balanceColor} rounded-lg border-2 p-6`}>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-gray-600 mb-2">Current Balance</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Current Balance</p>
                   <p className={`text-3xl font-bold ${balanceTextColor} mb-1`}>
                     {formatBalance(balance)}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     {balance > 0 ? 'Amount owed to us' : balance < 0 ? 'Credit balance' : 'No balance'}
                   </p>
                 </div>
@@ -929,7 +929,7 @@ export default function CustomerProfilePage() {
             {canViewBalances && (
               <button
                 onClick={() => setIsEditModalOpen(true)}
-                className="w-full px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium flex items-center justify-center gap-2"
+                className="w-full px-4 py-3 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium flex items-center justify-center gap-2"
               >
                 <Edit size={18} />
                 Edit Profile
@@ -973,18 +973,18 @@ export default function CustomerProfilePage() {
             )}
 
             {/* Checks Section (Compact summary) */}
-            <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <ImageIcon size={18} className="text-gray-600" />
-                  <h3 className="font-semibold text-gray-900">الشيكات الراجعة</h3>
+                  <ImageIcon size={18} className="text-gray-600 dark:text-gray-400" />
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">الشيكات الراجعة</h3>
                   {loadingHeavyData && (
-                    <Loader2 size={16} className="animate-spin text-gray-400" />
+                    <Loader2 size={16} className="animate-spin text-gray-400 dark:text-gray-500" />
                   )}
                 </div>
                 <button
                   onClick={() => setIsCheckModalOpen(true)}
-                  className="px-3 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm flex items-center gap-1"
+                  className="px-3 py-1.5 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors text-sm flex items-center gap-1"
                 >
                   <Plus size={14} />
                   إضافة
@@ -992,24 +992,24 @@ export default function CustomerProfilePage() {
               </div>
               {loadingHeavyData ? (
                 <div className="flex items-center justify-center py-4">
-                  <Loader2 size={20} className="animate-spin text-gray-400" />
-                  <span className="text-sm text-gray-500 mr-2">جاري التحميل...</span>
+                  <Loader2 size={20} className="animate-spin text-gray-400 dark:text-gray-500" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400 mr-2">جاري التحميل...</span>
                 </div>
               ) : checks.length === 0 ? (
-                <p className="text-sm text-gray-600">لا يوجد شيكات مسجلة</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">لا يوجد شيكات مسجلة</p>
               ) : (
                 <div className="space-y-2">
                   {checks.slice(0, 3).map((chk) => (
-                    <div key={chk.check_id} className="p-2 bg-gray-50 rounded border border-gray-200">
+                    <div key={chk.check_id} className="p-2 bg-gray-50 dark:bg-slate-800/50 rounded border border-gray-200 dark:border-slate-700">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-semibold text-gray-900">₪{(chk.amount || 0).toFixed(2)}</span>
-                        <span className="text-xs text-gray-500">{chk.return_date || '—'}</span>
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">₪{(chk.amount || 0).toFixed(2)}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{chk.return_date || '—'}</span>
                       </div>
-                      <div className="text-xs text-gray-700 mt-1">{chk.status}</div>
+                      <div className="text-xs text-gray-700 dark:text-gray-300 mt-1">{chk.status}</div>
                     </div>
                   ))}
                   {checks.length > 3 && (
-                    <p className="text-xs text-gray-500">و {checks.length - 3} أخرى...</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">و {checks.length - 3} أخرى...</p>
                   )}
                 </div>
               )}
@@ -1019,23 +1019,23 @@ export default function CustomerProfilePage() {
           {/* Right Area - Activity Timeline */}
           <div className="lg:col-span-2 space-y-6">
             {/* Interactions Section - First */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">التفاعلات والمواعيد</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">التفاعلات والمواعيد</h2>
                 {loadingHeavyData && (
-                  <Loader2 size={18} className="animate-spin text-gray-400" />
+                  <Loader2 size={18} className="animate-spin text-gray-400 dark:text-gray-500" />
                 )}
               </div>
 
               {loadingHeavyData ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 size={24} className="animate-spin text-gray-400" />
-                  <span className="text-gray-600 text-lg mr-3">جاري تحميل التفاعلات...</span>
+                  <Loader2 size={24} className="animate-spin text-gray-400 dark:text-gray-500" />
+                  <span className="text-gray-600 dark:text-gray-400 text-lg mr-3">جاري تحميل التفاعلات...</span>
                 </div>
               ) : interactionItems.length === 0 ? (
                 <div className="text-center py-12">
-                  <Phone size={48} className="text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600 text-lg">لا توجد تفاعلات</p>
+                  <Phone size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400 text-lg">لا توجد تفاعلات</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1056,26 +1056,26 @@ export default function CustomerProfilePage() {
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-gray-900">
+                                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                                   {item.channel || 'تفاعل'}
                                 </h3>
                                 {item.ptpStatus && (
                                   <span className={`px-2 py-1 rounded text-xs font-medium ${
                                     (item.ptpStatus || '').toLowerCase() === 'active' ? 'bg-blue-100 text-blue-700' :
-                                    (item.ptpStatus || '').toLowerCase() === 'fulfilled' || (item.ptpStatus || '').toLowerCase() === 'paid' ? 'bg-green-100 text-green-700' :
-                                    'bg-gray-100 text-gray-700'
+                                    (item.ptpStatus || '').toLowerCase() === 'fulfilled' || (item.ptpStatus || '').toLowerCase() === 'paid' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                                    'bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300'
                                   }`}>
                                     {item.ptpStatus}
                                   </span>
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-500">
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
                                   {formatDate(item.date)}
                                 </span>
                                 <button
                                   onClick={() => handleOpenInteractionModal(item)}
-                                  className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                  className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
                                   title="تعديل"
                                 >
                                   <Edit size={16} />
@@ -1085,14 +1085,14 @@ export default function CustomerProfilePage() {
 
                             {/* Notes */}
                             {item.notes && (
-                              <p className="text-sm text-gray-600 mb-2">
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                                 {item.notes}
                               </p>
                             )}
 
                             {/* Status/Outcome */}
                             {item.status && (
-                              <span className="inline-block px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium mb-2">
+                              <span className="inline-block px-2 py-1 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded text-xs font-medium mb-2">
                                 {item.status}
                               </span>
                             )}
@@ -1106,7 +1106,7 @@ export default function CustomerProfilePage() {
 
                             {/* Next Follow-up Date */}
                             {item.nextFollowUpDate && (
-                              <div className="flex items-center gap-1 text-xs text-gray-500 mt-2">
+                              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-2">
                                 <Calendar size={12} />
                                 <span>موعد المتابعة: {formatDate(item.nextFollowUpDate)}</span>
                               </div>
@@ -1114,7 +1114,7 @@ export default function CustomerProfilePage() {
 
                             {/* Audit: who created / last updated */}
                             {(item.CreatedByUsername || item.UpdatedByUsername) && (
-                              <p className="text-xs text-gray-500 mt-2">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                 {item.CreatedByUsername && <span>أنشأه: {item.CreatedByUsername}</span>}
                                 {item.CreatedByUsername && item.UpdatedByUsername && ' · '}
                                 {item.UpdatedByUsername && <span>آخر تحديث: {item.UpdatedByUsername}</span>}
@@ -1130,23 +1130,23 @@ export default function CustomerProfilePage() {
             </div>
 
             {/* Financial Transactions (Invoices, Receipts & Payments) - Second */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">الفواتير وسندات القبض والصرف</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">الفواتير وسندات القبض والصرف</h2>
                 {loadingHeavyData && (
-                  <Loader2 size={18} className="animate-spin text-gray-400" />
+                  <Loader2 size={18} className="animate-spin text-gray-400 dark:text-gray-500" />
                 )}
               </div>
 
               {loadingHeavyData ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 size={24} className="animate-spin text-gray-400" />
-                  <span className="text-gray-600 text-lg mr-3">جاري تحميل الفواتير والسندات...</span>
+                  <Loader2 size={24} className="animate-spin text-gray-400 dark:text-gray-500" />
+                  <span className="text-gray-600 dark:text-gray-400 text-lg mr-3">جاري تحميل الفواتير والسندات...</span>
                 </div>
               ) : financialItems.length === 0 ? (
                 <div className="text-center py-12">
-                  <FileText size={48} className="text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600 text-lg">لا توجد فواتير أو سندات</p>
+                  <FileText size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400 text-lg">لا توجد فواتير أو سندات</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1164,15 +1164,15 @@ export default function CustomerProfilePage() {
                       };
                       } else if (item.type === 'receipt') {
                         colors = {
-                          bg: 'bg-green-100',
-                          text: 'text-green-800',
+                          bg: 'bg-green-100 dark:bg-green-900/30',
+                          text: 'text-green-800 dark:text-green-300',
                           border: 'border-green-500',
                           iconBg: 'bg-green-200',
                         };
                       } else if (item.type === 'payment') {
                         colors = {
-                          bg: 'bg-red-100',
-                          text: 'text-red-800',
+                          bg: 'bg-red-100 dark:bg-red-900/30',
+                          text: 'text-red-800 dark:text-red-300',
                           border: 'border-red-500',
                           iconBg: 'bg-red-200',
                         };
@@ -1192,7 +1192,7 @@ export default function CustomerProfilePage() {
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-gray-900">
+                                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                                   {item.type === 'invoice' && item.source === 'Shop' && `فاتورة المحل #${item.invoiceNumber || item.id}`}
                                   {item.type === 'invoice' && item.source === 'Warehouse' && `فاتورة المخزن #${item.invoiceNumber || item.id}`}
                                   {item.type === 'receipt' && item.source === 'Shop' && `سند قبض المحل #${item.receiptNumber || item.id}`}
@@ -1201,13 +1201,13 @@ export default function CustomerProfilePage() {
                                   {item.type === 'payment' && item.source === 'Warehouse' && `سند صرف المستودع #${item.paymentNumber || item.id}`}
                                 </h3>
                                 {item.status && (
-                                  <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                                  <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300">
                                     {item.status}
                                   </span>
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-500">
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
                                   {formatDate(item.date)}
                                 </span>
                                 {/* Print Button */}
@@ -1227,7 +1227,7 @@ export default function CustomerProfilePage() {
                                       window.open(`/admin/warehouse-finance/payments/print/${item.id}`, `print-warehouse-payment-${item.id}`, 'noopener,noreferrer');
                                     }
                                   }}
-                                  className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                  className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
                                   title="طباعة"
                                 >
                                   <Printer size={16} />
@@ -1244,7 +1244,7 @@ export default function CustomerProfilePage() {
                                     return (
                                       <button
                                         disabled
-                                        className="p-1.5 text-gray-400 cursor-not-allowed rounded-lg transition-colors opacity-50"
+                                        className="p-1.5 text-gray-400 dark:text-gray-500 cursor-not-allowed rounded-lg transition-colors opacity-50"
                                         title="لا يمكن تعديل فاتورة مرحلة"
                                       >
                                         <Edit size={16} />
@@ -1274,7 +1274,7 @@ export default function CustomerProfilePage() {
                                           }
                                         }
                                       }}
-                                      className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                      className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
                                       title="تعديل (اضغط Command/Ctrl لفتح في نافذة جديدة)"
                                     >
                                       <Edit size={16} />
@@ -1287,7 +1287,7 @@ export default function CustomerProfilePage() {
                             {/* Amount for invoices, receipts and payments */}
                             {item.amount && (
                               <p className={`text-sm font-medium mb-2 ${
-                                item.type === 'payment' ? 'text-red-700' : 'text-gray-700'
+                                item.type === 'payment' ? 'text-red-700 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'
                               }`}>
                                 {item.type === 'payment' ? 'المبلغ المدفوع: ' : 'المبلغ: '}
                                 {formatBalance(item.amount)}
@@ -1296,7 +1296,7 @@ export default function CustomerProfilePage() {
 
                             {/* Cash/Cheque breakdown for receipts and payments */}
                             {(item.type === 'receipt' || item.type === 'payment') && (item.cashAmount || item.chequeAmount) && (
-                              <div className="text-xs text-gray-600 mb-2">
+                              <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                                 {item.cashAmount > 0 && <span>نقد: {formatBalance(item.cashAmount)}</span>}
                                 {item.cashAmount > 0 && item.chequeAmount > 0 && <span> • </span>}
                                 {item.chequeAmount > 0 && <span>شيك: {formatBalance(item.chequeAmount)}</span>}
@@ -1305,7 +1305,7 @@ export default function CustomerProfilePage() {
 
                             {/* Notes */}
                             {item.notes && (
-                              <p className="text-xs text-gray-600 mb-2">
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                                 {item.notes}
                               </p>
                             )}
@@ -1313,10 +1313,10 @@ export default function CustomerProfilePage() {
                             {/* Invoice Items (expandable) */}
                             {item.type === 'invoice' && item.items && item.items.length > 0 && (
                               <details className="mt-2">
-                                <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+                                <summary className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700">
                                   عرض {item.items.length} منتج
                                 </summary>
-                                <div className="mt-2 pl-4 border-l-2 border-gray-200 space-y-2">
+                                <div className="mt-2 pl-4 border-l-2 border-gray-200 dark:border-slate-700 space-y-2">
                                   {item.items
                                     .filter((invoiceItem: any) => invoiceItem)
                                     .map((invoiceItem: any, idx: number) => {
@@ -1326,9 +1326,9 @@ export default function CustomerProfilePage() {
                                       const itemQty = invoiceItem.Quantity ?? invoiceItem.quantity ?? 1;
                                       const itemTotal = itemPrice * itemQty;
                                       return (
-                                        <div key={`${uniqueKey}-item-${itemKey}-${idx}`} className="text-sm text-gray-700">
-                                          <div className="font-medium text-gray-900">{itemName}</div>
-                                          <div className="text-xs text-gray-500 mt-0.5">
+                                        <div key={`${uniqueKey}-item-${itemKey}-${idx}`} className="text-sm text-gray-700 dark:text-gray-300">
+                                          <div className="font-medium text-gray-900 dark:text-gray-100">{itemName}</div>
+                                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                             الكمية: {itemQty} × {formatBalance(itemPrice)} = {formatBalance(itemTotal)}
                                           </div>
                                         </div>
@@ -1347,29 +1347,29 @@ export default function CustomerProfilePage() {
             </div>
 
             {/* Quotations Section - Collapsible */}
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
               <details className="group">
-                <summary className="px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-between">
+                <summary className="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold text-gray-900">عروض الأسعار ({loadingHeavyData ? '...' : (customerData.quotations?.length || 0)})</h2>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">عروض الأسعار ({loadingHeavyData ? '...' : (customerData.quotations?.length || 0)})</h2>
                     {loadingHeavyData && (
-                      <Loader2 size={18} className="animate-spin text-gray-400" />
+                      <Loader2 size={18} className="animate-spin text-gray-400 dark:text-gray-500" />
                     )}
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
                     اضغط للعرض
                   </div>
                 </summary>
                 <div className="px-6 pb-6 pt-2">
                   {loadingHeavyData ? (
                     <div className="flex items-center justify-center py-12">
-                      <Loader2 size={24} className="animate-spin text-gray-400" />
-                      <span className="text-gray-600 text-lg mr-3">جاري تحميل عروض الأسعار...</span>
+                      <Loader2 size={24} className="animate-spin text-gray-400 dark:text-gray-500" />
+                      <span className="text-gray-600 dark:text-gray-400 text-lg mr-3">جاري تحميل عروض الأسعار...</span>
                     </div>
                   ) : customerData.quotations && customerData.quotations.length === 0 ? (
                     <div className="text-center py-12">
-                      <FileText size={48} className="text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-600 text-lg">لا توجد عروض أسعار</p>
+                      <FileText size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                      <p className="text-gray-600 dark:text-gray-400 text-lg">لا توجد عروض أسعار</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -1391,17 +1391,17 @@ export default function CustomerProfilePage() {
                               <div className="flex-1">
                                 <div className="flex items-center justify-between mb-1">
                                   <div className="flex items-center gap-2">
-                                    <h3 className="font-semibold text-gray-900">
+                                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                                       عرض سعر #{quotation.QuotationID || quotation.quotation_id || quotation.id}
                                     </h3>
                                     {quotationStatus && (
-                                      <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                                      <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300">
                                         {quotationStatus}
                                       </span>
                                     )}
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-500">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
                                       {formatDate(quotationDate)}
                                     </span>
                                     <button
@@ -1409,7 +1409,7 @@ export default function CustomerProfilePage() {
                                         const quotationId = quotation.QuotationID || quotation.quotation_id || quotation.id;
                                         window.open(`/admin/quotations/print/${quotationId}`, `print-quotation-${quotationId}`, 'noopener,noreferrer');
                                       }}
-                                      className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                      className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
                                       title="طباعة"
                                     >
                                       <Printer size={16} />
@@ -1419,7 +1419,7 @@ export default function CustomerProfilePage() {
                                         const quotationId = quotation.QuotationID || quotation.quotation_id || quotation.id;
                                         router.push(`/admin/quotations/${quotationId}`);
                                       }}
-                                      className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                      className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
                                       title="عرض/تعديل"
                                     >
                                       <Edit size={16} />
@@ -1429,14 +1429,14 @@ export default function CustomerProfilePage() {
 
                                 {/* Amount */}
                                 {quotationAmount > 0 && (
-                                  <p className="text-sm font-medium mb-2 text-gray-700">
+                                  <p className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                                     المبلغ: {formatBalance(quotationAmount)}
                                   </p>
                                 )}
 
                                 {/* Discounts */}
                                 {(quotation.SpecialDiscount > 0 || quotation.GiftDiscount > 0) && (
-                                  <div className="text-xs text-gray-600 mb-2">
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                                     {quotation.SpecialDiscount > 0 && (
                                       <span>خصم خاص: {formatBalance(quotation.SpecialDiscount)}</span>
                                     )}
@@ -1449,7 +1449,7 @@ export default function CustomerProfilePage() {
 
                                 {/* Notes */}
                                 {quotation.Notes && (
-                                  <p className="text-xs text-gray-600 mb-2">
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                                     {quotation.Notes}
                                   </p>
                                 )}
@@ -1457,10 +1457,10 @@ export default function CustomerProfilePage() {
                                 {/* Quotation Items (expandable) */}
                                 {quotation.Items && quotation.Items.length > 0 && (
                                   <details className="mt-2">
-                                    <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+                                    <summary className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700">
                                       عرض {quotation.Items.length} منتج
                                     </summary>
-                                    <div className="mt-2 pl-4 border-l-2 border-gray-200 space-y-2">
+                                    <div className="mt-2 pl-4 border-l-2 border-gray-200 dark:border-slate-700 space-y-2">
                                       {quotation.Items
                                         .filter((quotationItem: any) => quotationItem)
                                         .map((quotationItem: any, idx: number) => {
@@ -1470,9 +1470,9 @@ export default function CustomerProfilePage() {
                                           const itemQty = quotationItem.Quantity ?? quotationItem.quantity ?? 1;
                                           const itemTotal = itemPrice * itemQty;
                                           return (
-                                            <div key={`${uniqueKey}-item-${itemKey}-${idx}`} className="text-sm text-gray-700">
-                                              <div className="font-medium text-gray-900">{itemName}</div>
-                                              <div className="text-xs text-gray-500 mt-0.5">
+                                            <div key={`${uniqueKey}-item-${itemKey}-${idx}`} className="text-sm text-gray-700 dark:text-gray-300">
+                                              <div className="font-medium text-gray-900 dark:text-gray-100">{itemName}</div>
+                                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                                 الكمية: {itemQty} × {formatBalance(itemPrice)} = {formatBalance(itemTotal)}
                                               </div>
                                             </div>
@@ -1498,27 +1498,27 @@ export default function CustomerProfilePage() {
       {/* Login Credentials Modal */}
       {isLoginCredentialsModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" dir="rtl">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 space-y-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6 space-y-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">إدارة بيانات الدخول</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">إدارة بيانات الدخول</h3>
               <button
                 onClick={() => {
                   setIsLoginCredentialsModalOpen(false);
                   setLoginPassword('');
                 }}
-                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
-                <X size={20} className="text-gray-600" />
+                <X size={20} className="text-gray-600 dark:text-gray-400" />
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                   اسم المستخدم <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500">
                     <User size={18} />
                   </div>
                   <input
@@ -1526,19 +1526,19 @@ export default function CustomerProfilePage() {
                     value={loginUsername}
                     onChange={(e) => setLoginUsername(e.target.value)}
                     placeholder="اسم المستخدم"
-                    className="w-full pr-10 pl-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                    className="w-full pr-10 pl-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 bg-white dark:bg-slate-800"
                     dir="ltr"
                   />
                 </div>
-                <p className="mt-1 text-xs text-gray-500">يجب أن يكون اسم المستخدم فريداً</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">يجب أن يكون اسم المستخدم فريداً</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                   كلمة المرور <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500">
                     <Lock size={18} />
                   </div>
                   <input
@@ -1546,28 +1546,28 @@ export default function CustomerProfilePage() {
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="كلمة المرور"
-                    className="w-full pr-10 pl-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 bg-white"
+                    className="w-full pr-10 pl-10 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 bg-white dark:bg-slate-800"
                     dir="ltr"
                   />
                   <button
                     type="button"
                     onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                   >
                     {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
-                <p className="mt-1 text-xs text-gray-500">سيتم تشفير كلمة المرور تلقائياً</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">سيتم تشفير كلمة المرور تلقائياً</p>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
               <button
                 onClick={() => {
                   setIsLoginCredentialsModalOpen(false);
                   setLoginPassword('');
                 }}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                className="px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-medium"
                 disabled={savingLoginCredentials}
               >
                 إلغاء
@@ -1575,7 +1575,7 @@ export default function CustomerProfilePage() {
               <button
                 onClick={handleSaveLoginCredentials}
                 disabled={savingLoginCredentials || !loginUsername.trim() || !loginPassword.trim()}
-                className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {savingLoginCredentials ? (
                   <>
@@ -1637,28 +1637,28 @@ export default function CustomerProfilePage() {
           onClick={() => setIsCheckModalOpen(false)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900">إضافة شيك راجع</h3>
+            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">إضافة شيك راجع</h3>
               <button
                 onClick={() => setIsCheckModalOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
                 disabled={checkSaving}
               >
-                <X size={18} className="text-gray-600" />
+                <X size={18} className="text-gray-600 dark:text-gray-400" />
               </button>
             </div>
 
             <div className="p-4 space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">المبلغ</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">المبلغ</label>
                 <input
                   type="number"
                   value={checkForm.amount}
                   onChange={(e) => setCheckForm({ ...checkForm, amount: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                   min="0"
                   step="0.01"
                   placeholder="0.00"
@@ -1667,22 +1667,22 @@ export default function CustomerProfilePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">صورة الوجه (رابط)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">صورة الوجه (رابط)</label>
                   <input
                     type="text"
                     value={checkForm.imageFront}
                     onChange={(e) => setCheckForm({ ...checkForm, imageFront: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                     placeholder="https://..."
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">صورة الخلف (رابط)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">صورة الخلف (رابط)</label>
                   <input
                     type="text"
                     value={checkForm.imageBack}
                     onChange={(e) => setCheckForm({ ...checkForm, imageBack: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                     placeholder="https://..."
                   />
                 </div>
@@ -1690,20 +1690,20 @@ export default function CustomerProfilePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">تاريخ الإرجاع</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تاريخ الإرجاع</label>
                   <input
                     type="date"
                     value={checkForm.returnDate}
                     onChange={(e) => setCheckForm({ ...checkForm, returnDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">الحالة</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الحالة</label>
                   <select
                     value={checkForm.status}
                     onChange={(e) => setCheckForm({ ...checkForm, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                   >
                     <option value="مع الشركة">مع الشركة</option>
                     <option value="في البنك">في البنك</option>
@@ -1715,19 +1715,19 @@ export default function CustomerProfilePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ملاحظات</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ملاحظات</label>
                 <textarea
                   value={checkForm.notes}
                   onChange={(e) => setCheckForm({ ...checkForm, notes: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                 />
               </div>
 
               <div className="flex items-center gap-3 pt-2">
                 <button
                   onClick={() => setIsCheckModalOpen(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
                   disabled={checkSaving}
                 >
                   إلغاء
@@ -1735,7 +1735,7 @@ export default function CustomerProfilePage() {
                 <button
                   onClick={handleSaveCheck}
                   disabled={checkSaving}
-                  className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {checkSaving ? (
                     <>

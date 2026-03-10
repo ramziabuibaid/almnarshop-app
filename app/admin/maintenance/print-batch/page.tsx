@@ -106,21 +106,21 @@ function PrintBatchContent() {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen rtl font-cairo bg-white">
+            <div className="flex flex-col items-center justify-center min-h-screen rtl font-cairo bg-white dark:bg-slate-800">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-                <p className="text-gray-600">جاري التجهيز للطباعة الجماعية...</p>
+                <p className="text-gray-600 dark:text-gray-400">جاري التجهيز للطباعة الجماعية...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen rtl font-cairo bg-white p-4 text-center">
+            <div className="flex flex-col items-center justify-center min-h-screen rtl font-cairo bg-white dark:bg-slate-800 p-4 text-center">
                 <div className="text-red-500 mb-4">
                     <Wrench size={48} className="mx-auto text-red-500" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-800 mb-2">تعذر الطباعة</h2>
-                <p className="text-gray-600 mb-6">{error}</p>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">تعذر الطباعة</h2>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
                 {!isEmbed && (
                     <button
                         onClick={() => window.close()}
@@ -514,9 +514,9 @@ function PrintBatchContent() {
 export default function CashBoxBatchPrintA6Page() {
     return (
         <Suspense fallback={
-            <div className="flex flex-col items-center justify-center min-h-screen rtl font-cairo bg-white">
+            <div className="flex flex-col items-center justify-center min-h-screen rtl font-cairo bg-white dark:bg-slate-800">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-                <p className="text-gray-600">جاري تحميل الصفحة...</p>
+                <p className="text-gray-600 dark:text-gray-400">جاري تحميل الصفحة...</p>
             </div>
         }>
             <PrintBatchContent />

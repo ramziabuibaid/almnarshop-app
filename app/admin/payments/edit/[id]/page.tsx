@@ -127,7 +127,7 @@ export default function EditPaymentPage() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 size={32} className="animate-spin text-gray-600" />
+          <Loader2 size={32} className="animate-spin text-gray-600 dark:text-gray-400" />
         </div>
       </AdminLayout>
     );
@@ -141,24 +141,24 @@ export default function EditPaymentPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/admin/payments')}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             >
-              <ArrowLeft size={20} className="text-gray-600" />
+              <ArrowLeft size={20} className="text-gray-600 dark:text-gray-400" />
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">تعديل سند دفع</h1>
-            <span className="text-gray-500">#{payId}</span>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">تعديل سند دفع</h1>
+            <span className="text-gray-500 dark:text-gray-400">#{payId}</span>
           </div>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-800 text-sm">{error}</p>
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg">
+            <p className="text-red-800 dark:text-red-300 text-sm">{error}</p>
           </div>
         )}
 
         {/* Form */}
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             {/* Customer */}
             <CustomerSelect
@@ -171,21 +171,21 @@ export default function EditPaymentPage() {
 
             {/* Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                 التاريخ <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                 required
               />
             </div>
 
             {/* Cash Amount */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                 المبلغ النقدي
               </label>
               <input
@@ -194,14 +194,14 @@ export default function EditPaymentPage() {
                 min="0"
                 value={formData.cashAmount}
                 onChange={(e) => setFormData({ ...formData, cashAmount: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                 placeholder="0.00"
               />
             </div>
 
             {/* Cheque Amount */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                 المبلغ بالشيك
               </label>
               <input
@@ -210,31 +210,31 @@ export default function EditPaymentPage() {
                 min="0"
                 value={formData.chequeAmount}
                 onChange={(e) => setFormData({ ...formData, chequeAmount: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                 placeholder="0.00"
               />
             </div>
 
             {/* Notes */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                 الملاحظات
               </label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                 placeholder="ملاحظات إضافية..."
               />
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
+            <div className="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
               <button
                 type="submit"
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-6 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? (
                   <>
@@ -273,7 +273,7 @@ export default function EditPaymentPage() {
               <button
                 type="button"
                 onClick={() => router.push('/admin/payments')}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-6 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
               >
                 إلغاء
               </button>

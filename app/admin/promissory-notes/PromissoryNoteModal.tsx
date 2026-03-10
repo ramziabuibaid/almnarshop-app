@@ -297,14 +297,14 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col font-cairo" dir="rtl">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col font-cairo" dir="rtl">
                 {/* Header */}
-                <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <Calculator className="text-gray-600" size={24} />
+                <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between bg-gray-50 dark:bg-slate-800/50">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                        <Calculator className="text-gray-600 dark:text-gray-400" size={24} />
                         {initialData ? 'تعديل الكمبيالة' : 'إضافة كمبيالة جديدة'}
                     </h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 p-1 rounded-full transition-colors">
+                    <button onClick={onClose} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:bg-gray-200 dark:hover:bg-slate-600 p-1 rounded-full transition-colors">
                         <X size={24} />
                     </button>
                 </div>
@@ -312,7 +312,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-6">
                     {error && (
-                        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                        <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg flex items-center gap-2">
                             <AlertCircle size={20} />
                             {error}
                         </div>
@@ -333,22 +333,22 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">رقم هوية المدين</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">رقم هوية المدين</label>
                                     <input
                                         type="text"
                                         value={debtorIdNumber}
                                         onChange={(e) => setDebtorIdNumber(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder:text-gray-400 font-medium"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 font-medium"
                                         placeholder="رقم الهوية"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">عنوان المدين</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">عنوان المدين</label>
                                     <input
                                         type="text"
                                         value={debtorAddress}
                                         onChange={(e) => setDebtorAddress(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder:text-gray-400 font-medium"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 font-medium"
                                         placeholder="العنوان"
                                     />
                                 </div>
@@ -373,7 +373,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                         <button
                                             type="button"
                                             disabled={uploadingImage}
-                                            className="px-4 py-2 bg-white border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 disabled:opacity-50 flex items-center gap-2"
+                                            className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 disabled:opacity-50 flex items-center gap-2"
                                         >
                                             {uploadingImage ? (
                                                 <>
@@ -386,7 +386,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                         </button>
                                     </div>
                                     {imageUrl && (
-                                        <div className="relative w-16 h-16 rounded border border-gray-200 overflow-hidden shadow-sm">
+                                        <div className="relative w-16 h-16 rounded border border-gray-200 dark:border-slate-700 overflow-hidden shadow-sm">
                                             {/* eslint-disable-next-line @next/next/no-img-element */}
                                             <img src={imageUrl} alt="ID Preview" className="w-full h-full object-cover" />
                                             <button
@@ -406,14 +406,14 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                             </div>
 
                             {/* Legacy Note Toggle */}
-                            <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 flex items-start gap-3">
+                            <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-100 flex items-start gap-3">
                                 <div className="mt-0.5">
                                     <input
                                         type="checkbox"
                                         id="legacy-toggle"
                                         checked={isLegacy}
                                         onChange={(e) => setIsLegacy(e.target.checked)}
-                                        className="w-4 h-4 text-amber-600 rounded focus:ring-amber-500"
+                                        className="w-4 h-4 text-amber-600 dark:text-amber-400 rounded focus:ring-amber-500"
                                     />
                                 </div>
                                 <div>
@@ -429,7 +429,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                             <div>
                                                 <label className="block text-xs font-semibold text-amber-800 mb-1">المبلغ المدفوع مسبقاً</label>
                                                 <div className="relative">
-                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-600 font-bold text-sm">₪</span>
+                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-600 dark:text-amber-400 font-bold text-sm">₪</span>
                                                     <input
                                                         type="number"
                                                         value={paidAmount}
@@ -452,31 +452,31 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         {isLegacy ? `المبلغ الإجمالي (قيمة الكمبيالة الأصلية)` : `المبلغ الإجمالي`}
                                     </label>
                                     <div className="relative">
-                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₪</span>
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-bold">₪</span>
                                         <input
                                             type="number"
                                             value={amount}
                                             onChange={(e) => setAmount(e.target.value)}
-                                            className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400 font-medium"
+                                            className="w-full pr-10 pl-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 font-medium"
                                             placeholder="0.00"
                                         />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         {isLegacy ? 'تاريخ أول قسط قادم' : 'تاريخ البدء'}
                                     </label>
                                     <div className="relative">
-                                        <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                        <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
                                         <input
                                             type="date"
                                             value={startDate}
                                             onChange={(e) => setStartDate(e.target.value)}
-                                            className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400 font-medium"
+                                            className="w-full pr-10 pl-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 font-medium"
                                         />
                                     </div>
                                 </div>
@@ -493,7 +493,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                                 onChange={() => setInstallmentInterval('monthly')}
                                                 className="w-4 h-4 text-blue-600 focus:ring-blue-500"
                                             />
-                                            <span className="text-sm text-gray-700">شهري</span>
+                                            <span className="text-sm text-gray-700 dark:text-gray-300">شهري</span>
                                         </label>
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
@@ -502,7 +502,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                                 onChange={() => setInstallmentInterval('weekly')}
                                                 className="w-4 h-4 text-blue-600 focus:ring-blue-500"
                                             />
-                                            <span className="text-sm text-gray-700">أسبوعي</span>
+                                            <span className="text-sm text-gray-700 dark:text-gray-300">أسبوعي</span>
                                         </label>
                                     </div>
                                 </div>
@@ -517,7 +517,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                                 onChange={() => setCalculationMethod('byCount')}
                                                 className="w-4 h-4 text-blue-600 focus:ring-blue-500"
                                             />
-                                            <span className="text-sm text-gray-700">عدد الأقساط</span>
+                                            <span className="text-sm text-gray-700 dark:text-gray-300">عدد الأقساط</span>
                                         </label>
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
@@ -526,13 +526,13 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                                 onChange={() => setCalculationMethod('byAmount')}
                                                 className="w-4 h-4 text-blue-600 focus:ring-blue-500"
                                             />
-                                            <span className="text-sm text-gray-700">قيمة القسط</span>
+                                            <span className="text-sm text-gray-700 dark:text-gray-300">قيمة القسط</span>
                                         </label>
                                     </div>
 
                                     {calculationMethod === 'byCount' ? (
                                         <div>
-                                            <label className="block text-sm text-gray-600 mb-1">
+                                            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
                                                 عدد الأقساط {installmentInterval === 'monthly' ? 'الشهرية' : 'الأسبوعية'} {isLegacy ? 'المتبقية' : ''}
                                             </label>
                                             <input
@@ -540,12 +540,12 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                                 min="1"
                                                 value={installmentCount}
                                                 onChange={(e) => setInstallmentCount(e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 font-medium"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100 font-medium"
                                             />
                                         </div>
                                     ) : (
                                         <div>
-                                            <label className="block text-sm text-gray-600 mb-1">
+                                            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
                                                 قيمة القسط {installmentInterval === 'monthly' ? 'الشهري' : 'الأسبوعي'}
                                             </label>
                                             <input
@@ -553,7 +553,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                                 min="1"
                                                 value={installmentAmount}
                                                 onChange={(e) => setInstallmentAmount(e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 font-medium"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100 font-medium"
                                             />
                                         </div>
                                     )}
@@ -561,43 +561,43 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">ملاحظات</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ملاحظات</label>
                                 <textarea
                                     value={notes}
                                     onChange={(e) => setNotes(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 min-h-[80px] text-gray-900 placeholder:text-gray-400 font-medium"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 min-h-[80px] text-gray-900 dark:text-gray-100 placeholder:text-gray-400 font-medium"
                                     placeholder="ملاحظات إضافية..."
                                 />
                             </div>
                         </div>
 
                         {/* Preview Side */}
-                        <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden flex flex-col">
-                            <div className="p-4 border-b border-gray-200 bg-gray-100 font-medium text-gray-700 flex justify-between items-center">
+                        <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col">
+                            <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-700/50 font-medium text-gray-700 dark:text-gray-300 flex justify-between items-center">
                                 <span>جدول الأقساط المتوقع {isLegacy ? '(للمبلغ المتبقي فقط)' : ''}</span>
-                                <span className="text-sm bg-white px-2 py-1 rounded border border-gray-300">
+                                <span className="text-sm bg-white dark:bg-slate-800 px-2 py-1 rounded border border-gray-300 dark:border-slate-600">
                                     {previewInstallments.length} أقساط
                                 </span>
                             </div>
                             <div className="overflow-y-auto flex-1 p-2 space-y-2 max-h-[400px]">
                                 {previewInstallments.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+                                    <div className="flex flex-col items-center justify-center h-40 text-gray-400 dark:text-gray-500">
                                         <Calendar size={40} className="mb-2 opacity-50" />
                                         <p>أدخل البيانات لعرض الجدول</p>
                                     </div>
                                 ) : (
                                     previewInstallments.map((inst) => (
-                                        <div key={inst.id} className="bg-white p-3 rounded-lg border border-gray-200 flex justify-between items-center shadow-sm">
+                                        <div key={inst.id} className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700 flex justify-between items-center shadow-sm">
                                             <div className="flex items-center gap-3">
                                                 <div className="bg-blue-100 text-blue-700 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
                                                     {inst.id + 1}
                                                 </div>
                                                 <div>
-                                                    <div className="text-sm font-medium text-gray-900">{inst.dueDate}</div>
-                                                    <div className="text-xs text-gray-500">{inst.notes}</div>
+                                                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{inst.dueDate}</div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400">{inst.notes}</div>
                                                 </div>
                                             </div>
-                                            <div className="font-bold text-gray-900">
+                                            <div className="font-bold text-gray-900 dark:text-gray-100">
                                                 ₪{inst.amount.toFixed(2)}
                                             </div>
                                         </div>
@@ -605,7 +605,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                 )}
                             </div>
                             {previewInstallments.length > 0 && (
-                                <div className="p-4 bg-gray-100 border-t border-gray-200 flex justify-between items-center font-bold text-gray-900 text-lg">
+                                <div className="p-4 bg-gray-100 dark:bg-slate-700/50 border-t border-gray-200 dark:border-slate-700 flex justify-between items-center font-bold text-gray-900 dark:text-gray-100 text-lg">
                                     <span>مجموع الأقساط المجدولة</span>
                                     <span>₪{previewInstallments.reduce((sum, i) => sum + i.amount, 0).toFixed(2)}</span>
                                 </div>
@@ -615,10 +615,10 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
+                <div className="p-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3 bg-gray-50 dark:bg-slate-800/50">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors font-medium"
+                        className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors font-medium"
                         disabled={saving}
                     >
                         إلغاء
@@ -626,7 +626,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                     <button
                         onClick={handleSave}
                         disabled={saving || previewInstallments.length === 0}
-                        className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-6 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {saving ? (
                             <>

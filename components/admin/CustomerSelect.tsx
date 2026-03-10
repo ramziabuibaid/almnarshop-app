@@ -104,7 +104,7 @@ export default function CustomerSelect({
 
   return (
     <div className="relative" ref={containerRef}>
-      <label className="block text-sm font-medium text-gray-900 mb-2">
+      <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
         العميل {required && <span className="text-red-500">*</span>}
       </label>
       <div className="relative">
@@ -112,23 +112,23 @@ export default function CustomerSelect({
           type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white text-right flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white bg-white dark:bg-slate-800 text-right flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span className={selectedCustomer ? 'text-gray-900 font-medium' : 'text-gray-500'}>
+          <span className={selectedCustomer ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400'}>
             {selectedCustomer
               ? `${selectedCustomer.Name || selectedCustomer.name || ''} (${selectedCustomer.CustomerID || selectedCustomer.id || ''})${canViewBalances && (selectedCustomer.Balance || selectedCustomer.balance) !== undefined ? ` - ${formatBalance(selectedCustomer.Balance || selectedCustomer.balance || 0)}` : ''}`
               : placeholder}
           </span>
           <ChevronDown
             size={16}
-            className={`text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            className={`text-gray-600 dark:text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           />
         </button>
 
         {isOpen && (
-          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden">
+          <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg shadow-lg max-h-80 overflow-hidden">
             {/* Search Input */}
-            <div className="p-2 border-b border-gray-200 sticky top-0 bg-white">
+            <div className="p-2 border-b border-gray-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800">
               <div className="relative">
                 <Search
                   size={16}
@@ -140,7 +140,7 @@ export default function CustomerSelect({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
-                  className="w-full pr-8 pl-2 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm text-gray-900 placeholder:text-gray-500 font-medium"
+                  className="w-full pr-8 pl-2 py-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-sm text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 dark:text-gray-400 font-medium"
                   autoFocus
                   dir="rtl"
                 />
@@ -151,7 +151,7 @@ export default function CustomerSelect({
                       e.stopPropagation();
                       setSearchQuery('');
                     }}
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-700 rounded"
                   >
                     <X size={14} className="text-gray-400" />
                   </button>
@@ -162,7 +162,7 @@ export default function CustomerSelect({
             {/* Customer List */}
             <div className="overflow-y-auto max-h-64" dir="rtl">
               {filteredCustomers.length === 0 ? (
-                <div className="p-4 text-center text-gray-500 text-sm">
+                <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
                   {searchQuery ? 'لا توجد نتائج' : 'لا يوجد زبائن'}
                 </div>
               ) : (
@@ -175,13 +175,13 @@ export default function CustomerSelect({
                         key={customerID}
                         type="button"
                         onClick={() => handleSelect(customerID)}
-                        className={`w-full text-right px-4 py-2 hover:bg-gray-50 transition-colors ${isSelected ? 'bg-gray-100 font-medium' : ''
+                        className={`w-full text-right px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700/50 dark:bg-slate-700/50 transition-colors ${isSelected ? 'bg-gray-100 dark:bg-slate-700 font-medium' : ''
                           }`}
                       >
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-gray-900 dark:text-white">
                           {customer.Name || customer.name || 'بدون اسم'}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
                           {customerID} {customer.Phone || customer.phone ? `- ${customer.Phone || customer.phone}` : ''}
                           {canViewBalances && (customer.Balance || customer.balance) !== undefined && (
                             <span className="ml-2 font-medium">

@@ -47,7 +47,7 @@ export default function EditArticlePage({ params }: { params: Promise<{ id: stri
     return (
         <AdminLayout>
             <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-6">تعديل المقالة</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">تعديل المقالة</h1>
                 {article && <ArticleForm initialData={article} />}
             </div>
         </AdminLayout>

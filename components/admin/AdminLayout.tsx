@@ -25,29 +25,31 @@ import {
   Settings
 } from 'lucide-react';
 import NotificationCenter from './NotificationCenter';
+import { ThemeToggle } from './ThemeToggle';
 
 interface AdminLayoutProps {
   children: ReactNode;
+  headerAction?: ReactNode;
 }
 
 /** Sidebar accent: thin border + subtle active bg for compact professional look */
-/** Light sidebar — active: blue bg, hover: subtle gray (ResearchCollab-inspired) */
+/** Light/Dark sidebar — active: blue bg, hover: subtle gray */
 const ACCENT_STYLES: Record<string, { border: string; borderMuted: string; activeBg: string; activeText?: string }> = {
-  slate: { border: 'border-s-slate-500', borderMuted: 'border-s-transparent', activeBg: 'bg-slate-100' },
-  indigo: { border: 'border-s-indigo-500', borderMuted: 'border-s-transparent', activeBg: 'bg-indigo-50', activeText: 'text-indigo-700' },
-  violet: { border: 'border-s-violet-500', borderMuted: 'border-s-transparent', activeBg: 'bg-violet-50' },
-  emerald: { border: 'border-s-emerald-500', borderMuted: 'border-s-transparent', activeBg: 'bg-emerald-50' },
-  teal: { border: 'border-s-teal-500', borderMuted: 'border-s-transparent', activeBg: 'bg-teal-50' },
-  cyan: { border: 'border-s-cyan-500', borderMuted: 'border-s-transparent', activeBg: 'bg-cyan-50' },
-  blue: { border: 'border-s-blue-500', borderMuted: 'border-s-transparent', activeBg: 'bg-blue-50', activeText: 'text-blue-700' },
-  amber: { border: 'border-s-amber-500', borderMuted: 'border-s-transparent', activeBg: 'bg-amber-50' },
-  rose: { border: 'border-s-rose-500', borderMuted: 'border-s-transparent', activeBg: 'bg-rose-50' },
-  green: { border: 'border-s-green-500', borderMuted: 'border-s-transparent', activeBg: 'bg-green-50' },
-  orange: { border: 'border-s-orange-500', borderMuted: 'border-s-transparent', activeBg: 'bg-orange-50' },
-  fuchsia: { border: 'border-s-fuchsia-500', borderMuted: 'border-s-transparent', activeBg: 'bg-fuchsia-50' },
-  sky: { border: 'border-s-sky-500', borderMuted: 'border-s-transparent', activeBg: 'bg-sky-50' },
-  neutral: { border: 'border-s-gray-500', borderMuted: 'border-s-transparent', activeBg: 'bg-gray-100' },
-  red: { border: 'border-s-red-500', borderMuted: 'border-s-transparent', activeBg: 'bg-red-50' },
+  slate: { border: 'border-s-slate-500', borderMuted: 'border-s-transparent', activeBg: 'bg-slate-100 dark:bg-slate-800' },
+  indigo: { border: 'border-s-indigo-500', borderMuted: 'border-s-transparent', activeBg: 'bg-indigo-50 dark:bg-indigo-900/40', activeText: 'text-indigo-700 dark:text-indigo-300' },
+  violet: { border: 'border-s-violet-500', borderMuted: 'border-s-transparent', activeBg: 'bg-violet-50 dark:bg-violet-900/40' },
+  emerald: { border: 'border-s-emerald-500', borderMuted: 'border-s-transparent', activeBg: 'bg-emerald-50 dark:bg-emerald-900/40' },
+  teal: { border: 'border-s-teal-500', borderMuted: 'border-s-transparent', activeBg: 'bg-teal-50 dark:bg-teal-900/40' },
+  cyan: { border: 'border-s-cyan-500', borderMuted: 'border-s-transparent', activeBg: 'bg-cyan-50 dark:bg-cyan-900/40' },
+  blue: { border: 'border-s-blue-500', borderMuted: 'border-s-transparent', activeBg: 'bg-blue-50 dark:bg-blue-900/40', activeText: 'text-blue-700 dark:text-blue-300' },
+  amber: { border: 'border-s-amber-500', borderMuted: 'border-s-transparent', activeBg: 'bg-amber-50 dark:bg-amber-900/40' },
+  rose: { border: 'border-s-rose-500', borderMuted: 'border-s-transparent', activeBg: 'bg-rose-50 dark:bg-rose-900/40' },
+  green: { border: 'border-s-green-500', borderMuted: 'border-s-transparent', activeBg: 'bg-green-50 dark:bg-green-900/40' },
+  orange: { border: 'border-s-orange-500', borderMuted: 'border-s-transparent', activeBg: 'bg-orange-50 dark:bg-orange-900/40' },
+  fuchsia: { border: 'border-s-fuchsia-500', borderMuted: 'border-s-transparent', activeBg: 'bg-fuchsia-50 dark:bg-fuchsia-900/40' },
+  sky: { border: 'border-s-sky-500', borderMuted: 'border-s-transparent', activeBg: 'bg-sky-50 dark:bg-sky-900/40' },
+  neutral: { border: 'border-s-gray-500 dark:border-s-slate-400', borderMuted: 'border-s-transparent', activeBg: 'bg-gray-100 dark:bg-slate-800' },
+  red: { border: 'border-s-red-500', borderMuted: 'border-s-transparent', activeBg: 'bg-red-50 dark:bg-red-900/40' },
 };
 
 /** Submenu shown on hover under "المنتجات" */
@@ -98,7 +100,7 @@ const SECTION_LABELS: Record<string, string> = {
   admin: 'الإدارة',
 };
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
+export default function AdminLayout({ children, headerAction }: AdminLayoutProps) {
   const { logout } = useShop();
   const { admin, loading: adminLoading, logoutAdmin } = useAdminAuth();
   const router = useRouter();
@@ -141,8 +143,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   if (adminLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-gray-700">Checking admin session...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
+        <div className="text-gray-700 dark:text-gray-300">Checking admin session...</div>
       </div>
     );
   }
@@ -193,34 +195,34 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100" dir="rtl">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
-          className={`fixed inset-0 bg-black/50 z-[60] ${pathname === '/admin/pos' ? 'lg:block' : 'md:hidden'}`}
+          className={`fixed inset-0 bg-black/50 z-[60] ${pathname === '/admin/pos' ? 'lg:hidden' : 'md:hidden'}`}
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar — light, professional (Almnar System / ResearchCollab-inspired) */}
+      {/* Floating Sidebar */}
       <aside
-        className={`fixed top-0 right-0 h-full w-56 bg-white text-gray-800 z-[70] transform transition-transform duration-300 shadow-xl border-l border-gray-200 ${pathname === '/admin/pos'
-          ? (sidebarOpen ? 'translate-x-0' : 'translate-x-full')
-          : (sidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0')
+        className={`fixed top-4 right-4 h-[calc(100vh-2rem)] w-[260px] bg-white dark:bg-slate-900 text-gray-800 dark:text-gray-200 z-[70] transform transition-transform duration-300 shadow-xl border border-gray-200 dark:border-slate-800 rounded-2xl flex flex-col overflow-hidden ${pathname === '/admin/pos'
+          ? (sidebarOpen ? 'translate-x-0' : 'translate-x-[calc(100%+2rem)] lg:translate-x-[calc(100%+2rem)]')
+          : (sidebarOpen ? 'translate-x-0' : 'translate-x-[calc(100%+2rem)] md:translate-x-0')
           }`}
       >
         <div className="flex flex-col h-full">
-          {/* Header — Almnar System */}
-          <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between shrink-0 bg-gray-50/50">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
-                <Store size={18} className="text-white" />
+          {/* Header */}
+          <div className="px-4 py-4 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0 shadow-sm shadow-indigo-600/20">
+                <Store size={20} className="text-white" />
               </div>
-              <h1 className="text-base font-bold text-green-600 tracking-tight font-cairo">Almnar System</h1>
+              <h1 className="text-base font-bold text-slate-800 dark:text-white tracking-tight font-cairo">Almnar System</h1>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className={`p-1.5 hover:bg-gray-200 rounded-md text-gray-500 hover:text-gray-700 transition-colors ${pathname === '/admin/pos' ? 'lg:block' : 'md:hidden'}`}
+              className={`p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors ${pathname === '/admin/pos' ? 'lg:block' : 'md:hidden'}`}
             >
               <X size={18} />
             </button>
@@ -311,8 +313,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             setSidebarOpen(false);
                           }}
                           className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${borderClass} ${isActive || submenuActive
-                            ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
-                            : 'text-gray-700 hover:bg-gray-100'
+                            ? `${styles.activeBg} ${styles.activeText || 'text-gray-900 dark:text-gray-100'} font-medium`
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'
                             }`}
                         >
                           <Icon size={18} className="shrink-0" />
@@ -347,7 +349,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                   setSidebarOpen(false);
                                   setProductsSubmenuOpen(false);
                                 }}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${subActive ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'
                                   }`}
                               >
                                 <SubIcon size={14} className="shrink-0" />
@@ -379,8 +381,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             setSidebarOpen(false);
                           }}
                           className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${(isActive || submenuActive) ? styles.border : styles.borderMuted} ${isActive || submenuActive
-                            ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
-                            : 'text-gray-700 hover:bg-gray-100'
+                            ? `${styles.activeBg} ${styles.activeText || 'text-gray-900 dark:text-gray-100'} font-medium`
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'
                             }`}
                         >
                           <Icon size={18} className="shrink-0" />
@@ -417,7 +419,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                   setSidebarOpen(false);
                                   setPosSubmenuOpen(false);
                                 }}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${subActive ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'
                                   }`}
                               >
                                 <SubIcon size={14} className="shrink-0" />
@@ -450,8 +452,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             setSidebarOpen(false);
                           }}
                           className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${(isActive || invoicesSubmenuActive) ? styles.border : styles.borderMuted} ${isActive || invoicesSubmenuActive
-                            ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
-                            : 'text-gray-700 hover:bg-gray-100'
+                            ? `${styles.activeBg} ${styles.activeText || 'text-gray-900 dark:text-gray-100'} font-medium`
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'
                             }`}
                         >
                           <Icon size={18} className="shrink-0" />
@@ -486,7 +488,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                   setSidebarOpen(false);
                                   setInvoicesSubmenuOpen(false);
                                 }}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${subActive ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'
                                   }`}
                               >
                                 <SubIcon size={14} className="shrink-0" />
@@ -520,8 +522,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             setSidebarOpen(false);
                           }}
                           className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm min-w-0 ${(isActive || customersSubmenuActive) ? styles.border : styles.borderMuted} ${isActive || customersSubmenuActive
-                            ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
-                            : 'text-gray-700 hover:bg-gray-100'
+                            ? `${styles.activeBg} ${styles.activeText || 'text-gray-900 dark:text-gray-100'} font-medium`
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'
                             }`}
                         >
                           <Icon size={18} className="shrink-0" />
@@ -558,7 +560,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                   setSidebarOpen(false);
                                   setCustomersSubmenuOpen(false);
                                 }}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${subActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${subActive ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'
                                   }`}
                               >
                                 <SubIcon size={14} className="shrink-0" />
@@ -584,8 +586,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         setSidebarOpen(false);
                       }}
                       className={`flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${isActive ? styles.border : styles.borderMuted} ${isActive
-                        ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium`
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? `${styles.activeBg} ${styles.activeText || 'text-gray-900 dark:text-white'} font-medium`
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'
                         }`}
                     >
                       <Icon size={18} className="shrink-0" />
@@ -611,7 +613,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         router.push('/admin/admin-users');
                         setSidebarOpen(false);
                       }}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${borderClass} ${isActive ? `${styles.activeBg} ${styles.activeText || 'text-gray-900'} font-medium` : 'text-gray-700 hover:bg-gray-100'
+                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${borderClass} ${isActive ? `${styles.activeBg} ${styles.activeText || 'text-gray-900 dark:text-white'} font-medium` : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'
                         }`}
                     >
                       <Shield size={18} className="shrink-0" />
@@ -623,7 +625,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
 
             {/* Footer: الذهاب الى المتجر + Logout — مفصولان عن القائمة */}
-            <div className="mt-auto pt-3 border-t border-gray-200 space-y-0.5">
+            <div className="mt-auto pt-3 border-t border-gray-100 dark:border-slate-800 space-y-0.5">
               {(() => {
                 const styles = ACCENT_STYLES.neutral;
                 return (
@@ -640,7 +642,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       router.push('/');
                       setSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${styles.borderMuted} text-gray-700 hover:bg-gray-100 text-right`}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${styles.borderMuted} text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 text-right`}
                   >
                     <Store size={18} className="shrink-0" />
                     <span className="font-cairo truncate">الذهاب الى المتجر</span>
@@ -652,10 +654,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 return (
                   <button
                     onClick={handleLogout}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${styles.borderMuted} text-gray-700 hover:bg-red-50 hover:text-red-700 text-right`}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors border-s-2 text-sm ${styles.borderMuted} text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-700 dark:hover:text-red-400 text-right`}
                   >
                     <LogOut size={18} className="shrink-0" />
-                    <span className="font-cairo truncate">Logout</span>
+                    <span className="font-cairo truncate">تسجيل الخروج</span>
                   </button>
                 );
               })()}
@@ -666,41 +668,44 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Main Content */}
       <div
-        className={pathname === '/admin/pos' ? '' : 'md:mr-56'}
+        className={pathname === '/admin/pos' ? '' : 'md:mr-[280px]'}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
         {/* Top Bar */}
-        <header className={`sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm ${pathname === '/admin/pos' ? '' : ''}`} dir="rtl">
+        <header className={`sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-200 dark:border-slate-800 shadow-sm ${pathname === '/admin/pos' ? '' : ''}`} dir="rtl">
           <div className="px-4 py-3 flex items-center justify-between">
-            {/* Right side (visually left in RTL): Notifications and Menu button on Mobile, Notifications on Desktop */}
+            {/* Right side (visually left in RTL): Notifications, Theme Toggle, and Menu button */}
             <div className="flex items-center gap-3">
-              {/* Mobile: Notifications and Menu */}
+              {/* Mobile: Actions and Menu */}
               <div className="flex items-center gap-2 md:hidden">
+                <ThemeToggle />
                 <NotificationCenter />
                 <button
                   onClick={() => setSidebarOpen(true)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                 >
-                  <Menu size={24} className="text-gray-700" />
+                  <Menu size={24} className="text-gray-700 dark:text-gray-300" />
                 </button>
               </div>
 
-              {/* Desktop: Notifications and Menu (for POS page) */}
+              {/* Desktop: Actions (for POS page) */}
               {pathname === '/admin/pos' ? (
                 <div className="hidden lg:flex items-center gap-3">
-                  <span className="text-sm font-semibold text-gray-700 font-cairo">نظام نقطة البيع POS</span>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 font-cairo">نظام نقطة البيع POS</span>
+                  <ThemeToggle />
                   <NotificationCenter />
                   <button
                     onClick={() => setSidebarOpen(true)}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                   >
-                    <Menu size={24} className="text-gray-700" />
+                    <Menu size={24} className="text-gray-700 dark:text-gray-300" />
                   </button>
                 </div>
               ) : (
                 <div className="hidden md:flex items-center gap-2">
+                  <ThemeToggle />
                   <NotificationCenter />
                 </div>
               )}
@@ -708,10 +713,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
             {/* Desktop: Admin name in center */}
             <div className="hidden md:flex items-center gap-3 flex-1">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
                 {admin.username}
               </span>
-              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
+              <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-full border border-gray-200 dark:border-slate-700">
                 {admin.is_super_admin ? 'Super Admin' : 'Admin'}
               </span>
             </div>
@@ -720,13 +725,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
             {/* Left side (visually right in RTL): Admin Name on Mobile */}
             <div className="flex items-center gap-3 md:hidden">
-              <span className="text-sm font-medium text-gray-900">
+              <span className="text-sm font-medium text-gray-900 dark:text-white">
                 {admin.username}
               </span>
-              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
+              <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-full border border-gray-200 dark:border-slate-700">
                 {admin.is_super_admin ? 'Super Admin' : 'Admin'}
               </span>
             </div>
+
+            {/* Injected Header Action from Parent (e.g. POS Pay Button) */}
+            {headerAction && (
+              <div className="flex items-center gap-2">
+                {headerAction}
+              </div>
+            )}
           </div>
         </header>
 

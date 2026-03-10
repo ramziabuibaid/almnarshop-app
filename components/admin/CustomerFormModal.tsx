@@ -347,22 +347,22 @@ export default function CustomerFormModal({
       >
         {/* Modal */}
         <div
-          className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+          className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+          <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 {customer ? 'تعديل العميل' : 'إضافة عميل جديد'}
               </h2>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-700 rounded-full transition-colors"
               disabled={isSubmitting}
             >
-              <X size={20} className="text-gray-600" />
+              <X size={20} className="text-gray-600 dark:text-gray-400" />
             </button>
           </div>
 
@@ -378,31 +378,31 @@ export default function CustomerFormModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Customer ID */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
                   رقم الزبون
                 </label>
                 <input
                   type="text"
                   value={isGeneratingID ? 'جاري التوليد...' : (generatedCustomerID || formData.CustomerID)}
                   disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed font-mono"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 cursor-not-allowed font-mono"
                   dir="ltr"
                 />
                 {isGeneratingID && (
-                  <p className="text-xs text-gray-500 mt-1">يرجى الانتظار...</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">يرجى الانتظار...</p>
                 )}
               </div>
 
               {/* Name */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
                   الاسم <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.Name}
                   onChange={(e) => handleChange('Name', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                   required
                   dir="rtl"
                 />
@@ -410,65 +410,65 @@ export default function CustomerFormModal({
 
               {/* Shamel No */}
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
                   رقم الزبون في الشامل
                 </label>
                 <input
                   type="text"
                   value={formData.ShamelNo}
                   onChange={(e) => handleChange('ShamelNo', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                 />
               </div>
 
               {/* Postal Code */}
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
                   الرمز البريدي
                 </label>
                 <input
                   type="text"
                   value={formData.PostalCode}
                   onChange={(e) => handleChange('PostalCode', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                 />
               </div>
 
               {/* Phone */}
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
                   الهاتف
                 </label>
                 <input
                   type="tel"
                   value={formData.Phone}
                   onChange={(e) => handleChange('Phone', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                 />
               </div>
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
                   البريد الإلكتروني
                 </label>
                 <input
                   type="email"
                   value={formData.Email}
                   onChange={(e) => handleChange('Email', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                 />
               </div>
 
               {/* Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
                   النوع
                 </label>
                 <select
                   value={formData.Type}
                   onChange={(e) => handleChange('Type', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                 >
                   <option value="زبون">زبون</option>
                   <option value="تاجر">تاجر</option>
@@ -479,7 +479,7 @@ export default function CustomerFormModal({
 
               {/* Balance */}
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
                   الرصيد
                 </label>
                 <input
@@ -487,35 +487,35 @@ export default function CustomerFormModal({
                   step="0.01"
                   value={formData.Balance}
                   onChange={(e) => handleChange('Balance', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white"
                   placeholder="0.00"
                 />
               </div>
 
               {/* Address */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
                   العنوان
                 </label>
                 <textarea
                   value={formData.Address}
                   onChange={(e) => handleChange('Address', e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white resize-none"
                   dir="rtl"
                 />
               </div>
 
               {/* Notes */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
                   ملاحظات
                 </label>
                 <textarea
                   value={formData.Notes}
                   onChange={(e) => handleChange('Notes', e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white resize-none"
                   dir="rtl"
                 />
               </div>
@@ -547,7 +547,7 @@ export default function CustomerFormModal({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting || isDeleting}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 dark:bg-slate-700/50 transition-colors font-medium disabled:opacity-50"
               >
                 إلغاء
               </button>

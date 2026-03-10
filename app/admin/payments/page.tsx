@@ -207,9 +207,9 @@ export default function PaymentsPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <Lock size={48} className="text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg mb-2 font-cairo">ليس لديك صلاحية للوصول إلى صفحة سندات دفع المحل</p>
-            <p className="text-gray-500 text-sm font-cairo">يرجى التواصل مع المشرف للحصول على الصلاحية</p>
+            <Lock size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 text-lg mb-2 font-cairo">ليس لديك صلاحية للوصول إلى صفحة سندات دفع المحل</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm font-cairo">يرجى التواصل مع المشرف للحصول على الصلاحية</p>
           </div>
         </div>
       </AdminLayout>
@@ -221,8 +221,8 @@ export default function PaymentsPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">جاري تحميل سندات الدفع...</p>
+            <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">جاري تحميل سندات الدفع...</p>
           </div>
         </div>
       </AdminLayout>
@@ -235,14 +235,14 @@ export default function PaymentsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">سندات دفع المحل</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">سندات دفع المحل</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
               إدارة سندات دفع المحل ({searchQuery.trim() ? filteredPayments.length : totalPayments} سند)
             </p>
           </div>
           <button
             onClick={handleAddNew}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium"
           >
             <Plus size={20} />
             إضافة سند جديد
@@ -251,68 +251,68 @@ export default function PaymentsPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-700">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-4">
+            <p className="text-red-700 dark:text-red-400">{error}</p>
           </div>
         )}
 
         {/* Search */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
           <div className="relative">
             <Search
               size={20}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
             />
             <input
               type="text"
               placeholder="بحث برقم السند أو اسم العميل..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500"
+              className="w-full pr-10 pl-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
             />
           </div>
         </div>
 
         {/* Payments Table */}
         {filteredPayments.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-            <FileText size={48} className="text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg">لا توجد سندات دفع</p>
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-12 text-center">
+            <FileText size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 text-lg">لا توجد سندات دفع</p>
           </div>
         ) : (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
                   <tr>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                       رقم السند
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                       العميل
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                       التاريخ
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                       نقدي
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                       شيك
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                       الإجمالي
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                       الإجراءات
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {paginatedPayments.map((payment) => (
-                    <tr key={payment.PayID} className="hover:bg-gray-50 transition-colors">
+                    <tr key={payment.PayID} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
                       <td className="px-4 py-3 text-right">
-                        <div className="font-medium text-gray-900">{payment.PayID}</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">{payment.PayID}</div>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
@@ -336,29 +336,29 @@ export default function PaymentsPage() {
                         </button>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="text-gray-600">{formatDate(payment.Date)}</div>
+                        <div className="text-gray-600 dark:text-gray-400">{formatDate(payment.Date)}</div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="text-gray-900">{formatCurrency(payment.CashAmount)}</div>
+                        <div className="text-gray-900 dark:text-gray-100">{formatCurrency(payment.CashAmount)}</div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="text-gray-900">{formatCurrency(payment.ChequeAmount)}</div>
+                        <div className="text-gray-900 dark:text-gray-100">{formatCurrency(payment.ChequeAmount)}</div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="font-semibold text-gray-900">{formatCurrency(payment.TotalAmount)}</div>
+                        <div className="font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(payment.TotalAmount)}</div>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center gap-2 justify-end">
                           <button
                             onClick={() => router.push(`/admin/payments/edit/${payment.PayID}`)}
-                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                             title="تعديل"
                           >
                             <Edit size={18} />
                           </button>
                           <button
                             onClick={() => handlePrintPayment(payment)}
-                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                             title="طباعة"
                           >
                             <Printer size={18} />
@@ -373,26 +373,26 @@ export default function PaymentsPage() {
             
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="bg-gray-50 px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-                <div className="text-sm text-gray-700">
+              <div className="bg-gray-50 dark:bg-slate-800/50 px-4 py-3 border-t border-gray-200 dark:border-slate-700 flex items-center justify-between">
+                <div className="text-sm text-gray-700 dark:text-gray-300">
                   عرض {startIndex + 1} إلى {Math.min(endIndex, searchQuery.trim() ? filteredPayments.length : totalPayments)} من {searchQuery.trim() ? filteredPayments.length : totalPayments} سند
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title="الصفحة السابقة"
                   >
                     <ChevronRight size={18} />
                   </button>
-                  <div className="text-sm text-gray-700">
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
                     صفحة {currentPage} من {totalPages}
                   </div>
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
-                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title="الصفحة التالية"
                   >
                     <ChevronLeft size={18} />
@@ -413,18 +413,18 @@ export default function PaymentsPage() {
           />
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <div
-              className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
+              className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-                <h2 className="text-xl font-bold text-gray-900">إضافة سند دفع جديد</h2>
+              <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">إضافة سند دفع جديد</h2>
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
                   disabled={isSubmitting}
                 >
-                  <X size={20} className="text-gray-600" />
+                  <X size={20} className="text-gray-600 dark:text-gray-400" />
                 </button>
               </div>
 
@@ -441,21 +441,21 @@ export default function PaymentsPage() {
 
                 {/* Date */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                  <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                     التاريخ <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                     required
                   />
                 </div>
 
                 {/* Cash Amount */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                  <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                     المبلغ النقدي
                   </label>
                   <input
@@ -464,14 +464,14 @@ export default function PaymentsPage() {
                     min="0"
                     value={formData.cashAmount}
                     onChange={(e) => setFormData({ ...formData, cashAmount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                     placeholder="0.00"
                   />
                 </div>
 
                 {/* Cheque Amount */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                  <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                     المبلغ بالشيك
                   </label>
                   <input
@@ -480,21 +480,21 @@ export default function PaymentsPage() {
                     min="0"
                     value={formData.chequeAmount}
                     onChange={(e) => setFormData({ ...formData, chequeAmount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                     placeholder="0.00"
                   />
                 </div>
 
                 {/* Notes */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                  <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                     ملاحظات
                   </label>
                   <textarea
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 resize-none"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 resize-none"
                   />
                 </div>
 
@@ -504,14 +504,14 @@ export default function PaymentsPage() {
                     type="button"
                     onClick={() => setIsModalOpen(false)}
                     disabled={isSubmitting}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-medium disabled:opacity-50"
                   >
                     إلغاء
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isSubmitting ? (
                       <>

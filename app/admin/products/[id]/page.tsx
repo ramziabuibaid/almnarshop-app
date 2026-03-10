@@ -568,17 +568,17 @@ export default function ProductProfilePage() {
         };
       } else if (source === 'Cash') {
         return {
-          bg: 'bg-amber-50',
+          bg: 'bg-amber-50 dark:bg-amber-900/20',
           text: 'text-amber-700',
           border: 'border-amber-400',
           iconBg: 'bg-amber-100',
         };
       } else {
         return {
-          bg: 'bg-green-50',
-          text: 'text-green-700',
+          bg: 'bg-green-50 dark:bg-green-900/20',
+          text: 'text-green-700 dark:text-green-400',
           border: 'border-green-400',
-          iconBg: 'bg-green-100',
+          iconBg: 'bg-green-100 dark:bg-green-900/30',
         };
       }
     } else if (type === 'quotation') {
@@ -591,10 +591,10 @@ export default function ProductProfilePage() {
     }
     
     return {
-      bg: 'bg-gray-50',
-      text: 'text-gray-700',
+      bg: 'bg-gray-50 dark:bg-slate-800/50',
+      text: 'text-gray-700 dark:text-gray-300',
       border: 'border-gray-400',
-      iconBg: 'bg-gray-100',
+      iconBg: 'bg-gray-100 dark:bg-slate-700/50',
     };
   };
 
@@ -624,8 +624,8 @@ export default function ProductProfilePage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Loading product profile...</p>
+            <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">Loading product profile...</p>
           </div>
         </div>
       </AdminLayout>
@@ -638,12 +638,12 @@ export default function ProductProfilePage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-6 max-w-md">
               <h2 className="text-xl font-bold text-red-900 mb-2">غير مصرح لك بالوصول</h2>
-              <p className="text-red-700 mb-4">ليس لديك الصلاحية لعرض بروفايل المنتج. تحتاج إلى صلاحية "View item cost" للوصول إلى هذه الصفحة.</p>
+              <p className="text-red-700 dark:text-red-400 mb-4">ليس لديك الصلاحية لعرض بروفايل المنتج. تحتاج إلى صلاحية "View item cost" للوصول إلى هذه الصفحة.</p>
               <button
                 onClick={() => router.push('/admin/products')}
-                className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+                className="px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors"
               >
                 العودة إلى قائمة المنتجات
               </button>
@@ -659,10 +659,10 @@ export default function ProductProfilePage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <p className="text-red-600 text-lg mb-4">{error || 'Product not found'}</p>
+            <p className="text-red-600 dark:text-red-400 text-lg mb-4">{error || 'Product not found'}</p>
             <button
               onClick={() => router.push('/admin/products')}
-              className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+              className="px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors"
             >
               Back to Products
             </button>
@@ -682,20 +682,20 @@ export default function ProductProfilePage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/admin/products')}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors flex-shrink-0"
             >
-              <ArrowLeft size={20} className="text-gray-600" />
+              <ArrowLeft size={20} className="text-gray-600 dark:text-gray-400" />
             </button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Product Profile</h1>
-              <p className="text-gray-600 mt-1 text-sm md:text-base">View product information and sales history</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">Product Profile</h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm md:text-base">View product information and sales history</p>
             </div>
           </div>
 
           {/* Product Search Bar */}
           <div className="relative product-search-container">
             <div className="relative">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
               <input
                 ref={searchInputRef}
                 type="text"
@@ -720,19 +720,19 @@ export default function ProductProfilePage() {
                     (firstResult as HTMLElement)?.focus();
                   }
                 }}
-                className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500"
+                className="w-full pr-10 pl-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                 dir="rtl"
               />
               {isLoadingProducts && (
                 <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                  <Loader2 size={18} className="animate-spin text-gray-400" />
+                  <Loader2 size={18} className="animate-spin text-gray-400 dark:text-gray-500" />
                 </div>
               )}
             </div>
 
             {/* Search Results Dropdown */}
             {isSearchOpen && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
                 {searchResults.map((result) => {
                   const resultId = result.ProductID || result.id || '';
                   const resultName = result.Name || result.name || '';
@@ -771,11 +771,11 @@ export default function ProductProfilePage() {
                         }
                       }}
                       disabled={isCurrentProduct}
-                      className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-colors text-right ${
-                        isCurrentProduct ? 'bg-gray-100 opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                      className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 focus:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 transition-colors text-right ${
+                        isCurrentProduct ? 'bg-gray-100 dark:bg-slate-700/50 opacity-60 cursor-not-allowed' : 'cursor-pointer'
                       }`}
                     >
-                      <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                      <div className="w-12 h-12 bg-gray-100 dark:bg-slate-700/50 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
                         {resultImage ? (
                           <img
                             src={resultImage}
@@ -783,12 +783,12 @@ export default function ProductProfilePage() {
                             className="w-full h-full object-contain"
                           />
                         ) : (
-                          <Package size={20} className="text-gray-400" />
+                          <Package size={20} className="text-gray-400 dark:text-gray-500" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-900 truncate">{resultName}</div>
-                        <div className="text-sm text-gray-500 flex items-center gap-2 mt-0.5">
+                        <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{resultName}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-0.5">
                           <span>الرمز: {resultId}</span>
                           {result.Brand || result.brand ? (
                             <>
@@ -799,11 +799,11 @@ export default function ProductProfilePage() {
                         </div>
                       </div>
                       {isCurrentProduct ? (
-                        <div className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-medium">
+                        <div className="px-2 py-1 bg-gray-200 text-gray-600 dark:text-gray-400 rounded text-xs font-medium">
                           الحالي
                         </div>
                       ) : (
-                        <ArrowRight size={18} className="text-gray-400 flex-shrink-0" />
+                        <ArrowRight size={18} className="text-gray-400 dark:text-gray-500 flex-shrink-0" />
                       )}
                     </button>
                   );
@@ -813,7 +813,7 @@ export default function ProductProfilePage() {
 
             {/* No Results */}
             {isSearchOpen && searchQuery.trim() && searchResults.length === 0 && !isLoadingProducts && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4 text-center text-gray-500">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl z-50 p-4 text-center text-gray-500 dark:text-gray-400">
                 لا توجد نتائج للبحث
               </div>
             )}
@@ -824,7 +824,7 @@ export default function ProductProfilePage() {
           {/* Left Sidebar - Product Card */}
           <div className="lg:col-span-1 space-y-4">
             {/* Product Info Card */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
               {/* Images */}
               <div className="flex justify-center mb-4 gap-2">
                 {productImages.length > 0 ? (
@@ -832,7 +832,7 @@ export default function ProductProfilePage() {
                     {productImages.slice(0, 3).map((img: string, idx: number) => (
                       <div
                         key={idx}
-                        className="relative w-full aspect-square bg-white border border-gray-200 rounded-lg overflow-hidden cursor-pointer hover:shadow-md hover:border-gray-300 transition-all"
+                        className="relative w-full aspect-square bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden cursor-pointer hover:shadow-md hover:border-gray-300 transition-all"
                         onClick={() => {
                           setSelectedImageIndex(idx);
                           setLightboxOpen(true);
@@ -846,7 +846,7 @@ export default function ProductProfilePage() {
                       >
                         {imageErrors[idx] || !img ? (
                           <div className="w-full h-full flex items-center justify-center">
-                            <ImageIcon size={48} className="text-gray-400" />
+                            <ImageIcon size={48} className="text-gray-400 dark:text-gray-500" />
                           </div>
                         ) : (
                           <>
@@ -888,101 +888,101 @@ export default function ProductProfilePage() {
                   </div>
                 ) : (
                   <div className="w-full aspect-square bg-gray-200 rounded-lg flex items-center justify-center">
-                    <ImageIcon size={48} className="text-gray-400" />
+                    <ImageIcon size={48} className="text-gray-400 dark:text-gray-500" />
                   </div>
                 )}
               </div>
 
               {/* Name */}
-              <h2 className="text-2xl font-bold text-gray-900 text-center mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 text-center mb-4">
                 {product.Name || product.name || 'N/A'}
               </h2>
 
               {/* Product Info Grid */}
               <div className="space-y-3">
                 {product['Shamel No'] || product.ShamelNo ? (
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Hash size={16} className="flex-shrink-0" />
                     <span className="text-sm">شامل: {product['Shamel No'] || product.ShamelNo}</span>
                   </div>
                 ) : null}
 
                 {product.Barcode || product.barcode ? (
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Barcode size={16} className="flex-shrink-0" />
                     <span className="text-sm">باركود: {product.Barcode || product.barcode}</span>
                   </div>
                 ) : null}
 
                 {product.ProductID || product.id ? (
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Package size={16} className="flex-shrink-0" />
                     <span className="text-sm">الرقم: {product.ProductID || product.id}</span>
                   </div>
                 ) : null}
 
                 {product.Type || product.type ? (
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Tag size={16} className="flex-shrink-0" />
                     <span className="text-sm">النوع: {product.Type || product.type}</span>
                   </div>
                 ) : null}
 
                 {product.Brand || product.brand ? (
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Tag size={16} className="flex-shrink-0" />
                     <span className="text-sm">العلامة: {product.Brand || product.brand}</span>
                   </div>
                 ) : null}
 
                 {product.Size || product.size ? (
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Package size={16} className="flex-shrink-0" />
                     <span className="text-sm">الحجم: {product.Size || product.size}</span>
                   </div>
                 ) : null}
 
                 {product.Color || product.color ? (
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Tag size={16} className="flex-shrink-0" />
                     <span className="text-sm">اللون: {product.Color || product.color}</span>
                   </div>
                 ) : null}
 
                 {/* Stock */}
-                <div className="pt-3 border-t border-gray-200">
+                <div className="pt-3 border-t border-gray-200 dark:border-slate-700">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">المخزن:</span>
-                    <span className="text-sm font-bold text-gray-900">{product.CS_War || product.cs_war || 0}</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">المخزن:</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{product.CS_War || product.cs_war || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">المحل:</span>
-                    <span className="text-sm font-bold text-gray-900">{product.CS_Shop || product.cs_shop || 0}</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">المحل:</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{product.CS_Shop || product.cs_shop || 0}</span>
                   </div>
                 </div>
 
                 {/* Pricing */}
-                <div className="pt-3 border-t border-gray-200 space-y-2">
+                <div className="pt-3 border-t border-gray-200 dark:border-slate-700 space-y-2">
                   {canViewCost && (
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">سعر التكلفة:</span>
-                      <span className="text-sm font-bold text-gray-900">{formatBalance(product.CostPrice || product.costPrice || 0)}</span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">سعر التكلفة:</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatBalance(product.CostPrice || product.costPrice || 0)}</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">سعر البيع:</span>
-                    <span className="text-sm font-bold text-green-600">{formatBalance(product.SalePrice || product.price || product.salePrice || 0)}</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">سعر البيع:</span>
+                    <span className="text-sm font-bold text-green-600 dark:text-green-400">{formatBalance(product.SalePrice || product.price || product.salePrice || 0)}</span>
                   </div>
                   {product.T1Price ? (
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">T1:</span>
-                      <span className="text-sm font-bold text-gray-900">{formatBalance(product.T1Price)}</span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">T1:</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatBalance(product.T1Price)}</span>
                     </div>
                   ) : null}
                   {product.T2Price ? (
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">T2:</span>
-                      <span className="text-sm font-bold text-gray-900">{formatBalance(product.T2Price)}</span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">T2:</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatBalance(product.T2Price)}</span>
                     </div>
                   ) : null}
                 </div>
@@ -1023,7 +1023,7 @@ export default function ProductProfilePage() {
             {/* Edit Product Button */}
             <button
               onClick={() => setIsEditModalOpen(true)}
-              className="w-full px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium flex items-center justify-center gap-2"
+              className="w-full px-4 py-3 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium flex items-center justify-center gap-2"
             >
               <Edit size={18} />
               Edit Product
@@ -1033,23 +1033,23 @@ export default function ProductProfilePage() {
           {/* Right Area - Activity Timeline */}
           <div className="lg:col-span-2 space-y-6">
             {/* Sales Invoices Section */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">سجل المبيعات</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">سجل المبيعات</h2>
                 {loadingHeavyData && (
-                  <Loader2 size={18} className="animate-spin text-gray-400" />
+                  <Loader2 size={18} className="animate-spin text-gray-400 dark:text-gray-500" />
                 )}
               </div>
 
               {loadingHeavyData ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 size={24} className="animate-spin text-gray-400" />
-                  <span className="text-gray-600 text-lg mr-3">جاري تحميل سجل المبيعات...</span>
+                  <Loader2 size={24} className="animate-spin text-gray-400 dark:text-gray-500" />
+                  <span className="text-gray-600 dark:text-gray-400 text-lg mr-3">جاري تحميل سجل المبيعات...</span>
                 </div>
               ) : salesItems.length === 0 ? (
                 <div className="text-center py-12">
-                  <ShoppingCart size={48} className="text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600 text-lg">لا توجد مبيعات مسجلة</p>
+                  <ShoppingCart size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400 text-lg">لا توجد مبيعات مسجلة</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1070,19 +1070,19 @@ export default function ProductProfilePage() {
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-gray-900">
+                                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                                   {item.type === 'invoice' && item.source === 'Shop' && `فاتورة المحل #${item.invoiceNumber || item.id}`}
                                   {item.type === 'invoice' && item.source === 'Warehouse' && `فاتورة المخزن #${item.invoiceNumber || item.id}`}
                                   {item.type === 'invoice' && item.source === 'Cash' && `فاتورة نقدية #${item.invoiceNumber || item.id}`}
                                 </h3>
                                 {item.status && (
-                                  <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                                  <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300">
                                     {item.status}
                                   </span>
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-500">
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
                                   {formatDate(item.date)}
                                 </span>
                                 {/* Print Button */}
@@ -1096,7 +1096,7 @@ export default function ProductProfilePage() {
                                       window.open(`/admin/invoices/print/${item.id}`, `print-cash-${item.id}`, 'noopener,noreferrer');
                                     }
                                   }}
-                                  className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                  className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
                                   title="طباعة"
                                 >
                                   <Printer size={16} />
@@ -1113,7 +1113,7 @@ export default function ProductProfilePage() {
                                     return (
                                       <button
                                         disabled
-                                        className="p-1.5 text-gray-400 cursor-not-allowed rounded-lg transition-colors opacity-50"
+                                        className="p-1.5 text-gray-400 dark:text-gray-500 cursor-not-allowed rounded-lg transition-colors opacity-50"
                                         title="لا يمكن تعديل فاتورة مرحلة"
                                       >
                                         <Edit size={16} />
@@ -1143,7 +1143,7 @@ export default function ProductProfilePage() {
                                           }
                                         }
                                       }}
-                                      className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                      className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
                                       title="تعديل (اضغط Command/Ctrl لفتح في نافذة جديدة)"
                                     >
                                       <Edit size={16} />
@@ -1155,7 +1155,7 @@ export default function ProductProfilePage() {
 
                             {/* Customer Info */}
                             {item.customerName && (
-                              <div className="text-sm text-gray-700 mb-2">
+                              <div className="text-sm text-gray-700 dark:text-gray-300 mb-2">
                                 <span className="font-medium">الزبون:</span>{' '}
                                 {item.customerID ? (
                                   <button
@@ -1176,16 +1176,16 @@ export default function ProductProfilePage() {
                                 ) : (
                                   <span>{item.customerName}</span>
                                 )}
-                                {item.customerPhone && <span className="text-gray-600 mr-2"> ({item.customerPhone})</span>}
+                                {item.customerPhone && <span className="text-gray-600 dark:text-gray-400 mr-2"> ({item.customerPhone})</span>}
                               </div>
                             )}
 
                             {/* Invoice Total */}
                             {item.totalAmount !== undefined && (
-                              <div className="text-sm font-semibold text-gray-900 mb-2">
+                              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                                 <span className="font-medium">إجمالي الفاتورة:</span> {formatBalance(item.totalAmount)}
                                 {item.subtotal !== undefined && item.subtotal !== item.totalAmount && (
-                                  <span className="text-xs text-gray-500 mr-2">
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">
                                     {' '}(المجموع الفرعي: {formatBalance(item.subtotal)})
                                     {item.discount > 0 && ` - خصم: ${formatBalance(item.discount)}`}
                                   </span>
@@ -1196,10 +1196,10 @@ export default function ProductProfilePage() {
                             {/* Invoice Items (expandable) - All products in invoice */}
                             {item.type === 'invoice' && item.items && item.items.length > 0 && (
                               <details className="mt-2">
-                                <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700 font-medium">
+                                <summary className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 font-medium">
                                   عرض جميع المنتجات في الفاتورة ({item.items.length} منتج)
                                 </summary>
-                                <div className="mt-2 pl-4 border-l-2 border-gray-200 space-y-2">
+                                <div className="mt-2 pl-4 border-l-2 border-gray-200 dark:border-slate-700 space-y-2">
                                   {item.items
                                     .filter((invoiceItem: any) => invoiceItem)
                                     .map((invoiceItem: any, idx: number) => {
@@ -1213,13 +1213,13 @@ export default function ProductProfilePage() {
                                       return (
                                         <div 
                                           key={`${uniqueKey}-item-${itemKey}-${idx}`} 
-                                          className={`text-sm ${isCurrentProduct ? 'bg-blue-50 border border-blue-200 p-2 rounded font-medium' : 'text-gray-700'}`}
+                                          className={`text-sm ${isCurrentProduct ? 'bg-blue-50 border border-blue-200 p-2 rounded font-medium' : 'text-gray-700 dark:text-gray-300'}`}
                                         >
-                                          <div className={`${isCurrentProduct ? 'text-blue-900' : 'font-medium text-gray-900'}`}>
+                                          <div className={`${isCurrentProduct ? 'text-blue-900' : 'font-medium text-gray-900 dark:text-gray-100'}`}>
                                             {itemName}
                                             {isCurrentProduct && <span className="text-xs text-blue-600 mr-2">(المنتج الحالي)</span>}
                                           </div>
-                                          <div className="text-xs text-gray-500 mt-0.5">
+                                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                             الكمية: {itemQty} × {formatBalance(itemPrice)} = {formatBalance(itemTotal)}
                                           </div>
                                         </div>
@@ -1231,7 +1231,7 @@ export default function ProductProfilePage() {
 
                             {/* Notes */}
                             {item.notes && (
-                              <p className="text-xs text-gray-600 mb-2 mt-2">
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 mt-2">
                                 <span className="font-medium">ملاحظات:</span> {item.notes}
                               </p>
                             )}
@@ -1245,29 +1245,29 @@ export default function ProductProfilePage() {
             </div>
 
             {/* Quotations Section - Collapsible */}
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
               <details className="group">
-                <summary className="px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-between">
+                <summary className="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold text-gray-900">عروض الأسعار ({loadingHeavyData ? '...' : (quotationItems?.length || 0)})</h2>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">عروض الأسعار ({loadingHeavyData ? '...' : (quotationItems?.length || 0)})</h2>
                     {loadingHeavyData && (
-                      <Loader2 size={18} className="animate-spin text-gray-400" />
+                      <Loader2 size={18} className="animate-spin text-gray-400 dark:text-gray-500" />
                     )}
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
                     اضغط للعرض
                   </div>
                 </summary>
                 <div className="px-6 pb-6 pt-2">
                   {loadingHeavyData ? (
                     <div className="flex items-center justify-center py-12">
-                      <Loader2 size={24} className="animate-spin text-gray-400" />
-                      <span className="text-gray-600 text-lg mr-3">جاري تحميل عروض الأسعار...</span>
+                      <Loader2 size={24} className="animate-spin text-gray-400 dark:text-gray-500" />
+                      <span className="text-gray-600 dark:text-gray-400 text-lg mr-3">جاري تحميل عروض الأسعار...</span>
                     </div>
                   ) : quotationItems.length === 0 ? (
                     <div className="text-center py-12">
-                      <FileText size={48} className="text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-600 text-lg">لا توجد عروض أسعار</p>
+                      <FileText size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                      <p className="text-gray-600 dark:text-gray-400 text-lg">لا توجد عروض أسعار</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -1287,24 +1287,24 @@ export default function ProductProfilePage() {
                               <div className="flex-1">
                                 <div className="flex items-center justify-between mb-1">
                                   <div className="flex items-center gap-2">
-                                    <h3 className="font-semibold text-gray-900">
+                                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                                       عرض سعر #{item.quotationNumber || item.id}
                                     </h3>
                                     {item.status && (
-                                      <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                                      <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300">
                                         {item.status}
                                       </span>
                                     )}
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-500">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
                                       {formatDate(item.date)}
                                     </span>
                                     <button
                                       onClick={() => {
                                         window.open(`/admin/quotations/print/${item.id}`, `print-quotation-${item.id}`, 'noopener,noreferrer');
                                       }}
-                                      className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                      className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
                                       title="طباعة"
                                     >
                                       <Printer size={16} />
@@ -1320,7 +1320,7 @@ export default function ProductProfilePage() {
                                           router.push(editUrl);
                                         }
                                       }}
-                                      className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                                      className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
                                       title="عرض/تعديل (اضغط Command/Ctrl لفتح في نافذة جديدة)"
                                     >
                                       <Edit size={16} />
@@ -1330,10 +1330,10 @@ export default function ProductProfilePage() {
 
                                 {/* Quotation Total */}
                                 {item.totalAmount !== undefined && (
-                                  <div className="text-sm font-semibold text-gray-900 mb-2">
+                                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                                     <span className="font-medium">إجمالي عرض السعر:</span> {formatBalance(item.totalAmount)}
                                     {item.subtotal !== undefined && item.subtotal !== item.totalAmount && (
-                                      <span className="text-xs text-gray-500 mr-2">
+                                      <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">
                                         {' '}(المجموع الفرعي: {formatBalance(item.subtotal)})
                                         {item.specialDiscount > 0 && ` - خصم خاص: ${formatBalance(item.specialDiscount)}`}
                                         {item.giftDiscount > 0 && ` - خصم هدية: ${formatBalance(item.giftDiscount)}`}
@@ -1345,10 +1345,10 @@ export default function ProductProfilePage() {
                                 {/* Quotation Items (expandable) - All products in quotation */}
                                 {item.type === 'quotation' && item.items && item.items.length > 0 && (
                                   <details className="mt-2">
-                                    <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700 font-medium">
+                                    <summary className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 font-medium">
                                       عرض جميع المنتجات في عرض السعر ({item.items.length} منتج)
                                     </summary>
-                                    <div className="mt-2 pl-4 border-l-2 border-gray-200 space-y-2">
+                                    <div className="mt-2 pl-4 border-l-2 border-gray-200 dark:border-slate-700 space-y-2">
                                       {item.items
                                         .filter((quotationItem: any) => quotationItem)
                                         .map((quotationItem: any, idx: number) => {
@@ -1362,13 +1362,13 @@ export default function ProductProfilePage() {
                                           return (
                                             <div 
                                               key={`${uniqueKey}-item-${itemKey}-${idx}`} 
-                                              className={`text-sm ${isCurrentProduct ? 'bg-purple-50 border border-purple-200 p-2 rounded font-medium' : 'text-gray-700'}`}
+                                              className={`text-sm ${isCurrentProduct ? 'bg-purple-50 border border-purple-200 p-2 rounded font-medium' : 'text-gray-700 dark:text-gray-300'}`}
                                             >
-                                              <div className={`${isCurrentProduct ? 'text-purple-900' : 'font-medium text-gray-900'}`}>
+                                              <div className={`${isCurrentProduct ? 'text-purple-900' : 'font-medium text-gray-900 dark:text-gray-100'}`}>
                                                 {itemName}
                                                 {isCurrentProduct && <span className="text-xs text-purple-600 mr-2">(المنتج الحالي)</span>}
                                               </div>
-                                              <div className="text-xs text-gray-500 mt-0.5">
+                                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                                 الكمية: {itemQty} × {formatBalance(itemPrice)} = {formatBalance(itemTotal)}
                                               </div>
                                             </div>
@@ -1380,7 +1380,7 @@ export default function ProductProfilePage() {
 
                                 {/* Notes */}
                                 {item.notes && (
-                                  <p className="text-xs text-gray-600 mb-2 mt-2">
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 mt-2">
                                     <span className="font-medium">ملاحظات:</span> {item.notes}
                                   </p>
                                 )}
@@ -1421,7 +1421,7 @@ export default function ProductProfilePage() {
               e.stopPropagation();
               setLightboxOpen(false);
             }}
-            className="absolute top-4 right-4 z-10 p-2 bg-gray-900 bg-opacity-70 hover:bg-opacity-90 rounded-full text-white transition-all duration-200 hover:scale-110 shadow-lg"
+            className="absolute top-4 right-4 z-10 p-2 bg-gray-900 dark:bg-slate-700 bg-opacity-70 hover:bg-opacity-90 rounded-full text-white transition-all duration-200 hover:scale-110 shadow-lg"
             title="إغلاق (ESC)"
           >
             <X size={24} />
@@ -1434,7 +1434,7 @@ export default function ProductProfilePage() {
                 e.stopPropagation();
                 setSelectedImageIndex((prev) => (prev === 0 ? productImages.length - 1 : prev - 1));
               }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-gray-900 bg-opacity-70 hover:bg-opacity-90 rounded-full text-white transition-all duration-200 hover:scale-110 shadow-lg"
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-gray-900 dark:bg-slate-700 bg-opacity-70 hover:bg-opacity-90 rounded-full text-white transition-all duration-200 hover:scale-110 shadow-lg"
               title="الصورة السابقة (←)"
             >
               <ChevronRight size={28} />
@@ -1448,7 +1448,7 @@ export default function ProductProfilePage() {
                 e.stopPropagation();
                 setSelectedImageIndex((prev) => (prev === productImages.length - 1 ? 0 : prev + 1));
               }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-gray-900 bg-opacity-70 hover:bg-opacity-90 rounded-full text-white transition-all duration-200 hover:scale-110 shadow-lg"
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-gray-900 dark:bg-slate-700 bg-opacity-70 hover:bg-opacity-90 rounded-full text-white transition-all duration-200 hover:scale-110 shadow-lg"
               title="الصورة التالية (→)"
             >
               <ChevronLeft size={28} />
@@ -1472,7 +1472,7 @@ export default function ProductProfilePage() {
 
             {/* Image Counter */}
             {productImages.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 bg-opacity-80 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-slate-700 bg-opacity-80 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg">
                 {selectedImageIndex + 1} / {productImages.length}
               </div>
             )}

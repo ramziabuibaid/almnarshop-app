@@ -211,7 +211,7 @@ export default function EditCampaignPage() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 size={48} className="animate-spin text-gray-400" />
+          <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500" />
         </div>
       </AdminLayout>
     );
@@ -223,12 +223,12 @@ export default function EditCampaignPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">تعديل عرض ترويجي</h1>
-            <p className="text-gray-600 mt-1">تعديل معلومات العرض الترويجي</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">تعديل عرض ترويجي</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">تعديل معلومات العرض الترويجي</p>
           </div>
           <button
             onClick={() => router.push('/admin/marketing/campaigns')}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700 font-medium"
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors text-gray-700 dark:text-gray-300 font-medium"
           >
             <ArrowRight size={20} />
             رجوع
@@ -236,14 +236,14 @@ export default function EditCampaignPage() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6 space-y-6">
           {/* Basic Info */}
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-900">معلومات أساسية</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">معلومات أساسية</h2>
 
             {/* Title */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                 عنوان العرض *
               </label>
               <input
@@ -251,7 +251,7 @@ export default function EditCampaignPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="مثال: عرض الصيف الكبير"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                 dir="rtl"
                 required
               />
@@ -267,26 +267,26 @@ export default function EditCampaignPage() {
             {/* Dates */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                   تاريخ البداية *
                 </label>
                 <input
                   type="datetime-local"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                   تاريخ النهاية *
                 </label>
                 <input
                   type="datetime-local"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                   required
                 />
               </div>
@@ -295,26 +295,26 @@ export default function EditCampaignPage() {
 
           {/* Product Manager */}
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-900">إدارة المنتجات</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">إدارة المنتجات</h2>
 
             {/* Search Bar */}
             <div className="relative">
               <Search
                 size={20}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
               />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="ابحث عن منتج بالاسم، الرمز، أو العلامة التجارية..."
-                className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500"
+                className="w-full pr-10 pl-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                 dir="rtl"
               />
 
               {/* Search Results */}
               {showSearchResults && searchResults.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto" dir="rtl">
+                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg shadow-lg max-h-60 overflow-y-auto" dir="rtl">
                   {searchResults.map((product) => {
                     const productId = product.id || product.ProductID || '';
                     const productName = product.name || product.Name || '';
@@ -326,7 +326,7 @@ export default function EditCampaignPage() {
                         key={productId}
                         type="button"
                         onClick={() => handleProductSelect(product)}
-                        className="w-full text-right px-4 py-3 hover:bg-gray-100 transition-colors border-b border-gray-200 last:border-b-0 flex items-center gap-3"
+                        className="w-full text-right px-4 py-3 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors border-b border-gray-200 dark:border-slate-700 last:border-b-0 flex items-center gap-3"
                       >
                         {productImage && (
                           <img
@@ -339,12 +339,12 @@ export default function EditCampaignPage() {
                           />
                         )}
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900">{productName}</div>
-                          <div className="text-sm text-gray-500">
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{productName}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
                             {productId} • ₪{salePrice.toFixed(2)}
                           </div>
                         </div>
-                        <Plus size={20} className="text-gray-400" />
+                        <Plus size={20} className="text-gray-400 dark:text-gray-500" />
                       </button>
                     );
                   })}
@@ -355,7 +355,7 @@ export default function EditCampaignPage() {
             {/* Selected Products List */}
             {selectedProducts.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-900">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                   المنتجات المضافة ({selectedProducts.length})
                 </h3>
                 <div className="space-y-2">
@@ -373,7 +373,7 @@ export default function EditCampaignPage() {
                     return (
                       <div
                         key={sp.product_id}
-                        className="flex items-center gap-4 p-3 border border-gray-200 rounded-lg bg-gray-50"
+                        className="flex items-center gap-4 p-3 border border-gray-200 dark:border-slate-700 rounded-lg bg-gray-50 dark:bg-slate-800/50"
                       >
                         {/* Product Image */}
                         {product.image && (
@@ -389,17 +389,17 @@ export default function EditCampaignPage() {
 
                         {/* Product Info */}
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900">{productName}</div>
-                          <div className="text-sm text-gray-500">{productId}</div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{productName}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{productId}</div>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-sm text-gray-600 line-through">
+                            <span className="text-sm text-gray-600 dark:text-gray-400 line-through">
                               ₪{originalPrice.toFixed(2)}
                             </span>
-                            <span className="text-lg font-bold text-green-600">
+                            <span className="text-lg font-bold text-green-600 dark:text-green-400">
                               ₪{sp.offer_price.toFixed(2)}
                             </span>
                             {discount > 0 && (
-                              <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
+                              <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 px-2 py-1 rounded">
                                 خصم {discount.toFixed(0)}%
                               </span>
                             )}
@@ -408,7 +408,7 @@ export default function EditCampaignPage() {
 
                         {/* Offer Price Input */}
                         <div className="w-32">
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                             سعر العرض
                           </label>
                           <input
@@ -419,7 +419,7 @@ export default function EditCampaignPage() {
                             onChange={(e) =>
                               handleOfferPriceChange(sp.product_id, parseFloat(e.target.value) || 0)
                             }
-                            className="w-full px-2 py-1 border border-gray-300 rounded text-gray-900 text-sm"
+                            className="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded text-gray-900 dark:text-gray-100 text-sm"
                             dir="ltr"
                           />
                         </div>
@@ -428,7 +428,7 @@ export default function EditCampaignPage() {
                         <button
                           type="button"
                           onClick={() => handleRemoveProduct(sp.product_id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
                         >
                           <Trash size={18} />
                         </button>
@@ -441,11 +441,11 @@ export default function EditCampaignPage() {
           </div>
 
           {/* Submit Button */}
-          <div className="flex items-center justify-start gap-3 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-start gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-6 py-3 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? (
                 <>
@@ -461,7 +461,7 @@ export default function EditCampaignPage() {
             <button
               type="button"
               onClick={() => router.push('/admin/marketing/campaigns')}
-              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+              className="px-6 py-3 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors font-medium"
             >
               إلغاء
             </button>

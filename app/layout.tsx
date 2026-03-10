@@ -4,6 +4,7 @@ import "./globals.css";
 import { ShopProvider } from "@/context/ShopContext";
 import { InvoicesProvider } from "@/context/InvoicesContext";
 import { AdminAuthProvider } from "@/context/AdminAuthContext";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { getSiteUrl } from "@/lib/siteUrl";
 import FacebookPixel from "@/components/analytics/FacebookPixel";
 
@@ -63,16 +64,17 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${cairo.variable} ${nunito.variable} ${montserrat.variable} ${raleway.variable} antialiased`}
-        suppressHydrationWarning
       >
-        <AdminAuthProvider>
-          <ShopProvider>
-            <InvoicesProvider>
-              <FacebookPixel />
-              {children}
-            </InvoicesProvider>
-          </ShopProvider>
-        </AdminAuthProvider>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+          <AdminAuthProvider>
+            <ShopProvider>
+              <InvoicesProvider>
+                <FacebookPixel />
+                {children}
+              </InvoicesProvider>
+            </ShopProvider>
+          </AdminAuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

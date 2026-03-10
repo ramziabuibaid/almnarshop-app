@@ -66,11 +66,11 @@ export default function AdminArticlesPage() {
         <AdminLayout>
             <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <h1 className="text-2xl font-bold text-gray-900">المقالات</h1>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">المقالات</h1>
                     <div className="flex items-center gap-2">
                         <Link
                             href="/admin/articles/guests"
-                            className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg transition-colors font-medium border border-gray-200"
+                            className="flex items-center gap-2 bg-gray-100 dark:bg-slate-700/50 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg transition-colors font-medium border border-gray-200 dark:border-slate-700"
                         >
                             دعوات الكتابة
                         </Link>
@@ -84,41 +84,41 @@ export default function AdminArticlesPage() {
                     </div>
                 </div>
 
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-right border-collapse">
                             <thead>
-                                <tr className="bg-gray-50 border-b border-gray-200">
-                                    <th className="p-4 font-semibold text-gray-900">العنوان</th>
-                                    <th className="p-4 font-semibold text-gray-900">النوع</th>
-                                    <th className="p-4 font-semibold text-gray-900 text-center">المشاهدات</th>
-                                    <th className="p-4 font-semibold text-gray-900 text-center">الحالة</th>
-                                    <th className="p-4 font-semibold text-gray-900 text-center">تاريخ النشر</th>
-                                    <th className="p-4 font-semibold text-gray-900 text-center">إجراءات</th>
+                                <tr className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
+                                    <th className="p-4 font-semibold text-gray-900 dark:text-gray-100">العنوان</th>
+                                    <th className="p-4 font-semibold text-gray-900 dark:text-gray-100">النوع</th>
+                                    <th className="p-4 font-semibold text-gray-900 dark:text-gray-100 text-center">المشاهدات</th>
+                                    <th className="p-4 font-semibold text-gray-900 dark:text-gray-100 text-center">الحالة</th>
+                                    <th className="p-4 font-semibold text-gray-900 dark:text-gray-100 text-center">تاريخ النشر</th>
+                                    <th className="p-4 font-semibold text-gray-900 dark:text-gray-100 text-center">إجراءات</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {articles.map((article) => (
-                                    <tr key={article.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                        <td className="p-4 max-w-xs truncate font-bold text-gray-900">{article.title}</td>
+                                    <tr key={article.id} className="border-b border-gray-100 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                                        <td className="p-4 max-w-xs truncate font-bold text-gray-900 dark:text-gray-100">{article.title}</td>
                                         <td className="p-4">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200">
                                                 {article.type}
                                             </span>
                                         </td>
-                                        <td className="p-4 text-center font-bold text-gray-900">{article.view_count || 0}</td>
+                                        <td className="p-4 text-center font-bold text-gray-900 dark:text-gray-100">{article.view_count || 0}</td>
                                         <td className="p-4 text-center">
                                             {article.is_published ? (
-                                                <span className="inline-flex items-center gap-1 text-green-600 bg-green-50 px-2.5 py-1 rounded-full text-sm">
+                                                <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-full text-sm">
                                                     <Eye size={16} /> منشور
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full text-sm">
+                                                <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1 rounded-full text-sm">
                                                     مسودة
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="p-4 text-center text-sm text-gray-600 font-medium">
+                                        <td className="p-4 text-center text-sm text-gray-600 dark:text-gray-400 font-medium">
                                             {article.published_at ? new Date(article.published_at).toLocaleDateString('en-GB') : '-'}
                                         </td>
                                         <td className="p-4">
@@ -132,7 +132,7 @@ export default function AdminArticlesPage() {
                                                 </Link>
                                                 <button
                                                     onClick={() => handleDelete(article.id)}
-                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
                                                     title="حذف"
                                                 >
                                                     <Trash size={18} />
@@ -141,7 +141,7 @@ export default function AdminArticlesPage() {
                                                     href={`/articles/${article.slug}`}
                                                     target="_blank"
                                                     rel="noreferrer"
-                                                    className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                                                    className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                                                     title="معاينة"
                                                 >
                                                     <Eye size={18} />
@@ -152,7 +152,7 @@ export default function AdminArticlesPage() {
                                 ))}
                                 {articles.length === 0 && (
                                     <tr>
-                                        <td colSpan={6} className="p-8 text-center text-gray-500 bg-gray-50/50">
+                                        <td colSpan={6} className="p-8 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-slate-800/50/50">
                                             لا يوجد مقالات مضافة بعد
                                         </td>
                                     </tr>

@@ -47,8 +47,8 @@ export default function AdminDashboardPage() {
     <AdminLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-1">Welcome to the Admin Panel</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome to the Admin Panel</p>
         </div>
 
         {/* Stats Grid */}
@@ -58,12 +58,12 @@ export default function AdminDashboardPage() {
             return (
               <div
                 key={stat.label}
-                className="bg-white rounded-lg border border-gray-200 p-6"
+                className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6"
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">{stat.label}</p>
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{stat.label}</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</p>
                   </div>
                   <div className={`${stat.color} p-3 rounded-lg`}>
                     <Icon size={24} className="text-white" />
@@ -75,46 +75,46 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <a
               href="/admin/products"
-              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="p-4 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
             >
-              <Package size={24} className="text-gray-700 mb-2" />
-              <h3 className="font-semibold text-gray-900">Manage Products</h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <Package size={24} className="text-gray-700 dark:text-gray-300 mb-2" />
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Manage Products</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 View and edit product inventory
               </p>
             </a>
             <a
               href="/admin/orders"
-              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="p-4 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
             >
-              <ShoppingBag size={24} className="text-gray-700 mb-2" />
-              <h3 className="font-semibold text-gray-900">View Orders</h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <ShoppingBag size={24} className="text-gray-700 dark:text-gray-300 mb-2" />
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">View Orders</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 Manage customer orders
               </p>
             </a>
             <a
               href="/admin/customers"
-              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="p-4 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
             >
-              <Users size={24} className="text-gray-700 mb-2" />
-              <h3 className="font-semibold text-gray-900">Manage Customers</h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <Users size={24} className="text-gray-700 dark:text-gray-300 mb-2" />
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Manage Customers</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 View customer information
               </p>
             </a>
             <a
               href="/admin/tasks"
-              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="p-4 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
             >
-              <ClipboardList size={24} className="text-gray-700 mb-2" />
-              <h3 className="font-semibold text-gray-900">Tasks & Follow-ups</h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <ClipboardList size={24} className="text-gray-700 dark:text-gray-300 mb-2" />
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Tasks & Follow-ups</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 Manage debt collection tasks
               </p>
             </a>

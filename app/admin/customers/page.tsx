@@ -64,12 +64,12 @@ type SortField = 'customerId' | 'name' | 'type' | 'phone' | 'balance' | 'lastInv
 type SortDirection = 'asc' | 'desc';
 
 // Optimized Mobile Customer Card Component
-const MobileCustomerCard = React.memo(({ 
-  customer, 
-  canViewBalances, 
-  router, 
-  handleViewProfile, 
-  handleEditCustomer, 
+const MobileCustomerCard = React.memo(({
+  customer,
+  canViewBalances,
+  router,
+  handleViewProfile,
+  handleEditCustomer,
   handleOpenInteractionModal,
   getTypeBadgeColor,
   getBalanceColor,
@@ -95,22 +95,22 @@ const MobileCustomerCard = React.memo(({
   const lastInvoiceDate = customer.LastInvoiceDate || customer.lastInvoiceDate || customer['Last Invoice Date'] || '';
   const lastPaymentDate = customer.LastPaymentDate || customer.lastPaymentDate || customer['Last Payment Date'] || '';
   const shamelNo = customer['Shamel No'] || customer.ShamelNo || customer.shamel_no;
-  
+
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+    <div className="bg-white dark:bg-slate-800 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 dark:border-slate-800 rounded-lg p-4 shadow-sm">
       {/* Header */}
-      <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
+      <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200 dark:border-slate-700 dark:border-slate-800">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <User size={18} className="text-gray-400 flex-shrink-0" />
+            <User size={18} className="text-gray-400 dark:text-gray-500 flex-shrink-0" />
             <button
               onClick={() => handleViewProfile(customer)}
-              className="text-base font-bold text-gray-900 hover:text-blue-600 hover:underline text-right truncate transition-colors"
+              className="text-base font-bold text-gray-900 dark:text-gray-100 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline text-right truncate transition-colors"
             >
               {name}
             </button>
           </div>
-          <div className="text-xs text-gray-500 mb-1">
+          <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400 mb-1">
             {customerId}
             {shamelNo && ` • شامل: ${shamelNo}`}
           </div>
@@ -127,15 +127,15 @@ const MobileCustomerCard = React.memo(({
       {/* Phone */}
       {phone && (
         <div className="mb-3">
-          <div className="text-xs text-gray-500 mb-1">الهاتف</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400 mb-1">الهاتف</div>
           <PhoneActions phone={phone} />
         </div>
       )}
 
       {/* Balance */}
       {canViewBalances && (
-        <div className="mb-3 p-2 bg-gray-50 rounded-lg">
-          <div className="text-xs text-gray-600 mb-1">الرصيد</div>
+        <div className="mb-3 p-2 bg-gray-50 dark:bg-slate-800/50 dark:bg-slate-800 rounded-lg">
+          <div className="text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400 mb-1">الرصيد</div>
           <div className={`text-lg font-bold ${getBalanceColor(balance)}`}>
             {formatBalance(balance)}
           </div>
@@ -146,23 +146,23 @@ const MobileCustomerCard = React.memo(({
       <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
         {formatDate(lastInvoiceDate) && (
           <div>
-            <div className="text-gray-500 mb-0.5">آخر فاتورة</div>
-            <div className="text-gray-900 font-medium">{formatDate(lastInvoiceDate)}</div>
+            <div className="text-gray-500 dark:text-gray-400 dark:text-gray-400 mb-0.5">آخر فاتورة</div>
+            <div className="text-gray-900 dark:text-gray-100 dark:text-gray-100 font-medium">{formatDate(lastInvoiceDate)}</div>
           </div>
         )}
         {formatDate(lastPaymentDate) && (
           <div>
-            <div className="text-gray-500 mb-0.5">آخر دفعة</div>
-            <div className="text-gray-900 font-medium">{formatDate(lastPaymentDate)}</div>
+            <div className="text-gray-500 dark:text-gray-400 dark:text-gray-400 mb-0.5">آخر دفعة</div>
+            <div className="text-gray-900 dark:text-gray-100 dark:text-gray-100 font-medium">{formatDate(lastPaymentDate)}</div>
           </div>
         )}
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+      <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-slate-700 dark:border-slate-800">
         <button
           onClick={() => handleOpenInteractionModal(customer)}
-          className="flex-1 px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2 transition-colors text-sm"
+          className="flex-1 px-3 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 flex items-center justify-center gap-2 transition-colors text-sm"
         >
           <Phone size={16} />
           <span>تفاعل</span>
@@ -210,27 +210,27 @@ export default function CustomersPage() {
   const [searchInput, setSearchInput] = useState(''); // For input field - updates immediately
   const [searchQuery, setSearchQuery] = useState(''); // For actual filtering - updates in background
   const [isPending, startTransition] = useTransition();
-  
+
   // Mobile pagination state
   const [mobilePage, setMobilePage] = useState(1);
   const MOBILE_PAGE_SIZE = 20;
-  
+
   // Desktop pagination state
   const [desktopPage, setDesktopPage] = useState(1);
   const DESKTOP_PAGE_SIZE = 50;
-  
+
   // Debounce hook for search
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Debounced search handler
   const handleSearchChange = useCallback((value: string) => {
     setSearchInput(value); // Update input immediately
-    
+
     // Clear previous timeout
     if (searchDebounceRef.current) {
       clearTimeout(searchDebounceRef.current);
     }
-    
+
     // Set new timeout for debounced search
     searchDebounceRef.current = setTimeout(() => {
       startTransition(() => {
@@ -238,7 +238,7 @@ export default function CustomersPage() {
       });
     }, 300); // 300ms debounce delay
   }, [startTransition]);
-  
+
   // Cleanup debounce on unmount
   useEffect(() => {
     return () => {
@@ -359,14 +359,14 @@ export default function CustomersPage() {
   // Helper function to parse date string to timestamp
   const parseDateToTimestamp = (dateString: string | undefined | null): number | null => {
     if (!dateString || dateString.trim() === '') return null;
-    
+
     try {
       let date: Date;
-      
+
       // Check if date is in DD-MM-YYYY format
       const ddMMyyyyPattern = /^(\d{2})-(\d{2})-(\d{4})$/;
       const match = dateString.trim().match(ddMMyyyyPattern);
-      
+
       if (match) {
         // Parse DD-MM-YYYY format
         const [, day, month, year] = match;
@@ -375,9 +375,9 @@ export default function CustomersPage() {
         // Try to parse as standard date format
         date = new Date(dateString);
       }
-      
+
       if (isNaN(date.getTime())) return null;
-      
+
       return date.getTime();
     } catch (error) {
       console.error('[CustomersPage] Error parsing date:', dateString, error);
@@ -393,7 +393,7 @@ export default function CustomersPage() {
       // Compare as strings, but handle numeric parts if present
       const aNumMatch = aId.match(/(\d+)/);
       const bNumMatch = bId.match(/(\d+)/);
-      
+
       if (aNumMatch && bNumMatch) {
         const aNum = parseInt(aNumMatch[1], 10);
         const bNum = parseInt(bNumMatch[1], 10);
@@ -401,7 +401,7 @@ export default function CustomersPage() {
           return bNum - aNum; // Descending order (largest to smallest)
         }
       }
-      
+
       // Fallback to string comparison (descending)
       return bId.localeCompare(aId, 'en', { numeric: true });
     });
@@ -451,7 +451,7 @@ export default function CustomersPage() {
       filtered = filtered.filter((c) => {
         const lastInvoiceDate = c.LastInvoiceDate || c.lastInvoiceDate || c['Last Invoice Date'] || '';
         if (!lastInvoiceDate) return false;
-        
+
         try {
           const date = new Date(lastInvoiceDate);
           if (isNaN(date.getTime())) return false;
@@ -468,7 +468,7 @@ export default function CustomersPage() {
       filtered = filtered.filter((c) => {
         const lastPaymentDate = c.LastPaymentDate || c.lastPaymentDate || c['Last Payment Date'] || '';
         if (!lastPaymentDate) return false;
-        
+
         try {
           const date = new Date(lastPaymentDate);
           if (isNaN(date.getTime())) return false;
@@ -488,15 +488,15 @@ export default function CustomersPage() {
         .trim()
         .split(/\s+/)
         .filter(word => word.length > 0);
-      
+
       filtered = filtered.filter((c) => {
         // Safely convert all values to strings and create searchable text
         const name = String(c.Name || c.name || '').toLowerCase();
         const phone = String(c.Phone || c.phone || '').toLowerCase();
-        
+
         // Combine all searchable fields into one text
         const searchableText = `${name} ${phone}`;
-        
+
         // Check if ALL search words are found in the searchable text
         return searchWords.every(word => searchableText.includes(word));
       });
@@ -576,25 +576,25 @@ export default function CustomersPage() {
 
     return filtered;
   }, [sortedCustomers, filterType, searchQuery, showNegativeBalance, showZeroBalance, lastInvoiceYear, lastPaymentYear, sortField, sortDirection, canViewBalances]);
-  
+
   // Paginated customers for mobile view
   const paginatedMobileCustomers = useMemo(() => {
     const startIndex = (mobilePage - 1) * MOBILE_PAGE_SIZE;
     const endIndex = startIndex + MOBILE_PAGE_SIZE;
     return filteredCustomers.slice(startIndex, endIndex);
   }, [filteredCustomers, mobilePage]);
-  
+
   const totalMobilePages = Math.ceil(filteredCustomers.length / MOBILE_PAGE_SIZE);
-  
+
   // Paginated customers for desktop view
   const paginatedDesktopCustomers = useMemo(() => {
     const startIndex = (desktopPage - 1) * DESKTOP_PAGE_SIZE;
     const endIndex = startIndex + DESKTOP_PAGE_SIZE;
     return filteredCustomers.slice(startIndex, endIndex);
   }, [filteredCustomers, desktopPage]);
-  
+
   const totalDesktopPages = Math.ceil(filteredCustomers.length / DESKTOP_PAGE_SIZE);
-  
+
   // Reset pages when filtered customers change significantly
   useEffect(() => {
     if (mobilePage > totalMobilePages && totalMobilePages > 0) {
@@ -604,7 +604,7 @@ export default function CustomersPage() {
       setDesktopPage(1);
     }
   }, [totalMobilePages, totalDesktopPages, mobilePage, desktopPage]);
-  
+
   // Reset pages when search changes
   useEffect(() => {
     setMobilePage(1);
@@ -705,14 +705,14 @@ export default function CustomersPage() {
 
   const formatDate = (dateString: string | undefined | null) => {
     if (!dateString || dateString.trim() === '') return null;
-    
+
     try {
       let date: Date;
-      
+
       // Check if date is in DD-MM-YYYY format
       const ddMMyyyyPattern = /^(\d{2})-(\d{2})-(\d{4})$/;
       const match = dateString.trim().match(ddMMyyyyPattern);
-      
+
       if (match) {
         // Parse DD-MM-YYYY format
         const [, day, month, year] = match;
@@ -721,9 +721,9 @@ export default function CustomersPage() {
         // Try to parse as standard date format
         date = new Date(dateString);
       }
-      
+
       if (isNaN(date.getTime())) return null;
-      
+
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
@@ -751,7 +751,7 @@ export default function CustomersPage() {
         const d = String(date.getDate()).padStart(2, '0');
         return `${y}-${m}-${d}`;
       }
-    } catch {}
+    } catch { }
     return '';
   };
 
@@ -809,7 +809,7 @@ export default function CustomersPage() {
       if (interactionId) {
         try {
           await updatePTPStatus(interactionId, 'Archived', admin?.id);
-        } catch {}
+        } catch { }
       }
       await logActivity({
         CustomerID: customerId,
@@ -896,9 +896,9 @@ export default function CustomersPage() {
 
   const getBalanceColor = (balance: number | undefined | null) => {
     const value = balance || 0;
-    if (value > 0) return 'text-red-600 font-semibold';
-    if (value < 0) return 'text-green-600 font-semibold';
-    return 'text-gray-500';
+    if (value > 0) return 'text-red-600 dark:text-red-400 font-semibold';
+    if (value < 0) return 'text-green-600 dark:text-green-400 font-semibold';
+    return 'text-gray-500 dark:text-gray-400';
   };
 
   const getTypeBadgeColor = (type: string | undefined) => {
@@ -911,9 +911,9 @@ export default function CustomersPage() {
     } else if (typeStr === 'مورد' || typeStr.toLowerCase() === 'supplier') {
       return 'bg-orange-100 text-orange-800';
     } else if (typeStr === 'تنظيمات محاسبية' || typeStr.toLowerCase() === 'accounting') {
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-100 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200';
     }
-    return 'bg-gray-100 text-gray-800';
+    return 'bg-gray-100 dark:bg-slate-700/50 text-gray-800 dark:text-gray-200';
   };
 
   // Handle column header click for sorting
@@ -922,7 +922,7 @@ export default function CustomersPage() {
     if (field === 'balance' && !canViewBalances) {
       return;
     }
-    
+
     if (sortField === field) {
       // Toggle direction if same field
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -950,9 +950,8 @@ export default function CustomersPage() {
       {/* Toast */}
       {toast.message && (
         <div
-          className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 transition-all duration-300 ${
-            toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-          }`}
+          className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 transition-all duration-300 ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+            }`}
         >
           <span>{toast.message}</span>
           <button onClick={() => setToast({ message: '', type: null })} className="hover:opacity-80">
@@ -965,8 +964,8 @@ export default function CustomersPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">الزبائن</h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 dark:text-gray-100">الزبائن</h1>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 dark:text-gray-400 mt-1">
               إدارة علاقات العملاء ومتابعة المستحقات والمديونيات
             </p>
           </div>
@@ -975,7 +974,7 @@ export default function CustomersPage() {
               <button
                 onClick={refreshFromDatabase}
                 disabled={loading}
-                className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 dark:hover:bg-slate-800 transition-colors font-medium text-gray-700 dark:text-gray-300 dark:text-gray-200 disabled:opacity-50"
                 title="تحديث كاش الزبائن من قاعدة البيانات (يُحدّث القائمة لجميع المستخدمين)"
               >
                 <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
@@ -987,7 +986,7 @@ export default function CustomersPage() {
                 setEditingCustomer(null);
                 setIsCustomerModalOpen(true);
               }}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium"
             >
               <Users size={20} />
               <span>إضافة عميل جديد</span>
@@ -998,126 +997,126 @@ export default function CustomersPage() {
         {/* Follow-up Dashboard */}
         {(dashboardData.overdue?.length > 0 || dashboardData.today?.length > 0) && (
           <div className="space-y-3 sm:space-y-4">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900">مهام المتابعة</h2>
-            
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 dark:text-gray-100">مهام المتابعة</h2>
+
             {/* Overdue Follow-ups */}
             {dashboardData.overdue?.length > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded-lg overflow-hidden">
+              <div className="bg-red-50 dark:bg-red-900/20 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-lg overflow-hidden">
                 <button
                   onClick={() => setShowOverdueList(!showOverdueList)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-red-100 transition-colors"
+                  className="w-full flex items-center justify-between p-4 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <AlertCircle size={20} className="text-red-600" />
-                    <h3 className="font-semibold text-red-900">متأخرة ({dashboardData.overdue.length})</h3>
+                    <AlertCircle size={20} className="text-red-600 dark:text-red-400 dark:text-red-400" />
+                    <h3 className="font-semibold text-red-900 dark:text-red-200">متأخرة ({dashboardData.overdue.length})</h3>
                   </div>
                   {showOverdueList ? (
-                    <ChevronUp size={20} className="text-red-600" />
+                    <ChevronUp size={20} className="text-red-600 dark:text-red-400" />
                   ) : (
-                    <ChevronDown size={20} className="text-red-600" />
+                    <ChevronDown size={20} className="text-red-600 dark:text-red-400" />
                   )}
                 </button>
                 {showOverdueList && (
                   <div className="p-4 pt-0 space-y-2">
-                  {dashboardData.overdue
-                    .filter((item: any) => item) // Filter out null/undefined items
-                    .map((item: any, index: number) => {
-                      const itemId = item.InteractionID || item.id || item.CustomerID || item.customerID || `overdue-${index}`;
-                      const customer = customers.find(
-                        (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
-                      );
-                      const customerName = item.CustomerName || item.customerName || customer?.Name || customer?.name || 'عميل';
-                      const customerPhone = customer?.Phone || customer?.phone || '';
-                      return (
-                        <div
-                          key={`overdue-${itemId}-${index}`}
-                          className="bg-white rounded-lg p-3 border border-red-200 flex items-center justify-between"
-                        >
-                      <div className="flex-1">
-                        <button
-                          onClick={(e) => {
-                            if (customer) {
-                              handleViewProfile(customer, e);
-                            } else if (item.CustomerID || item.customerID) {
-                              const cid = item.CustomerID || item.customerID;
-                              if (e?.ctrlKey || e?.metaKey || e?.button === 1) {
-                                window.open(`/admin/customers/${cid}`, '_blank');
-                              } else {
-                                router.push(`/admin/customers/${cid}`);
-                              }
-                            }
-                          }}
-                          onMouseDown={(e) => {
-                            if (e.button === 1 && (item.CustomerID || item.customerID)) {
-                              e.preventDefault();
-                              window.open(`/admin/customers/${item.CustomerID || item.customerID}`, '_blank');
-                            }
-                          }}
-                          className="font-medium text-gray-900 hover:text-blue-600 hover:underline text-right transition-colors cursor-pointer block"
-                          title="عرض الملف الشخصي (Ctrl+Click لفتح في تاب جديد)"
-                        >
-                          {customerName}
-                        </button>
-                        {customerPhone && (
-                          <div className="mt-1">
-                            <PhoneActions phone={customerPhone} />
+                    {dashboardData.overdue
+                      .filter((item: any) => item) // Filter out null/undefined items
+                      .map((item: any, index: number) => {
+                        const itemId = item.InteractionID || item.id || item.CustomerID || item.customerID || `overdue-${index}`;
+                        const customer = customers.find(
+                          (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
+                        );
+                        const customerName = item.CustomerName || item.customerName || customer?.Name || customer?.name || 'عميل';
+                        const customerPhone = customer?.Phone || customer?.phone || '';
+                        return (
+                          <div
+                            key={`overdue-${itemId}-${index}`}
+                            className="bg-white dark:bg-slate-800 dark:bg-slate-900/80 rounded-lg p-3 border border-red-200 dark:border-red-900/30 flex items-center justify-between"
+                          >
+                            <div className="flex-1">
+                              <button
+                                onClick={(e) => {
+                                  if (customer) {
+                                    handleViewProfile(customer, e);
+                                  } else if (item.CustomerID || item.customerID) {
+                                    const cid = item.CustomerID || item.customerID;
+                                    if (e?.ctrlKey || e?.metaKey || e?.button === 1) {
+                                      window.open(`/admin/customers/${cid}`, '_blank');
+                                    } else {
+                                      router.push(`/admin/customers/${cid}`);
+                                    }
+                                  }
+                                }}
+                                onMouseDown={(e) => {
+                                  if (e.button === 1 && (item.CustomerID || item.customerID)) {
+                                    e.preventDefault();
+                                    window.open(`/admin/customers/${item.CustomerID || item.customerID}`, '_blank');
+                                  }
+                                }}
+                                className="font-medium text-gray-900 dark:text-gray-100 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline text-right transition-colors cursor-pointer block"
+                                title="عرض الملف الشخصي (Ctrl+Click لفتح في تاب جديد)"
+                              >
+                                {customerName}
+                              </button>
+                              {customerPhone && (
+                                <div className="mt-1">
+                                  <PhoneActions phone={customerPhone} />
+                                </div>
+                              )}
+                              <p className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 mt-1">
+                                {item.Notes || item.notes || 'لا توجد ملاحظات'}
+                              </p>
+                              {(item.NextFollowUpDate || item.NextDate) && (
+                                <p className="text-xs text-red-600 dark:text-red-400 dark:text-red-400 mt-1">
+                                  كان من المفترض: {formatDate(item.NextFollowUpDate || item.NextDate)}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                              <button
+                                onClick={() => handleResolved(item)}
+                                disabled={updatingIds.has(item.InteractionID || item.id || '')}
+                                className="px-3 py-1.5 bg-green-100 dark:bg-green-900/30 dark:bg-green-900/40 text-green-700 dark:text-green-400 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/60 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
+                                title="تم الدفع"
+                              >
+                                {updatingIds.has(item.InteractionID || item.id || '') ? (
+                                  <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                  <CheckCircle2 size={14} />
+                                )}
+                                تم الدفع
+                              </button>
+                              <button
+                                onClick={() => handleRescheduleClick(item)}
+                                disabled={updatingIds.has(item.InteractionID || item.id || '')}
+                                className="px-3 py-1.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
+                                title="إعادة جدولة"
+                              >
+                                <Calendar size={14} />
+                                إعادة جدولة
+                              </button>
+                              <button
+                                onClick={() => handleCopyClick(item)}
+                                disabled={updatingIds.has(item.InteractionID || item.id || '')}
+                                className="px-3 py-1.5 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
+                                title="نسخ تفاعل"
+                              >
+                                <Copy size={14} />
+                                نسخ تفاعل
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const cust = customers.find((c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID));
+                                  if (cust) handleOpenInteractionModal(cust, item);
+                                }}
+                                className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+                                title="فتح/تعديل"
+                              >
+                                <Edit size={14} />
+                              </button>
+                            </div>
                           </div>
-                        )}
-                        <p className="text-sm text-gray-600 mt-1">
-                          {item.Notes || item.notes || 'لا توجد ملاحظات'}
-                        </p>
-                        {(item.NextFollowUpDate || item.NextDate) && (
-                          <p className="text-xs text-red-600 mt-1">
-                            كان من المفترض: {formatDate(item.NextFollowUpDate || item.NextDate)}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
-                        <button
-                          onClick={() => handleResolved(item)}
-                          disabled={updatingIds.has(item.InteractionID || item.id || '')}
-                          className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
-                          title="تم الدفع"
-                        >
-                          {updatingIds.has(item.InteractionID || item.id || '') ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <CheckCircle2 size={14} />
-                          )}
-                          تم الدفع
-                        </button>
-                        <button
-                          onClick={() => handleRescheduleClick(item)}
-                          disabled={updatingIds.has(item.InteractionID || item.id || '')}
-                          className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
-                          title="إعادة جدولة"
-                        >
-                          <Calendar size={14} />
-                          إعادة جدولة
-                        </button>
-                        <button
-                          onClick={() => handleCopyClick(item)}
-                          disabled={updatingIds.has(item.InteractionID || item.id || '')}
-                          className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
-                          title="نسخ تفاعل"
-                        >
-                          <Copy size={14} />
-                          نسخ تفاعل
-                        </button>
-                        <button
-                          onClick={() => {
-                            const cust = customers.find((c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID));
-                            if (cust) handleOpenInteractionModal(cust, item);
-                          }}
-                          className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
-                          title="فتح/تعديل"
-                        >
-                          <Edit size={14} />
-                        </button>
-                      </div>
-                    </div>
-                      );
-                    })}
+                        );
+                      })}
                   </div>
                 )}
               </div>
@@ -1125,14 +1124,14 @@ export default function CustomersPage() {
 
             {/* Today Follow-ups */}
             {dashboardData.today?.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg overflow-hidden">
+              <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-lg overflow-hidden">
                 <button
                   onClick={() => setShowTodayList(!showTodayList)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-blue-100 transition-colors"
+                  className="w-full flex items-center justify-between p-4 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <Calendar size={20} className="text-blue-600" />
-                    <h3 className="font-semibold text-blue-900">اليوم ({dashboardData.today.length})</h3>
+                    <Calendar size={20} className="text-blue-600 dark:text-blue-400" />
+                    <h3 className="font-semibold text-blue-900 dark:text-blue-200">اليوم ({dashboardData.today.length})</h3>
                   </div>
                   {showTodayList ? (
                     <ChevronUp size={20} className="text-blue-600" />
@@ -1142,100 +1141,100 @@ export default function CustomersPage() {
                 </button>
                 {showTodayList && (
                   <div className="p-4 pt-0 space-y-2">
-                  {dashboardData.today
-                    .filter((item: any) => item) // Filter out null/undefined items
-                    .map((item: any, index: number) => {
-                      const itemId = item.InteractionID || item.id || item.CustomerID || item.customerID || `today-${index}`;
-                      const customer = customers.find(
-                        (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
-                      );
-                      const customerName = item.CustomerName || item.customerName || customer?.Name || customer?.name || 'عميل';
-                      const customerPhone = customer?.Phone || customer?.phone || '';
-                      return (
-                        <div
-                          key={`today-${itemId}-${index}`}
-                          className="bg-white rounded-lg p-3 border border-blue-200 flex items-center justify-between"
-                        >
-                      <div className="flex-1">
-                        <button
-                          onClick={(e) => {
-                            if (customer) {
-                              handleViewProfile(customer, e);
-                            } else if (item.CustomerID || item.customerID) {
-                              const cid = item.CustomerID || item.customerID;
-                              if (e?.ctrlKey || e?.metaKey || e?.button === 1) {
-                                window.open(`/admin/customers/${cid}`, '_blank');
-                              } else {
-                                router.push(`/admin/customers/${cid}`);
-                              }
-                            }
-                          }}
-                          onMouseDown={(e) => {
-                            if (e.button === 1 && (item.CustomerID || item.customerID)) {
-                              e.preventDefault();
-                              window.open(`/admin/customers/${item.CustomerID || item.customerID}`, '_blank');
-                            }
-                          }}
-                          className="font-medium text-gray-900 hover:text-blue-600 hover:underline text-right transition-colors cursor-pointer block"
-                          title="عرض الملف الشخصي (Ctrl+Click لفتح في تاب جديد)"
-                        >
-                          {customerName}
-                        </button>
-                        {customerPhone && (
-                          <div className="mt-1">
-                            <PhoneActions phone={customerPhone} />
+                    {dashboardData.today
+                      .filter((item: any) => item) // Filter out null/undefined items
+                      .map((item: any, index: number) => {
+                        const itemId = item.InteractionID || item.id || item.CustomerID || item.customerID || `today-${index}`;
+                        const customer = customers.find(
+                          (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
+                        );
+                        const customerName = item.CustomerName || item.customerName || customer?.Name || customer?.name || 'عميل';
+                        const customerPhone = customer?.Phone || customer?.phone || '';
+                        return (
+                          <div
+                            key={`today-${itemId}-${index}`}
+                            className="bg-white dark:bg-slate-800 dark:bg-slate-900/80 rounded-lg p-3 border border-blue-200 dark:border-blue-900/30 flex items-center justify-between"
+                          >
+                            <div className="flex-1">
+                              <button
+                                onClick={(e) => {
+                                  if (customer) {
+                                    handleViewProfile(customer, e);
+                                  } else if (item.CustomerID || item.customerID) {
+                                    const cid = item.CustomerID || item.customerID;
+                                    if (e?.ctrlKey || e?.metaKey || e?.button === 1) {
+                                      window.open(`/admin/customers/${cid}`, '_blank');
+                                    } else {
+                                      router.push(`/admin/customers/${cid}`);
+                                    }
+                                  }
+                                }}
+                                onMouseDown={(e) => {
+                                  if (e.button === 1 && (item.CustomerID || item.customerID)) {
+                                    e.preventDefault();
+                                    window.open(`/admin/customers/${item.CustomerID || item.customerID}`, '_blank');
+                                  }
+                                }}
+                                className="font-medium text-gray-900 dark:text-gray-100 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline text-right transition-colors cursor-pointer block"
+                                title="عرض الملف الشخصي (Ctrl+Click لفتح في تاب جديد)"
+                              >
+                                {customerName}
+                              </button>
+                              {customerPhone && (
+                                <div className="mt-1">
+                                  <PhoneActions phone={customerPhone} />
+                                </div>
+                              )}
+                              <p className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 mt-1">
+                                {item.Notes || item.notes || 'لا توجد ملاحظات'}
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                              <button
+                                onClick={() => handleResolved(item)}
+                                disabled={updatingIds.has(item.InteractionID || item.id || '')}
+                                className="px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
+                                title="تم الدفع"
+                              >
+                                {updatingIds.has(item.InteractionID || item.id || '') ? (
+                                  <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                  <CheckCircle2 size={14} />
+                                )}
+                                تم الدفع
+                              </button>
+                              <button
+                                onClick={() => handleRescheduleClick(item)}
+                                disabled={updatingIds.has(item.InteractionID || item.id || '')}
+                                className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
+                                title="إعادة جدولة"
+                              >
+                                <Calendar size={14} />
+                                إعادة جدولة
+                              </button>
+                              <button
+                                onClick={() => handleCopyClick(item)}
+                                disabled={updatingIds.has(item.InteractionID || item.id || '')}
+                                className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
+                                title="نسخ تفاعل"
+                              >
+                                <Copy size={14} />
+                                نسخ تفاعل
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const cust = customers.find((c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID));
+                                  if (cust) handleOpenInteractionModal(cust, item);
+                                }}
+                                className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+                                title="فتح/تعديل"
+                              >
+                                <Edit size={14} />
+                              </button>
+                            </div>
                           </div>
-                        )}
-                        <p className="text-sm text-gray-600 mt-1">
-                          {item.Notes || item.notes || 'لا توجد ملاحظات'}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
-                        <button
-                          onClick={() => handleResolved(item)}
-                          disabled={updatingIds.has(item.InteractionID || item.id || '')}
-                          className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
-                          title="تم الدفع"
-                        >
-                          {updatingIds.has(item.InteractionID || item.id || '') ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <CheckCircle2 size={14} />
-                          )}
-                          تم الدفع
-                        </button>
-                        <button
-                          onClick={() => handleRescheduleClick(item)}
-                          disabled={updatingIds.has(item.InteractionID || item.id || '')}
-                          className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
-                          title="إعادة جدولة"
-                        >
-                          <Calendar size={14} />
-                          إعادة جدولة
-                        </button>
-                        <button
-                          onClick={() => handleCopyClick(item)}
-                          disabled={updatingIds.has(item.InteractionID || item.id || '')}
-                          className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
-                          title="نسخ تفاعل"
-                        >
-                          <Copy size={14} />
-                          نسخ تفاعل
-                        </button>
-                        <button
-                          onClick={() => {
-                            const cust = customers.find((c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID));
-                            if (cust) handleOpenInteractionModal(cust, item);
-                          }}
-                          className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
-                          title="فتح/تعديل"
-                        >
-                          <Edit size={14} />
-                        </button>
-                      </div>
-                    </div>
-                      );
-                    })}
+                        );
+                      })}
                   </div>
                 )}
               </div>
@@ -1247,17 +1246,17 @@ export default function CustomersPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           {/* Total Receivables */}
           {canViewBalances && (
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-800 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">إجمالي المستحقات</p>
-                  <p className="text-2xl font-bold text-red-600 mt-2">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">إجمالي المستحقات</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400 dark:text-red-400 mt-2">
                     {formatBalance(stats.totalReceivables)}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">المال المستحق لنا</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">المال المستحق لنا</p>
                 </div>
-                <div className="p-3 bg-red-50 rounded-full">
-                  <TrendingUp size={24} className="text-red-600" />
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 dark:bg-red-900/20 rounded-full">
+                  <TrendingUp size={24} className="text-red-600 dark:text-red-400 dark:text-red-400" />
                 </div>
               </div>
             </div>
@@ -1265,44 +1264,44 @@ export default function CustomersPage() {
 
           {/* Total Payables */}
           {canViewBalances && (
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-800 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">إجمالي المدفوعات</p>
-                  <p className="text-2xl font-bold text-green-600 mt-2">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">إجمالي المدفوعات</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400 dark:text-green-400 mt-2">
                     {formatBalance(stats.totalPayables)}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">المال المستحق علينا</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">المال المستحق علينا</p>
                 </div>
-                <div className="p-3 bg-green-50 rounded-full">
-                  <TrendingDown size={24} className="text-green-600" />
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 dark:bg-green-900/20 rounded-full">
+                  <TrendingDown size={24} className="text-green-600 dark:text-green-400 dark:text-green-400" />
                 </div>
               </div>
             </div>
           )}
 
           {/* Total Customers */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="bg-white dark:bg-slate-800 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-800 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">إجمالي العملاء</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">إجمالي العملاء</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 dark:text-gray-100 mt-2">
                   {stats.totalCustomers}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">جميع أنواع العملاء</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">جميع أنواع العملاء</p>
               </div>
-              <div className="p-3 bg-gray-50 rounded-full">
-                <Users size={24} className="text-gray-600" />
+              <div className="p-3 bg-gray-50 dark:bg-slate-800/50 dark:bg-slate-800 rounded-full">
+                <Users size={24} className="text-gray-600 dark:text-gray-400 dark:text-gray-400" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 space-y-3 sm:space-y-4">
+        <div className="bg-white dark:bg-slate-800 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-800 p-3 sm:p-4 space-y-3 sm:space-y-4">
           {/* Type Filter Tabs */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs sm:text-sm font-semibold text-gray-700 mr-2">فلترة حسب النوع:</span>
+            <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300 mr-2">فلترة حسب النوع:</span>
             {([
               { value: 'All', label: 'الكل' },
               { value: 'Customer', label: 'زبون' },
@@ -1314,11 +1313,10 @@ export default function CustomersPage() {
                 <button
                   key={value}
                   onClick={() => setFilterType(value)}
-                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors ${
-                    filterType === value
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors ${filterType === value
+                    ? 'bg-gray-900 dark:bg-slate-700 dark:bg-gray-100 text-white dark:text-gray-900'
+                    : 'bg-gray-100 dark:bg-slate-700/50 dark:bg-slate-800 text-gray-700 dark:text-gray-300 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600 dark:hover:bg-slate-700'
+                    }`}
                 >
                   {label}
                 </button>
@@ -1329,28 +1327,26 @@ export default function CustomersPage() {
           {/* Balance Filters */}
           {canViewBalances && (
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <span className="text-xs sm:text-sm font-semibold text-gray-700">فلاتر الرصيد:</span>
+              <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300">فلاتر الرصيد:</span>
               <button
                 onClick={() => setShowNegativeBalance(!showNegativeBalance)}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 ${
-                  showNegativeBalance
-                    ? 'bg-green-100 text-green-700 border border-green-300'
-                    : 'bg-gray-100 text-gray-500 border border-gray-300'
-                }`}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 border ${showNegativeBalance
+                  ? 'bg-green-100 dark:bg-green-900/30 dark:bg-green-900/40 text-green-700 dark:text-green-400 dark:text-green-300 border-green-300 dark:border-green-700'
+                  : 'bg-gray-100 dark:bg-slate-700/50 dark:bg-slate-800 text-gray-500 dark:text-gray-400 dark:text-gray-400 border-gray-300 dark:border-slate-600 dark:border-slate-700'
+                  }`}
               >
-                <div className={`w-2 h-2 rounded-full ${showNegativeBalance ? 'bg-green-600' : 'bg-gray-400'}`} />
+                <div className={`w-2 h-2 rounded-full ${showNegativeBalance ? 'bg-green-600 dark:bg-green-400' : 'bg-gray-400 dark:bg-gray-600'}`} />
                 <span className="hidden sm:inline">إظهار الرصيد السالب</span>
                 <span className="sm:hidden">رصيد سالب</span>
               </button>
               <button
                 onClick={() => setShowZeroBalance(!showZeroBalance)}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 ${
-                  showZeroBalance
-                    ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                    : 'bg-gray-100 text-gray-500 border border-gray-300'
-                }`}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 border ${showZeroBalance
+                  ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700'
+                  : 'bg-gray-100 dark:bg-slate-700/50 dark:bg-slate-800 text-gray-500 dark:text-gray-400 dark:text-gray-400 border-gray-300 dark:border-slate-600 dark:border-slate-700'
+                  }`}
               >
-                <div className={`w-2 h-2 rounded-full ${showZeroBalance ? 'bg-blue-600' : 'bg-gray-400'}`} />
+                <div className={`w-2 h-2 rounded-full ${showZeroBalance ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-400 dark:bg-gray-600'}`} />
                 <span className="hidden sm:inline">إظهار الرصيد الصفر</span>
                 <span className="sm:hidden">رصيد صفر</span>
               </button>
@@ -1359,11 +1355,11 @@ export default function CustomersPage() {
 
           {/* Date Filters */}
           <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-4">
-            <span className="text-xs sm:text-sm font-semibold text-gray-700">فلاتر التاريخ:</span>
-            
+            <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300">فلاتر التاريخ:</span>
+
             {/* Last Invoice Year Filter */}
             <div className="flex items-center gap-2 flex-1 sm:flex-none">
-              <label className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">آخر فاتورة:</label>
+              <label className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 whitespace-nowrap">آخر فاتورة:</label>
               <select
                 value={lastInvoiceYear}
                 onChange={(e) => {
@@ -1372,7 +1368,7 @@ export default function CustomersPage() {
                     setLastPaymentYear(''); // Clear payment year when invoice year is selected
                   }
                 }}
-                className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 text-xs sm:text-sm"
+                className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 text-gray-900 dark:text-gray-100 dark:text-gray-100 text-xs sm:text-sm"
               >
                 <option value="">جميع السنوات</option>
                 {Array.from({ length: 11 }, (_, i) => 2025 - i).map((year) => (
@@ -1385,7 +1381,7 @@ export default function CustomersPage() {
 
             {/* Last Payment Year Filter */}
             <div className="flex items-center gap-2 flex-1 sm:flex-none">
-              <label className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">آخر دفعة:</label>
+              <label className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 whitespace-nowrap">آخر دفعة:</label>
               <select
                 value={lastPaymentYear}
                 onChange={(e) => {
@@ -1394,7 +1390,7 @@ export default function CustomersPage() {
                     setLastInvoiceYear(''); // Clear invoice year when payment year is selected
                   }
                 }}
-                className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 text-xs sm:text-sm"
+                className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 text-gray-900 dark:text-gray-100 dark:text-gray-100 text-xs sm:text-sm"
               >
                 <option value="">جميع السنوات</option>
                 {Array.from({ length: 11 }, (_, i) => 2025 - i).map((year) => (
@@ -1409,18 +1405,17 @@ export default function CustomersPage() {
 
           {/* Filtered Balance Total */}
           {canViewBalances && filteredCustomers.length > 0 && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <div className="bg-gray-50 dark:bg-slate-800/50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 dark:border-slate-700 rounded-lg p-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <span className="text-xs sm:text-sm font-semibold text-gray-700">
+                <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300">
                   مجموع أرصدة العملاء المفلترين ({filteredCustomers.length}):
                 </span>
-                <span className={`text-base sm:text-lg font-bold ${
-                  filteredBalanceTotal > 0 
-                    ? 'text-red-600' 
-                    : filteredBalanceTotal < 0 
-                    ? 'text-green-600' 
-                    : 'text-gray-600'
-                }`}>
+                <span className={`text-base sm:text-lg font-bold ${filteredBalanceTotal > 0
+                  ? 'text-red-600 dark:text-red-400 dark:text-red-400'
+                  : filteredBalanceTotal < 0
+                    ? 'text-green-600 dark:text-green-400 dark:text-green-400'
+                    : 'text-gray-600 dark:text-gray-400 dark:text-gray-400'
+                  }`}>
                   {formatBalance(filteredBalanceTotal)}
                 </span>
               </div>
@@ -1430,24 +1425,24 @@ export default function CustomersPage() {
         </div>
 
         {/* Search - below filters, above table */}
-        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-3 sm:p-4">
           <div className="relative">
             <Search
               size={18}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
             />
             <input
               type="text"
               placeholder="البحث بالاسم أو الهاتف..."
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-500 text-sm sm:text-base"
+              className="w-full pr-10 pl-4 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 text-gray-900 dark:text-gray-100 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 text-sm sm:text-base"
               dir="rtl"
             />
             {searchInput && (
               <button
                 onClick={() => handleSearchChange('')}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <X size={18} />
               </button>
@@ -1457,11 +1452,11 @@ export default function CustomersPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-4">
             <div className="flex items-start gap-3">
               <div className="flex-1">
-                <h3 className="text-sm font-semibold text-red-800 mb-1">خطأ في تحميل العملاء</h3>
-                <p className="text-sm text-red-700">{error}</p>
+                <h3 className="text-sm font-semibold text-red-800 dark:text-red-300 mb-1">خطأ في تحميل العملاء</h3>
+                <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
                 <button
                   onClick={async () => {
                     try {
@@ -1487,28 +1482,28 @@ export default function CustomersPage() {
         {/* Desktop Table View */}
         <div className="hidden md:block">
           {loading ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-              <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">جاري تحميل العملاء...</p>
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-800 p-12 text-center">
+              <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400 dark:text-gray-400">جاري تحميل العملاء...</p>
             </div>
           ) : error ? null : filteredCustomers.length === 0 ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-              <Users size={48} className="text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">لم يتم العثور على عملاء</p>
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-12 text-center">
+              <Users size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400 text-lg">لم يتم العثور على عملاء</p>
               {searchQuery && (
-                <p className="text-gray-500 text-sm mt-2">
+                <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
                   حاول تعديل استعلام البحث
                 </p>
               )}
             </div>
           ) : (
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-800 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-gray-50 dark:bg-slate-800/50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700 dark:border-slate-800">
                     <tr>
-                      <th 
-                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      <th
+                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 dark:hover:bg-slate-700 transition-colors select-none"
                         onClick={() => handleSort('customerId')}
                       >
                         <div className="flex items-center justify-end">
@@ -1516,8 +1511,8 @@ export default function CustomersPage() {
                           {getSortIcon('customerId')}
                         </div>
                       </th>
-                      <th 
-                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      <th
+                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 dark:hover:bg-slate-700 transition-colors select-none"
                         onClick={() => handleSort('name')}
                       >
                         <div className="flex items-center justify-end">
@@ -1525,8 +1520,8 @@ export default function CustomersPage() {
                           {getSortIcon('name')}
                         </div>
                       </th>
-                      <th 
-                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      <th
+                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 dark:hover:bg-slate-700 transition-colors select-none"
                         onClick={() => handleSort('type')}
                       >
                         <div className="flex items-center justify-end">
@@ -1534,8 +1529,8 @@ export default function CustomersPage() {
                           {getSortIcon('type')}
                         </div>
                       </th>
-                      <th 
-                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      <th
+                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 dark:hover:bg-slate-700 transition-colors select-none"
                         onClick={() => handleSort('phone')}
                       >
                         <div className="flex items-center justify-end">
@@ -1544,8 +1539,8 @@ export default function CustomersPage() {
                         </div>
                       </th>
                       {canViewBalances && (
-                        <th 
-                          className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                        <th
+                          className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 dark:hover:bg-slate-700 transition-colors select-none"
                           onClick={() => handleSort('balance')}
                         >
                           <div className="flex items-center justify-end">
@@ -1554,8 +1549,8 @@ export default function CustomersPage() {
                           </div>
                         </th>
                       )}
-                      <th 
-                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      <th
+                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 dark:hover:bg-slate-700 transition-colors select-none"
                         onClick={() => handleSort('lastInvoice')}
                       >
                         <div className="flex items-center justify-end">
@@ -1563,8 +1558,8 @@ export default function CustomersPage() {
                           {getSortIcon('lastInvoice')}
                         </div>
                       </th>
-                      <th 
-                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      <th
+                        className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 dark:hover:bg-slate-700 transition-colors select-none"
                         onClick={() => handleSort('lastPayment')}
                       >
                         <div className="flex items-center justify-end">
@@ -1572,33 +1567,33 @@ export default function CustomersPage() {
                           {getSortIcon('lastPayment')}
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300 uppercase tracking-wider">
                         الإجراءات
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {paginatedDesktopCustomers.map((customer, index) => {
-                        const customerId = customer.CustomerID || customer.id || customer.customerID || `fallback-${index}`;
-                        const name = customer.Name || customer.name || 'N/A';
-                        const phone = customer.Phone || customer.phone || '';
-                        const type = customer.Type || customer.type || 'Customer';
-                        const balance = customer.Balance || customer.balance || 0;
-                        const lastInvoiceDate = customer.LastInvoiceDate || customer.lastInvoiceDate || customer['Last Invoice Date'] || '';
-                        const lastPaymentDate = customer.LastPaymentDate || customer.lastPaymentDate || customer['Last Payment Date'] || '';
+                      const customerId = customer.CustomerID || customer.id || customer.customerID || `fallback-${index}`;
+                      const name = customer.Name || customer.name || 'N/A';
+                      const phone = customer.Phone || customer.phone || '';
+                      const type = customer.Type || customer.type || 'Customer';
+                      const balance = customer.Balance || customer.balance || 0;
+                      const lastInvoiceDate = customer.LastInvoiceDate || customer.lastInvoiceDate || customer['Last Invoice Date'] || '';
+                      const lastPaymentDate = customer.LastPaymentDate || customer.lastPaymentDate || customer['Last Payment Date'] || '';
 
-                        return (
+                      return (
                         <tr
                           key={customerId}
-                          className="hover:bg-gray-50 transition-colors"
+                          className="hover:bg-gray-50 dark:hover:bg-slate-700/50 dark:hover:bg-slate-800 transition-colors border-b border-gray-100 dark:border-slate-700/50 dark:border-slate-800 last:border-0"
                         >
                           {/* Customer Number */}
                           <td className="px-4 py-3 text-right">
-                            <div className="font-semibold text-gray-900">
+                            <div className="font-semibold text-gray-900 dark:text-gray-100 dark:text-gray-100">
                               {customerId}
                             </div>
                             {(customer['Shamel No'] || customer.ShamelNo || customer.shamel_no) && (
-                              <div className="text-xs text-gray-500 mt-0.5">
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                 {customer['Shamel No'] || customer.ShamelNo || customer.shamel_no}
                               </div>
                             )}
@@ -1623,7 +1618,7 @@ export default function CustomersPage() {
                                   window.open(`/admin/customers/${customerId}`, '_blank', 'noopener,noreferrer');
                                 }
                               }}
-                              className="font-semibold text-gray-900 hover:text-blue-600 hover:underline text-right transition-colors cursor-pointer"
+                              className="font-semibold text-gray-900 dark:text-gray-100 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline text-right transition-colors cursor-pointer"
                               title="عرض الملف الشخصي (Ctrl+Click أو Cmd+Click لفتح في تاب جديد)"
                             >
                               {name}
@@ -1646,7 +1641,7 @@ export default function CustomersPage() {
                             {phone ? (
                               <PhoneActions phone={phone} />
                             ) : (
-                              <span className="text-gray-400">—</span>
+                              <span className="text-gray-400 dark:text-gray-500 dark:text-gray-500">—</span>
                             )}
                           </td>
 
@@ -1662,22 +1657,22 @@ export default function CustomersPage() {
                           {/* Last Invoice Date */}
                           <td className="px-4 py-3 text-right">
                             {formatDate(lastInvoiceDate) ? (
-                              <span className="text-sm text-gray-900">
+                              <span className="text-sm text-gray-900 dark:text-gray-100 dark:text-gray-300">
                                 {formatDate(lastInvoiceDate)}
                               </span>
                             ) : (
-                              <span className="text-sm text-gray-400">—</span>
+                              <span className="text-sm text-gray-400 dark:text-gray-500 dark:text-gray-500">—</span>
                             )}
                           </td>
 
                           {/* Last Payment Date */}
                           <td className="px-4 py-3 text-right">
                             {formatDate(lastPaymentDate) ? (
-                              <span className="text-sm text-gray-900">
+                              <span className="text-sm text-gray-900 dark:text-gray-100 dark:text-gray-300">
                                 {formatDate(lastPaymentDate)}
                               </span>
                             ) : (
-                              <span className="text-sm text-gray-400">—</span>
+                              <span className="text-sm text-gray-400 dark:text-gray-500 dark:text-gray-500">—</span>
                             )}
                           </td>
 
@@ -1687,7 +1682,7 @@ export default function CustomersPage() {
                               {canViewBalances && (
                                 <button
                                   onClick={() => handleEditCustomer(customer)}
-                                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                  className="p-2 text-gray-600 dark:text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 dark:hover:bg-slate-700 rounded-lg transition-colors"
                                   title="تعديل العميل"
                                 >
                                   <Edit size={18} />
@@ -1695,7 +1690,7 @@ export default function CustomersPage() {
                               )}
                               <button
                                 onClick={() => handleOpenInteractionModal(customer)}
-                                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                className="p-2 text-gray-600 dark:text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 dark:hover:bg-slate-700 rounded-lg transition-colors"
                                 title="إضافة تفاعل"
                               >
                                 <Phone size={18} />
@@ -1708,17 +1703,17 @@ export default function CustomersPage() {
                   </tbody>
                 </table>
               </div>
-              
+
               {/* Desktop Pagination */}
               {totalDesktopPages > 1 && (
-                <div className="border-t border-gray-200 px-4 py-3 bg-gray-50 flex items-center justify-between flex-wrap gap-4" dir="rtl">
+                <div className="border-t border-gray-200 dark:border-slate-700 dark:border-slate-800 px-4 py-3 bg-gray-50 dark:bg-slate-800/50 dark:bg-slate-900/50 flex items-center justify-between flex-wrap gap-4" dir="rtl">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setDesktopPage((prev) => Math.max(1, prev - 1))}
                       disabled={desktopPage === 1}
-                      className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm text-gray-900 font-medium"
+                      className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 dark:border-slate-600 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm text-gray-900 dark:text-gray-100 dark:text-gray-100 font-medium"
                     >
-                      <ChevronRight size={16} className="text-gray-900" />
+                      <ChevronRight size={16} className="text-gray-900 dark:text-gray-100 dark:text-gray-100" />
                       السابق
                     </button>
 
@@ -1743,11 +1738,10 @@ export default function CustomersPage() {
                             <button
                               key={pageNum}
                               onClick={() => setDesktopPage(pageNum)}
-                              className={`px-3 py-1.5 rounded-lg transition-colors text-sm font-medium ${
-                                currentPage === pageNum
-                                  ? 'bg-gray-900 text-white'
-                                  : 'border border-gray-300 hover:bg-gray-100 text-gray-900'
-                              }`}
+                              className={`px-3 py-1.5 rounded-lg transition-colors text-sm font-medium ${currentPage === pageNum
+                                ? 'bg-gray-900 dark:bg-slate-700 dark:bg-gray-100 text-white dark:text-gray-900'
+                                : 'border border-gray-300 dark:border-slate-600 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 dark:hover:bg-slate-800 text-gray-900 dark:text-gray-100 dark:text-gray-300'
+                                }`}
                             >
                               {pageNum}
                             </button>
@@ -1759,14 +1753,14 @@ export default function CustomersPage() {
                     <button
                       onClick={() => setDesktopPage((prev) => Math.min(totalDesktopPages, prev + 1))}
                       disabled={desktopPage === totalDesktopPages}
-                      className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm text-gray-900 font-medium"
+                      className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 dark:border-slate-600 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm text-gray-900 dark:text-gray-100 dark:text-gray-100 font-medium"
                     >
                       التالي
-                      <ChevronLeft size={16} className="text-gray-900" />
+                      <ChevronLeft size={16} className="text-gray-900 dark:text-gray-100 dark:text-gray-100" />
                     </button>
                   </div>
 
-                  <div className="flex items-center gap-4 text-sm text-gray-900 font-medium">
+                  <div className="flex items-center gap-4 text-sm text-gray-900 dark:text-gray-100 dark:text-gray-300 font-medium">
                     <span>
                       صفحة {desktopPage} من {totalDesktopPages || 1}
                     </span>
@@ -1777,7 +1771,7 @@ export default function CustomersPage() {
                         const newSize = Number(e.target.value);
                         setDesktopPage(1); // Reset to first page when changing page size
                       }}
-                      className="px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-900 text-sm text-gray-900 font-medium bg-white"
+                      className="px-2 py-1 border border-gray-300 dark:border-slate-600 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-400 text-sm text-gray-900 dark:text-gray-100 dark:text-gray-100 font-medium bg-white dark:bg-slate-800 dark:bg-slate-800"
                       dir="rtl"
                       disabled
                     >
@@ -1796,25 +1790,25 @@ export default function CustomersPage() {
         {/* Mobile Card View */}
         <div className="md:hidden space-y-3">
           {loading ? (
-            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-              <div className="flex items-center justify-center gap-2 text-gray-500">
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 dark:border-slate-800 rounded-lg p-8 text-center">
+              <div className="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 dark:text-gray-400">
                 <Loader2 className="animate-spin" size={20} />
                 <span>جاري التحميل...</span>
               </div>
             </div>
           ) : error ? null : filteredCustomers.length === 0 ? (
-            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center text-gray-500">
-              <Users size={48} className="text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">لم يتم العثور على عملاء</p>
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 dark:border-slate-800 rounded-lg p-8 text-center text-gray-500 dark:text-gray-400 dark:text-gray-400">
+              <Users size={48} className="text-gray-300 dark:text-gray-600 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400 dark:text-gray-300 text-lg">لم يتم العثور على عملاء</p>
               {searchQuery && (
-                <p className="text-gray-500 text-sm mt-2">
+                <p className="text-gray-500 dark:text-gray-400 dark:text-gray-400 text-sm mt-2">
                   حاول تعديل استعلام البحث
                 </p>
               )}
             </div>
           ) : isPending ? (
-            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-              <div className="flex items-center justify-center gap-2 text-gray-500">
+            <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-8 text-center">
+              <div className="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
                 <Loader2 className="animate-spin" size={20} />
                 <span>جاري البحث...</span>
               </div>
@@ -1839,32 +1833,32 @@ export default function CustomersPage() {
                   />
                 );
               })}
-              
+
               {/* Mobile Pagination */}
               {totalMobilePages > 1 && (
-                <div className="flex items-center justify-between gap-4 pt-4 pb-2 border-t border-gray-200 bg-white sticky bottom-0 z-10">
+                <div className="flex items-center justify-between gap-4 pt-4 pb-2 border-t border-gray-200 dark:border-slate-700 dark:border-slate-800 bg-white dark:bg-slate-800 dark:bg-slate-900 sticky bottom-0 z-10">
                   <button
                     onClick={() => setMobilePage((prev) => Math.max(1, prev - 1))}
                     disabled={mobilePage === 1}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-gray-900"
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-700 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-gray-900 dark:text-gray-100 dark:text-gray-100"
                   >
                     <ChevronRight size={16} />
                     السابق
                   </button>
-                  
-                  <div className="flex items-center gap-2 text-sm text-gray-700">
+
+                  <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 dark:text-gray-300">
                     <span className="font-medium">
                       صفحة {mobilePage} من {totalMobilePages}
                     </span>
-                    <span className="text-gray-500">
+                    <span className="text-gray-500 dark:text-gray-400 dark:text-gray-500">
                       ({filteredCustomers.length} عميل)
                     </span>
                   </div>
-                  
+
                   <button
                     onClick={() => setMobilePage((prev) => Math.min(totalMobilePages, prev + 1))}
                     disabled={mobilePage === totalMobilePages}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-gray-900"
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-700 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-gray-900 dark:text-gray-100 dark:text-gray-100"
                   >
                     التالي
                     <ChevronLeft size={16} />
@@ -1877,7 +1871,7 @@ export default function CustomersPage() {
 
         {/* Results Count */}
         {!loading && filteredCustomers.length > 0 && (
-          <div className="text-xs sm:text-sm text-gray-600 text-center">
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 text-center">
             عرض {filteredCustomers.length} من {sortedCustomers.length} عميل
           </div>
         )}
@@ -1915,42 +1909,42 @@ export default function CustomersPage() {
           }}
         >
           <div
-            className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
+            className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">إعادة جدولة</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">إعادة جدولة</h3>
               <button
                 onClick={() => {
                   setRescheduleModal({ isOpen: false, item: null });
                   setRescheduleDate('');
                   setRescheduleNote('');
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <X size={24} />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   تاريخ السداد الجديد <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
                   value={rescheduleDate}
                   onChange={(e) => setRescheduleDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">ملاحظات</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ملاحظات</label>
                 <textarea
                   value={rescheduleNote}
                   onChange={(e) => setRescheduleNote(e.target.value)}
                   placeholder="أضف ملاحظات..."
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
                 />
               </div>
             </div>
@@ -1961,7 +1955,7 @@ export default function CustomersPage() {
                   setRescheduleDate('');
                   setRescheduleNote('');
                 }}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
+                className="flex-1 px-4 py-2 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 font-medium"
               >
                 إلغاء
               </button>
@@ -2000,17 +1994,17 @@ export default function CustomersPage() {
           }}
         >
           <div
-            className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">نسخ تفاعل</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">نسخ تفاعل</h3>
               <button
                 onClick={() => {
                   setCopyModal({ isOpen: false, item: null });
                   setCopyForm({ customerID: '', date: '', note: '', channel: 'Phone' });
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <X size={24} />
               </button>
@@ -2024,7 +2018,7 @@ export default function CustomersPage() {
                 required
               />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">طريقة التواصل</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">طريقة التواصل</label>
                 <div className="grid grid-cols-4 gap-2">
                   {[
                     { value: 'Phone', label: 'اتصال', icon: Phone },
@@ -2038,11 +2032,10 @@ export default function CustomersPage() {
                         key={ch.value}
                         type="button"
                         onClick={() => setCopyForm({ ...copyForm, channel: ch.value })}
-                        className={`flex flex-col items-center gap-2 px-3 py-3 border-2 rounded-lg transition-colors ${
-                          copyForm.channel === ch.value
-                            ? 'border-gray-900 bg-gray-50 text-gray-900'
-                            : 'border-gray-200 hover:border-gray-300 text-gray-600'
-                        }`}
+                        className={`flex flex-col items-center gap-2 px-3 py-3 border-2 rounded-lg transition-colors ${copyForm.channel === ch.value
+                          ? 'border-gray-900 bg-gray-50 dark:bg-slate-800/50 text-gray-900 dark:text-gray-100'
+                          : 'border-gray-200 dark:border-slate-700 hover:border-gray-300 text-gray-600 dark:text-gray-400'
+                          }`}
                       >
                         <Icon size={20} />
                         <span className="text-xs font-medium">{ch.label}</span>
@@ -2052,24 +2045,24 @@ export default function CustomersPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   تاريخ الموعد <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
                   value={copyForm.date}
                   onChange={(e) => setCopyForm({ ...copyForm, date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">ملاحظات</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ملاحظات</label>
                 <textarea
                   value={copyForm.note}
                   onChange={(e) => setCopyForm({ ...copyForm, note: e.target.value })}
                   placeholder="أضف ملاحظات..."
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
                 />
               </div>
             </div>
@@ -2079,7 +2072,7 @@ export default function CustomersPage() {
                   setCopyModal({ isOpen: false, item: null });
                   setCopyForm({ customerID: '', date: '', note: '', channel: 'Phone' });
                 }}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
+                className="flex-1 px-4 py-2 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 font-medium"
               >
                 إلغاء
               </button>

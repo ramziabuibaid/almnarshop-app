@@ -55,18 +55,18 @@ export default function PromissoryNotePrintPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="animate-spin text-gray-500" size={32} />
+                <Loader2 className="animate-spin text-gray-500 dark:text-gray-400" size={32} />
             </div>
         );
     }
 
     if (error || !note) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen text-red-600 gap-4">
+            <div className="flex flex-col items-center justify-center min-h-screen text-red-600 dark:text-red-400 gap-4">
                 <p>حدث خطأ أثناء تحميل الكمبيالة</p>
                 <button
                     onClick={() => router.back()}
-                    className="px-4 py-2 bg-gray-100 rounded-lg text-gray-700 hover:bg-gray-200"
+                    className="px-4 py-2 bg-gray-100 dark:bg-slate-700/50 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600"
                 >
                     العودة
                 </button>
@@ -75,13 +75,13 @@ export default function PromissoryNotePrintPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-100 p-8 print:p-0 print:bg-white font-cairo" dir="rtl">
+        <div className="min-h-screen bg-gray-100 dark:bg-slate-700/50 p-8 print:p-0 print:bg-white font-cairo" dir="rtl">
             {/* Header / Controls - Hidden in Print and Embed */}
             {!isEmbed && (
                 <div className="max-w-[210mm] mx-auto mb-6 flex justify-between items-center print:hidden">
                     <button
                         onClick={() => router.back()}
-                        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                        className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 transition-colors"
                     >
                         <ArrowRight size={20} />
                         <span>العودة</span>
@@ -97,11 +97,11 @@ export default function PromissoryNotePrintPage() {
             )}
 
             {/* A4 Page Container */}
-            <div className="max-w-[210mm] min-h-[297mm] mx-auto bg-white shadow-lg print:shadow-none p-[10mm] flex flex-col gap-6 text-black">
+            <div className="max-w-[210mm] min-h-[297mm] mx-auto bg-white dark:bg-slate-800 shadow-lg print:shadow-none p-[10mm] flex flex-col gap-6 text-black">
 
                 {/* PART 1: Promissory Note (سند لأمر) */}
                 <div className="border-2 border-black p-5 rounded-xl relative">
-                    <div className="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 bg-white px-4">
+                    <div className="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 px-4">
                         <h1 className="text-xl font-bold">سند لأمر</h1>
                     </div>
 
@@ -201,7 +201,7 @@ export default function PromissoryNotePrintPage() {
                 </div>
 
                 {/* Separator */}
-                <div className="border-t-2 border-dashed border-gray-300 print:border-gray-400"></div>
+                <div className="border-t-2 border-dashed border-gray-300 dark:border-slate-600 print:border-gray-400"></div>
 
                 {/* PART 2: Installment Agreement (اتفاقية تقسيط) */}
                 <div className="flex-1">
@@ -222,7 +222,7 @@ export default function PromissoryNotePrintPage() {
                                 <div>
                                     <table className="w-full border-collapse border border-black text-xs">
                                         <thead>
-                                            <tr className="bg-gray-100 print:bg-gray-200">
+                                            <tr className="bg-gray-100 dark:bg-slate-700/50 print:bg-gray-200">
                                                 <th className="border border-black p-1 w-8">#</th>
                                                 <th className="border border-black p-1">التاريخ</th>
                                                 <th className="border border-black p-1">قيمة القسط</th>
@@ -247,7 +247,7 @@ export default function PromissoryNotePrintPage() {
                                     {note.installments?.length > 6 && (
                                         <table className="w-full border-collapse border border-black text-xs">
                                             <thead>
-                                                <tr className="bg-gray-100 print:bg-gray-200">
+                                                <tr className="bg-gray-100 dark:bg-slate-700/50 print:bg-gray-200">
                                                     <th className="border border-black p-1 w-8">#</th>
                                                     <th className="border border-black p-1">التاريخ</th>
                                                     <th className="border border-black p-1">قيمة القسط</th>
@@ -270,7 +270,7 @@ export default function PromissoryNotePrintPage() {
                             </div>
 
                             {/* Total Row - Full Width below columns */}
-                            <div className="border border-black p-2 mt-3 bg-gray-50 flex justify-between items-center font-bold text-sm">
+                            <div className="border border-black p-2 mt-3 bg-gray-50 dark:bg-slate-800/50 flex justify-between items-center font-bold text-sm">
                                 <span>الإجمالي الكلي:</span>
                                 <span>₪{note.total_amount.toLocaleString()}</span>
                             </div>

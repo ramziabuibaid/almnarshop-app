@@ -519,9 +519,9 @@ export default function TasksPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <Lock size={48} className="text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg mb-2 font-cairo">ليس لديك صلاحية لعرض المهام اليومية</p>
-            <p className="text-gray-500 text-sm font-cairo">يرجى التواصل مع المشرف للحصول على الصلاحية</p>
+            <Lock size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 text-lg mb-2 font-cairo">ليس لديك صلاحية لعرض المهام اليومية</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm font-cairo">يرجى التواصل مع المشرف للحصول على الصلاحية</p>
           </div>
         </div>
       </AdminLayout>
@@ -533,8 +533,8 @@ export default function TasksPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
-            <Loader2 size={48} className="animate-spin text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 font-cairo">جاري التحميل...</p>
+            <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 font-cairo">جاري التحميل...</p>
           </div>
         </div>
       </AdminLayout>
@@ -547,10 +547,10 @@ export default function TasksPage() {
         <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
           <div className="text-center">
             <AlertCircle size={48} className="text-red-400 mx-auto mb-4" />
-            <p className="text-red-600 text-lg mb-4 font-cairo">{error}</p>
+            <p className="text-red-600 dark:text-red-400 text-lg mb-4 font-cairo">{error}</p>
             <button
               onClick={loadTasks}
-              className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-cairo"
+              className="px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-cairo"
             >
               إعادة المحاولة
             </button>
@@ -585,12 +585,12 @@ export default function TasksPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">المهام والمتابعات</h1>
-            <p className="text-gray-600 mt-1">إدارة متابعة الذمم والتحصيل من العملاء</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">المهام والمتابعات</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">إدارة متابعة الذمم والتحصيل من العملاء</p>
           </div>
           <button
             onClick={loadTasks}
-            className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium flex items-center gap-2"
+            className="px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium flex items-center gap-2"
           >
             <Clock size={20} />
             تحديث
@@ -600,11 +600,11 @@ export default function TasksPage() {
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Broken Promises */}
-          <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6 shadow-sm">
+          <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-300 rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-red-600 mb-1">وعود مكسورة</p>
-                <p className="text-3xl font-bold text-red-700">{statistics.brokenPromises}</p>
+                <p className="text-sm font-medium text-red-600 dark:text-red-400 mb-1">وعود مكسورة</p>
+                <p className="text-3xl font-bold text-red-700 dark:text-red-400">{statistics.brokenPromises}</p>
               </div>
               <AlertCircle size={40} className="text-red-400" />
             </div>
@@ -622,15 +622,15 @@ export default function TasksPage() {
           </div>
 
           {/* Total Tasks */}
-          <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-6 shadow-sm">
+          <div className="bg-gray-50 dark:bg-slate-800/50 border-2 border-gray-300 dark:border-slate-600 rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">إجمالي المهام</p>
-                <p className="text-3xl font-bold text-gray-700">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">إجمالي المهام</p>
+                <p className="text-3xl font-bold text-gray-700 dark:text-gray-300">
                   {tasks.overdue.length + tasks.today.length + tasks.upcoming.length}
                 </p>
               </div>
-              <TrendingDown size={40} className="text-gray-400" />
+              <TrendingDown size={40} className="text-gray-400 dark:text-gray-500" />
             </div>
           </div>
         </div>
@@ -640,18 +640,18 @@ export default function TasksPage() {
           {/* Column 1: Overdue */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
-              <AlertCircle size={24} className="text-red-600" />
-              <h2 className="text-xl font-bold text-gray-900">وعود فائتة/متأخرة</h2>
-              <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
+              <AlertCircle size={24} className="text-red-600 dark:text-red-400" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">وعود فائتة/متأخرة</h2>
+              <span className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-sm font-semibold">
                 {tasks.overdue.length}
               </span>
             </div>
 
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
               {tasks.overdue.length === 0 ? (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-                  <CheckCircle2 size={48} className="text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500">لا توجد وعود فائتة</p>
+                <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-lg p-8 text-center">
+                  <CheckCircle2 size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                  <p className="text-gray-500 dark:text-gray-400">لا توجد وعود فائتة</p>
                 </div>
               ) : (
                 tasks.overdue.map((task) => {
@@ -659,13 +659,13 @@ export default function TasksPage() {
                   return (
                     <div
                       key={task.InteractionID}
-                      className="bg-white rounded-lg border-2 border-red-400 p-4 shadow-sm hover:shadow-md transition-shadow"
+                      className="bg-white dark:bg-slate-800 rounded-lg border-2 border-red-400 p-4 shadow-sm hover:shadow-md transition-shadow"
                     >
                       <a
                         href={`/admin/customers/${task.CustomerID}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
+                        className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
                       >
                         {task.CustomerName}
                       </a>
@@ -675,16 +675,16 @@ export default function TasksPage() {
                         </div>
                       )}
                       {task.PromiseAmount && (
-                        <p className="text-sm font-semibold text-red-600 mb-1">
+                        <p className="text-sm font-semibold text-red-600 dark:text-red-400 mb-1">
                           المبلغ: {formatCurrency(task.PromiseAmount)}
                         </p>
                       )}
                       <p className="text-xs text-red-500 mb-2">تاريخ فائت: {formatDate(task.NextDate)}</p>
                       {task.Notes && (
-                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.Notes}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{task.Notes}</p>
                       )}
                       {(task.CreatedByUsername || task.UpdatedByUsername) && (
-                        <p className="text-xs text-gray-500 mb-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                           {task.CreatedByUsername && <span>أنشأه: {task.CreatedByUsername}</span>}
                           {task.CreatedByUsername && task.UpdatedByUsername && ' · '}
                           {task.UpdatedByUsername && <span>آخر تحديث: {task.UpdatedByUsername}</span>}
@@ -694,7 +694,7 @@ export default function TasksPage() {
                         <button
                           onClick={() => handleResolved(task)}
                           disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                          className="flex-1 px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
                         >
                           {updatingIds.has(task.InteractionID) ? (
                             <Loader2 size={14} className="animate-spin" />
@@ -706,7 +706,7 @@ export default function TasksPage() {
                         <button
                           onClick={() => handleNoAnswer(task)}
                           disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                          className="flex-1 px-3 py-2 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
                         >
                           {updatingIds.has(task.InteractionID) ? (
                             <Loader2 size={14} className="animate-spin" />
@@ -743,7 +743,7 @@ export default function TasksPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <Calendar size={24} className="text-blue-600" />
-              <h2 className="text-xl font-bold text-gray-900">وعود اليوم</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">وعود اليوم</h2>
               <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
                 {tasks.today.length}
               </span>
@@ -751,9 +751,9 @@ export default function TasksPage() {
 
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
               {tasks.today.length === 0 ? (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-                  <CheckCircle2 size={48} className="text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500">لا توجد مهام اليوم</p>
+                <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-lg p-8 text-center">
+                  <CheckCircle2 size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                  <p className="text-gray-500 dark:text-gray-400">لا توجد مهام اليوم</p>
                 </div>
               ) : (
                 tasks.today.map((task) => {
@@ -761,13 +761,13 @@ export default function TasksPage() {
                   return (
                     <div
                       key={task.InteractionID}
-                      className="bg-white rounded-lg border-2 border-blue-200 p-4 shadow-sm hover:shadow-md transition-shadow"
+                      className="bg-white dark:bg-slate-800 rounded-lg border-2 border-blue-200 p-4 shadow-sm hover:shadow-md transition-shadow"
                     >
                       <a
                         href={`/admin/customers/${task.CustomerID}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
+                        className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
                       >
                         {task.CustomerName}
                       </a>
@@ -783,10 +783,10 @@ export default function TasksPage() {
                       )}
                       <p className="text-xs text-blue-500 mb-2">تاريخ: {formatDate(task.NextDate)}</p>
                       {task.Notes && (
-                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.Notes}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{task.Notes}</p>
                       )}
                       {(task.CreatedByUsername || task.UpdatedByUsername) && (
-                        <p className="text-xs text-gray-500 mb-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                           {task.CreatedByUsername && <span>أنشأه: {task.CreatedByUsername}</span>}
                           {task.CreatedByUsername && task.UpdatedByUsername && ' · '}
                           {task.UpdatedByUsername && <span>آخر تحديث: {task.UpdatedByUsername}</span>}
@@ -796,7 +796,7 @@ export default function TasksPage() {
                         <button
                           onClick={() => handleResolved(task)}
                           disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                          className="flex-1 px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
                         >
                           {updatingIds.has(task.InteractionID) ? (
                             <Loader2 size={14} className="animate-spin" />
@@ -808,7 +808,7 @@ export default function TasksPage() {
                         <button
                           onClick={() => handleNoAnswer(task)}
                           disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                          className="flex-1 px-3 py-2 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
                         >
                           {updatingIds.has(task.InteractionID) ? (
                             <Loader2 size={14} className="animate-spin" />
@@ -844,18 +844,18 @@ export default function TasksPage() {
           {/* Column 3: Upcoming */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
-              <Clock size={24} className="text-green-600" />
-              <h2 className="text-xl font-bold text-gray-900">وعود قادمة</h2>
-              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
+              <Clock size={24} className="text-green-600 dark:text-green-400" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">وعود قادمة</h2>
+              <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-sm font-semibold">
                 {tasks.upcoming.length}
               </span>
             </div>
 
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
               {tasks.upcoming.length === 0 ? (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-                  <CheckCircle2 size={48} className="text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500">لا توجد وعود قادمة</p>
+                <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-lg p-8 text-center">
+                  <CheckCircle2 size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                  <p className="text-gray-500 dark:text-gray-400">لا توجد وعود قادمة</p>
                 </div>
               ) : (
                 tasks.upcoming.map((task) => {
@@ -863,13 +863,13 @@ export default function TasksPage() {
                   return (
                     <div
                       key={task.InteractionID}
-                      className="bg-white rounded-lg border-2 border-green-200 p-4 shadow-sm hover:shadow-md transition-shadow"
+                      className="bg-white dark:bg-slate-800 rounded-lg border-2 border-green-200 p-4 shadow-sm hover:shadow-md transition-shadow"
                     >
                       <a
                         href={`/admin/customers/${task.CustomerID}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
+                        className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
                       >
                         {task.CustomerName}
                       </a>
@@ -879,16 +879,16 @@ export default function TasksPage() {
                         </div>
                       )}
                       {task.PromiseAmount && (
-                        <p className="text-sm font-semibold text-green-600 mb-1">
+                        <p className="text-sm font-semibold text-green-600 dark:text-green-400 mb-1">
                           المبلغ: {formatCurrency(task.PromiseAmount)}
                         </p>
                       )}
                       <p className="text-xs text-green-500 mb-2">تاريخ: {formatDate(task.NextDate)}</p>
                       {task.Notes && (
-                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.Notes}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{task.Notes}</p>
                       )}
                       {(task.CreatedByUsername || task.UpdatedByUsername) && (
-                        <p className="text-xs text-gray-500 mb-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                           {task.CreatedByUsername && <span>أنشأه: {task.CreatedByUsername}</span>}
                           {task.CreatedByUsername && task.UpdatedByUsername && ' · '}
                           {task.UpdatedByUsername && <span>آخر تحديث: {task.UpdatedByUsername}</span>}
@@ -898,7 +898,7 @@ export default function TasksPage() {
                         <button
                           onClick={() => handleResolved(task)}
                           disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                          className="flex-1 px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
                         >
                           {updatingIds.has(task.InteractionID) ? (
                             <Loader2 size={14} className="animate-spin" />
@@ -910,7 +910,7 @@ export default function TasksPage() {
                         <button
                           onClick={() => handleNoAnswer(task)}
                           disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
+                          className="flex-1 px-3 py-2 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
                         >
                           {updatingIds.has(task.InteractionID) ? (
                             <Loader2 size={14} className="animate-spin" />
@@ -961,19 +961,19 @@ export default function TasksPage() {
           style={{ backdropFilter: 'blur(2px)' }}
         >
           <div
-            className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
+            className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
             style={{ fontFamily: 'Cairo, Arial, sans-serif' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">إعادة جدولة</h3>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">إعادة جدولة</h3>
               <button
                 onClick={() => {
                   setRescheduleModal({ isOpen: false, task: null });
                   setRescheduleDate('');
                   setRescheduleNote('');
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
                 <X size={24} />
               </button>
@@ -981,20 +981,20 @@ export default function TasksPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   تاريخ السداد الجديد <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
                   value={rescheduleDate}
                   onChange={(e) => setRescheduleDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   ملاحظات
                 </label>
                 <textarea
@@ -1002,7 +1002,7 @@ export default function TasksPage() {
                   onChange={(e) => setRescheduleNote(e.target.value)}
                   placeholder="أضف ملاحظات حول إعادة الجدولة..."
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-400"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
                 />
               </div>
             </div>
@@ -1014,7 +1014,7 @@ export default function TasksPage() {
                   setRescheduleDate('');
                   setRescheduleNote('');
                 }}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                className="flex-1 px-4 py-2 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors font-medium"
               >
                 إلغاء
               </button>
@@ -1060,12 +1060,12 @@ export default function TasksPage() {
           style={{ backdropFilter: 'blur(2px)' }}
         >
           <div
-            className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto"
             style={{ fontFamily: 'Cairo, Arial, sans-serif' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">نسخ تفاعل</h3>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">نسخ تفاعل</h3>
               <button
                 onClick={() => {
                   setCopyModal({ isOpen: false, task: null });
@@ -1076,7 +1076,7 @@ export default function TasksPage() {
                     channel: 'Phone',
                   });
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
                 <X size={24} />
               </button>
@@ -1094,7 +1094,7 @@ export default function TasksPage() {
 
               {/* Channel Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   طريقة التواصل <span className="text-red-500">*</span>
                 </label>
                 <div className="grid grid-cols-4 gap-2">
@@ -1111,8 +1111,8 @@ export default function TasksPage() {
                         type="button"
                         onClick={() => setCopyForm({ ...copyForm, channel: channel.value })}
                         className={`flex flex-col items-center gap-2 px-3 py-3 border-2 rounded-lg transition-colors ${copyForm.channel === channel.value
-                          ? 'border-gray-900 bg-gray-50 text-gray-900'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                          ? 'border-gray-900 bg-gray-50 dark:bg-slate-800/50 text-gray-900 dark:text-gray-100'
+                          : 'border-gray-200 dark:border-slate-700 hover:border-gray-300 text-gray-600 dark:text-gray-400'
                           }`}
                       >
                         <Icon size={20} />
@@ -1125,21 +1125,21 @@ export default function TasksPage() {
 
               {/* Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   تاريخ الموعد <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
                   value={copyForm.date}
                   onChange={(e) => setCopyForm({ ...copyForm, date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                   required
                 />
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   ملاحظات
                 </label>
                 <textarea
@@ -1147,7 +1147,7 @@ export default function TasksPage() {
                   onChange={(e) => setCopyForm({ ...copyForm, note: e.target.value })}
                   placeholder="أضف ملاحظات..."
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-400"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
                 />
               </div>
             </div>
@@ -1163,7 +1163,7 @@ export default function TasksPage() {
                     channel: 'Phone',
                   });
                 }}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                className="flex-1 px-4 py-2 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors font-medium"
               >
                 إلغاء
               </button>

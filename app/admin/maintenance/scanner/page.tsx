@@ -47,7 +47,7 @@ const TRANSITIONS: TransitionAction[] = [
         icon: <Store className="w-5 h-5" />,
         allowedCurrentStatuses: ['موجودة في الشركة'],
         getNewStatus: () => 'جاهزة للتسليم للزبون من المحل',
-        colorClass: 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200'
+        colorClass: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-300 hover:bg-green-200'
     },
     {
         id: 'receive_company_warehouse',
@@ -583,23 +583,23 @@ export default function MaintenanceScannerPage() {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => router.push('/admin/maintenance')}
-                        className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors"
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-600 dark:text-gray-400 transition-colors"
                     >
                         <ChevronRight size={24} />
                     </button>
                     <div>
-                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                             <ScanLine className="w-8 h-8 text-blue-600" />
                             الماسح السريع للصيانة
                         </h1>
-                        <p className="text-gray-600 mt-1">
+                        <p className="text-gray-600 dark:text-gray-400 mt-1">
                             اختر الإجراء المطلوب ثم ابدأ بمسح الباركود لتحديث الحالات تلقائياً
                         </p>
                     </div>
                 </div>
 
                 {/* Inquiry Section */}
-                <div className="bg-white border-2 border-indigo-100 rounded-2xl p-6 shadow-sm mb-8 relative overflow-hidden">
+                <div className="bg-white dark:bg-slate-800 border-2 border-indigo-100 rounded-2xl p-6 shadow-sm mb-8 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-full h-1 bg-indigo-500"></div>
                     <div className="flex flex-col md:flex-row items-center gap-6">
                         <div className="flex-1 w-full">
@@ -629,7 +629,7 @@ export default function MaintenanceScannerPage() {
                             </div>
 
                             {inquiryError && (
-                                <p className="text-red-600 text-sm font-bold mt-2 flex items-center gap-1">
+                                <p className="text-red-600 dark:text-red-400 text-sm font-bold mt-2 flex items-center gap-1">
                                     <XCircle className="w-4 h-4" /> {inquiryError}
                                 </p>
                             )}
@@ -644,10 +644,10 @@ export default function MaintenanceScannerPage() {
                                     </span>
                                     <CheckCircle2 className="w-6 h-6 text-indigo-600" />
                                 </div>
-                                <h3 className="font-bold text-gray-900 text-lg mb-1">{inquiryResult.ItemName}</h3>
-                                <p className="text-gray-600 text-sm mb-3 font-medium">العميل: {inquiryResult.CustomerName}</p>
-                                <div className="bg-white px-4 py-3 rounded-lg border border-indigo-100">
-                                    <span className="text-gray-500 text-xs block mb-1">الحالة الحالية:</span>
+                                <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg mb-1">{inquiryResult.ItemName}</h3>
+                                <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 font-medium">العميل: {inquiryResult.CustomerName}</p>
+                                <div className="bg-white dark:bg-slate-800 px-4 py-3 rounded-lg border border-indigo-100">
+                                    <span className="text-gray-500 dark:text-gray-400 text-xs block mb-1">الحالة الحالية:</span>
                                     <span className="font-bold text-lg text-indigo-900 block">{inquiryResult.Status}</span>
                                 </div>
                             </div>
@@ -658,7 +658,7 @@ export default function MaintenanceScannerPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Actions Column */}
                     <div className="lg:col-span-1 space-y-4">
-                        <h2 className="font-bold text-lg text-gray-800 mb-2 border-b pb-2">1. اختر نوع الإجراء:</h2>
+                        <h2 className="font-bold text-lg text-gray-800 dark:text-gray-200 mb-2 border-b pb-2">1. اختر نوع الإجراء:</h2>
                         <div className="space-y-3">
                             {TRANSITIONS.map((transition) => (
                                 <button
@@ -669,7 +669,7 @@ export default function MaintenanceScannerPage() {
                                     }}
                                     className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${activeTransitionId === transition.id
                                         ? `ring-4 ring-opacity-50 ${transition.colorClass.replace('bg-', 'ring-').split(' ')[0]} ${transition.colorClass}`
-                                        : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-gray-50'
+                                        : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:border-blue-300 hover:bg-gray-50 dark:hover:bg-slate-700/50'
                                         }`}
                                 >
                                     <div className="flex items-center gap-3 font-bold">
@@ -687,9 +687,9 @@ export default function MaintenanceScannerPage() {
                     {/* Scanner Area & Logs Column */}
                     <div className="lg:col-span-2 space-y-6">
                         {!activeTransition ? (
-                            <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl h-full min-h-[400px] flex flex-col items-center justify-center p-8 text-center text-gray-500">
-                                <ArrowRightLeft className="w-16 h-16 text-gray-300 mb-4" />
-                                <h3 className="text-xl font-bold text-gray-700 mb-2">يرجى اختيار إجراء للبدء</h3>
+                            <div className="bg-gray-50 dark:bg-slate-800/50 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-2xl h-full min-h-[400px] flex flex-col items-center justify-center p-8 text-center text-gray-500 dark:text-gray-400">
+                                <ArrowRightLeft className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
+                                <h3 className="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">يرجى اختيار إجراء للبدء</h3>
                                 <p>اختر أحد الأزرار الجانبية لتحديد مسار نقل القطع قبل المسح</p>
                             </div>
                         ) : (
@@ -702,10 +702,10 @@ export default function MaintenanceScannerPage() {
 
                                     <h2 className="text-2xl font-bold text-blue-900 mb-2">النظام جاهز للمسح</h2>
                                     <p className="text-blue-700 font-medium mb-4">
-                                        الإجراء الحالي: <span className="font-bold bg-white px-2 py-1 rounded inline-block mx-1 shadow-sm">{activeTransition.label}</span>
+                                        الإجراء الحالي: <span className="font-bold bg-white dark:bg-slate-800 px-2 py-1 rounded inline-block mx-1 shadow-sm">{activeTransition.label}</span>
                                     </p>
 
-                                    <p className="text-sm border-2 border-blue-200 border-dashed rounded-lg p-3 inline-block bg-white text-gray-500">
+                                    <p className="text-sm border-2 border-blue-200 border-dashed rounded-lg p-3 inline-block bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400">
                                         ضع مؤشر الماوس هنا واستخدم الماسح
                                         <br />
                                         أو اكتب رقم الصيانة واضغط مسافة/Enter
@@ -742,8 +742,8 @@ export default function MaintenanceScannerPage() {
                                 </div>
 
                                 {/* Scan Logs */}
-                                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm min-h-[300px]">
-                                    <h3 className="font-bold text-gray-800 mb-4 flex items-center justify-between border-b pb-2">
+                                <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm min-h-[300px]">
+                                    <h3 className="font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center justify-between border-b pb-2">
                                         <span>سجل المسح الحديث ({logs.length})</span>
                                         <div className="flex items-center gap-3">
                                             {logs.length > 0 && activeTransitionId && (
@@ -765,7 +765,7 @@ export default function MaintenanceScannerPage() {
                                     </h3>
 
                                     {logs.length === 0 ? (
-                                        <div className="text-center text-gray-400 py-10">
+                                        <div className="text-center text-gray-400 dark:text-gray-500 py-10">
                                             لا يوجد أي سجلات حالياً. امسح باركود ليظهر هنا.
                                         </div>
                                     ) : (
@@ -773,7 +773,7 @@ export default function MaintenanceScannerPage() {
                                             {logs.map((log) => (
                                                 <div
                                                     key={log.id}
-                                                    className={`flex items-start gap-3 p-3 rounded-xl border ${log.success ? 'bg-green-50/50 border-green-200' : 'bg-red-50/50 border-red-200'
+                                                    className={`flex items-start gap-3 p-3 rounded-xl border ${log.success ? 'bg-green-50 dark:bg-green-900/20/50 border-green-200' : 'bg-red-50 dark:bg-red-900/20/50 border-red-200'
                                                         }`}
                                                 >
                                                     <div className="mt-1 flex-shrink-0">
@@ -785,19 +785,19 @@ export default function MaintenanceScannerPage() {
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center justify-between mb-1">
-                                                            <span className="font-bold text-gray-900 tracking-wider">#{log.maintNo}</span>
-                                                            <span className="text-xs text-gray-500">
+                                                            <span className="font-bold text-gray-900 dark:text-gray-100 tracking-wider">#{log.maintNo}</span>
+                                                            <span className="text-xs text-gray-500 dark:text-gray-400">
                                                                 {log.timestamp.toLocaleTimeString('ar-SA')}
                                                             </span>
                                                         </div>
 
                                                         {log.itemName && (
-                                                            <div className="text-sm text-gray-700 font-medium mb-1">
+                                                            <div className="text-sm text-gray-700 dark:text-gray-300 font-medium mb-1">
                                                                 {log.itemName} {log.customerName ? `(${log.customerName})` : ''}
                                                             </div>
                                                         )}
 
-                                                        <div className={`text-sm font-semibold ${log.success ? 'text-green-700' : 'text-red-700'}`}>
+                                                        <div className={`text-sm font-semibold ${log.success ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
                                                             {log.message}
                                                         </div>
                                                     </div>
@@ -819,7 +819,7 @@ export default function MaintenanceScannerPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-white text-lg font-bold mb-1">امسح الباركود</p>
-                                    <p className="text-gray-300 text-sm">وجه الكاميرا نحو الباركود</p>
+                                    <p className="text-gray-300 dark:text-gray-600 text-sm">وجه الكاميرا نحو الباركود</p>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {/* Switch Camera Button */}
@@ -920,7 +920,7 @@ export default function MaintenanceScannerPage() {
                     </div>
                 )}
                 {/* Handover Print Report Overlay */}
-                <div className="hidden print:block absolute top-0 left-0 w-full bg-white z-[99999] min-h-screen p-8 text-black" dir="rtl">
+                <div className="hidden print:block absolute top-0 left-0 w-full bg-white dark:bg-slate-800 z-[99999] min-h-screen p-8 text-black" dir="rtl">
                     {/* Styles specifically for the print table to avoid page breaks in bad spots */}
                     <style dangerouslySetInnerHTML={{
                         __html: `
@@ -938,11 +938,11 @@ export default function MaintenanceScannerPage() {
                     <div className="flex justify-between items-start border-b-2 border-black pb-4 mb-6">
                         <div>
                             <h1 className="text-2xl font-bold mb-1">محضر تسليم بضاعة</h1>
-                            <p className="text-gray-600 text-sm">شركة المنار للأجهزة الكهربائية - جنين، شارع الناصرة</p>
+                            <p className="text-gray-600 dark:text-gray-400 text-sm">شركة المنار للأجهزة الكهربائية - جنين، شارع الناصرة</p>
                         </div>
-                        <div className="text-left bg-gray-100 p-3 rounded-lg border border-gray-300">
+                        <div className="text-left bg-gray-100 dark:bg-slate-700/50 p-3 rounded-lg border border-gray-300 dark:border-slate-600">
                             <p className="font-bold text-lg mb-1">{activeTransition?.label || 'تقرير تسليم'}</p>
-                            <p className="text-sm text-gray-700" dir="ltr">{new Date().toLocaleDateString('en-US')} {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
+                            <p className="text-sm text-gray-700 dark:text-gray-300" dir="ltr">{new Date().toLocaleDateString('en-US')} {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
                         </div>
                     </div>
 
@@ -968,7 +968,7 @@ export default function MaintenanceScannerPage() {
                             ))}
                             {logs.filter(l => l.success).length === 0 && (
                                 <tr>
-                                    <td colSpan={5} className="text-center py-8 text-gray-500 italic">لا يوجد عناصر ناجحة في هذا المحضر.</td>
+                                    <td colSpan={5} className="text-center py-8 text-gray-500 dark:text-gray-400 italic">لا يوجد عناصر ناجحة في هذا المحضر.</td>
                                 </tr>
                             )}
                         </tbody>
@@ -982,7 +982,7 @@ export default function MaintenanceScannerPage() {
                         </div>
                         <div className="text-center">
                             <p className="font-bold mb-8">اسم وتوقيع المسلّم</p>
-                            <p className="border-t border-black pt-2 w-48 mx-auto font-bold text-gray-800">{admin?.username || 'مُدخل النظام'}</p>
+                            <p className="border-t border-black pt-2 w-48 mx-auto font-bold text-gray-800 dark:text-gray-200">{admin?.username || 'مُدخل النظام'}</p>
                         </div>
                     </div>
                 </div>

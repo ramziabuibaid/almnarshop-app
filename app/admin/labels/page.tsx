@@ -454,20 +454,20 @@ export default function LabelsPage() {
 
   return (
     <AdminLayout>
-      <div className="min-h-screen bg-gray-50 p-6 no-print" dir="rtl">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-800/50 p-6 no-print" dir="rtl">
         <div className="max-w-7xl mx-auto no-print">
           {/* Header */}
           <div className="mb-6 no-print">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">طباعة ملصقات الأسعار</h1>
-            <p className="text-gray-600">اختر المنتجات وحدد نوع الملصق للطباعة</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">طباعة ملصقات الأسعار</h1>
+            <p className="text-gray-600 dark:text-gray-400">اختر المنتجات وحدد نوع الملصق للطباعة</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column: Product Selection */}
-            <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-4 no-print">
+            <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 no-print">
               {/* مسح الباركود: ماسح خارجي أو كاميرا — يحدد الصنف تلقائياً ويبقى جاهزاً لمسح جديد */}
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <label className="block text-sm font-medium text-gray-700 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
+              <div className="mb-4 p-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
                 <BarcodeScannerInput
                   onProductFound={(product) => {
                     const productId = product.ProductID || product.id || '';
@@ -478,25 +478,25 @@ export default function LabelsPage() {
                   className="w-full"
                   disabled={loading}
                 />
-                <p className="text-xs text-gray-500 mt-1.5 font-cairo">الماسح الخارجي أو كاميرا الموبايل — كل مسح يحدد/يلغي الصنف ويجهز لمسح التالي</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 font-cairo">الماسح الخارجي أو كاميرا الموبايل — كل مسح يحدد/يلغي الصنف ويجهز لمسح التالي</p>
               </div>
               {/* بحث نصي عن المنتجات */}
               <div className="mb-4">
                 <div className="relative">
-                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
                   <input
                     type="text"
                     placeholder="ابحث عن منتج..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                    className="w-full pr-10 pl-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
                   />
                 </div>
               </div>
 
               {loading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="animate-spin text-gray-400" size={32} />
+                  <Loader2 className="animate-spin text-gray-400 dark:text-gray-500" size={32} />
                 </div>
               ) : (
                 <>
@@ -504,16 +504,16 @@ export default function LabelsPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={toggleAll}
-                        className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
+                        className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900"
                       >
                         {selectedProducts.size === filteredProducts.length ? (
-                          <CheckSquare size={18} className="text-gray-900" />
+                          <CheckSquare size={18} className="text-gray-900 dark:text-gray-100" />
                         ) : (
-                          <Square size={18} className="text-gray-400" />
+                          <Square size={18} className="text-gray-400 dark:text-gray-500" />
                         )}
                         <span>تحديد الكل</span>
                       </button>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
                         ({selectedProducts.size} منتج محدد)
                       </span>
                     </div>
@@ -522,16 +522,16 @@ export default function LabelsPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">تحديد</th>
-                          <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">الصورة</th>
-                          <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">الاسم</th>
-                          <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">الباركود</th>
+                        <tr className="border-b border-gray-200 dark:border-slate-700">
+                          <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300">تحديد</th>
+                          <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300">الصورة</th>
+                          <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300">الاسم</th>
+                          <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300">الباركود</th>
                           {labelType === 'C' && useQuantity && (
-                            <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700">الكمية للطباعة</th>
+                            <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300">الكمية للطباعة</th>
                           )}
                           <th 
-                            className="text-right py-2 px-3 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 select-none"
+                            className="text-right py-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 select-none"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSort('price');
@@ -541,15 +541,15 @@ export default function LabelsPage() {
                               <span>السعر</span>
                               {sortField === 'price' && (
                                 sortDirection === 'asc' ? (
-                                  <ArrowUp size={14} className="text-gray-900" />
+                                  <ArrowUp size={14} className="text-gray-900 dark:text-gray-100" />
                                 ) : (
-                                  <ArrowDown size={14} className="text-gray-900" />
+                                  <ArrowDown size={14} className="text-gray-900 dark:text-gray-100" />
                                 )
                               )}
                             </div>
                           </th>
                           <th 
-                            className="text-right py-2 px-3 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 select-none"
+                            className="text-right py-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 select-none"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSort('quantity');
@@ -559,9 +559,9 @@ export default function LabelsPage() {
                               <span>المخزون</span>
                               {sortField === 'quantity' && (
                                 sortDirection === 'asc' ? (
-                                  <ArrowUp size={14} className="text-gray-900" />
+                                  <ArrowUp size={14} className="text-gray-900 dark:text-gray-100" />
                                 ) : (
-                                  <ArrowDown size={14} className="text-gray-900" />
+                                  <ArrowDown size={14} className="text-gray-900 dark:text-gray-100" />
                                 )
                               )}
                             </div>
@@ -571,7 +571,7 @@ export default function LabelsPage() {
                       <tbody>
                         {filteredProducts.length === 0 ? (
                           <tr>
-                            <td colSpan={labelType === 'C' && useQuantity ? 7 : 6} className="text-center py-8 text-gray-500">
+                            <td colSpan={labelType === 'C' && useQuantity ? 7 : 6} className="text-center py-8 text-gray-500 dark:text-gray-400">
                               لا توجد منتجات
                             </td>
                           </tr>
@@ -612,7 +612,7 @@ export default function LabelsPage() {
                   </div>
                   {filteredProducts.length > 0 && (
                     <div className="flex items-center justify-between gap-4 mt-3 px-1">
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
                         عرض {labelsPageStart}–{labelsPageEnd} من {filteredProducts.length}
                       </span>
                       <div className="flex items-center gap-2">
@@ -620,19 +620,19 @@ export default function LabelsPage() {
                           type="button"
                           onClick={() => setLabelsPage((p) => Math.max(1, p - 1))}
                           disabled={labelsPage <= 1}
-                          className="p-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          className="p-2 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                           title="السابق"
                         >
                           <ChevronRight size={18} />
                         </button>
-                        <span className="text-sm text-gray-700 min-w-[5rem] text-center">
+                        <span className="text-sm text-gray-700 dark:text-gray-300 min-w-[5rem] text-center">
                           {labelsPage} / {totalLabelsPages}
                         </span>
                         <button
                           type="button"
                           onClick={() => setLabelsPage((p) => Math.min(totalLabelsPages, p + 1))}
                           disabled={labelsPage >= totalLabelsPages}
-                          className="p-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          className="p-2 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                           title="التالي"
                         >
                           <ChevronLeft size={18} />
@@ -647,8 +647,8 @@ export default function LabelsPage() {
             {/* Right Column: Preview & Settings */}
             <div className="lg:col-span-1 space-y-4 no-print">
               {/* Label Type Selector */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 no-print">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">نوع الملصق</h2>
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 no-print">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">نوع الملصق</h2>
                 <div className="space-y-3">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
@@ -657,11 +657,11 @@ export default function LabelsPage() {
                       value="A"
                       checked={labelType === 'A'}
                       onChange={(e) => setLabelType(e.target.value as LabelType)}
-                      className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                      className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100"
                     />
                     <div>
-                      <div className="font-medium text-gray-900">نوع أ - كبير (ثلاجة)</div>
-                      <div className="text-xs text-gray-500">A6 - ملصق واحد لكل صفحة</div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">نوع أ - كبير (ثلاجة)</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">A6 - ملصق واحد لكل صفحة</div>
                     </div>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
@@ -671,11 +671,11 @@ export default function LabelsPage() {
                       value="B"
                       checked={labelType === 'B'}
                       onChange={(e) => setLabelType(e.target.value as LabelType)}
-                      className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                      className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100"
                     />
                     <div>
-                      <div className="font-medium text-gray-900">نوع ب - متوسط</div>
-                      <div className="text-xs text-gray-500">A6 - 4 ملصقات (2×2)</div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">نوع ب - متوسط</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">A6 - 4 ملصقات (2×2)</div>
                     </div>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
@@ -685,11 +685,11 @@ export default function LabelsPage() {
                       value="C"
                       checked={labelType === 'C'}
                       onChange={(e) => setLabelType(e.target.value as LabelType)}
-                      className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                      className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100"
                     />
                     <div>
-                      <div className="font-medium text-gray-900">نوع ج - صغير (رف)</div>
-                      <div className="text-xs text-gray-500">A4 - 70mm × 29.7mm</div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">نوع ج - صغير (رف)</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">A4 - 70mm × 29.7mm</div>
                     </div>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
@@ -699,11 +699,11 @@ export default function LabelsPage() {
                       value="D"
                       checked={labelType === 'D'}
                       onChange={(e) => setLabelType(e.target.value as LabelType)}
-                      className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                      className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100"
                     />
                     <div>
-                      <div className="font-medium text-gray-900">نوع د - كتالوج</div>
-                      <div className="text-xs text-gray-500">A4 - صفحة منتج واحدة مع الصورة</div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">نوع د - كتالوج</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">A4 - صفحة منتج واحدة مع الصورة</div>
                     </div>
                   </label>
                 </div>
@@ -711,19 +711,19 @@ export default function LabelsPage() {
 
               {/* خيارات الكتالوج — لنوع د فقط: إظهار المنتجات ذات الكمية صفر في المحل / المخزن */}
               {labelType === 'D' && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 no-print">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">خيارات الكتالوج</h2>
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 no-print">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">خيارات الكتالوج</h2>
                   <div className="space-y-3">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={showZeroShopCatalog}
                         onChange={(e) => setShowZeroShopCatalog(e.target.checked)}
-                        className="w-4 h-4 text-gray-900 focus:ring-gray-900 rounded"
+                        className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100 rounded"
                       />
                       <div>
-                        <div className="font-medium text-gray-900">إظهار المنتجات التي كميتها صفر في المحل</div>
-                        <div className="text-xs text-gray-500">إدراج أصناف بدون كمية في المحل في الكتالوج</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">إظهار المنتجات التي كميتها صفر في المحل</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">إدراج أصناف بدون كمية في المحل في الكتالوج</div>
                       </div>
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
@@ -731,38 +731,38 @@ export default function LabelsPage() {
                         type="checkbox"
                         checked={showZeroWarehouseCatalog}
                         onChange={(e) => setShowZeroWarehouseCatalog(e.target.checked)}
-                        className="w-4 h-4 text-gray-900 focus:ring-gray-900 rounded"
+                        className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100 rounded"
                       />
                       <div>
-                        <div className="font-medium text-gray-900">إظهار المنتجات التي كميتها صفر في المخزن</div>
-                        <div className="text-xs text-gray-500">إدراج أصناف بدون كمية في المخزن في الكتالوج</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">إظهار المنتجات التي كميتها صفر في المخزن</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">إدراج أصناف بدون كمية في المخزن في الكتالوج</div>
                       </div>
                     </label>
-                    <div className="pt-2 border-t border-gray-200">
+                    <div className="pt-2 border-t border-gray-200 dark:border-slate-700">
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={showPriceInCatalog}
                           onChange={(e) => setShowPriceInCatalog(e.target.checked)}
-                          className="w-4 h-4 text-gray-900 focus:ring-gray-900 rounded"
+                          className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100 rounded"
                         />
                         <div>
-                          <div className="font-medium text-gray-900">إظهار السعر</div>
-                          <div className="text-xs text-gray-500">إظهار سعر المنتج في الكتالوج</div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">إظهار السعر</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">إظهار سعر المنتج في الكتالوج</div>
                         </div>
                       </label>
                     </div>
-                    <div className="pt-2 border-t border-gray-200">
+                    <div className="pt-2 border-t border-gray-200 dark:border-slate-700">
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={hideCatalogHeader}
                           onChange={(e) => setHideCatalogHeader(e.target.checked)}
-                          className="w-4 h-4 text-gray-900 focus:ring-gray-900 rounded"
+                          className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100 rounded"
                         />
                         <div>
-                          <div className="font-medium text-gray-900">الطباعة بلا الترويسة الخاصة بالمعرض</div>
-                          <div className="text-xs text-gray-500">طباعة الكتالوج بدون الشعار وبيانات المعرض في أعلى الصفحة</div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">الطباعة بلا الترويسة الخاصة بالمعرض</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">طباعة الكتالوج بدون الشعار وبيانات المعرض في أعلى الصفحة</div>
                         </div>
                       </label>
                     </div>
@@ -772,8 +772,8 @@ export default function LabelsPage() {
 
               {/* Quantity Option for Type C */}
               {labelType === 'C' && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 no-print">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">خيارات الطباعة</h2>
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 no-print">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">خيارات الطباعة</h2>
                   <div className="space-y-3">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input
@@ -781,11 +781,11 @@ export default function LabelsPage() {
                         name="quantityOption"
                         checked={quantitySource === 'shop'}
                         onChange={() => setQuantitySource('shop')}
-                        className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                        className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100"
                       />
                       <div>
-                        <div className="font-medium text-gray-900">حسب كمية المحل</div>
-                        <div className="text-xs text-gray-500">تكرار الليبل حسب الكمية في المحل</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">حسب كمية المحل</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">تكرار الليبل حسب الكمية في المحل</div>
                       </div>
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
@@ -794,11 +794,11 @@ export default function LabelsPage() {
                         name="quantityOption"
                         checked={quantitySource === 'warehouse'}
                         onChange={() => setQuantitySource('warehouse')}
-                        className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                        className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100"
                       />
                       <div>
-                        <div className="font-medium text-gray-900">حسب كمية المخزن</div>
-                        <div className="text-xs text-gray-500">تكرار الليبل حسب الكمية في المخزن</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">حسب كمية المخزن</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">تكرار الليبل حسب الكمية في المخزن</div>
                       </div>
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
@@ -807,24 +807,24 @@ export default function LabelsPage() {
                         name="quantityOption"
                         checked={quantitySource === 'one'}
                         onChange={() => setQuantitySource('one')}
-                        className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                        className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100"
                       />
                       <div>
-                        <div className="font-medium text-gray-900">ليبل واحد لكل منتج</div>
-                        <div className="text-xs text-gray-500">طباعة ملصق واحد بغض النظر عن الكمية</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">ليبل واحد لكل منتج</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">طباعة ملصق واحد بغض النظر عن الكمية</div>
                       </div>
                     </label>
-                    <div className="pt-2 border-t border-gray-200">
+                    <div className="pt-2 border-t border-gray-200 dark:border-slate-700">
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={showZeroQuantity}
                           onChange={(e) => setShowZeroQuantity(e.target.checked)}
-                          className="w-4 h-4 text-gray-900 focus:ring-gray-900 rounded"
+                          className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100 rounded"
                         />
                         <div>
-                          <div className="font-medium text-gray-900">إظهار الأصناف ذات الكمية صفر</div>
-                          <div className="text-xs text-gray-500">طباعة ملصقات للأصناف التي لا يوجد لها كمية في المحل</div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">إظهار الأصناف ذات الكمية صفر</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">طباعة ملصقات للأصناف التي لا يوجد لها كمية في المحل</div>
                         </div>
                       </label>
                     </div>
@@ -834,8 +834,8 @@ export default function LabelsPage() {
 
               {/* QR: لنوع د = خياران فقط (عدم إظهار / فتح صفحة المنتج). لأنواع أ، ب، ج = فتح صفحة المنتج أو الباركود/الشامل */}
               {labelType === 'D' ? (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 no-print">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">رمز QR في الكتالوج</h2>
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 no-print">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">رمز QR في الكتالوج</h2>
                   <div className="space-y-3">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input
@@ -843,11 +843,11 @@ export default function LabelsPage() {
                         name="qrCatalog"
                         checked={!showQrInCatalog}
                         onChange={() => setShowQrInCatalog(false)}
-                        className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                        className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100"
                       />
                       <div>
-                        <div className="font-medium text-gray-900">عدم إظهار رمز QR</div>
-                        <div className="text-xs text-gray-500">الافتراضي — بدون QR في الكتالوج</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">عدم إظهار رمز QR</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">الافتراضي — بدون QR في الكتالوج</div>
                       </div>
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
@@ -856,18 +856,18 @@ export default function LabelsPage() {
                         name="qrCatalog"
                         checked={showQrInCatalog}
                         onChange={() => setShowQrInCatalog(true)}
-                        className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                        className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100"
                       />
                       <div>
-                        <div className="font-medium text-gray-900">فتح صفحة المنتج</div>
-                        <div className="text-xs text-gray-500">إظهار QR في زاوية الصفحة يفتح صفحة المنتج</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">فتح صفحة المنتج</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">إظهار QR في زاوية الصفحة يفتح صفحة المنتج</div>
                       </div>
                     </label>
                   </div>
                 </div>
               ) : (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 no-print">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">سلوك رمز QR</h2>
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 no-print">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">سلوك رمز QR</h2>
                   <div className="space-y-3">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input
@@ -875,11 +875,11 @@ export default function LabelsPage() {
                         name="qrOption"
                         checked={useQrProductUrl}
                         onChange={() => setUseQrProductUrl(true)}
-                        className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                        className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100"
                       />
                       <div>
-                        <div className="font-medium text-gray-900">فتح صفحة المنتج</div>
-                        <div className="text-xs text-gray-500">QR = رابط صفحة المنتج (للهواتف والمتجر)</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">فتح صفحة المنتج</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">QR = رابط صفحة المنتج (للهواتف والمتجر)</div>
                       </div>
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
@@ -888,11 +888,11 @@ export default function LabelsPage() {
                         name="qrOption"
                         checked={!useQrProductUrl}
                         onChange={() => setUseQrProductUrl(false)}
-                        className="w-4 h-4 text-gray-900 focus:ring-gray-900"
+                        className="w-4 h-4 text-gray-900 dark:text-gray-100 focus:ring-gray-900 dark:focus:ring-gray-100"
                       />
                       <div>
-                        <div className="font-medium text-gray-900">استخدام الباركود/الشامل</div>
-                        <div className="text-xs text-gray-500">QR = رقم الباركود أو الشامل (للقراءات القديمة)</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">استخدام الباركود/الشامل</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">QR = رقم الباركود أو الشامل (للقراءات القديمة)</div>
                       </div>
                     </label>
                   </div>
@@ -903,7 +903,7 @@ export default function LabelsPage() {
               <button
                 onClick={handlePrint}
                 disabled={selectedProductsList.length === 0}
-                className="w-full bg-gray-900 text-white py-3 px-4 rounded-lg font-semibold hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+                className="w-full bg-gray-900 dark:bg-slate-700 text-white py-3 px-4 rounded-lg font-semibold hover:bg-gray-800 dark:hover:bg-slate-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
               >
                 <Printer size={20} />
                 <span>طباعة</span>
@@ -911,16 +911,16 @@ export default function LabelsPage() {
 
               {/* Selected Products Summary */}
               {selectedProductsList.length > 0 && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">المنتجات المحددة</h3>
-                  <div className="text-xs text-gray-600 space-y-1">
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">المنتجات المحددة</h3>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                     {selectedProductsList.slice(0, 5).map((product) => (
                       <div key={product.ProductID || product.id}>
                         • {product.Name || product.name || '—'}
                       </div>
                     ))}
                     {selectedProductsList.length > 5 && (
-                      <div className="text-gray-400">+ {selectedProductsList.length - 5} أكثر</div>
+                      <div className="text-gray-400 dark:text-gray-500">+ {selectedProductsList.length - 5} أكثر</div>
                     )}
                   </div>
                 </div>
