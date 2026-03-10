@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -272,155 +272,168 @@ export default function PromissoryNotesPage() {
                             لا توجد كمبيالات
                         </div>
                     ) : (
-                        <div className="divide-y divide-gray-200">
-                            {notes.map((note) => (
-                                <div key={note.id} className="group transition-colors hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                                    {/* Main Row */}
-                                    <div
-                                        className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer"
-                                        onClick={() => toggleExpand(note.id)}
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${note.status === 'Active' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 dark:bg-slate-700/50 text-gray-500 dark:text-gray-400'}`}>
-                                                <Calendar size={20} />
-                                            </div>
-                                            <div>
-                                                {note.customer_id ? (
-                                                    <Link
-                                                        href={`/admin/customers/${note.customer_id}`}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="font-bold text-gray-900 dark:text-gray-100 hover:text-blue-600 hover:underline transition-colors block"
-                                                    >
-                                                        {note.customers?.name || 'زبون عام'}
-                                                    </Link>
-                                                ) : (
-                                                    <div className="font-bold text-gray-900 dark:text-gray-100">{note.customers?.name || 'زبون عام'}</div>
-                                                )}
-                                                <div className="text-sm text-gray-500 dark:text-gray-400">{note.customers?.phone}</div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-                                            <div className="flex flex-col">
-                                                <span className="text-gray-900 dark:text-gray-100 text-xs font-medium">رقم الكمبيالة</span>
-                                                <span className="font-bold text-gray-900 dark:text-gray-100">{note.id}</span>
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-gray-900 dark:text-gray-100 text-xs font-medium">المبلغ الإجمالي</span>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-gray-900 dark:text-gray-100">₪{note.total_amount.toLocaleString()}</span>
-                                                    {note.is_legacy && note.remaining_amount != null && (
-                                                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
-                                                            متبقي: ₪{note.remaining_amount.toLocaleString()}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-gray-900 dark:text-gray-100 text-xs font-medium">تاريخ الاصدار</span>
-                                                <span className="font-bold text-gray-900 dark:text-gray-100">{note.issue_date}</span>
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-gray-900 dark:text-gray-100 text-xs font-medium">عدد الأقساط</span>
-                                                <span className="font-bold text-gray-900 dark:text-gray-100">{note.installments?.length || 0}</span>
-                                            </div>
-                                            <div>
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(note.status)}`}>
-                                                    {note.status === 'Active' ? 'نشط' : note.status === 'Completed' ? 'مكتمل' : 'متعثر'}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handlePrintNote(note.id);
-                                                }}
-                                                className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                                title="طباعة الكمبيالة"
+                        <div className="overflow-x-auto w-full">
+                            <table className="w-full text-right text-sm">
+                                <thead className="bg-gray-50 dark:bg-slate-800/80 border-b border-gray-200 dark:border-slate-700 text-gray-500 dark:text-gray-400">
+                                    <tr>
+                                        <th className="px-4 py-3 font-medium whitespace-nowrap hidden md:table-cell w-16"></th>
+                                        <th className="px-4 py-3 font-medium whitespace-nowrap">الزبون</th>
+                                        <th className="px-4 py-3 font-medium whitespace-nowrap">رقم الكمبيالة</th>
+                                        <th className="px-4 py-3 font-medium whitespace-nowrap">المبلغ الإجمالي</th>
+                                        <th className="px-4 py-3 font-medium whitespace-nowrap">تاريخ الاصدار</th>
+                                        <th className="px-4 py-3 font-medium whitespace-nowrap">عدد الأقساط</th>
+                                        <th className="px-4 py-3 font-medium whitespace-nowrap">الحالة</th>
+                                        <th className="px-4 py-3 font-medium whitespace-nowrap w-36">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
+                                    {notes.map((note) => (
+                                        <Fragment key={note.id}>
+                                            <tr
+                                                className="group transition-colors hover:bg-gray-50 dark:hover:bg-slate-700/50 cursor-pointer bg-white dark:bg-slate-800"
+                                                onClick={() => toggleExpand(note.id)}
                                             >
-                                                <Printer size={18} />
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleEdit(note);
-                                                }}
-                                                className="p-2 text-gray-400 dark:text-gray-500 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-                                                title="تعديل الكمبيالة"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDelete(note.id);
-                                                }}
-                                                className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                                                title="حذف"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                            <button className="text-gray-400 dark:text-gray-500 hover:text-gray-700 transition-colors p-2">
-                                                {expandedNoteId === note.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Expanded Installments */}
-                                    {expandedNoteId === note.id && (
-                                        <div className="bg-gray-50 dark:bg-slate-800/50 p-4 border-t border-gray-200 dark:border-slate-700 animate-in slide-in-from-top-2 duration-200">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                {note.installments?.map((inst, idx) => (
-                                                    <div
-                                                        key={inst.id}
-                                                        className={`p-3 rounded-lg border flex items-center justify-between ${inst.status === 'Paid' ? 'bg-green-50 dark:bg-green-900/20 border-green-200' :
-                                                            inst.status === 'Late' ? 'bg-white dark:bg-slate-800 border-red-300 shadow-sm' :
-                                                                'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700'
-                                                            }`}
-                                                    >
-                                                        <div>
-                                                            <div className="text-sm font-bold text-gray-900 dark:text-gray-100">قسط #{idx + 1}</div>
-                                                            <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1">
-                                                                <Clock size={12} />
-                                                                {inst.due_date}
-                                                            </div>
-                                                            {inst.notes && <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{inst.notes}</div>}
-                                                        </div>
-
-                                                        <div className="flex flex-col items-end gap-2">
-                                                            <span className="font-bold text-gray-900 dark:text-gray-100">₪{inst.amount}</span>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleInstallmentStatus(inst.id, inst.status);
-                                                                }}
-                                                                disabled={updatingInstallment === inst.id}
-                                                                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${inst.status === 'Paid'
-                                                                    ? 'bg-green-200 text-green-800 dark:text-green-300 hover:bg-green-300'
-                                                                    : 'bg-gray-200 text-gray-700 dark:text-gray-300 hover:bg-gray-300'
-                                                                    }`}
-                                                            >
-                                                                {updatingInstallment === inst.id ? (
-                                                                    <Loader2 size={12} className="animate-spin" />
-                                                                ) : inst.status === 'Paid' ? (
-                                                                    <>
-                                                                        <CheckCircle2 size={12} />
-                                                                        تم الدفع
-                                                                    </>
-                                                                ) : (
-                                                                    'تسجيل دفع'
-                                                                )}
-                                                            </button>
-                                                        </div>
+                                                <td className="px-4 py-4 hidden md:table-cell">
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${note.status === 'Active' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-100 dark:bg-slate-700/50 text-gray-500 dark:text-gray-400'}`}>
+                                                        <Calendar size={18} />
                                                     </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+                                                </td>
+                                                <td className="px-4 py-4 min-w-[200px]">
+                                                    {note.customer_id ? (
+                                                        <Link
+                                                            href={`/admin/customers/${note.customer_id}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="font-bold text-gray-900 dark:text-gray-100 hover:text-blue-600 hover:underline transition-colors block"
+                                                        >
+                                                            {note.customers?.name || 'زبون عام'}
+                                                        </Link>
+                                                    ) : (
+                                                        <div className="font-bold text-gray-900 dark:text-gray-100">{note.customers?.name || 'زبون عام'}</div>
+                                                    )}
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{note.customers?.phone}</div>
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap">
+                                                    <span className="font-bold text-gray-900 dark:text-gray-100">{note.id}</span>
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap">
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="font-bold text-gray-900 dark:text-gray-100">₪{note.total_amount.toLocaleString()}</span>
+                                                        {note.is_legacy && note.remaining_amount != null && (
+                                                            <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800 w-fit">
+                                                                متبقي: ₪{note.remaining_amount.toLocaleString()}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap">
+                                                    <span className="font-bold text-gray-900 dark:text-gray-100">{note.issue_date}</span>
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap">
+                                                    <span className="font-bold text-gray-900 dark:text-gray-100">{note.installments?.length || 0}</span>
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap">
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(note.status)}`}>
+                                                        {note.status === 'Active' ? 'نشط' : note.status === 'Completed' ? 'مكتمل' : 'متعثر'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap">
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handlePrintNote(note.id);
+                                                            }}
+                                                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                                                            title="طباعة الكمبيالة"
+                                                        >
+                                                            <Printer size={18} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEdit(note);
+                                                            }}
+                                                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+                                                            title="تعديل الكمبيالة"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDelete(note.id);
+                                                            }}
+                                                            className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                                                            title="حذف"
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                        <button className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors p-1.5">
+                                                            {expandedNoteId === note.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+
+                                            {/* Expanded Installments */}
+                                            {expandedNoteId === note.id && (
+                                                <tr className="bg-gray-50/50 dark:bg-slate-800/30">
+                                                    <td colSpan={8} className="p-0 border-b-0">
+                                                        <div className="p-4 border-b border-gray-200 dark:border-slate-700 animate-in slide-in-from-top-2 duration-200">
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                                                {note.installments?.map((inst, idx) => (
+                                                                    <div
+                                                                        key={inst.id}
+                                                                        className={`p-3 rounded-lg border flex items-center justify-between ${inst.status === 'Paid' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/30' :
+                                                                            inst.status === 'Late' ? 'bg-white dark:bg-slate-800 border-red-300 dark:border-red-800/50 shadow-sm' :
+                                                                                'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700'
+                                                                            }`}
+                                                                    >
+                                                                        <div>
+                                                                            <div className="text-sm font-bold text-gray-900 dark:text-gray-100">قسط #{idx + 1}</div>
+                                                                            <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1">
+                                                                                <Clock size={12} />
+                                                                                {inst.due_date}
+                                                                            </div>
+                                                                            {inst.notes && <div className="text-[10px] bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 mt-1.5 px-1.5 py-0.5 rounded leading-tight line-clamp-2" title={inst.notes}>{inst.notes}</div>}
+                                                                        </div>
+
+                                                                        <div className="flex flex-col items-end gap-2 shrink-0">
+                                                                            <span className="font-bold text-gray-900 dark:text-gray-100">₪{inst.amount}</span>
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleInstallmentStatus(inst.id, inst.status);
+                                                                                }}
+                                                                                disabled={updatingInstallment === inst.id}
+                                                                                className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-bold transition-colors ${inst.status === 'Paid'
+                                                                                    ? 'bg-green-200 dark:bg-green-800/50 text-green-800 dark:text-green-300 hover:bg-green-300 dark:hover:bg-green-800/70'
+                                                                                    : 'bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-500'
+                                                                                    }`}
+                                                                            >
+                                                                                {updatingInstallment === inst.id ? (
+                                                                                    <Loader2 size={12} className="animate-spin" />
+                                                                                ) : inst.status === 'Paid' ? (
+                                                                                    <>
+                                                                                        <CheckCircle2 size={12} />
+                                                                                        تم الدفع
+                                                                                    </>
+                                                                                ) : (
+                                                                                    'تسجيل دفع'
+                                                                                )}
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </Fragment>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     )}
                 </div>

@@ -1507,7 +1507,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                   </div>
                   <div>
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">إلى</label>
-                    <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 bg-blue-50 px-3 py-2 rounded-lg font-medium font-cairo">{statusChangeModal.newStatus}</p>
+                    <p className="text-sm sm:text-base text-gray-900 dark:text-white bg-blue-50 dark:bg-blue-900/30 dark:border-blue-800/50 border border-transparent px-3 py-2 rounded-lg font-medium font-cairo">{statusChangeModal.newStatus}</p>
                   </div>
                   <div>
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 font-cairo">

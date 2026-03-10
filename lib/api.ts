@@ -11065,18 +11065,19 @@ export async function getPromissoryNotes(params?: {
 
     if (params?.search?.trim()) {
       const q = params.search.trim();
-      const { data: searchResults, error: searchError } = await supabase
-        .from('promissory_notes')
-        .select('id, notes')
-        .or(`notes.ilike.%${q}%,id.ilike.%${q}%`);
 
-      if (!searchError && searchResults) {
-        const ids = searchResults.map(r => r.id);
-        if (ids.length > 0) {
-          query = query.in('id', ids);
-        } else {
-          return [];
-        }
+      // Find matching customers first
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select('customer_id')
+        .or(`name.ilike.%${q}%,phone.ilike.%${q}%`);
+
+      const relatedCustomerIds = customerData?.map((c: any) => c.customer_id) || [];
+
+      if (relatedCustomerIds.length > 0) {
+        query = query.or(`notes.ilike.%${q}%,id.ilike.%${q}%,customer_id.in.(${relatedCustomerIds.join(',')})`);
+      } else {
+        query = query.or(`notes.ilike.%${q}%,id.ilike.%${q}%`);
       }
     }
 
