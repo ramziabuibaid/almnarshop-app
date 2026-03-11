@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ShoppingCart, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { useShop } from '@/context/ShopContext';
 import { getDirectImageUrl } from '@/lib/utils';
@@ -153,11 +154,12 @@ export default function ProductCard({ product }: ProductCardProps) {
           {/* Product Image */}
           <div ref={imgRef} className="w-full h-full flex items-center justify-center">
             {hasValidImage && isInView && imageUrl ? (
-              <img
+              <Image
                 src={imageUrl}
                 alt={product.name}
-                loading="lazy"
-                className={`object-contain w-full h-full p-2 transition-transform duration-300 group-hover:scale-105 ${imageLoading ? 'opacity-0' : 'opacity-100'
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                className={`object-contain p-2 transition-transform duration-300 group-hover:scale-105 ${imageLoading ? 'opacity-0' : 'opacity-100'
                   } ${!isAvailable ? 'opacity-50 grayscale' : ''}`}
                 onLoad={() => setImageLoading(false)}
                 onError={() => {

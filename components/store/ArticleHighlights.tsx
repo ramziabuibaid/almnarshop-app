@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { getArticles } from '@/lib/api';
 import { getDirectImageUrl } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -85,10 +86,12 @@ export default function ArticleHighlights() {
               {/* Image Container */}
               <div className="relative aspect-[16/9] bg-gray-200 overflow-hidden">
                 {article.cover_image ? (
-                  <img
+                  <Image
                     src={getDirectImageUrl(article.cover_image)}
                     alt={article.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out"
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    className="object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-400">

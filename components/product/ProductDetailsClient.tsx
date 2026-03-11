@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { ShoppingCart, MessageCircle, Image as ImageIcon, Home, ChevronLeft, Tag } from 'lucide-react';
 import { useShop } from '@/context/ShopContext';
 import { getDirectImageUrl } from '@/lib/utils';
@@ -21,7 +22,7 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
-  const imgRef = useRef<HTMLImageElement | null>(null);
+  const imgRef = useRef<HTMLDivElement | null>(null);
   const [activeCampaign, setActiveCampaign] = useState<{
     campaign_id: string;
     title: string;
@@ -58,10 +59,10 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
       return;
     }
 
-    const img = imgRef.current;
+    const img = imgRef.current.querySelector('img');
 
     // If image is already complete and has dimensions, it's loaded (cached)
-    if (img.complete && img.naturalWidth > 0 && img.src === mainImage) {
+    if (img && img.complete && img.naturalWidth > 0) {
       setImageLoading(false);
       setImageError(false);
     }
@@ -202,27 +203,28 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
 
                 {mainImage && !imageError ? (
                   <>
-                    <img
-                      ref={(node) => {
-                        imgRef.current = node;
-                        if (node && node.complete && node.naturalWidth > 0 && node.src === mainImage) {
+                    <div
+                      ref={imgRef}
+                      className="relative w-full h-full"
+                    >
+                      <Image
+                        src={mainImage}
+                        alt={productName}
+                        fill
+                        sizes="(max-width: 1024px) 100vw, 50vw"
+                        priority
+                        className={`object-contain sm:p-4 transition-all duration-500 group-hover:scale-105 ${imageLoading ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+                          } ${!isAvailable ? 'opacity-50 grayscale' : ''}`}
+                        onLoad={() => {
                           setImageLoading(false);
                           setImageError(false);
-                        }
-                      }}
-                      src={mainImage}
-                      alt={productName}
-                      className={`object-contain w-full h-full sm:p-4 transition-all duration-500 group-hover:scale-105 ${imageLoading ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
-                        } ${!isAvailable ? 'opacity-50 grayscale' : ''}`}
-                      onLoad={() => {
-                        setImageLoading(false);
-                        setImageError(false);
-                      }}
-                      onError={() => {
-                        setImageError(true);
-                        setImageLoading(false);
-                      }}
-                    />
+                        }}
+                        onError={() => {
+                          setImageError(true);
+                          setImageLoading(false);
+                        }}
+                      />
+                    </div>
                     {imageLoading && (
                       <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-white/80 z-10 backdrop-blur-sm">
                         <ImageIcon size={48} className="mb-2 animate-pulse" />
@@ -250,10 +252,12 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
                         : 'border-transparent hover:border-gray-200 opacity-70 hover:opacity-100 bg-gray-50'
                         }`}
                     >
-                      <img
+                      <Image
                         src={img}
                         alt={`${productName} - Image ${index + 1}`}
-                        className="object-contain w-full h-full bg-white p-1"
+                        fill
+                        sizes="96px"
+                        className="object-contain bg-white p-1"
                       />
                     </button>
                   ))}

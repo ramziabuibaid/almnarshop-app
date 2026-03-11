@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Clock, Tag } from 'lucide-react';
-import { getActiveCampaignWithProducts } from '@/lib/api';
 import { getDirectImageUrl } from '@/lib/utils';
 import { useShop } from '@/context/ShopContext';
 import { useRouter } from 'next/navigation';
@@ -38,15 +38,17 @@ interface Campaign {
 }
 
 export default function FlashSaleSection() {
-  const { addToCart } = useShop();
+  const { addToCart, activeCampaign: contextCampaign } = useShop();
   const router = useRouter();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
 
+  // Use campaign data from ShopContext (already fetched during loadProducts)
   useEffect(() => {
-    loadActiveCampaign();
-  }, []);
+    if (contextCampaign) {
+      setCampaign(contextCampaign);
+    }
+  }, [contextCampaign]);
 
   useEffect(() => {
     if (!campaign) return;
@@ -64,8 +66,6 @@ export default function FlashSaleSection() {
         setTimeLeft({ hours, minutes, seconds });
       } else {
         setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
-        // Campaign expired, reload to check for new active campaign
-        loadActiveCampaign();
       }
     };
 
@@ -74,19 +74,6 @@ export default function FlashSaleSection() {
 
     return () => clearInterval(interval);
   }, [campaign]);
-
-  const loadActiveCampaign = async () => {
-    try {
-      setLoading(true);
-      const activeCampaign = await getActiveCampaignWithProducts();
-      setCampaign(activeCampaign);
-    } catch (error) {
-      console.error('[FlashSaleSection] Error loading active campaign:', error);
-      setCampaign(null);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleAddToCart = (product: CampaignProduct) => {
     const warehouseStock = product.CS_War || product.cs_war || 0;
@@ -122,10 +109,6 @@ export default function FlashSaleSection() {
       });
     }
   }, [campaign, campaignUrl]);
-
-  if (loading) {
-    return null; // Don't show anything while loading
-  }
 
   if (!campaign || !campaign.products || campaign.products.length === 0) {
     return null; // Don't show section if no active campaign
@@ -227,10 +210,12 @@ export default function FlashSaleSection() {
                   {/* Product Image */}
                   <Link href={productUrl} className="relative w-full aspect-square bg-gray-50 flex items-center justify-center overflow-hidden block">
                     {imageUrl ? (
-                      <img
+                      <Image
                         src={imageUrl}
                         alt={prodName}
-                        className={`object-contain w-full h-full p-2 transition-transform duration-300 group-hover:scale-105 ${
+                        fill
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                        className={`object-contain p-2 transition-transform duration-300 group-hover:scale-105 ${
                           !isAvailable ? 'opacity-50 grayscale' : ''
                         }`}
                       />

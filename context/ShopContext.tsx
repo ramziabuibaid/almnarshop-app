@@ -49,6 +49,7 @@ interface ShopContextType {
   setUser: (user: User | null) => void;
   setProducts: (products: Product[]) => void;
   loadProducts: () => Promise<void>;
+  activeCampaign: any | null;
 }
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
@@ -59,6 +60,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [activeCampaign, setActiveCampaignState] = useState<any | null>(null);
 
   // Log products changes (only when products are first loaded)
   useEffect(() => {
@@ -141,13 +143,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       const fetchedProducts = await getProducts({ forStore: true });
       console.log('[ShopContext] Products loaded:', fetchedProducts.length);
 
-      const activeCampaign = await getActiveCampaignWithProducts();
+      const activeCampaignData = await getActiveCampaignWithProducts();
+      setActiveCampaignState(activeCampaignData);
       let finalProducts = fetchedProducts;
 
-      if (activeCampaign && activeCampaign.products && activeCampaign.products.length > 0) {
-        console.log('[ShopContext] Found active campaign with products:', activeCampaign.products.length);
+      if (activeCampaignData && activeCampaignData.products && activeCampaignData.products.length > 0) {
+        console.log('[ShopContext] Found active campaign with products:', activeCampaignData.products.length);
         finalProducts = fetchedProducts.map(product => {
-          const campaignProduct = activeCampaign.products.find((cp: any) => cp.product_id === product.id || cp.id === product.id);
+          const campaignProduct = activeCampaignData.products.find((cp: any) => cp.product_id === product.id || cp.id === product.id);
           if (campaignProduct && campaignProduct.offer_price) {
             return {
               ...product,
@@ -231,6 +234,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setUser: setUserWithLogging,
     setProducts,
     loadProducts,
+    activeCampaign,
   };
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;

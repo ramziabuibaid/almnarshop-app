@@ -499,7 +499,21 @@ export async function getProductById(productId: string): Promise<any | null> {
       return null;
     }
 
-    console.log('[API] Fetching product by ID from Supabase:', productId);
+    console.log('[API] Fetching product by ID:', productId);
+
+    // Check the local products cache first to avoid a network request
+    const cachedProducts = getFromCache<any[]>(CACHE_PRODUCTS_DATA, CACHE_PRODUCTS_TIMESTAMP);
+    if (cachedProducts && Array.isArray(cachedProducts)) {
+      const cachedProduct = cachedProducts.find(
+        (p: any) => (p.product_id || p.id || p.ProductID) === productId.trim()
+      );
+      if (cachedProduct) {
+        console.log('[API] Product found in local cache:', productId);
+        return cachedProduct;
+      }
+    }
+
+    console.log('[API] Product not in cache, fetching from Supabase:', productId);
 
     // Fetch product by product_id (the primary key in Supabase)
     const { data: product, error } = await supabase

@@ -205,9 +205,11 @@ export default function StoreHeader({
                           >
                             {imageUrl ? (
                               <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
-                                <img
+                                <Image
                                   src={imageUrl}
                                   alt={productName}
+                                  width={64}
+                                  height={64}
                                   className="object-contain w-full h-full"
                                   onError={(e) => {
                                     (e.target as HTMLImageElement).style.display = 'none';
@@ -333,9 +335,11 @@ export default function StoreHeader({
                                 >
                                   {imageUrl ? (
                                     <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
-                                      <img
+                                      <Image
                                         src={imageUrl}
                                         alt={productName}
+                                        width={64}
+                                        height={64}
                                         className="object-contain w-full h-full"
                                         onError={(e) => {
                                           (e.target as HTMLImageElement).style.display = 'none';
