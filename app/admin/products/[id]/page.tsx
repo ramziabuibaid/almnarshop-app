@@ -561,39 +561,39 @@ export default function ProductProfilePage() {
     if (type === 'invoice') {
       if (source === 'Warehouse') {
         return {
-          bg: 'bg-blue-50',
-          text: 'text-blue-700',
-          border: 'border-blue-400',
-          iconBg: 'bg-blue-100',
+          bg: 'bg-blue-50 dark:bg-blue-900/20',
+          text: 'text-blue-700 dark:text-blue-400',
+          border: 'border-blue-400 dark:border-blue-800',
+          iconBg: 'bg-blue-100 dark:bg-blue-900/40',
         };
       } else if (source === 'Cash') {
         return {
           bg: 'bg-amber-50 dark:bg-amber-900/20',
-          text: 'text-amber-700',
-          border: 'border-amber-400',
-          iconBg: 'bg-amber-100',
+          text: 'text-amber-700 dark:text-amber-400',
+          border: 'border-amber-400 dark:border-amber-800',
+          iconBg: 'bg-amber-100 dark:bg-amber-900/40',
         };
       } else {
         return {
           bg: 'bg-green-50 dark:bg-green-900/20',
           text: 'text-green-700 dark:text-green-400',
-          border: 'border-green-400',
-          iconBg: 'bg-green-100 dark:bg-green-900/30',
+          border: 'border-green-400 dark:border-green-800',
+          iconBg: 'bg-green-100 dark:bg-green-900/40',
         };
       }
     } else if (type === 'quotation') {
       return {
-        bg: 'bg-purple-50',
-        text: 'text-purple-700',
-        border: 'border-purple-400',
-        iconBg: 'bg-purple-100',
+        bg: 'bg-purple-50 dark:bg-purple-900/20',
+        text: 'text-purple-700 dark:text-purple-400',
+        border: 'border-purple-400 dark:border-purple-800',
+        iconBg: 'bg-purple-100 dark:bg-purple-900/40',
       };
     }
     
     return {
       bg: 'bg-gray-50 dark:bg-slate-800/50',
       text: 'text-gray-700 dark:text-gray-300',
-      border: 'border-gray-400',
+      border: 'border-gray-400 dark:border-gray-700',
       iconBg: 'bg-gray-100 dark:bg-slate-700/50',
     };
   };
@@ -1168,7 +1168,7 @@ export default function ProductProfilePage() {
                                         router.push(`/admin/customers/${item.customerID}`);
                                       }
                                     }}
-                                    className="text-blue-600 hover:text-blue-800 hover:underline font-medium cursor-pointer"
+                                    className="text-gray-900 dark:text-white hover:underline font-medium cursor-pointer"
                                     title="عرض بروفايل الزبون (اضغط Command/Ctrl لفتح في نافذة جديدة)"
                                   >
                                     {item.customerName}
@@ -1213,11 +1213,11 @@ export default function ProductProfilePage() {
                                       return (
                                         <div 
                                           key={`${uniqueKey}-item-${itemKey}-${idx}`} 
-                                          className={`text-sm ${isCurrentProduct ? 'bg-blue-50 border border-blue-200 p-2 rounded font-medium' : 'text-gray-700 dark:text-gray-300'}`}
+                                          className={`text-sm ${isCurrentProduct ? 'bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-800 p-2 rounded font-medium' : 'text-gray-700 dark:text-gray-300'}`}
                                         >
-                                          <div className={`${isCurrentProduct ? 'text-blue-900' : 'font-medium text-gray-900 dark:text-gray-100'}`}>
+                                          <div className={`${isCurrentProduct ? 'text-blue-900 dark:text-blue-300' : 'font-medium text-gray-900 dark:text-gray-100'}`}>
                                             {itemName}
-                                            {isCurrentProduct && <span className="text-xs text-blue-600 mr-2">(المنتج الحالي)</span>}
+                                            {isCurrentProduct && <span className="text-xs text-blue-600 dark:text-blue-400 mr-2">(المنتج الحالي)</span>}
                                           </div>
                                           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                             الكمية: {itemQty} × {formatBalance(itemPrice)} = {formatBalance(itemTotal)}
@@ -1362,11 +1362,11 @@ export default function ProductProfilePage() {
                                           return (
                                             <div 
                                               key={`${uniqueKey}-item-${itemKey}-${idx}`} 
-                                              className={`text-sm ${isCurrentProduct ? 'bg-purple-50 border border-purple-200 p-2 rounded font-medium' : 'text-gray-700 dark:text-gray-300'}`}
+                                              className={`text-sm ${isCurrentProduct ? 'bg-purple-50 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-800 p-2 rounded font-medium' : 'text-gray-700 dark:text-gray-300'}`}
                                             >
-                                              <div className={`${isCurrentProduct ? 'text-purple-900' : 'font-medium text-gray-900 dark:text-gray-100'}`}>
+                                              <div className={`${isCurrentProduct ? 'text-purple-900 dark:text-purple-300' : 'font-medium text-gray-900 dark:text-gray-100'}`}>
                                                 {itemName}
-                                                {isCurrentProduct && <span className="text-xs text-purple-600 mr-2">(المنتج الحالي)</span>}
+                                                {isCurrentProduct && <span className="text-xs text-purple-600 dark:text-purple-400 mr-2">(المنتج الحالي)</span>}
                                               </div>
                                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                                 الكمية: {itemQty} × {formatBalance(itemPrice)} = {formatBalance(itemTotal)}

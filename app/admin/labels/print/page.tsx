@@ -70,16 +70,89 @@ function LabelsPrintContent() {
     document.title = `طباعة الملصقات - ${dateStr} - ${timeStr}`;
   };
 
-  // Auto print when products are loaded
+  // Auto print when products are loaded (only if NOT in download mode)
   useEffect(() => {
-    if (!loading && products.length > 0 && !error) {
+    const isDownloadMode = searchParams.get('mode') === 'download' || searchParams.get('download') === 'true';
+    if (!loading && products.length > 0 && !error && !isDownloadMode) {
       const timer = setTimeout(() => {
         setPrintTitle();
         window.print();
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [loading, products.length, error]);
+  }, [loading, products.length, error, searchParams]);
+
+  // Handle direct PDF download for Catalog (Type D)
+  useEffect(() => {
+    const isDownloadMode = searchParams.get('mode') === 'download' || searchParams.get('download') === 'true';
+    if (labelType === 'D' && isDownloadMode && products.length > 0 && !loading && !error) {
+      const timer = setTimeout(() => {
+        // Load html2pdf from CDN
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        script.onload = async () => {
+          const element = document.querySelector('.label-type-d-container');
+          if (element) {
+            console.log('[LabelsPrintPage] Waiting for all images to load...');
+            const images = Array.from(element.querySelectorAll('img'));
+            await Promise.all(images.map(img => {
+              if (img.complete) return Promise.resolve();
+              return new Promise(resolve => {
+                img.onload = resolve;
+                img.onerror = resolve;
+              });
+            }));
+
+            console.log('[LabelsPrintPage] Starting PDF generation with html2pdf...');
+            const opt = {
+              margin: [0, 0, 0, 0],
+              filename: `Catalog-${new Date().toISOString().slice(0, 10)}.pdf`,
+              image: { type: 'jpeg', quality: 1.0 },
+              html2canvas: { 
+                scale: 3, // Higher scale for better quality
+                useCORS: true,
+                letterRendering: true,
+                allowTaint: false,
+                logging: false,
+                scrollY: 0,
+                scrollX: 0
+              },
+              jsPDF: { 
+                unit: 'mm', 
+                format: [180, 110], 
+                orientation: 'landscape',
+                compress: true,
+                precision: 16
+              },
+              pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+            
+            setPrintTitle();
+            const html2pdf = (window as any).html2pdf;
+            if (html2pdf) {
+              const worker = html2pdf().from(element).set(opt);
+              
+              // Only download, don't show print dialog
+              worker.save().then(() => {
+                console.log('[LabelsPrintPage] PDF saved successfully');
+                // Optional: Close window after download
+                setTimeout(() => window.close(), 2000);
+              }).catch((err: any) => {
+                console.error('[LabelsPrintPage] PDF generation failed:', err);
+                window.print();
+              });
+            }
+          }
+        };
+        script.onerror = () => {
+          console.error('[LabelsPrintPage] Failed to load html2pdf.js script');
+          window.print();
+        };
+        document.head.appendChild(script);
+      }, 1000); // Give images more time to load for PDF
+      return () => clearTimeout(timer);
+    }
+  }, [loading, products, labelType, searchParams, error]);
 
   useEffect(() => {
     // Get products and labelType from sessionStorage
@@ -737,11 +810,11 @@ function LabelsPrintContent() {
           }
 
           .label-type-d-container {
-            width: 180mm;
-            margin: 0;
-            padding: 0;
+            width: 180mm !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
             background: #faf9f7;
-            display: block;
+            display: block !important;
           }
 
           .label-type-d {
@@ -750,6 +823,8 @@ function LabelsPrintContent() {
             height: 110mm !important;
             min-height: 110mm !important;
             max-height: 110mm !important;
+            min-width: 180mm !important;
+            max-width: 180mm !important;
             margin: 0;
             padding: 8mm 10mm;
             background: linear-gradient(180deg, #faf9f7 0%, #f5f3f0 100%);
@@ -1139,6 +1214,9 @@ function LabelsPrintContent() {
                         src="/logo.png"
                         alt="Logo"
                         className="catalog-logo"
+                        crossOrigin="anonymous"
+                        width={100}
+                        height={32}
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = 'none';
                         }}
@@ -1156,6 +1234,7 @@ function LabelsPrintContent() {
                           <img
                             src={mainImageUrl}
                             alt={name}
+                            crossOrigin="anonymous"
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = '/logo.png';
                             }}
@@ -1171,6 +1250,7 @@ function LabelsPrintContent() {
                               <img
                                 src={url}
                                 alt={`${name} ${i + 2}`}
+                                crossOrigin="anonymous"
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src = '/logo.png';
                                 }}

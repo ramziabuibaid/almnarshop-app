@@ -12,7 +12,7 @@ type QuantitySource = 'shop' | 'warehouse' | 'one';
 interface LabelsTableRowProps {
   product: Product;
   isSelected: boolean;
-  labelType: 'A' | 'B' | 'C';
+  labelType: 'A' | 'B' | 'C' | 'D';
   useQuantity: boolean;
   quantitySource: QuantitySource;
   editingBarcode: string | null;
@@ -76,24 +76,28 @@ const LabelsTableRow = memo(function LabelsTableRow({
 
   return (
     <tr
-      className={`border-b border-gray-100 cursor-pointer transition-colors duration-75 ${
-        isSelected ? 'bg-blue-50' : 'bg-white hover:bg-gray-50'
-      }`}
+      className={`border-b border-gray-100 dark:border-slate-700/50 cursor-pointer transition-all duration-200 ${
+        isSelected 
+          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' 
+          : 'bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/40 border-gray-100 dark:border-slate-700/40'
+      } flex flex-col md:table-row mb-4 md:mb-0 rounded-xl md:rounded-none overflow-hidden border md:border-0 md:border-b shadow-sm md:shadow-none relative`}
       onClick={() => onToggle(productId)}
     >
-      <td className="py-3 px-3">
+      <td className="py-3 px-4 md:py-3 md:px-3 flex items-center justify-between md:table-cell border-b md:border-0 border-gray-50 dark:border-slate-700/30">
+        <span className="md:hidden text-xs font-medium text-gray-500 dark:text-gray-400">تحديد</span>
         {isSelected ? (
-          <CheckSquare size={18} className="text-blue-600" />
+          <CheckSquare size={20} className="text-blue-600 dark:text-blue-400" />
         ) : (
-          <Square size={18} className="text-gray-400" />
+          <Square size={20} className="text-gray-400 dark:text-gray-500" />
         )}
       </td>
-      <td className="py-3 px-3">
+      <td className="py-3 px-4 md:py-3 md:px-3 flex items-center justify-between md:table-cell border-b md:border-0 border-gray-50 dark:border-slate-700/30">
+        <span className="md:hidden text-xs font-medium text-gray-500 dark:text-gray-400">الصورة</span>
         {directImageUrl ? (
           <img
             src={directImageUrl}
             alt={product.Name || product.name || ''}
-            className="w-12 h-12 object-cover rounded"
+            className="w-14 h-14 md:w-12 md:h-12 object-cover rounded-lg md:rounded shadow-sm"
             onError={(e) => {
               (e.target as HTMLImageElement).src = '/logo.png';
             }}
@@ -101,12 +105,12 @@ const LabelsTableRow = memo(function LabelsTableRow({
             decoding="async"
           />
         ) : (
-          <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
-            <span className="text-xs text-gray-400">لا صورة</span>
+          <div className="w-14 h-14 md:w-12 md:h-12 bg-gray-100 dark:bg-slate-700 rounded-lg md:rounded flex items-center justify-center border border-gray-200 dark:border-slate-600">
+            <span className="text-[10px] text-gray-400 dark:text-gray-500">لا صورة</span>
           </div>
         )}
       </td>
-      <td className="py-3 px-3">
+      <td className="py-3 px-4 md:py-3 md:px-3 flex flex-col md:table-cell border-b md:border-0 border-gray-50 dark:border-slate-700/30">
         <div className="flex flex-col gap-1">
           <button
             onClick={(e) => {
@@ -119,60 +123,59 @@ const LabelsTableRow = memo(function LabelsTableRow({
                 }
               }
             }}
-            className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline text-right cursor-pointer transition-colors"
+            className="text-base md:text-sm font-bold md:font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline text-right cursor-pointer transition-colors"
             title="عرض بروفايل المنتج (اضغط Command/Ctrl لفتح في نافذة جديدة)"
           >
             {product.Name || product.name || '—'}
           </button>
           {(product['Shamel No'] || product.ShamelNo || product.shamel_no) && (
-            <div className="text-xs text-gray-500">
-              رقم الشامل: {product['Shamel No'] || product.ShamelNo || product.shamel_no}
+            <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              <span className="opacity-70">رقم الشامل:</span>
+              <span className="font-mono">{product['Shamel No'] || product.ShamelNo || product.shamel_no}</span>
             </div>
           )}
         </div>
       </td>
-      <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
+      <td className="py-3 px-4 md:py-3 md:px-3 flex items-center justify-between md:table-cell border-b md:border-0 border-gray-50 dark:border-slate-700/30" onClick={(e) => e.stopPropagation()}>
+        <span className="md:hidden text-xs font-medium text-gray-500 dark:text-gray-400">الباركود</span>
         {isEditing ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full md:w-auto">
             <ScannerLatinInput
               type="text"
               value={editingBarcodeValue}
               onChange={(e) => onBarcodeValueChange(e.target.value)}
               onKeyDown={(e) => onBarcodeKeyDown(product, e, () => onSaveBarcode(product), onCancelEditBarcode)}
-              className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+              className="flex-1 md:w-32 px-2 py-1.5 text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-gray-900 dark:text-gray-100"
               autoFocus
               disabled={isSaving}
             />
             <button
               onClick={(e) => onSaveBarcode(product, e)}
               disabled={isSaving}
-              className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="حفظ"
+              className="p-1.5 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors disabled:opacity-50"
             >
               {isSaving ? (
-                <Loader2 size={16} className="animate-spin" />
+                <Loader2 size={18} className="animate-spin" />
               ) : (
-                <Check size={16} />
+                <Check size={18} />
               )}
             </button>
             <button
               onClick={onCancelEditBarcode}
               disabled={isSaving}
-              className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="إلغاء"
+              className="p-1.5 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
             >
-              <X size={16} />
+              <X size={18} />
             </button>
           </div>
         ) : (
           <div className="flex items-center gap-2 group">
-            <span className="text-sm text-gray-900 font-mono flex-1">
-              {barcode || <span className="text-gray-400">—</span>}
+            <span className="text-sm text-gray-900 dark:text-gray-100 font-mono">
+              {barcode || <span className="text-gray-400 dark:text-gray-600">—</span>}
             </span>
             <button
               onClick={(e) => onStartEditBarcode(product, e)}
-              className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors opacity-0 group-hover:opacity-100"
-              title="تعديل الباركود"
+              className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100"
             >
               <Edit2 size={14} />
             </button>
@@ -180,7 +183,8 @@ const LabelsTableRow = memo(function LabelsTableRow({
         )}
       </td>
       {labelType === 'C' && useQuantity && (
-        <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
+        <td className="py-3 px-4 md:py-3 md:px-3 flex items-center justify-between md:table-cell border-b md:border-0 border-gray-50 dark:border-slate-700/30" onClick={(e) => e.stopPropagation()}>
+          <span className="md:hidden text-xs font-medium text-gray-500 dark:text-gray-400">الكمية للطباعة</span>
           {isEditingQuantity ? (
             <div className="flex items-center gap-2">
               <input
@@ -189,40 +193,39 @@ const LabelsTableRow = memo(function LabelsTableRow({
                 value={editingQuantityValue}
                 onChange={(e) => onQuantityValueChange(e.target.value)}
                 onKeyDown={(e) => onQuantityKeyDown(product, e, () => onSaveQuantity(product), onCancelEditQuantity)}
-                className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900"
+                className="w-20 px-2 py-1.5 text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-gray-900 dark:text-gray-100 font-mono"
                 autoFocus
               />
               <button
                 onClick={(e) => onSaveQuantity(product, e)}
-                className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
+                className="p-1.5 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
                 title="حفظ"
               >
-                <Check size={16} />
+                <Check size={18} />
               </button>
               <button
                 onClick={onCancelEditQuantity}
-                className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                 title="إلغاء"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
           ) : (
-          <div className="flex items-center gap-2 group">
-            <span className={`text-sm font-medium flex-1 ${
-              printQuantity !== defaultQty ? 'text-blue-600' : 'text-gray-900'
-            }`}>
-              {printQuantity}
-            </span>
-            {printQuantity !== defaultQty && (
-              <span className="text-xs text-gray-400">
-                (أصلي: {defaultQty})
+            <div className="flex items-center gap-2 group">
+              <span className={`text-base md:text-sm font-bold font-mono ${
+                printQuantity !== defaultQty ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-gray-100'
+              }`}>
+                {printQuantity}
               </span>
-            )}
+              {printQuantity !== defaultQty && (
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                  (أصلي: {defaultQty})
+                </span>
+              )}
               <button
                 onClick={(e) => onStartEditQuantity(product, e)}
-                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors opacity-0 group-hover:opacity-100"
-                title="تعديل الكمية"
+                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100"
               >
                 <Edit2 size={14} />
               </button>
@@ -230,33 +233,39 @@ const LabelsTableRow = memo(function LabelsTableRow({
           )}
         </td>
       )}
-      <td className="py-3 px-3">
-        <div className="text-sm font-semibold text-gray-900">
+      <td className="py-3 px-4 md:py-3 md:px-3 flex items-center justify-between md:table-cell border-b md:border-0 border-gray-50 dark:border-slate-700/30">
+        <span className="md:hidden text-xs font-medium text-gray-500 dark:text-gray-400">السعر</span>
+        <div className="text-lg md:text-sm font-bold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-slate-900/50 md:bg-transparent px-2 py-1 rounded md:p-0">
           {price.toLocaleString('en-US')} ₪
         </div>
       </td>
-      <td className="py-3 px-3">
-        <div className="text-sm text-gray-600 flex flex-col gap-1">
+      <td className="py-4 px-4 md:py-3 md:px-3 flex flex-col md:table-cell">
+        <div className="flex items-center justify-between md:hidden mb-2">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">حالة المخزون</span>
+        </div>
+        <div className="flex md:flex-col items-center md:items-start gap-4 md:gap-1">
           {shopQty !== null && (
-            <span className="text-xs text-gray-500">
-              مح: <span className={`font-medium ${
-                shopQty > 0 ? 'text-green-700' : 'text-red-700'
+            <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              <span className="opacity-70">المحل:</span>
+              <span className={`font-bold ${
+                shopQty > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
               }`}>{shopQty}</span>
             </span>
           )}
           {warehouseQty !== null && (
-            <span className="text-xs text-gray-500">
-              م: <span className={`font-medium ${
-                warehouseQty > 0 ? 'text-green-700' : 'text-red-700'
+            <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              <span className="opacity-70">المخزن:</span>
+              <span className={`font-bold ${
+                warehouseQty > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
               }`}>{warehouseQty}</span>
             </span>
           )}
           {totalQty > 0 && (
             <span
-              className={`px-2 py-1 rounded-full text-xs font-medium mt-1 ${
+              className={`px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold md:mt-1 ${
                 totalQty > 0
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-red-100 text-red-800'
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                  : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
               }`}
             >
               المجموع: {totalQty}
@@ -265,6 +274,7 @@ const LabelsTableRow = memo(function LabelsTableRow({
         </div>
       </td>
     </tr>
+
   );
 }, (prevProps, nextProps) => {
   const prevId = prevProps.product.ProductID || prevProps.product.id || '';

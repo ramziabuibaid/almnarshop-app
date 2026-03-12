@@ -119,8 +119,8 @@ export default function MaintenanceTimeline({ maintNo }: MaintenanceTimelineProp
     return (
       <div className="flex items-center justify-center py-8" dir="rtl">
         <div className="text-center">
-          <Loader2 size={32} className="animate-spin text-gray-400 mx-auto mb-2" />
-          <p className="text-sm text-gray-600">جاري تحميل السجل التاريخي...</p>
+          <Loader2 size={32} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+          <p className="text-sm text-gray-600 dark:text-gray-400">جاري تحميل السجل التاريخي...</p>
         </div>
       </div>
     );
@@ -128,8 +128,8 @@ export default function MaintenanceTimeline({ maintNo }: MaintenanceTimelineProp
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4" dir="rtl">
-        <p className="text-red-700 text-sm">{error}</p>
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4" dir="rtl">
+        <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
       </div>
     );
   }
@@ -137,9 +137,9 @@ export default function MaintenanceTimeline({ maintNo }: MaintenanceTimelineProp
   if (history.length === 0) {
     return (
       <div className="text-center py-8" dir="rtl">
-        <Clock size={48} className="text-gray-300 mx-auto mb-3" />
-        <p className="text-gray-600">لا يوجد سجل تاريخي لهذا السجل</p>
-        <p className="text-sm text-gray-500 mt-1">سيتم إنشاء السجل التاريخي عند تغيير الحالة</p>
+        <Clock size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+        <p className="text-gray-600 dark:text-gray-400">لا يوجد سجل تاريخي لهذا السجل</p>
+        <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">سيتم إنشاء السجل التاريخي عند تغيير الحالة</p>
       </div>
     );
   }
@@ -150,38 +150,38 @@ export default function MaintenanceTimeline({ maintNo }: MaintenanceTimelineProp
         <div key={entry.history_id} className="relative flex gap-4 pb-6 last:pb-0">
           {/* Timeline line */}
           {index < history.length - 1 && (
-            <div className="absolute right-5 top-8 bottom-0 w-0.5 bg-gray-200" />
+            <div className="absolute right-5 top-8 bottom-0 w-0.5 bg-gray-200 dark:bg-slate-700" />
           )}
 
           {/* Timeline dot */}
           <div className="relative z-10 flex-shrink-0">
-            <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center border-4 border-white shadow-sm">
-              <div className="w-2 h-2 rounded-full bg-white" />
+            <div className="w-10 h-10 rounded-full bg-gray-900 dark:bg-slate-400 flex items-center justify-center border-4 border-white dark:border-slate-800 shadow-sm">
+              <div className="w-2 h-2 rounded-full bg-white dark:bg-slate-800" />
             </div>
           </div>
 
           {/* Content */}
-          <div className="flex-1 bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+          <div className="flex-1 bg-white dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700 p-4 shadow-sm">
             <div className="flex items-start justify-between gap-4 mb-2">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-semibold text-gray-900">تغيير الحالة</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">تغيير الحالة</span>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                  <span className="text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded">
                     {entry.status_from || '—'}
                   </span>
                   <ArrowLeft size={16} className="text-blue-500" />
-                  <span className="text-sm text-blue-800 bg-blue-100 px-2 py-1 rounded font-bold">
+                  <span className="text-sm text-blue-800 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded font-bold">
                     {entry.status_to}
                   </span>
                 </div>
               </div>
               <div className="text-left">
-                <div className="text-xs font-medium text-gray-900">
+                <div className="text-xs font-medium text-gray-900 dark:text-gray-100">
                   {formatDate(entry.created_at)}
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
                   {formatTime(entry.created_at)}
                 </div>
                 {isSuperAdmin && (
@@ -202,15 +202,15 @@ export default function MaintenanceTimeline({ maintNo }: MaintenanceTimelineProp
             </div>
 
             {entry.notes && (
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{entry.notes}</p>
+              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700">
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{entry.notes}</p>
               </div>
             )}
 
             {entry.changed_by && userMap.get(entry.changed_by) && (
-              <div className="mt-2 pt-2 border-t border-gray-100">
-                <p className="text-xs text-gray-500">
-                  تم التغيير بواسطة: <span className="font-medium">{userMap.get(entry.changed_by)}</span>
+              <div className="mt-2 pt-2 border-t border-gray-100 dark:border-slate-700">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  تم التغيير بواسطة: <span className="font-medium dark:text-gray-300">{userMap.get(entry.changed_by)}</span>
                 </p>
               </div>
             )}

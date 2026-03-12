@@ -405,37 +405,37 @@ export default function CustomerProfilePage() {
     switch (type) {
       case 'invoice':
         return {
-          bg: 'bg-blue-50',
-          text: 'text-blue-700',
-          border: 'border-blue-300',
-          iconBg: 'bg-blue-100',
+          bg: 'bg-blue-50 dark:bg-blue-900/20',
+          text: 'text-blue-700 dark:text-blue-400',
+          border: 'border-blue-300 dark:border-blue-800',
+          iconBg: 'bg-blue-100 dark:bg-blue-900/40',
         };
       case 'receipt':
         return {
           bg: 'bg-green-50 dark:bg-green-900/20',
           text: 'text-green-700 dark:text-green-400',
-          border: 'border-green-300',
-          iconBg: 'bg-green-100 dark:bg-green-900/30',
+          border: 'border-green-300 dark:border-green-800',
+          iconBg: 'bg-green-100 dark:bg-green-900/40',
         };
       case 'payment':
         return {
           bg: 'bg-red-50 dark:bg-red-900/20',
           text: 'text-red-700 dark:text-red-400',
-          border: 'border-red-300',
-          iconBg: 'bg-red-100 dark:bg-red-900/30',
+          border: 'border-red-300 dark:border-red-800',
+          iconBg: 'bg-red-100 dark:bg-red-900/40',
         };
       case 'interaction':
         return {
           bg: 'bg-orange-50 dark:bg-orange-900/20',
           text: 'text-orange-700 dark:text-orange-400',
-          border: 'border-orange-300',
-          iconBg: 'bg-orange-100',
+          border: 'border-orange-300 dark:border-orange-800',
+          iconBg: 'bg-orange-100 dark:bg-orange-900/40',
         };
       default:
         return {
           bg: 'bg-gray-50 dark:bg-slate-800/50',
           text: 'text-gray-700 dark:text-gray-300',
-          border: 'border-gray-300 dark:border-slate-600',
+          border: 'border-gray-300 dark:border-slate-700',
           iconBg: 'bg-gray-100 dark:bg-slate-700/50',
         };
     }
@@ -447,33 +447,33 @@ export default function CustomerProfilePage() {
     switch (status) {
       case 'active':
         return {
-          bg: 'bg-blue-50',
-          text: 'text-blue-700',
-          border: 'border-blue-400',
-          iconBg: 'bg-blue-100',
+          bg: 'bg-blue-50 dark:bg-blue-900/20',
+          text: 'text-blue-700 dark:text-blue-400',
+          border: 'border-blue-400 dark:border-blue-800',
+          iconBg: 'bg-blue-100 dark:bg-blue-900/40',
         };
       case 'fulfilled':
       case 'paid':
         return {
           bg: 'bg-green-50 dark:bg-green-900/20',
           text: 'text-green-700 dark:text-green-400',
-          border: 'border-green-400',
-          iconBg: 'bg-green-100 dark:bg-green-900/30',
+          border: 'border-green-400 dark:border-green-800',
+          iconBg: 'bg-green-100 dark:bg-green-900/40',
         };
       case 'archived':
       case 'closed':
         return {
           bg: 'bg-gray-50 dark:bg-slate-800/50',
           text: 'text-gray-700 dark:text-gray-300',
-          border: 'border-gray-400',
+          border: 'border-gray-400 dark:border-gray-700',
           iconBg: 'bg-gray-100 dark:bg-slate-700/50',
         };
       default:
         return {
           bg: 'bg-orange-50 dark:bg-orange-900/20',
           text: 'text-orange-700 dark:text-orange-400',
-          border: 'border-orange-400',
-          iconBg: 'bg-orange-100',
+          border: 'border-orange-400 dark:border-orange-800',
+          iconBg: 'bg-orange-100 dark:bg-orange-900/40',
         };
     }
   };
@@ -1156,25 +1156,25 @@ export default function CustomerProfilePage() {
                     let colors = getTimelineColor(item.type);
                     if (item.source === 'Warehouse') {
                       if (item.type === 'invoice') {
-                      colors = {
-                        bg: 'bg-blue-100',
-                        text: 'text-blue-800',
-                        border: 'border-blue-500',
-                        iconBg: 'bg-blue-200',
-                      };
+                        colors = {
+                          bg: 'bg-blue-100 dark:bg-blue-900/40',
+                          text: 'text-blue-800 dark:text-blue-300',
+                          border: 'border-blue-500 dark:border-blue-700',
+                          iconBg: 'bg-blue-200 dark:bg-blue-800/50',
+                        };
                       } else if (item.type === 'receipt') {
                         colors = {
-                          bg: 'bg-green-100 dark:bg-green-900/30',
+                          bg: 'bg-green-100 dark:bg-green-900/40',
                           text: 'text-green-800 dark:text-green-300',
-                          border: 'border-green-500',
-                          iconBg: 'bg-green-200',
+                          border: 'border-green-500 dark:border-green-700',
+                          iconBg: 'bg-green-200 dark:bg-green-800/50',
                         };
                       } else if (item.type === 'payment') {
                         colors = {
-                          bg: 'bg-red-100 dark:bg-red-900/30',
+                          bg: 'bg-red-100 dark:bg-red-900/40',
                           text: 'text-red-800 dark:text-red-300',
-                          border: 'border-red-500',
-                          iconBg: 'bg-red-200',
+                          border: 'border-red-500 dark:border-red-700',
+                          iconBg: 'bg-red-200 dark:bg-red-800/50',
                         };
                       }
                     }
@@ -1382,11 +1382,11 @@ export default function CustomerProfilePage() {
                         return (
                           <div
                             key={uniqueKey}
-                            className="border-l-4 border-purple-500 pl-4 py-4 rounded-r-lg bg-purple-50 border border-purple-300 hover:shadow-sm transition-shadow"
+                            className="border-l-4 border-purple-500 pl-4 py-4 rounded-r-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-300 dark:border-purple-800 hover:shadow-sm transition-shadow"
                           >
                             <div className="flex items-start gap-3">
-                              <div className="p-2 rounded-lg bg-purple-100 flex-shrink-0">
-                                <FileText size={20} className="text-purple-700" />
+                              <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/40 flex-shrink-0">
+                                <FileText size={20} className="text-purple-700 dark:text-purple-400" />
                               </div>
                               <div className="flex-1">
                                 <div className="flex items-center justify-between mb-1">

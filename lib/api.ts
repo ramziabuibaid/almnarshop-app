@@ -8184,7 +8184,11 @@ export async function getQuotationDetailsFromSupabase(quotationId: string): Prom
           image_url_3,
           image,
           image_2,
-          image_3
+          image_3,
+          size,
+          color,
+          dimention,
+          warranty
         )
       `)
       .eq('quotation_id', quotationId)
@@ -8217,7 +8221,20 @@ export async function getQuotationDetailsFromSupabase(quotationId: string): Prom
           shamelNo: product.shamel_no || '',
           costPrice: parseFloat(String(product.cost_price || 0)) || 0,
           sale_price: parseFloat(String(product.sale_price || 0)) || 0,
+          size: product.size || '',
+          color: product.color || '',
+          dimention: product.dimention || '',
+          warranty: product.warranty || '',
+          images: Array.from(new Set([
+            product.image_url,
+            product.image_url_2,
+            product.image_url_3,
+            product.image,
+            product.image_2,
+            product.image_3
+          ].filter(Boolean) as string[])),
           image: product.image_url || product.image_url_2 || product.image_url_3 || product.image || product.image_2 || product.image_3 || '',
+          Image: product.image_url || product.image_url_2 || product.image_url_3 || product.image || product.image_2 || product.image_3 || '',
         },
       };
     });

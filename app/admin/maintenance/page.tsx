@@ -1209,7 +1209,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                           </td>
                         </tr>
                         {expandedRows.has(record.MaintNo) && (
-                          <tr className="bg-gradient-to-b from-gray-50 to-white">
+                          <tr className="bg-gradient-to-b from-gray-50 to-white dark:from-slate-800 dark:to-slate-900">
                             <td colSpan={7} className="px-4 sm:px-6 py-4 border-t-2 border-gray-300 dark:border-slate-600">
                               <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-top-2 duration-200" dir="rtl">
                                 <div className="flex items-center justify-between mb-3 sm:mb-4 pb-3 border-b border-gray-300 dark:border-slate-600">
@@ -1218,7 +1218,7 @@ ${record.SerialNo ? `الرقم التسلسلي: ${record.SerialNo}\n` : ''}
                                       <History size={14} className="text-white" />
                                     </div>
                                     <h3 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 font-cairo">السجل التاريخي</h3>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full font-cairo">#{record.MaintNo}</span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-slate-700 px-2 py-0.5 rounded-full font-cairo">#{record.MaintNo}</span>
                                   </div>
                                   <button
                                     onClick={() => toggleRowExpansion(record.MaintNo)}

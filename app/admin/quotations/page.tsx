@@ -26,6 +26,8 @@ import {
   ChevronDown,
   Image,
   Copy,
+  Link,
+  Check,
 } from 'lucide-react';
 
 interface Quotation {
@@ -76,6 +78,7 @@ export default function QuotationsPage() {
   const [cloningId, setCloningId] = useState<string | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [copyingId, setCopyingId] = useState<string | null>(null);
   const QUOTATIONS_PER_PAGE = 50;
   const [searchByIdResult, setSearchByIdResult] = useState<Quotation | null>(null);
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
@@ -258,18 +261,25 @@ export default function QuotationsPage() {
     }
   };
 
-  const [printMenuOpen, setPrintMenuOpen] = useState<string | null>(null);
+  const handleCopyLink = (quotationId: string) => {
+    const url = `${window.location.origin}/quotation/${quotationId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopyingId(quotationId);
+      setTimeout(() => setCopyingId(null), 2000);
+    }).catch(err => {
+      console.error('[QuotationsPage] Failed to copy link:', err);
+      alert('فشل نسخ الرابط');
+    });
+  };
 
-  const handlePrint = (quotationId: string, withImages = true) => {
-    setPrintMenuOpen(null);
+
+  const handlePrint = (quotationId: string) => {
     if (isMobilePrint()) {
-      const url = withImages
-        ? `/admin/quotations/print/${quotationId}?variant=image`
-        : `/admin/quotations/print/${quotationId}`;
+      const url = `/admin/quotations/print/${quotationId}`;
       window.open(url, `print-quotation-${quotationId}`, 'noopener,noreferrer');
       return;
     }
-    setPrintOverlayQuotation({ id: quotationId, variant: withImages ? 'image' : undefined });
+    setPrintOverlayQuotation({ id: quotationId, variant: undefined });
   };
 
   const formatCurrency = (amount: number | undefined | null) => {
@@ -484,11 +494,6 @@ export default function QuotationsPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900 dark:text-gray-100 font-cairo flex items-center gap-2">
                             {quotation.QuotationID}
-                            {quotation.is_groom_offer && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800" title={quotation.groom_offer_title || 'عرض عرسان مميز'}>
-                                👑 عرض عرسان
-                              </span>
-                            )}
                           </div>
                           {(() => {
                             const userId = quotation.created_by || quotation.createdBy || quotation.user_id || quotation.CreatedBy || '';
@@ -577,73 +582,57 @@ export default function QuotationsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center gap-2">
-                            <div className="relative inline-block">
-                              <button
-                                onClick={() => handlePrint(quotation.QuotationID)}
-                                className="text-blue-600 hover:text-blue-900 flex items-center gap-1 font-cairo"
-                              >
-                                <Printer size={16} />
-                                طباعة
-                              </button>
-                              <button
-                                onClick={() => setPrintMenuOpen(printMenuOpen === quotation.QuotationID ? null : quotation.QuotationID)}
-                                className="text-blue-600 hover:text-blue-900 p-0.5 -mr-1 font-cairo"
-                                title="خيارات الطباعة"
-                              >
-                                <ChevronDown size={14} className={printMenuOpen === quotation.QuotationID ? 'rotate-180' : ''} />
-                              </button>
-                              {printMenuOpen === quotation.QuotationID && (
-                                <>
-                                  <div className="fixed inset-0 z-10" onClick={() => setPrintMenuOpen(null)} />
-                                  <div className="absolute right-0 top-full mt-1 py-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg z-20 min-w-[180px]">
-                                    <button
-                                      onClick={() => handlePrint(quotation.QuotationID, true)}
-                                      className="w-full px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-cairo"
-                                    >
-                                      <Image size={14} />
-                                      طباعة مع صور المنتجات
-                                    </button>
-                                    <button
-                                      onClick={() => handlePrint(quotation.QuotationID, false)}
-                                      className="w-full px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-cairo"
-                                    >
-                                      <Printer size={14} />
-                                      طباعة عادية (رقم شامل)
-                                    </button>
-                                  </div>
-                                </>
-                              )}
-                            </div>
+                            <button
+                              onClick={() => handlePrint(quotation.QuotationID)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                              title="طباعة"
+                            >
+                              <Printer size={18} />
+                            </button>
                             <button
                               onClick={() => router.push(`/admin/quotations/${quotation.QuotationID}`)}
-                              className="text-yellow-600 hover:text-yellow-900 flex items-center gap-1 font-cairo"
+                              className="p-2 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition-colors"
+                              title="تعديل"
                             >
-                              <Edit size={16} />
-                              تعديل
+                              <Edit size={18} />
+                            </button>
+                            <button
+                              onClick={() => handleCopyLink(quotation.QuotationID)}
+                              className={`p-2 rounded-lg transition-colors ${copyingId === quotation.QuotationID ? 'text-green-600 bg-green-50' : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}`}
+                              title="نسخ رابط العرض العام"
+                            >
+                              {copyingId === quotation.QuotationID ? (
+                                <Check size={18} />
+                              ) : (
+                                <Link size={18} />
+                              )}
                             </button>
                             {canAccountant && (
                               <button
                                 onClick={() => handleCloneAsOffer(quotation.QuotationID)}
                                 disabled={cloningId === quotation.QuotationID}
-                                className="text-purple-600 hover:text-purple-900 flex items-center gap-1 font-cairo disabled:opacity-50"
+                                className="p-2 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors disabled:opacity-50"
                                 title="استنساخ كعرض عرسان"
                               >
                                 {cloningId === quotation.QuotationID ? (
-                                  <Loader2 size={16} className="animate-spin" />
+                                  <Loader2 size={18} className="animate-spin" />
                                 ) : (
-                                  <Copy size={16} />
+                                  <Copy size={18} />
                                 )}
-                                استنساخ
                               </button>
                             )}
                             {canAccountant && (
                               <button
                                 onClick={() => handleDelete(quotation.QuotationID)}
                                 disabled={deletingId === quotation.QuotationID}
-                                className="text-red-600 dark:text-red-400 hover:text-red-900 flex items-center gap-1 font-cairo disabled:opacity-50"
+                                className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
+                                title="حذف"
                               >
-                                <Trash2 size={16} />
-                                حذف
+                                {deletingId === quotation.QuotationID ? (
+                                  <Loader2 size={18} className="animate-spin" />
+                                ) : (
+                                  <Trash2 size={18} />
+                                )}
                               </button>
                             )}
                           </div>
@@ -665,11 +654,6 @@ export default function QuotationsPage() {
                       <div className="flex items-center gap-2 mb-1">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 font-cairo">#{quotation.QuotationID}</h3>
-                          {quotation.is_groom_offer && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800" title={quotation.groom_offer_title || 'عرض عرسان مميز'}>
-                              👑 عرض عرسان
-                            </span>
-                          )}
                           <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-lg font-cairo ${getStatusColor(quotation.Status)}`}>
                             {quotation.Status}
                           </span>
@@ -755,77 +739,57 @@ export default function QuotationsPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-slate-700">
-                    <div className="flex-1 relative">
-                      <button
-                        onClick={() => handlePrint(quotation.QuotationID)}
-                        className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors font-cairo"
-                      >
-                        <Printer size={16} />
-                        <span>طباعة</span>
-                      </button>
-                      <button
-                        onClick={() => setPrintMenuOpen(printMenuOpen === quotation.QuotationID ? null : quotation.QuotationID)}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700"
-                        title="خيارات الطباعة"
-                      >
-                        <ChevronDown size={14} className={printMenuOpen === quotation.QuotationID ? 'rotate-180' : ''} />
-                      </button>
-                      {printMenuOpen === quotation.QuotationID && (
-                        <>
-                          <div className="fixed inset-0 z-10" onClick={() => setPrintMenuOpen(null)} />
-                          <div className="absolute right-0 bottom-full mb-1 py-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg z-20 min-w-[200px]">
-                            <button
-                              onClick={() => handlePrint(quotation.QuotationID, true)}
-                              className="w-full px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-cairo"
-                            >
-                              <Image size={14} />
-                              طباعة مع صور المنتجات
-                            </button>
-                            <button
-                              onClick={() => handlePrint(quotation.QuotationID, false)}
-                              className="w-full px-3 py-2 text-right text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center gap-2 font-cairo"
-                            >
-                              <Printer size={14} />
-                              طباعة عادية (رقم شامل)
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
+                    <button
+                      onClick={() => handlePrint(quotation.QuotationID)}
+                      className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                      title="طباعة"
+                    >
+                      <Printer size={18} />
+                    </button>
                     <button
                       onClick={() => router.push(`/admin/quotations/${quotation.QuotationID}`)}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-cairo"
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="تعديل"
                     >
-                      <Edit size={16} />
-                      <span>تعديل</span>
+                      <Edit size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleCopyLink(quotation.QuotationID)}
+                      className={`p-2 rounded-lg transition-colors ${copyingId === quotation.QuotationID ? 'text-green-600 bg-green-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+                      title="نسخ رابط العرض العام"
+                    >
+                      {copyingId === quotation.QuotationID ? (
+                        <Check size={18} />
+                      ) : (
+                        <Link size={18} />
+                      )}
                     </button>
                     {canAccountant && (
                       <button
                         onClick={() => handleCloneAsOffer(quotation.QuotationID)}
                         disabled={cloningId === quotation.QuotationID}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50"
                         title="استنساخ كعرض عرسان عام"
                       >
                         {cloningId === quotation.QuotationID ? (
-                          <Loader2 size={16} className="animate-spin" />
+                          <Loader2 size={18} className="animate-spin" />
                         ) : (
-                          <Copy size={16} />
+                          <Copy size={18} />
                         )}
-                        <span className="hidden sm:inline">استنساخ</span>
                       </button>
                     )}
                     {canAccountant && (
                       <button
                         onClick={() => handleDelete(quotation.QuotationID)}
                         disabled={deletingId === quotation.QuotationID}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 transition-colors font-cairo disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        title="حذف"
                       >
                         {deletingId === quotation.QuotationID ? (
-                          <Loader2 size={16} className="animate-spin" />
+                          <Loader2 size={18} className="animate-spin" />
                         ) : (
-                          <Trash2 size={16} />
+                          <Trash2 size={18} />
                         )}
-                        <span>حذف</span>
                       </button>
                     )}
                   </div>

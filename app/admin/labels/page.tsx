@@ -8,6 +8,7 @@ import { Product } from '@/types';
 import { getProducts, saveProduct } from '@/lib/api';
 import LabelsTableRow from '@/components/admin/LabelsTableRow';
 import BarcodeScannerInput from '@/components/admin/BarcodeScannerInput';
+import CatalogPdfGenerator from '@/components/admin/CatalogPdfGenerator';
 import { useRouter } from 'next/navigation';
 
 type LabelType = 'A' | 'B' | 'C' | 'D';
@@ -378,6 +379,9 @@ export default function LabelsPage() {
     return filtered;
   }, [products, selectedProducts, customQuantities, quantitySource]);
 
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfProducts, setPdfProducts] = useState<Product[]>([]);
+
   const handlePrint = () => {
     if (selectedProductsList.length === 0) {
       alert('يرجى تحديد منتج واحد على الأقل للطباعة');
@@ -388,8 +392,8 @@ export default function LabelsPage() {
     const productsToPrint =
       labelType === 'D'
         ? selectedProductsList.filter((p) => {
-            const shopQty = p.CS_Shop ?? p.cs_shop ?? 0;
-            const warQty = p.CS_War ?? p.cs_war ?? 0;
+            const shopQty = (p as any).CS_Shop ?? (p as any).cs_shop ?? 0;
+            const warQty = (p as any).CS_War ?? (p as any).cs_war ?? 0;
             const includeByShop = showZeroShopCatalog || shopQty > 0;
             const includeByWarehouse = showZeroWarehouseCatalog || warQty > 0;
             return includeByShop && includeByWarehouse;
@@ -401,52 +405,88 @@ export default function LabelsPage() {
       return;
     }
 
+    openPrintWindow(productsToPrint, 'print');
+  };
+
+  const handleDownloadPdf = () => {
+    if (labelType !== 'D') return;
+
+    if (selectedProductsList.length === 0) {
+      alert('يرجى تحديد منتج واحد على الأقل للتنزيل');
+      return;
+    }
+
+    const productsToPrint = selectedProductsList.filter((p) => {
+      const shopQty = (p as any).CS_Shop ?? (p as any).cs_shop ?? 0;
+      const warQty = (p as any).CS_War ?? (p as any).cs_war ?? 0;
+      const includeByShop = showZeroShopCatalog || shopQty > 0;
+      const includeByWarehouse = showZeroWarehouseCatalog || warQty > 0;
+      return includeByShop && includeByWarehouse;
+    });
+
+    if (productsToPrint.length === 0) {
+      alert('لا توجد منتجات تطابق الخيارات المحددة للتنزيل.');
+      return;
+    }
+
+    // Set products for the hidden renderer and trigger generation
+    setPdfProducts(productsToPrint);
+    setIsGeneratingPdf(true);
+    // Small delay to allow render before capture
+    setTimeout(() => {
+      const fn = (window as any).__catalogPdfGenerate;
+      if (typeof fn === 'function') fn();
+    }, 300);
+  };
+
+  const openPrintWindow = (productsToPrint: any[], mode: 'print' | 'download') => {
     // Store products and labelType in sessionStorage to avoid URL length limits
     const printData = {
       products: productsToPrint,
       labelType: labelType,
-      useQuantity: labelType === 'C' ? useQuantity : true, // Only relevant for Type C
-      showZeroQuantity: labelType === 'C' ? showZeroQuantity : true, // Only relevant for Type C
+      useQuantity: labelType === 'C' ? useQuantity : true,
+      showZeroQuantity: labelType === 'C' ? showZeroQuantity : true,
       useQrProductUrl,
-      showQrInCatalog: labelType === 'D' ? showQrInCatalog : undefined, // لنوع د فقط: إظهار QR لفتح صفحة المنتج
-      showPriceInCatalog: labelType === 'D' ? showPriceInCatalog : undefined, // لنوع د فقط: إظهار السعر
-      hideCatalogHeader: labelType === 'D' ? hideCatalogHeader : undefined, // لنوع د فقط: الطباعة بلا الترويسة
+      showQrInCatalog: labelType === 'D' ? showQrInCatalog : undefined,
+      showPriceInCatalog: labelType === 'D' ? showPriceInCatalog : undefined,
+      hideCatalogHeader: labelType === 'D' ? hideCatalogHeader : undefined,
+      mode: mode,
       timestamp: Date.now(),
     };
     
     try {
       const dataString = JSON.stringify(printData);
-      console.log('[LabelsPage] Storing print data:', {
-        productsCount: productsToPrint.length,
-        labelType: labelType,
-        dataSize: dataString.length,
-      });
-      
-      // Use localStorage instead of sessionStorage for better cross-window compatibility
       localStorage.setItem('labelsPrintData', dataString);
       
-      // Verify data was stored
-      const verifyData = localStorage.getItem('labelsPrintData');
-      if (!verifyData) {
-        throw new Error('Failed to store data in localStorage');
+      const printUrl = `/admin/labels/print?t=${Date.now()}${mode === 'download' ? '&download=true' : ''}`;
+      
+      if (mode === 'download') {
+        // Use hidden iframe for download
+        let iframe = document.getElementById('pdf-download-iframe') as HTMLIFrameElement;
+        if (!iframe) {
+          iframe = document.createElement('iframe');
+          iframe.id = 'pdf-download-iframe';
+          iframe.style.display = 'none';
+          document.body.appendChild(iframe);
+        }
+        iframe.src = printUrl;
+      } else {
+        // Use new window for print
+        window.open(printUrl, 'labels-print', 'noopener,noreferrer');
       }
       
-      console.log('[LabelsPage] Data stored successfully, opening print window...');
-      
-      // Open print page in new window with a unique identifier
-      const printUrl = `/admin/labels/print?t=${Date.now()}`;
-      const printWindow = window.open(printUrl, 'labels-print', 'noopener,noreferrer');
-      
-      // Clean up localStorage after a delay (in case window doesn't open)
       setTimeout(() => {
-        // Only remove if window was closed or failed to open
-        if (!printWindow || printWindow.closed) {
+        // Cleanup localStorage after a bit
+        if (mode === 'print') {
+          // Keep it longer for the window
+        } else {
           localStorage.removeItem('labelsPrintData');
         }
       }, 5000);
     } catch (error: any) {
       console.error('[LabelsPage] Failed to store print data:', error);
-      alert('فشل تحضير البيانات للطباعة. يرجى المحاولة مرة أخرى.');
+      alert('فشل تحضير البيانات. يرجى المحاولة مرة أخرى.');
+      setIsGeneratingPdf(false);
     }
   };
 
@@ -457,17 +497,19 @@ export default function LabelsPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-slate-800/50 p-6 no-print" dir="rtl">
         <div className="max-w-7xl mx-auto no-print">
           {/* Header */}
-          <div className="mb-6 no-print">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">طباعة ملصقات الأسعار</h1>
-            <p className="text-gray-600 dark:text-gray-400">اختر المنتجات وحدد نوع الملصق للطباعة</p>
+          <div className="mb-8 no-print flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-50 mb-2 tracking-tight">طباعة ملصقات الأسعار</h1>
+              <p className="text-gray-600 dark:text-gray-400 font-medium">اختر المنتجات وحدد نوع الملصق للطباعة</p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column: Product Selection */}
             <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 no-print">
               {/* مسح الباركود: ماسح خارجي أو كاميرا — يحدد الصنف تلقائياً ويبقى جاهزاً لمسح جديد */}
-              <div className="mb-4 p-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 font-cairo">مسح الباركود أو رقم الشامل</label>
+              <div className="mb-6 p-4 bg-gray-50 dark:bg-slate-900/40 rounded-xl border border-gray-200 dark:border-slate-700/50 shadow-sm">
+                <label className="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-3 font-cairo">مسح الباركود أو رقم الشامل</label>
                 <BarcodeScannerInput
                   onProductFound={(product) => {
                     const productId = product.ProductID || product.id || '';
@@ -478,7 +520,10 @@ export default function LabelsPage() {
                   className="w-full"
                   disabled={loading}
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 font-cairo">الماسح الخارجي أو كاميرا الموبايل — كل مسح يحدد/يلغي الصنف ويجهز لمسح التالي</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-cairo leading-relaxed flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                  الماسح الخارجي أو كاميرا الموبايل — كل مسح يحدد/يلغي الصنف ويجهز لمسح التالي
+                </p>
               </div>
               {/* بحث نصي عن المنتجات */}
               <div className="mb-4">
@@ -519,56 +564,56 @@ export default function LabelsPage() {
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-200 dark:border-slate-700">
-                          <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300">تحديد</th>
-                          <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300">الصورة</th>
-                          <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300">الاسم</th>
-                          <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300">الباركود</th>
+                  <div className="overflow-x-auto -mx-1 px-1">
+                    <table className="w-full border-separate border-spacing-0">
+                      <thead className="hidden md:table-header-group">
+                        <tr className="border-b border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/30">
+                          <th className="text-right py-3 px-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700 rounded-tr-lg">تحديد</th>
+                          <th className="text-right py-3 px-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">الصورة</th>
+                          <th className="text-right py-3 px-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">الاسم</th>
+                          <th className="text-right py-3 px-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">الباركود</th>
                           {labelType === 'C' && useQuantity && (
-                            <th className="text-right py-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300">الكمية للطباعة</th>
+                            <th className="text-right py-3 px-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">الكمية للطباعة</th>
                           )}
                           <th 
-                            className="text-right py-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 select-none"
+                            className="text-right py-3 px-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors select-none"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSort('price');
                             }}
                           >
-                            <div className="flex items-center justify-end gap-1">
+                            <div className="flex items-center justify-end gap-1.5">
                               <span>السعر</span>
                               {sortField === 'price' && (
                                 sortDirection === 'asc' ? (
-                                  <ArrowUp size={14} className="text-gray-900 dark:text-gray-100" />
+                                  <ArrowUp size={12} className="text-blue-600 dark:text-blue-400" />
                                 ) : (
-                                  <ArrowDown size={14} className="text-gray-900 dark:text-gray-100" />
+                                  <ArrowDown size={12} className="text-blue-600 dark:text-blue-400" />
                                 )
                               )}
                             </div>
                           </th>
                           <th 
-                            className="text-right py-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 select-none"
+                            className="text-right py-3 px-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700 rounded-tl-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors select-none"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSort('quantity');
                             }}
                           >
-                            <div className="flex items-center justify-end gap-1">
+                            <div className="flex items-center justify-end gap-1.5">
                               <span>المخزون</span>
                               {sortField === 'quantity' && (
                                 sortDirection === 'asc' ? (
-                                  <ArrowUp size={14} className="text-gray-900 dark:text-gray-100" />
+                                  <ArrowUp size={12} className="text-blue-600 dark:text-blue-400" />
                                 ) : (
-                                  <ArrowDown size={14} className="text-gray-900 dark:text-gray-100" />
+                                  <ArrowDown size={12} className="text-blue-600 dark:text-blue-400" />
                                 )
                               )}
                             </div>
                           </th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="flex flex-col md:table-row-group">
                         {filteredProducts.length === 0 ? (
                           <tr>
                             <td colSpan={labelType === 'C' && useQuantity ? 7 : 6} className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -900,14 +945,43 @@ export default function LabelsPage() {
               )}
 
               {/* Print Button */}
-              <button
-                onClick={handlePrint}
-                disabled={selectedProductsList.length === 0}
-                className="w-full bg-gray-900 dark:bg-slate-700 text-white py-3 px-4 rounded-lg font-semibold hover:bg-gray-800 dark:hover:bg-slate-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
-              >
-                <Printer size={20} />
-                <span>طباعة</span>
-              </button>
+              {labelType === 'D' ? (
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={handleDownloadPdf}
+                    disabled={selectedProductsList.length === 0 || isGeneratingPdf}
+                    className="w-full bg-blue-600 dark:bg-blue-600 text-white py-3.5 px-4 rounded-xl font-bold hover:bg-blue-700 dark:hover:bg-blue-500 disabled:bg-gray-400 dark:disabled:bg-slate-700 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-all shadow-md active:scale-[0.98]"
+                  >
+                    {isGeneratingPdf ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>جاري التحضير...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Printer size={22} />
+                        <span>تنزيل ملف الكتالوج (PDF)</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={handlePrint}
+                    disabled={selectedProductsList.length === 0}
+                    className="w-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 py-2.5 px-4 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
+                  >
+                    <span>عرض نافذة الطباعة العادية</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handlePrint}
+                  disabled={selectedProductsList.length === 0}
+                  className="w-full bg-gray-900 dark:bg-slate-700 text-white py-3.5 px-4 rounded-xl font-bold hover:bg-gray-800 dark:hover:bg-slate-600 disabled:bg-gray-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-all shadow-md active:scale-[0.98]"
+                >
+                  <Printer size={22} />
+                  <span>طباعة الملصقات</span>
+                </button>
+              )}
 
               {/* Selected Products Summary */}
               {selectedProductsList.length > 0 && (
@@ -930,6 +1004,25 @@ export default function LabelsPage() {
         </div>
 
       </div>
+
+      {/* Hidden PDF Generator for Catalog export — renders off-screen, no tab switch */}
+      {labelType === 'D' && pdfProducts.length > 0 && (
+        <CatalogPdfGenerator
+          products={pdfProducts}
+          showQrInCatalog={showQrInCatalog}
+          showPriceInCatalog={showPriceInCatalog}
+          hideCatalogHeader={hideCatalogHeader}
+          onComplete={() => {
+            setIsGeneratingPdf(false);
+            setPdfProducts([]);
+          }}
+          onError={(err) => {
+            setIsGeneratingPdf(false);
+            setPdfProducts([]);
+            alert(`حدث خطأ أثناء توليد الـ PDF: ${err}`);
+          }}
+        />
+      )}
     </AdminLayout>
   );
 }

@@ -2,15 +2,28 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { getQuotationFromSupabase } from '@/lib/api';
 import { getDirectImageUrl } from '@/lib/utils';
-import { LucideUser, LucideFileText, LucideCalendar, LucideAlertCircle, LucideSmartphone, LucideCheckCircle, LucideGift, LucideBanknote } from 'lucide-react';
+import { LucideUser, LucideFileText, LucideCalendar, LucideAlertCircle, LucideSmartphone, LucideCheckCircle, LucideGift, LucideBanknote, LucideChevronRight, LucideChevronLeft, LucideX, LucideScaling, LucidePalette, LucideSettings, LucideShieldCheck, LucideHash } from 'lucide-react';
 import { FaWhatsapp } from 'react-icons/fa';
 
 interface QuotationItem {
     QuotationDetailID: string;
     ProductID: string;
-    product?: { name: string; barcode?: string; shamelNo?: string; image?: string; Image?: string };
+    product?: {
+        name: string;
+        barcode?: string;
+        shamelNo?: string;
+        image?: string;
+        Image?: string;
+        images?: string[];
+        size?: string;
+        color?: string;
+        dimention?: string;
+        warranty?: string;
+        sale_price?: number;
+    };
     Quantity: number;
     UnitPrice: number;
     notes?: string;
@@ -38,6 +51,11 @@ export default function PublicQuotationView() {
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [lightboxData, setLightboxData] = useState<{
+        images: string[];
+        index: number;
+        title: string;
+    } | null>(null);
 
     useEffect(() => {
         if (!quotationId) {
@@ -115,6 +133,39 @@ export default function PublicQuotationView() {
         } catch {
             return dateString;
         }
+    };
+
+    const handleImageClick = (item: QuotationItem) => {
+        if (!item.product) return;
+        const images = (item.product.images || [])
+            .map(img => getDirectImageUrl(img))
+            .filter(Boolean);
+            
+        if (images.length === 0) return;
+
+        setLightboxData({
+            images,
+            index: 0,
+            title: item.product.name
+        });
+    };
+
+    const nextImage = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!lightboxData) return;
+        setLightboxData({
+            ...lightboxData,
+            index: (lightboxData.index + 1) % lightboxData.images.length
+        });
+    };
+
+    const prevImage = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!lightboxData) return;
+        setLightboxData({
+            ...lightboxData,
+            index: (lightboxData.index - 1 + lightboxData.images.length) % lightboxData.images.length
+        });
     };
 
     const regularItems = useMemo(() => {
@@ -255,19 +306,60 @@ export default function PublicQuotationView() {
 
                                 return (
                                     <div key={item.QuotationDetailID || index} className="flex flex-col sm:flex-row bg-gray-50 rounded-xl p-4 border border-gray-100 gap-4">
-                                        <div className="w-24 h-24 sm:w-20 sm:h-20 bg-white rounded-lg border border-gray-200 flex-shrink-0 mx-auto sm:mx-0 overflow-hidden flex items-center justify-center">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleImageClick(item)}
+                                            className="w-24 h-24 sm:w-20 sm:h-20 bg-white rounded-lg border border-gray-200 flex-shrink-0 mx-auto sm:mx-0 overflow-hidden flex items-center justify-center hover:ring-2 hover:ring-emerald-500 transition-all cursor-pointer group"
+                                        >
                                             {imageUrl ? (
-                                                <img src={imageUrl} alt={item.product?.name} className="max-w-full max-h-full object-contain p-1" />
+                                                <img src={imageUrl} alt={item.product?.name} className="max-w-full max-h-full object-contain p-1 group-hover:scale-110 transition-transform" />
                                             ) : (
                                                 <LucideFileText className="w-8 h-8 text-gray-300" />
                                             )}
-                                        </div>
+                                        </button>
                                         <div className="flex-1 flex flex-col justify-between text-center sm:text-right">
                                             <div>
-                                                <h3 className="font-bold text-gray-900">{item.product?.name || `Product ${item.ProductID}`}</h3>
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    رقم الصنف: {item.product?.shamelNo || item.product?.barcode || item.ProductID}
-                                                </p>
+                                                <Link 
+                                                    href={`/product/${item.ProductID}`}
+                                                    className="font-bold text-gray-900 hover:text-emerald-600 hover:underline transition-colors block"
+                                                >
+                                                    {item.product?.name || `Product ${item.ProductID}`}
+                                                </Link>
+
+                                                {/* Product Specs */}
+                                                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-gray-500 bg-white/50 p-2 rounded-lg border border-gray-100">
+                                                    {(item.product?.shamelNo || item.product?.barcode || item.ProductID) && (
+                                                        <div className="flex items-center gap-1">
+                                                            <LucideHash className="w-3 h-3 text-emerald-600" />
+                                                            <span className="font-semibold text-gray-700">رقم الصنف: {item.product?.shamelNo || item.product?.barcode || item.ProductID}</span>
+                                                        </div>
+                                                    )}
+                                                    {item.product?.size && (
+                                                        <div className="flex items-center gap-1">
+                                                            <LucideScaling className="w-3 h-3 text-emerald-600" />
+                                                            <span className="font-semibold text-gray-700">الحجم: {item.product.size}</span>
+                                                        </div>
+                                                    )}
+                                                    {item.product?.dimention && (
+                                                        <div className="flex items-center gap-1">
+                                                            <LucideSettings className="w-3 h-3 text-emerald-600" />
+                                                            <span className="font-semibold text-gray-700">الأبعاد: {item.product.dimention}</span>
+                                                        </div>
+                                                    )}
+                                                    {item.product?.warranty && (
+                                                        <div className="flex items-center gap-1">
+                                                            <LucideShieldCheck className="w-3 h-3 text-emerald-600" />
+                                                            <span className="font-semibold text-gray-700">الكفالة: {item.product.warranty}</span>
+                                                        </div>
+                                                    )}
+                                                    {item.product?.color && (
+                                                        <div className="flex items-center gap-1">
+                                                            <LucidePalette className="w-3 h-3 text-emerald-600" />
+                                                            <span className="font-semibold text-gray-700">اللون: {item.product.color}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
                                                 {item.serialNos && item.serialNos.length > 0 && (
                                                     <div className="mt-2 flex flex-wrap gap-1 justify-center sm:justify-start">
                                                         {item.serialNos.map((serial, idx) => (
@@ -285,8 +377,15 @@ export default function PublicQuotationView() {
                                                 <div className="text-sm font-semibold text-gray-700">
                                                     الكمية: <span className="text-gray-900 bg-white px-2 py-1 rounded border shadow-sm">{item.Quantity}</span>
                                                 </div>
-                                                <div className="text-left font-bold text-blue-700 text-lg">
-                                                    {totalItemPrice.toFixed(2)} ₪
+                                                <div className="text-left flex flex-col items-end">
+                                                    {item.product?.sale_price !== undefined && Math.abs(item.UnitPrice - item.product.sale_price) > 0.01 && (
+                                                        <span className="text-xs text-gray-400 line-through decoration-red-400/50 font-medium">
+                                                            {item.product.sale_price.toFixed(2)} ₪
+                                                        </span>
+                                                    )}
+                                                    <div className="font-bold text-blue-700 text-lg leading-none">
+                                                        {totalItemPrice.toFixed(2)} ₪
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -317,19 +416,60 @@ export default function PublicQuotationView() {
 
                                 return (
                                     <div key={item.QuotationDetailID || `gift-${index}`} className="flex flex-col sm:flex-row bg-white rounded-xl p-4 border border-amber-100 gap-4 shadow-sm hover:shadow-md transition-shadow">
-                                        <div className="w-24 h-24 sm:w-20 sm:h-20 bg-gray-50 rounded-lg border border-gray-100 flex-shrink-0 mx-auto sm:mx-0 overflow-hidden flex items-center justify-center">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleImageClick(item)}
+                                            className="w-24 h-24 sm:w-20 sm:h-20 bg-gray-50 rounded-lg border border-gray-100 flex-shrink-0 mx-auto sm:mx-0 overflow-hidden flex items-center justify-center hover:ring-2 hover:ring-amber-500 transition-all cursor-pointer group"
+                                        >
                                             {imageUrl ? (
-                                                <img src={imageUrl} alt={item.product?.name} className="max-w-full max-h-full object-contain p-1" />
+                                                <img src={imageUrl} alt={item.product?.name} className="max-w-full max-h-full object-contain p-1 group-hover:scale-110 transition-transform" />
                                             ) : (
                                                 <LucideGift className="w-8 h-8 text-amber-200" />
                                             )}
-                                        </div>
+                                        </button>
                                         <div className="flex-1 flex flex-col justify-between text-center sm:text-right">
                                             <div>
-                                                <h3 className="font-bold text-gray-900">{item.product?.name || `Product ${item.ProductID}`}</h3>
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    رقم الصنف: {item.product?.shamelNo || item.product?.barcode || item.ProductID}
-                                                </p>
+                                                <Link 
+                                                    href={`/product/${item.ProductID}`}
+                                                    className="font-bold text-gray-900 hover:text-emerald-600 hover:underline transition-colors block"
+                                                >
+                                                    {item.product?.name || `Product ${item.ProductID}`}
+                                                </Link>
+
+                                                {/* Product Specs */}
+                                                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-gray-500 bg-white p-2 rounded-lg border border-amber-100">
+                                                    {(item.product?.shamelNo || item.product?.barcode || item.ProductID) && (
+                                                        <div className="flex items-center gap-1">
+                                                            <LucideHash className="w-3 h-3 text-amber-500" />
+                                                            <span className="font-semibold text-gray-700">رقم الصنف: {item.product?.shamelNo || item.product?.barcode || item.ProductID}</span>
+                                                        </div>
+                                                    )}
+                                                    {item.product?.size && (
+                                                        <div className="flex items-center gap-1">
+                                                            <LucideScaling className="w-3 h-3 text-amber-500" />
+                                                            <span className="font-semibold text-gray-700">الحجم: {item.product.size}</span>
+                                                        </div>
+                                                    )}
+                                                    {item.product?.dimention && (
+                                                        <div className="flex items-center gap-1">
+                                                            <LucideSettings className="w-3 h-3 text-amber-500" />
+                                                            <span className="font-semibold text-gray-700">الأبعاد: {item.product.dimention}</span>
+                                                        </div>
+                                                    )}
+                                                    {item.product?.warranty && (
+                                                        <div className="flex items-center gap-1">
+                                                            <LucideShieldCheck className="w-3 h-3 text-amber-500" />
+                                                            <span className="font-semibold text-gray-700">الكفالة: {item.product.warranty}</span>
+                                                        </div>
+                                                    )}
+                                                    {item.product?.color && (
+                                                        <div className="flex items-center gap-1">
+                                                            <LucidePalette className="w-3 h-3 text-amber-500" />
+                                                            <span className="font-semibold text-gray-700">اللون: {item.product.color}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
                                                 {item.serialNos && item.serialNos.length > 0 && (
                                                     <div className="mt-2 flex flex-wrap gap-1 justify-center sm:justify-start">
                                                         {item.serialNos.map((serial, idx) => (
@@ -347,8 +487,15 @@ export default function PublicQuotationView() {
                                                 <div className="text-sm font-semibold text-gray-700">
                                                     الكمية: <span className="text-gray-900 bg-amber-50 px-2 py-1 rounded border border-amber-100">{item.Quantity}</span>
                                                 </div>
-                                                <div className="text-left font-black text-amber-500 line-through opacity-70">
-                                                    {totalItemPrice.toFixed(2)} ₪
+                                                <div className="text-left flex flex-col items-end">
+                                                    {item.product?.sale_price !== undefined && Math.abs(item.UnitPrice - item.product.sale_price) > 0.01 && (
+                                                        <span className="text-[10px] text-amber-600/60 line-through decoration-amber-400 font-medium">
+                                                            {item.product.sale_price.toFixed(2)} ₪
+                                                        </span>
+                                                    )}
+                                                    <div className="font-black text-amber-500 line-through opacity-70 leading-none">
+                                                        {totalItemPrice.toFixed(2)} ₪
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -416,6 +563,69 @@ export default function PublicQuotationView() {
             <div className="text-center mt-8 pb-4 text-sm text-gray-400 font-semibold">
                 صُدر هذا العرض بواسطة نظام المنار وتاريخ نشأته {formatDate(data.date)}
             </div>
+
+            {/* Lightbox Overlay */}
+            {lightboxData && (
+                <div
+                    className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300"
+                    onClick={() => setLightboxData(null)}
+                >
+                    <button
+                        className="absolute top-6 right-6 text-white hover:text-gray-300 p-2 bg-white/10 rounded-full transition-colors z-[110]"
+                        onClick={() => setLightboxData(null)}
+                    >
+                        <LucideX className="w-8 h-8" />
+                    </button>
+
+                    <div className="max-w-4xl w-full h-full flex flex-col items-center justify-center gap-6">
+                        <div className="relative w-full h-[60vh] flex items-center justify-center group">
+                            {lightboxData.images.length > 1 && (
+                                <>
+                                    <button
+                                        className="absolute left-0 p-3 text-white hover:bg-white/10 rounded-full transition-all z-[110] transform -translate-x-2 md:-translate-x-12 opacity-50 group-hover:opacity-100"
+                                        onClick={prevImage}
+                                    >
+                                        <LucideChevronLeft className="w-10 h-10" />
+                                    </button>
+                                    <button
+                                        className="absolute right-0 p-3 text-white hover:bg-white/10 rounded-full transition-all z-[110] transform translate-x-2 md:translate-x-12 opacity-50 group-hover:opacity-100"
+                                        onClick={nextImage}
+                                    >
+                                        <LucideChevronRight className="w-10 h-10" />
+                                    </button>
+                                </>
+                            )}
+
+                            <img
+                                src={lightboxData.images[lightboxData.index]}
+                                alt={lightboxData.title}
+                                className="max-w-full max-h-full object-contain shadow-2xl rounded-lg animate-in zoom-in-95 duration-300"
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        </div>
+
+                        <div className="text-center">
+                            <h2 className="text-white text-xl font-bold mb-2">{lightboxData.title}</h2>
+                            {lightboxData.images.length > 1 && (
+                                <div className="flex flex-wrap justify-center gap-2 mt-4">
+                                    {lightboxData.images.map((img, idx) => (
+                                        <button
+                                            key={idx}
+                                            className={`w-16 h-16 rounded-lg border-2 overflow-hidden transition-all ${lightboxData.index === idx ? 'border-emerald-500 scale-110' : 'border-white/20 opacity-50'}`}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setLightboxData({ ...lightboxData, index: idx });
+                                            }}
+                                        >
+                                            <img src={img} alt="" className="w-full h-full object-cover" />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
