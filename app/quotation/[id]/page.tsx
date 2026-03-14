@@ -47,6 +47,7 @@ export default function PublicQuotationView() {
         specialDiscount: number;
         giftDiscount: number;
         netTotal: number;
+        privacyMode?: boolean;
     } | null>(null);
 
     const [loading, setLoading] = useState(true);
@@ -113,6 +114,7 @@ export default function PublicQuotationView() {
                 specialDiscount,
                 giftDiscount,
                 netTotal,
+                privacyMode: quotation.PrivacyMode,
             });
         } catch (err: any) {
             console.error('Error loading quotation data:', err);
@@ -238,11 +240,17 @@ export default function PublicQuotationView() {
 
             <div className="max-w-3xl mx-auto px-4 -mt-6">
 
-                {/* Net Total Card Top Highlight */}
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6">
                     <div className="flex justify-between items-center text-center w-full">
-                        <span className="text-gray-500 font-bold block mb-1">الصافي للدفع</span>
-                        <span className="font-black text-3xl text-emerald-600">{data.netTotal.toFixed(2)} ₪</span>
+                        <span className="text-gray-500 font-bold block mb-1">
+                            {data.privacyMode ? 'المجموع الإجمالي' : 'الصافي للدفع'}
+                        </span>
+                        <span className="font-black text-3xl text-emerald-600">
+                            {data.privacyMode 
+                                ? data.items.reduce((sum, item) => sum + (item.Quantity * (item.product?.sale_price || item.UnitPrice)), 0).toFixed(2)
+                                : data.netTotal.toFixed(2)
+                            } ₪
+                        </span>
                     </div>
                 </div>
 
@@ -378,14 +386,22 @@ export default function PublicQuotationView() {
                                                     الكمية: <span className="text-gray-900 bg-white px-2 py-1 rounded border shadow-sm">{item.Quantity}</span>
                                                 </div>
                                                 <div className="text-left flex flex-col items-end">
-                                                    {item.product?.sale_price !== undefined && Math.abs(item.UnitPrice - item.product.sale_price) > 0.01 && (
-                                                        <span className="text-xs text-gray-400 line-through decoration-red-400/50 font-medium">
-                                                            {item.product.sale_price.toFixed(2)} ₪
-                                                        </span>
+                                                    {data.privacyMode ? (
+                                                        <div className="font-bold text-blue-700 text-lg leading-none">
+                                                            {(item.product?.sale_price || item.UnitPrice).toFixed(2)} ₪
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            {item.product?.sale_price !== undefined && Math.abs(item.UnitPrice - item.product.sale_price) > 0.01 && (
+                                                                <span className="text-xs text-gray-400 line-through decoration-red-400/50 font-medium">
+                                                                    {item.product.sale_price.toFixed(2)} ₪
+                                                                </span>
+                                                            )}
+                                                            <div className="font-bold text-blue-700 text-lg leading-none">
+                                                                {item.UnitPrice.toFixed(2)} ₪
+                                                            </div>
+                                                        </>
                                                     )}
-                                                    <div className="font-bold text-blue-700 text-lg leading-none">
-                                                        {totalItemPrice.toFixed(2)} ₪
-                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -488,14 +504,22 @@ export default function PublicQuotationView() {
                                                     الكمية: <span className="text-gray-900 bg-amber-50 px-2 py-1 rounded border border-amber-100">{item.Quantity}</span>
                                                 </div>
                                                 <div className="text-left flex flex-col items-end">
-                                                    {item.product?.sale_price !== undefined && Math.abs(item.UnitPrice - item.product.sale_price) > 0.01 && (
-                                                        <span className="text-[10px] text-amber-600/60 line-through decoration-amber-400 font-medium">
-                                                            {item.product.sale_price.toFixed(2)} ₪
-                                                        </span>
+                                                    {data.privacyMode ? (
+                                                        <div className="font-black text-amber-500 line-through opacity-70 leading-none">
+                                                            {(item.product?.sale_price || item.UnitPrice).toFixed(2)} ₪
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            {item.product?.sale_price !== undefined && Math.abs(item.UnitPrice - item.product.sale_price) > 0.01 && (
+                                                                <span className="text-[10px] text-amber-600/60 line-through decoration-amber-400 font-medium">
+                                                                    {item.product.sale_price.toFixed(2)} ₪
+                                                                </span>
+                                                            )}
+                                                            <div className="font-black text-amber-500 line-through opacity-70 leading-none">
+                                                                {item.UnitPrice.toFixed(2)} ₪
+                                                            </div>
+                                                        </>
                                                     )}
-                                                    <div className="font-black text-amber-500 line-through opacity-70 leading-none">
-                                                        {totalItemPrice.toFixed(2)} ₪
-                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -513,36 +537,45 @@ export default function PublicQuotationView() {
                         الملخص المالي
                     </h2>
                     <div className="space-y-4">
-                        <div className="flex justify-between items-center py-2">
-                            <span className="text-gray-600 font-semibold">المجموع الإجمالي</span>
-                            <span className="font-bold text-gray-900">{data.subtotal.toFixed(2)} ₪</span>
-                        </div>
-
-                        {data.specialDiscount > 0 && (
-                            <div className="flex justify-between items-center py-2 text-red-600">
-                                <span className="font-semibold">خصم خاص</span>
-                                <span className="font-bold">- {data.specialDiscount.toFixed(2)} ₪</span>
+                        {data.privacyMode ? (
+                            <div className="flex justify-between items-center py-4 bg-blue-50/50 px-4 rounded-xl border border-blue-100/50">
+                                <span className="text-blue-900 font-black text-lg">المجموع الإجمالي</span>
+                                <span className="font-black text-2xl text-blue-700">
+                                    {data.items.reduce((sum, item) => sum + (item.Quantity * (item.product?.sale_price || item.UnitPrice)), 0).toFixed(2)} ₪
+                                </span>
                             </div>
-                        )}
+                        ) : (
+                            <>
+                                <div className="flex justify-between items-center py-2">
+                                    <span className="text-gray-600 font-semibold">المجموع الإجمالي</span>
+                                    <span className="font-bold text-gray-900">{data.subtotal.toFixed(2)} ₪</span>
+                                </div>
+                                {data.specialDiscount > 0 && (
+                                    <div className="flex justify-between items-center py-2 text-red-600 font-medium">
+                                        <span>خصم خاص</span>
+                                        <span>- {data.specialDiscount.toFixed(2)} ₪</span>
+                                    </div>
+                                )}
+                                {data.giftDiscount > 0 && (
+                                    <div className="flex justify-between items-center py-2 text-green-600 font-medium">
+                                        <span>قيمة الهدايا المخصومة</span>
+                                        <span>- {data.giftDiscount.toFixed(2)} ₪</span>
+                                    </div>
+                                )}
 
-                        {data.giftDiscount > 0 && (
-                            <div className="flex justify-between items-center py-2 text-red-600">
-                                <span className="font-semibold">قيمة الهدايا المخصومة</span>
-                                <span className="font-bold">- {data.giftDiscount.toFixed(2)} ₪</span>
-                            </div>
-                        )}
+                                {((data.specialDiscount > 0 || data.giftDiscount > 0) && discountPercentage > 0) && (
+                                    <div className="flex justify-between items-center py-2 text-emerald-600 bg-emerald-50 px-3 rounded-lg">
+                                        <span className="font-semibold">نسبة التوفير المتوقعة</span>
+                                        <span className="font-bold">{discountPercentage.toFixed(2)}%</span>
+                                    </div>
+                                )}
 
-                        {((data.specialDiscount > 0 || data.giftDiscount > 0) && discountPercentage > 0) && (
-                            <div className="flex justify-between items-center py-2 text-emerald-600 bg-emerald-50 px-3 rounded-lg">
-                                <span className="font-semibold">نسبة التوفير المتوقعة</span>
-                                <span className="font-bold">{discountPercentage.toFixed(2)}%</span>
-                            </div>
+                                <div className="flex justify-between items-center pt-4 border-t-2 border-gray-100 border-dashed">
+                                    <span className="text-gray-800 font-bold text-lg">الصافي النهائي</span>
+                                    <span className="font-black text-2xl text-emerald-600">{data.netTotal.toFixed(2)} ₪</span>
+                                </div>
+                            </>
                         )}
-
-                        <div className="flex justify-between items-center pt-4 border-t-2 border-gray-100 border-dashed">
-                            <span className="text-gray-800 font-bold text-lg">الصافي النهائي</span>
-                            <span className="font-black text-2xl text-emerald-600">{data.netTotal.toFixed(2)} ₪</span>
-                        </div>
                     </div>
                 </div>
 

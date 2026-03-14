@@ -290,17 +290,20 @@ export default function ArticleForm({ initialData, onSave, hidePublishOption }: 
                     {!hidePublishOption && (
                         <div className="space-y-2">
                             <label className="block text-sm font-medium text-gray-700">حالة النشر</label>
-                            <div className="flex items-center h-[50px]">
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        className="sr-only peer"
-                                        checked={isPublished}
-                                        onChange={(e) => setIsPublished(e.target.checked)}
+                            <div className="flex items-center h-[50px] gap-3">
+                                <button
+                                    type="button"
+                                    dir="ltr"
+                                    onClick={() => setIsPublished(!isPublished)}
+                                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${isPublished ? 'bg-blue-600' : 'bg-gray-200'
+                                        }`}
+                                >
+                                    <span
+                                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isPublished ? 'translate-x-5' : 'translate-x-0'
+                                            }`}
                                     />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                    <span className="ms-3 text-sm font-medium text-gray-700">{isPublished ? 'منشور للعامة' : 'مسودة مخفية'}</span>
-                                </label>
+                                </button>
+                                <span className="text-sm font-medium text-gray-700">{isPublished ? 'منشور للعامة' : 'مسودة مخفية'}</span>
                             </div>
                         </div>
                     )}

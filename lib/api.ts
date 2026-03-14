@@ -7948,6 +7948,7 @@ function mapQuotationFromSupabase(quotation: any, totalAmount: number = 0): any 
     GiftDiscountAmount: parseFloat(String(quotation.gift_discount_amount || 0)) || 0,
     is_groom_offer: quotation.is_groom_offer || false,
     groom_offer_title: quotation.groom_offer_title || '',
+    PrivacyMode: !!quotation.privacy_mode,
     totalAmount: totalAmount,
     CreatedAt: quotation.created_at || '',
     CreatedBy: quotation.created_by || quotation.user_id || '',
@@ -8302,6 +8303,7 @@ export async function saveQuotation(
     created_by?: string; // Admin user ID (UUID)
     isGroomOffer?: boolean;
     groomOfferTitle?: string;
+    privacyMode?: boolean;
     items: Array<{
       detailID?: string;
       productID: string;
@@ -8335,6 +8337,7 @@ export async function saveQuotation(
       created_by: payload.created_by || null, // Admin user ID
       is_groom_offer: payload.isGroomOffer || false,
       groom_offer_title: payload.groomOfferTitle || null,
+      privacy_mode: payload.privacyMode || false,
     };
 
     const { error: quotationError } = await supabase

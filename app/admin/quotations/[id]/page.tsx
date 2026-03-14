@@ -86,6 +86,7 @@ interface Quotation {
   Status: string;
   SpecialDiscountAmount: number;
   GiftDiscountAmount: number;
+  PrivacyMode?: boolean;
   details?: QuotationDetail[];
 }
 
@@ -554,6 +555,7 @@ export default function EditQuotationPage() {
   const [status, setStatus] = useState('مسودة');
   const [specialDiscountAmount, setSpecialDiscountAmount] = useState(0);
   const [giftDiscountAmount, setGiftDiscountAmount] = useState(0);
+  const [privacyMode, setPrivacyMode] = useState(false);
 
   const [details, setDetails] = useState<QuotationDetail[]>([]);
 
@@ -643,6 +645,7 @@ export default function EditQuotationPage() {
       setStatus(data.Status || 'مسودة');
       setSpecialDiscountAmount(data.SpecialDiscountAmount || 0);
       setGiftDiscountAmount(data.GiftDiscountAmount || 0);
+      setPrivacyMode(!!data.PrivacyMode);
 
 
       // First, get raw details from Supabase to access serial_no field
@@ -1326,6 +1329,7 @@ export default function EditQuotationPage() {
         status,
         specialDiscountAmount,
         giftDiscountAmount,
+        privacyMode,
         created_by: admin?.id || undefined,
         items: details.map((item) => ({
           detailID: item.QuotationDetailID.startsWith('temp-') ? undefined : item.QuotationDetailID,
@@ -1363,6 +1367,7 @@ export default function EditQuotationPage() {
         status,
         specialDiscountAmount,
         giftDiscountAmount,
+        privacyMode,
         created_by: admin?.id || undefined,
         items: details.map((item) => ({
           detailID: item.QuotationDetailID.startsWith('temp-') ? undefined : item.QuotationDetailID,
@@ -1640,6 +1645,26 @@ export default function EditQuotationPage() {
                   يتم حساب قيمة الهدايا تلقائياً من الأصناف المحددة كهدايا
                 </p>
               )}
+            </div>
+            <div className="flex items-center gap-3 bg-gray-50 dark:bg-slate-700/30 p-4 rounded-xl border border-gray-200 dark:border-slate-700 self-end">
+              <div className="flex-1 text-right">
+                <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 font-cairo text-right">وضع الخصوصية (Privacy Mode)</label>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-cairo mt-1 text-right">إخفاء الخصومات وعرض السعر الرسمي فقط في الصفحة العامة</p>
+              </div>
+              <button
+                type="button"
+                dir="ltr"
+                onClick={() => setPrivacyMode(!privacyMode)}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:ring-offset-slate-800 ${
+                  privacyMode ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-slate-600'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    privacyMode ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
             </div>
           </div>
 
