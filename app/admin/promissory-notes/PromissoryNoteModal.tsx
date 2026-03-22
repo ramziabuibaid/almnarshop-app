@@ -296,15 +296,15 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
     const remainingForPreview = isLegacy ? (parseFloat(amount) || 0) - (parseFloat(paidAmount) || 0) : (parseFloat(amount) || 0);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col font-cairo" dir="rtl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col font-cairo" dir="rtl">
                 {/* Header */}
-                <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between bg-gray-50 dark:bg-slate-800/50">
+                <div className="p-4 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between bg-gray-50 dark:bg-slate-900/50">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                         <Calculator className="text-gray-600 dark:text-gray-400" size={24} />
                         {initialData ? 'تعديل الكمبيالة' : 'إضافة كمبيالة جديدة'}
                     </h2>
-                    <button onClick={onClose} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:bg-gray-200 dark:hover:bg-slate-600 p-1 rounded-full transition-colors">
+                    <button onClick={onClose} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-slate-800 p-1 rounded-full transition-colors">
                         <X size={24} />
                     </button>
                 </div>
@@ -355,9 +355,9 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                             </div>
 
                             {/* ID Smart Scan / Attachment */}
-                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                                <label className="block text-sm font-bold text-slate-800 mb-2 flex items-center gap-2">
-                                    <Camera size={18} className="text-slate-500" />
+                            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
+                                <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
+                                    <Camera size={18} className="text-slate-500 dark:text-slate-400" />
                                     صورة هوية المدين (Smart Scan)
                                 </label>
                                 <div className="flex items-center gap-4">
@@ -373,7 +373,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                         <button
                                             type="button"
                                             disabled={uploadingImage}
-                                            className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 disabled:opacity-50 flex items-center gap-2"
+                                            className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 disabled:opacity-50 flex items-center gap-2"
                                         >
                                             {uploadingImage ? (
                                                 <>
@@ -400,13 +400,13 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                         </div>
                                     )}
                                 </div>
-                                <p className="text-xs text-slate-500 mt-2">
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                                     سيتم ضغط الصورة تلقائياً لتوفير المساحة مع الحفاظ على وضوح البيانات.
                                 </p>
                             </div>
 
                             {/* Legacy Note Toggle */}
-                            <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-100 flex items-start gap-3">
+                            <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-100 dark:border-amber-900/30 flex items-start gap-3">
                                 <div className="mt-0.5">
                                     <input
                                         type="checkbox"
@@ -417,31 +417,31 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="legacy-toggle" className="block text-sm font-bold text-amber-900 cursor-pointer mb-1">
+                                    <label htmlFor="legacy-toggle" className="block text-sm font-bold text-amber-900 dark:text-amber-400 cursor-pointer mb-1">
                                         إدخال كمبيالة سابقة (موجودة فعلياً)
                                     </label>
-                                    <p className="text-xs text-amber-700 mb-3">
+                                    <p className="text-xs text-amber-700 dark:text-amber-500/80 mb-3">
                                         قم بتفعيل هذا الخيار إذا كانت هذه الكمبيالة قديمة وتم دفع جزء منها مسبقاً، ليتم جدولة المبلغ المتبقي فقط.
                                     </p>
 
                                     {isLegacy && (
                                         <div className="grid grid-cols-2 gap-3 mt-2">
                                             <div>
-                                                <label className="block text-xs font-semibold text-amber-800 mb-1">المبلغ المدفوع مسبقاً</label>
+                                                <label className="block text-xs font-semibold text-amber-800 dark:text-amber-400/90 mb-1">المبلغ المدفوع مسبقاً</label>
                                                 <div className="relative">
                                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-600 dark:text-amber-400 font-bold text-sm">₪</span>
                                                     <input
                                                         type="number"
                                                         value={paidAmount}
                                                         onChange={(e) => setPaidAmount(e.target.value)}
-                                                        className="w-full pr-8 pl-3 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-amber-900 placeholder:text-amber-400 font-medium text-sm"
+                                                        className="w-full pr-8 pl-3 py-1.5 border border-amber-300 dark:border-amber-900/50 rounded bg-white dark:bg-slate-800 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-amber-900 dark:text-amber-100 placeholder:text-amber-400 font-medium text-sm"
                                                         placeholder="0.00"
                                                     />
                                                 </div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-semibold text-amber-800 mb-1">المبلغ المتبقي للجدولة</label>
-                                                <div className="w-full px-3 py-1.5 bg-amber-100 border border-amber-200 rounded text-amber-900 font-bold text-sm h-[34px] flex items-center">
+                                                <label className="block text-xs font-semibold text-amber-800 dark:text-amber-400/90 mb-1">المبلغ المتبقي للجدولة</label>
+                                                <div className="w-full px-3 py-1.5 bg-amber-100 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-900/30 rounded text-amber-900 dark:text-amber-100 font-bold text-sm h-[34px] flex items-center">
                                                     ₪{remainingForPreview > 0 ? remainingForPreview.toFixed(2) : '0.00'}
                                                 </div>
                                             </div>
@@ -482,16 +482,16 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                 </div>
                             </div>
 
-                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 space-y-4">
+                            <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-900/30 space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-blue-900 mb-2">تكرار الأقساط</label>
+                                    <label className="block text-sm font-medium text-blue-900 dark:text-blue-400 mb-2">تكرار الأقساط</label>
                                     <div className="flex items-center gap-4">
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
                                                 type="radio"
                                                 checked={installmentInterval === 'monthly'}
                                                 onChange={() => setInstallmentInterval('monthly')}
-                                                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                                className="w-4 h-4 text-blue-600 dark:text-blue-400 focus:ring-blue-500"
                                             />
                                             <span className="text-sm text-gray-700 dark:text-gray-300">شهري</span>
                                         </label>
@@ -500,22 +500,22 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                                 type="radio"
                                                 checked={installmentInterval === 'weekly'}
                                                 onChange={() => setInstallmentInterval('weekly')}
-                                                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                                className="w-4 h-4 text-blue-600 dark:text-blue-400 focus:ring-blue-500"
                                             />
                                             <span className="text-sm text-gray-700 dark:text-gray-300">أسبوعي</span>
                                         </label>
                                     </div>
                                 </div>
 
-                                <div className="border-t border-blue-200 pt-4">
-                                    <label className="block text-sm font-medium text-blue-900 mb-3">طريقة تقسيم الأقساط</label>
+                                <div className="border-t border-blue-200 dark:border-blue-900/50 pt-4">
+                                    <label className="block text-sm font-medium text-blue-900 dark:text-blue-400 mb-3">طريقة تقسيم الأقساط</label>
                                     <div className="flex items-center gap-4 mb-4">
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
                                                 type="radio"
                                                 checked={calculationMethod === 'byCount'}
                                                 onChange={() => setCalculationMethod('byCount')}
-                                                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                                className="w-4 h-4 text-blue-600 dark:text-blue-400 focus:ring-blue-500"
                                             />
                                             <span className="text-sm text-gray-700 dark:text-gray-300">عدد الأقساط</span>
                                         </label>
@@ -524,7 +524,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                                 type="radio"
                                                 checked={calculationMethod === 'byAmount'}
                                                 onChange={() => setCalculationMethod('byAmount')}
-                                                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                                className="w-4 h-4 text-blue-600 dark:text-blue-400 focus:ring-blue-500"
                                             />
                                             <span className="text-sm text-gray-700 dark:text-gray-300">قيمة القسط</span>
                                         </label>
@@ -572,10 +572,10 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                         </div>
 
                         {/* Preview Side */}
-                        <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col">
-                            <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-700/50 font-medium text-gray-700 dark:text-gray-300 flex justify-between items-center">
+                        <div className="bg-gray-50 dark:bg-slate-900/50 rounded-xl border border-gray-200 dark:border-slate-800 overflow-hidden flex flex-col">
+                            <div className="p-4 border-b border-gray-200 dark:border-slate-800 bg-gray-100 dark:bg-slate-800/80 font-medium text-gray-700 dark:text-gray-300 flex justify-between items-center">
                                 <span>جدول الأقساط المتوقع {isLegacy ? '(للمبلغ المتبقي فقط)' : ''}</span>
-                                <span className="text-sm bg-white dark:bg-slate-800 px-2 py-1 rounded border border-gray-300 dark:border-slate-600">
+                                <span className="text-sm bg-white dark:bg-slate-800 px-2 py-1 rounded border border-gray-300 dark:border-slate-700">
                                     {previewInstallments.length} أقساط
                                 </span>
                             </div>
@@ -589,7 +589,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                                     previewInstallments.map((inst) => (
                                         <div key={inst.id} className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700 flex justify-between items-center shadow-sm">
                                             <div className="flex items-center gap-3">
-                                                <div className="bg-blue-100 text-blue-700 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
+                                                <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
                                                     {inst.id + 1}
                                                 </div>
                                                 <div>
@@ -615,10 +615,10 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3 bg-gray-50 dark:bg-slate-800/50">
+                <div className="p-4 border-t border-gray-200 dark:border-slate-800 flex justify-end gap-3 bg-gray-50 dark:bg-slate-900/50">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors font-medium"
+                        className="px-4 py-2 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors font-medium"
                         disabled={saving}
                     >
                         إلغاء
@@ -626,7 +626,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                     <button
                         onClick={handleSave}
                         disabled={saving || previewInstallments.length === 0}
-                        className="px-6 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-6 py-2 bg-gray-900 dark:bg-slate-800 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-700 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {saving ? (
                             <>
