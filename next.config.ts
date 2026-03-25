@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    loader: 'custom',
+    loaderFile: './supabase-image-loader.ts',
     remotePatterns: [
       {
         protocol: 'https',
