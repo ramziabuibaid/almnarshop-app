@@ -2668,6 +2668,31 @@ export async function getCustomerData(customerId: string | number): Promise<any>
       };
     });
 
+    // Fetch promissory note installments
+    const { data: installments, error: installmentsError } = await supabase
+      .from('promissory_note_installments')
+      .select('*, promissory_notes!inner(customer_id, notes)')
+      .eq('promissory_notes.customer_id', idString)
+      .order('due_date', { ascending: false });
+
+    if (installmentsError) {
+      console.error('[API] Failed to fetch promissory note installments:', installmentsError);
+    }
+
+    const mappedInstallments = (installments || []).map((inst: any) => ({
+      InstallmentID: inst.id,
+      NoteID: inst.promissory_note_id,
+      CustomerID: inst.promissory_notes?.customer_id,
+      Amount: inst.amount,
+      DueDate: inst.due_date,
+      Status: inst.status,
+      Notes: inst.notes || '',
+      NoteReference: inst.promissory_notes?.notes || '',
+      PaymentDate: inst.payment_date,
+      CreatedAt: inst.created_at,
+      Type: 'promissory_installment'
+    }));
+
     // Combine all financial transactions (shop and warehouse invoices)
     const allInvoices = [...mappedInvoices, ...mappedWarehouseInvoices];
     const allReceipts = [...mappedReceipts, ...mappedPayments, ...mappedWarehouseReceipts, ...mappedWarehousePayments];
@@ -2677,6 +2702,7 @@ export async function getCustomerData(customerId: string | number): Promise<any>
       receipts: allReceipts,
       interactions: interactions || [],
       quotations: mappedQuotations || [],
+      installments: mappedInstallments || [],
     };
 
     console.log('[API] getCustomerData success');
@@ -2731,6 +2757,7 @@ export async function logActivity(payload: {
   PromiseDate?: string; // ISO Date string (YYYY-MM-DD or ISO format)
   PromiseAmount?: number;
   created_by?: string; // Admin user ID for audit (who logged this interaction)
+  InstallmentID?: string; // Linked installment ID
 }): Promise<any> {
   // Use Supabase implementation
   return logActivityToSupabase(payload);
@@ -2773,6 +2800,7 @@ export async function logActivityToSupabase(payload: {
   PromiseDate?: string; // ISO Date string (YYYY-MM-DD)
   PromiseAmount?: number;
   created_by?: string; // Admin user ID for audit (who logged this interaction)
+  InstallmentID?: string; // Linked installment ID
 }): Promise<any> {
   try {
     console.log('[API] Logging activity to Supabase crm_activities:', payload);
@@ -2797,6 +2825,7 @@ export async function logActivityToSupabase(payload: {
         : 0,
       ptp_status: payload.PromiseDate ? 'Active' : 'Closed', // Set to Active if there's a promise date
       created_by: payload.created_by || null,
+      installment_id: payload.InstallmentID || null,
     };
 
     const { data, error } = await supabase
@@ -2841,16 +2870,20 @@ export async function updatePTPStatusInSupabase(activityId: string, newStatus: s
       .from('crm_activities')
       .update(updatePayload)
       .eq('activity_id', activityId)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('[API] Failed to update PTP status in Supabase:', error);
       throw new Error(`Failed to update PTP status: ${error.message}`);
     }
 
+    if (!data || data.length === 0) {
+      console.warn('[API] No rows updated. Activity ID might not exist:', activityId);
+      throw new Error(`لم يتم العثور على المهمة أو لم يتم تحديثها: ${activityId}`);
+    }
+
     console.log('[API] PTP status updated successfully:', data);
-    return { status: 'success', data };
+    return { status: 'success', data: data[0] };
   } catch (error: any) {
     console.error('[API] updatePTPStatusInSupabase error:', error);
     throw error;
@@ -2895,16 +2928,20 @@ export async function updateActivityInSupabase(activityId: string, payload: {
       .from('crm_activities')
       .update(updateData)
       .eq('activity_id', activityId)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('[API] Failed to update activity in Supabase:', error);
       throw new Error(`Failed to update activity: ${error.message}`);
     }
 
+    if (!data || data.length === 0) {
+      console.warn('[API] No rows updated. Activity ID might not exist:', activityId);
+      throw new Error(`لم يتم العثور على المهمة لتحديثها: ${activityId}`);
+    }
+
     console.log('[API] Activity updated successfully:', data);
-    return { status: 'success', data };
+    return { status: 'success', data: data[0] };
   } catch (error: any) {
     console.error('[API] updateActivityInSupabase error:', error);
     throw error;
@@ -2946,6 +2983,7 @@ export async function getCRMDataFromSupabase(): Promise<any> {
         promise_date,
         promise_amount,
         ptp_status,
+        installment_id,
         created_at,
         created_by,
         updated_by,
@@ -2994,6 +3032,7 @@ export async function getCRMDataFromSupabase(): Promise<any> {
         ActionType: activity.action_type || 'Call',
         Outcome: activity.outcome || '',
         PTPStatus: activity.ptp_status || 'Active',
+        InstallmentID: activity.installment_id || null,
         CreatedAt: activity.created_at || '',
         created_by: activity.created_by || null,
         updated_by: activity.updated_by || null,
@@ -11108,8 +11147,11 @@ export async function getPromissoryNotes(params?: {
 
       const relatedCustomerIds = customerData?.map((c: any) => c.customer_id) || [];
 
+      // Construct the OR filter for notes, id, and customer_id
+      // For string IDs in .in.(), they should be quoted to handle special characters like hyphens
       if (relatedCustomerIds.length > 0) {
-        query = query.or(`notes.ilike.%${q}%,id.ilike.%${q}%,customer_id.in.(${relatedCustomerIds.join(',')})`);
+        const quotedIds = relatedCustomerIds.map(id => `"${id}"`).join(',');
+        query = query.or(`notes.ilike.%${q}%,id.ilike.%${q}%,customer_id.in.(${quotedIds})`);
       } else {
         query = query.or(`notes.ilike.%${q}%,id.ilike.%${q}%`);
       }
@@ -11348,6 +11390,29 @@ export async function updateInstallmentStatus(
     // For now, we leave the main note status manual or handle it later
   } catch (error: any) {
     console.error('[API] updateInstallmentStatus catch error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update the due_date of a promissory note installment
+ */
+export async function updateInstallmentDate(
+  installmentId: string,
+  newDate: string
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('promissory_note_installments')
+      .update({ due_date: newDate })
+      .eq('id', installmentId);
+
+    if (error) {
+      console.error('[API] updateInstallmentDate error:', error);
+      throw new Error(`Failed to update installment date: ${error.message}`);
+    }
+  } catch (error: any) {
+    console.error('[API] updateInstallmentDate catch error:', error);
     throw error;
   }
 }

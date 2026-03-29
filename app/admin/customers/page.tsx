@@ -259,16 +259,7 @@ export default function CustomersPage() {
   const [selectedInteraction, setSelectedInteraction] = useState<any | null>(null);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [dashboardData, setDashboardData] = useState<any>({ overdue: [], today: [], upcoming: [] });
-  const [dashboardLoading, setDashboardLoading] = useState(false);
-  const [showOverdueList, setShowOverdueList] = useState(false);
-  const [showTodayList, setShowTodayList] = useState(false);
-  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
-  const [rescheduleModal, setRescheduleModal] = useState<{ isOpen: boolean; item: any }>({ isOpen: false, item: null });
-  const [rescheduleDate, setRescheduleDate] = useState('');
-  const [rescheduleNote, setRescheduleNote] = useState('');
-  const [copyModal, setCopyModal] = useState<{ isOpen: boolean; item: any }>({ isOpen: false, item: null });
-  const [copyForm, setCopyForm] = useState({ customerID: '', date: '', note: '', channel: 'Phone' });
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | null }>({ message: '', type: null });
 
   // Set page title
@@ -296,10 +287,7 @@ export default function CustomersPage() {
     loadCustomers();
   }, []);
 
-  // Fetch dashboard data on mount
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+
 
   // Reload customers (from cache if available)
   const reloadCustomers = async () => {
@@ -328,21 +316,7 @@ export default function CustomersPage() {
     }
   };
 
-  const loadDashboardData = async () => {
-    setDashboardLoading(true);
-    try {
-      console.log('[CustomersPage] Loading dashboard data...');
-      const data = await getDashboardData();
-      console.log('[CustomersPage] Dashboard data loaded:', data);
-      setDashboardData(data || { overdue: [], today: [], upcoming: [] });
-    } catch (error: any) {
-      console.error('[CustomersPage] Error loading dashboard data:', error);
-      // Don't show error to user, just log it
-      setDashboardData({ overdue: [], today: [], upcoming: [] });
-    } finally {
-      setDashboardLoading(false);
-    }
-  };
+
 
   // Map English filter types to Arabic values in database
   const getTypeMapping = (englishType: FilterType): string[] => {
@@ -656,9 +630,8 @@ export default function CustomersPage() {
   };
 
   const handleInteractionSuccess = async () => {
-    // Reload customers and dashboard data
+    // Reload customers
     await reloadCustomers();
-    loadDashboardData();
   };
 
   const handleEditCustomer = (customer: Customer) => {
@@ -760,139 +733,7 @@ export default function CustomersPage() {
     setTimeout(() => setToast({ message: '', type: null }), 3000);
   };
 
-  const handleResolved = async (item: any) => {
-    const interactionId = item.InteractionID || item.id || item.ActivityID;
-    if (!interactionId) {
-      showToast('معرف المهمة غير متوفر', 'error');
-      return;
-    }
-    setUpdatingIds((prev) => new Set(prev).add(interactionId));
-    try {
-      await updatePTPStatus(interactionId, 'Fulfilled', admin?.id);
-      setDashboardData((prev: any) => ({
-        ...prev,
-        overdue: (prev.overdue || []).filter((i: any) => (i.InteractionID || i.id) !== interactionId),
-        today: (prev.today || []).filter((i: any) => (i.InteractionID || i.id) !== interactionId),
-      }));
-      showToast('تم تحديث الحالة بنجاح', 'success');
-    } catch (err: any) {
-      showToast(`فشل تحديث الحالة: ${err?.message || 'خطأ غير معروف'}`, 'error');
-    } finally {
-      setUpdatingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(interactionId);
-        return next;
-      });
-    }
-  };
 
-  const handleRescheduleClick = (item: any) => {
-    setRescheduleModal({ isOpen: true, item });
-    const oneWeekLater = new Date();
-    oneWeekLater.setDate(oneWeekLater.getDate() + 7);
-    setRescheduleDate(oneWeekLater.toISOString().split('T')[0]);
-    setRescheduleNote('');
-  };
-
-  const handleRescheduleSubmit = async () => {
-    if (!rescheduleModal.item || !rescheduleDate) {
-      showToast('يرجى إدخال التاريخ', 'error');
-      return;
-    }
-    const item = rescheduleModal.item;
-    const interactionId = item.InteractionID || item.id || item.ActivityID;
-    if (interactionId) setUpdatingIds((prev) => new Set(prev).add(interactionId));
-    try {
-      const formattedDate = formatDateToYYYYMMDD(rescheduleDate);
-      const originalAmount = item.PromiseAmount ? parseFloat(String(item.PromiseAmount)) : 0;
-      const customerId = item.CustomerID || item.customerID;
-      if (interactionId) {
-        try {
-          await updatePTPStatus(interactionId, 'Archived', admin?.id);
-        } catch { }
-      }
-      await logActivity({
-        CustomerID: customerId,
-        ActionType: 'Call',
-        Outcome: 'Promised',
-        Notes: rescheduleNote || 'تم إعادة الجدولة',
-        PromiseDate: formattedDate,
-        PromiseAmount: originalAmount,
-        created_by: admin?.id,
-      });
-      showToast('تم إعادة الجدولة بنجاح', 'success');
-      setRescheduleModal({ isOpen: false, item: null });
-      setRescheduleDate('');
-      setRescheduleNote('');
-      loadDashboardData();
-    } catch (err: any) {
-      showToast(`فشل إعادة الجدولة: ${err?.message || 'خطأ غير معروف'}`, 'error');
-    } finally {
-      if (interactionId) {
-        setUpdatingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(interactionId);
-          return next;
-        });
-      }
-    }
-  };
-
-  const handleCopyClick = (item: any) => {
-    setCopyModal({ isOpen: true, item });
-    const oneWeekLater = new Date();
-    oneWeekLater.setDate(oneWeekLater.getDate() + 7);
-    setCopyForm({
-      customerID: item.CustomerID || item.customerID || '',
-      date: oneWeekLater.toISOString().split('T')[0],
-      note: item.Notes || item.notes || '',
-      channel: 'Phone',
-    });
-  };
-
-  const handleCopySubmit = async () => {
-    if (!copyModal.item || !copyForm.customerID || !copyForm.date) {
-      showToast('يرجى إدخال جميع الحقول المطلوبة', 'error');
-      return;
-    }
-    const item = copyModal.item;
-    const interactionId = item.InteractionID || item.id || item.ActivityID;
-    if (interactionId) setUpdatingIds((prev) => new Set(prev).add(interactionId));
-    try {
-      const formattedDate = formatDateToYYYYMMDD(copyForm.date);
-      const originalAmount = item.PromiseAmount ? parseFloat(String(item.PromiseAmount)) : 0;
-      const channelMapping: Record<string, string> = {
-        Phone: 'Call',
-        WhatsApp: 'WhatsApp',
-        Visit: 'Visit',
-        Email: 'Email',
-      };
-      const actionType = channelMapping[copyForm.channel] || 'Call';
-      await logActivity({
-        CustomerID: copyForm.customerID,
-        ActionType: actionType,
-        Outcome: 'Promised',
-        Notes: copyForm.note || 'تم نسخ التفاعل',
-        PromiseDate: formattedDate,
-        PromiseAmount: originalAmount,
-        created_by: admin?.id,
-      });
-      showToast('تم نسخ التفاعل بنجاح', 'success');
-      setCopyModal({ isOpen: false, item: null });
-      setCopyForm({ customerID: '', date: '', note: '', channel: 'Phone' });
-      loadDashboardData();
-    } catch (err: any) {
-      showToast(`فشل نسخ التفاعل: ${err?.message || 'خطأ غير معروف'}`, 'error');
-    } finally {
-      if (interactionId) {
-        setUpdatingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(interactionId);
-          return next;
-        });
-      }
-    }
-  };
 
   const getBalanceColor = (balance: number | undefined | null) => {
     const value = balance || 0;
@@ -994,438 +835,10 @@ export default function CustomersPage() {
           </div>
         </div>
 
-        {/* Follow-up Dashboard */}
-        {(dashboardData.overdue?.length > 0 || dashboardData.today?.length > 0) && (
-          <div className="space-y-3 sm:space-y-4">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 dark:text-gray-100">مهام المتابعة</h2>
-
-            {/* Overdue Follow-ups */}
-            {dashboardData.overdue?.length > 0 && (
-              <div className="bg-red-50 dark:bg-red-900/20 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-lg overflow-hidden">
-                <button
-                  onClick={() => setShowOverdueList(!showOverdueList)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <AlertCircle size={20} className="text-red-600 dark:text-red-400 dark:text-red-400" />
-                    <h3 className="font-semibold text-red-900 dark:text-red-200">متأخرة ({dashboardData.overdue.length})</h3>
-                  </div>
-                  {showOverdueList ? (
-                    <ChevronUp size={20} className="text-red-600 dark:text-red-400" />
-                  ) : (
-                    <ChevronDown size={20} className="text-red-600 dark:text-red-400" />
-                  )}
-                </button>
-                {showOverdueList && (
-                  <div className="p-4 pt-0 space-y-2">
-                    {dashboardData.overdue
-                      .filter((item: any) => item) // Filter out null/undefined items
-                      .map((item: any, index: number) => {
-                        const itemId = item.InteractionID || item.id || item.CustomerID || item.customerID || `overdue-${index}`;
-                        const customer = customers.find(
-                          (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
-                        );
-                        const customerName = item.CustomerName || item.customerName || customer?.Name || customer?.name || 'عميل';
-                        const customerPhone = customer?.Phone || customer?.phone || '';
-                        return (
-                          <div
-                            key={`overdue-${itemId}-${index}`}
-                            className="bg-white dark:bg-slate-800 dark:bg-slate-900/80 rounded-lg p-3 border border-red-200 dark:border-red-900/30 flex items-center justify-between"
-                          >
-                            <div className="flex-1">
-                              <button
-                                onClick={(e) => {
-                                  if (customer) {
-                                    handleViewProfile(customer, e);
-                                  } else if (item.CustomerID || item.customerID) {
-                                    const cid = item.CustomerID || item.customerID;
-                                    if (e?.ctrlKey || e?.metaKey || e?.button === 1) {
-                                      window.open(`/admin/customers/${cid}`, '_blank');
-                                    } else {
-                                      router.push(`/admin/customers/${cid}`);
-                                    }
-                                  }
-                                }}
-                                onMouseDown={(e) => {
-                                  if (e.button === 1 && (item.CustomerID || item.customerID)) {
-                                    e.preventDefault();
-                                    window.open(`/admin/customers/${item.CustomerID || item.customerID}`, '_blank');
-                                  }
-                                }}
-                                className="font-medium text-gray-900 dark:text-gray-100 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline text-right transition-colors cursor-pointer block"
-                                title="عرض الملف الشخصي (Ctrl+Click لفتح في تاب جديد)"
-                              >
-                                {customerName}
-                              </button>
-                              {customerPhone && (
-                                <div className="mt-1">
-                                  <PhoneActions phone={customerPhone} />
-                                </div>
-                              )}
-                              <p className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 mt-1">
-                                {item.Notes || item.notes || 'لا توجد ملاحظات'}
-                              </p>
-                              {(item.NextFollowUpDate || item.NextDate) && (
-                                <p className="text-xs text-red-600 dark:text-red-400 dark:text-red-400 mt-1">
-                                  كان من المفترض: {formatDate(item.NextFollowUpDate || item.NextDate)}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
-                              <button
-                                onClick={() => handleResolved(item)}
-                                disabled={updatingIds.has(item.InteractionID || item.id || '')}
-                                className="px-3 py-1.5 bg-green-100 dark:bg-green-900/30 dark:bg-green-900/40 text-green-700 dark:text-green-400 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/60 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
-                                title="تم الدفع"
-                              >
-                                {updatingIds.has(item.InteractionID || item.id || '') ? (
-                                  <Loader2 size={14} className="animate-spin" />
-                                ) : (
-                                  <CheckCircle2 size={14} />
-                                )}
-                                تم الدفع
-                              </button>
-                              <button
-                                onClick={() => handleRescheduleClick(item)}
-                                disabled={updatingIds.has(item.InteractionID || item.id || '')}
-                                className="px-3 py-1.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
-                                title="إعادة جدولة"
-                              >
-                                <Calendar size={14} />
-                                إعادة جدولة
-                              </button>
-                              <button
-                                onClick={() => handleCopyClick(item)}
-                                disabled={updatingIds.has(item.InteractionID || item.id || '')}
-                                className="px-3 py-1.5 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
-                                title="نسخ تفاعل"
-                              >
-                                <Copy size={14} />
-                                نسخ تفاعل
-                              </button>
-                              <button
-                                onClick={() => {
-                                  const cust = customers.find((c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID));
-                                  if (cust) handleOpenInteractionModal(cust, item);
-                                }}
-                                className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
-                                title="فتح/تعديل"
-                              >
-                                <Edit size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Today Follow-ups */}
-            {dashboardData.today?.length > 0 && (
-              <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-lg overflow-hidden">
-                <button
-                  onClick={() => setShowTodayList(!showTodayList)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <Calendar size={20} className="text-blue-600 dark:text-blue-400" />
-                    <h3 className="font-semibold text-blue-900 dark:text-blue-200">اليوم ({dashboardData.today.length})</h3>
-                  </div>
-                  {showTodayList ? (
-                    <ChevronUp size={20} className="text-blue-600" />
-                  ) : (
-                    <ChevronDown size={20} className="text-blue-600" />
-                  )}
-                </button>
-                {showTodayList && (
-                  <div className="p-4 pt-0 space-y-2">
-                    {dashboardData.today
-                      .filter((item: any) => item) // Filter out null/undefined items
-                      .map((item: any, index: number) => {
-                        const itemId = item.InteractionID || item.id || item.CustomerID || item.customerID || `today-${index}`;
-                        const customer = customers.find(
-                          (c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID)
-                        );
-                        const customerName = item.CustomerName || item.customerName || customer?.Name || customer?.name || 'عميل';
-                        const customerPhone = customer?.Phone || customer?.phone || '';
-                        return (
-                          <div
-                            key={`today-${itemId}-${index}`}
-                            className="bg-white dark:bg-slate-800 dark:bg-slate-900/80 rounded-lg p-3 border border-blue-200 dark:border-blue-900/30 flex items-center justify-between"
-                          >
-                            <div className="flex-1">
-                              <button
-                                onClick={(e) => {
-                                  if (customer) {
-                                    handleViewProfile(customer, e);
-                                  } else if (item.CustomerID || item.customerID) {
-                                    const cid = item.CustomerID || item.customerID;
-                                    if (e?.ctrlKey || e?.metaKey || e?.button === 1) {
-                                      window.open(`/admin/customers/${cid}`, '_blank');
-                                    } else {
-                                      router.push(`/admin/customers/${cid}`);
-                                    }
-                                  }
-                                }}
-                                onMouseDown={(e) => {
-                                  if (e.button === 1 && (item.CustomerID || item.customerID)) {
-                                    e.preventDefault();
-                                    window.open(`/admin/customers/${item.CustomerID || item.customerID}`, '_blank');
-                                  }
-                                }}
-                                className="font-medium text-gray-900 dark:text-gray-100 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline text-right transition-colors cursor-pointer block"
-                                title="عرض الملف الشخصي (Ctrl+Click لفتح في تاب جديد)"
-                              >
-                                {customerName}
-                              </button>
-                              {customerPhone && (
-                                <div className="mt-1">
-                                  <PhoneActions phone={customerPhone} />
-                                </div>
-                              )}
-                              <p className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 mt-1">
-                                {item.Notes || item.notes || 'لا توجد ملاحظات'}
-                              </p>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
-                              <button
-                                onClick={() => handleResolved(item)}
-                                disabled={updatingIds.has(item.InteractionID || item.id || '')}
-                                className="px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
-                                title="تم الدفع"
-                              >
-                                {updatingIds.has(item.InteractionID || item.id || '') ? (
-                                  <Loader2 size={14} className="animate-spin" />
-                                ) : (
-                                  <CheckCircle2 size={14} />
-                                )}
-                                تم الدفع
-                              </button>
-                              <button
-                                onClick={() => handleRescheduleClick(item)}
-                                disabled={updatingIds.has(item.InteractionID || item.id || '')}
-                                className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
-                                title="إعادة جدولة"
-                              >
-                                <Calendar size={14} />
-                                إعادة جدولة
-                              </button>
-                              <button
-                                onClick={() => handleCopyClick(item)}
-                                disabled={updatingIds.has(item.InteractionID || item.id || '')}
-                                className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1"
-                                title="نسخ تفاعل"
-                              >
-                                <Copy size={14} />
-                                نسخ تفاعل
-                              </button>
-                              <button
-                                onClick={() => {
-                                  const cust = customers.find((c) => (c.CustomerID || c.id) === (item.CustomerID || item.customerID));
-                                  if (cust) handleOpenInteractionModal(cust, item);
-                                }}
-                                className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
-                                title="فتح/تعديل"
-                              >
-                                <Edit size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-          {/* Total Receivables */}
-          {canViewBalances && (
-            <div className="bg-white dark:bg-slate-800 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-800 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">إجمالي المستحقات</p>
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400 dark:text-red-400 mt-2">
-                    {formatBalance(stats.totalReceivables)}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">المال المستحق لنا</p>
-                </div>
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 dark:bg-red-900/20 rounded-full">
-                  <TrendingUp size={24} className="text-red-600 dark:text-red-400 dark:text-red-400" />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Total Payables */}
-          {canViewBalances && (
-            <div className="bg-white dark:bg-slate-800 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-800 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">إجمالي المدفوعات</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400 dark:text-green-400 mt-2">
-                    {formatBalance(stats.totalPayables)}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">المال المستحق علينا</p>
-                </div>
-                <div className="p-3 bg-green-50 dark:bg-green-900/20 dark:bg-green-900/20 rounded-full">
-                  <TrendingDown size={24} className="text-green-600 dark:text-green-400 dark:text-green-400" />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Total Customers */}
-          <div className="bg-white dark:bg-slate-800 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-800 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400">إجمالي العملاء</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 dark:text-gray-100 mt-2">
-                  {stats.totalCustomers}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">جميع أنواع العملاء</p>
-              </div>
-              <div className="p-3 bg-gray-50 dark:bg-slate-800/50 dark:bg-slate-800 rounded-full">
-                <Users size={24} className="text-gray-600 dark:text-gray-400 dark:text-gray-400" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="bg-white dark:bg-slate-800 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-800 p-3 sm:p-4 space-y-3 sm:space-y-4">
-          {/* Type Filter Tabs */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300 mr-2">فلترة حسب النوع:</span>
-            {([
-              { value: 'All', label: 'الكل' },
-              { value: 'Customer', label: 'زبون' },
-              { value: 'Merchant', label: 'تاجر' },
-              { value: 'Supplier', label: 'مورد' },
-              { value: 'Accounting', label: 'تنظيمات محاسبية' }
-            ] as { value: FilterType; label: string }[]).map(
-              ({ value, label }) => (
-                <button
-                  key={value}
-                  onClick={() => setFilterType(value)}
-                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors ${filterType === value
-                    ? 'bg-gray-900 dark:bg-slate-700 dark:bg-gray-100 text-white dark:text-gray-900'
-                    : 'bg-gray-100 dark:bg-slate-700/50 dark:bg-slate-800 text-gray-700 dark:text-gray-300 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600 dark:hover:bg-slate-700'
-                    }`}
-                >
-                  {label}
-                </button>
-              )
-            )}
-          </div>
-
-          {/* Balance Filters */}
-          {canViewBalances && (
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300">فلاتر الرصيد:</span>
-              <button
-                onClick={() => setShowNegativeBalance(!showNegativeBalance)}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 border ${showNegativeBalance
-                  ? 'bg-green-100 dark:bg-green-900/30 dark:bg-green-900/40 text-green-700 dark:text-green-400 dark:text-green-300 border-green-300 dark:border-green-700'
-                  : 'bg-gray-100 dark:bg-slate-700/50 dark:bg-slate-800 text-gray-500 dark:text-gray-400 dark:text-gray-400 border-gray-300 dark:border-slate-600 dark:border-slate-700'
-                  }`}
-              >
-                <div className={`w-2 h-2 rounded-full ${showNegativeBalance ? 'bg-green-600 dark:bg-green-400' : 'bg-gray-400 dark:bg-gray-600'}`} />
-                <span className="hidden sm:inline">إظهار الرصيد السالب</span>
-                <span className="sm:hidden">رصيد سالب</span>
-              </button>
-              <button
-                onClick={() => setShowZeroBalance(!showZeroBalance)}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 border ${showZeroBalance
-                  ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700'
-                  : 'bg-gray-100 dark:bg-slate-700/50 dark:bg-slate-800 text-gray-500 dark:text-gray-400 dark:text-gray-400 border-gray-300 dark:border-slate-600 dark:border-slate-700'
-                  }`}
-              >
-                <div className={`w-2 h-2 rounded-full ${showZeroBalance ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-400 dark:bg-gray-600'}`} />
-                <span className="hidden sm:inline">إظهار الرصيد الصفر</span>
-                <span className="sm:hidden">رصيد صفر</span>
-              </button>
-            </div>
-          )}
-
-          {/* Date Filters */}
-          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-4">
-            <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300">فلاتر التاريخ:</span>
-
-            {/* Last Invoice Year Filter */}
-            <div className="flex items-center gap-2 flex-1 sm:flex-none">
-              <label className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 whitespace-nowrap">آخر فاتورة:</label>
-              <select
-                value={lastInvoiceYear}
-                onChange={(e) => {
-                  setLastInvoiceYear(e.target.value);
-                  if (e.target.value) {
-                    setLastPaymentYear(''); // Clear payment year when invoice year is selected
-                  }
-                }}
-                className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 text-gray-900 dark:text-gray-100 dark:text-gray-100 text-xs sm:text-sm"
-              >
-                <option value="">جميع السنوات</option>
-                {Array.from({ length: 11 }, (_, i) => 2025 - i).map((year) => (
-                  <option key={year} value={year.toString()}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Last Payment Year Filter */}
-            <div className="flex items-center gap-2 flex-1 sm:flex-none">
-              <label className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 whitespace-nowrap">آخر دفعة:</label>
-              <select
-                value={lastPaymentYear}
-                onChange={(e) => {
-                  setLastPaymentYear(e.target.value);
-                  if (e.target.value) {
-                    setLastInvoiceYear(''); // Clear invoice year when payment year is selected
-                  }
-                }}
-                className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 text-gray-900 dark:text-gray-100 dark:text-gray-100 text-xs sm:text-sm"
-              >
-                <option value="">جميع السنوات</option>
-                {Array.from({ length: 11 }, (_, i) => 2025 - i).map((year) => (
-                  <option key={year} value={year.toString()}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
 
 
-          {/* Filtered Balance Total */}
-          {canViewBalances && filteredCustomers.length > 0 && (
-            <div className="bg-gray-50 dark:bg-slate-800/50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 dark:border-slate-700 rounded-lg p-3">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300">
-                  مجموع أرصدة العملاء المفلترين ({filteredCustomers.length}):
-                </span>
-                <span className={`text-base sm:text-lg font-bold ${filteredBalanceTotal > 0
-                  ? 'text-red-600 dark:text-red-400 dark:text-red-400'
-                  : filteredBalanceTotal < 0
-                    ? 'text-green-600 dark:text-green-400 dark:text-green-400'
-                    : 'text-gray-600 dark:text-gray-400 dark:text-gray-400'
-                  }`}>
-                  {formatBalance(filteredBalanceTotal)}
-                </span>
-              </div>
-            </div>
-          )}
-
-        </div>
-
-        {/* Search - below filters, above table */}
-        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-3 sm:p-4">
+        {/* Search - Top Position */}
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-3 sm:p-4 shadow-sm">
           <div className="relative">
             <Search
               size={18}
@@ -1436,7 +849,7 @@ export default function CustomersPage() {
               placeholder="البحث بالاسم أو الهاتف..."
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pr-10 pl-4 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 text-gray-900 dark:text-gray-100 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 text-sm sm:text-base"
+              className="w-full pr-10 pl-4 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 text-gray-900 dark:text-gray-100 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 text-sm sm:text-base transition-all"
               dir="rtl"
             />
             {searchInput && (
@@ -1449,6 +862,150 @@ export default function CustomersPage() {
             )}
           </div>
         </div>
+
+        {/* Filters Toggle Header (Thin Line) */}
+        <div 
+          onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+          className="group cursor-pointer py-1 flex items-center justify-center gap-2 border-b border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-all rounded-md"
+          title={isFiltersExpanded ? 'إخفاء الفلاتر' : 'إظهار الفلاتر'}
+        >
+          <div className="h-[2px] flex-1 bg-gray-100 dark:bg-slate-800 group-hover:bg-gray-200 dark:group-hover:bg-slate-700 transition-colors" />
+          <div className="flex items-center gap-1.5 px-3">
+            <Filter size={14} className={`${isFiltersExpanded ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`} />
+            <span className="text-[10px] sm:text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+              {isFiltersExpanded ? 'إخفاء الفلاتر' : 'تصفية النتائج'}
+            </span>
+            {isFiltersExpanded ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+          </div>
+          <div className="h-[2px] flex-1 bg-gray-100 dark:bg-slate-800 group-hover:bg-gray-200 dark:group-hover:bg-slate-700 transition-colors" />
+        </div>
+
+        {/* Filters Content (Collapsible) */}
+        {isFiltersExpanded && (
+          <div className="bg-white dark:bg-slate-800 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-800 p-3 sm:p-4 space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            {/* Type Filter Tabs */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300 mr-2">فلترة حسب النوع:</span>
+              {([
+                { value: 'All', label: 'الكل' },
+                { value: 'Customer', label: 'زبون' },
+                { value: 'Merchant', label: 'تاجر' },
+                { value: 'Supplier', label: 'مورد' },
+                { value: 'Accounting', label: 'تنظيمات محاسبية' }
+              ] as { value: FilterType; label: string }[]).map(
+                ({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setFilterType(value)}
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors ${filterType === value
+                      ? 'bg-gray-900 dark:bg-slate-700 dark:bg-gray-100 text-white dark:text-gray-900'
+                      : 'bg-gray-100 dark:bg-slate-700/50 dark:bg-slate-800 text-gray-700 dark:text-gray-300 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600 dark:hover:bg-slate-700'
+                      }`}
+                  >
+                    {label}
+                  </button>
+                )
+              )}
+            </div>
+
+            {/* Balance Filters */}
+            {canViewBalances && (
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300">فلاتر الرصيد:</span>
+                <button
+                  onClick={() => setShowNegativeBalance(!showNegativeBalance)}
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 border ${showNegativeBalance
+                    ? 'bg-green-100 dark:bg-green-900/30 dark:bg-green-900/40 text-green-700 dark:text-green-400 dark:text-green-300 border-green-300 dark:border-green-700'
+                    : 'bg-gray-100 dark:bg-slate-700/50 dark:bg-slate-800 text-gray-500 dark:text-gray-400 dark:text-gray-400 border-gray-300 dark:border-slate-600 dark:border-slate-700'
+                    }`}
+                >
+                  <div className={`w-2 h-2 rounded-full ${showNegativeBalance ? 'bg-green-600 dark:bg-green-400' : 'bg-gray-400 dark:bg-gray-600'}`} />
+                  <span className="hidden sm:inline">إظهار الرصيد السالب</span>
+                  <span className="sm:hidden">رصيد سالب</span>
+                </button>
+                <button
+                  onClick={() => setShowZeroBalance(!showZeroBalance)}
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors flex items-center gap-2 border ${showZeroBalance
+                    ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700'
+                    : 'bg-gray-100 dark:bg-slate-700/50 dark:bg-slate-800 text-gray-500 dark:text-gray-400 dark:text-gray-400 border-gray-300 dark:border-slate-600 dark:border-slate-700'
+                    }`}
+                >
+                  <div className={`w-2 h-2 rounded-full ${showZeroBalance ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-400 dark:bg-gray-600'}`} />
+                  <span className="hidden sm:inline">إظهار الرصيد الصفر</span>
+                  <span className="sm:hidden">رصيد صفر</span>
+                </button>
+              </div>
+            )}
+
+            {/* Date Filters */}
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-4">
+              <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300">فلاتر التاريخ:</span>
+
+              {/* Last Invoice Year Filter */}
+              <div className="flex items-center gap-2 flex-1 sm:flex-none">
+                <label className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 whitespace-nowrap">آخر فاتورة:</label>
+                <select
+                  value={lastInvoiceYear}
+                  onChange={(e) => {
+                    setLastInvoiceYear(e.target.value);
+                    if (e.target.value) {
+                      setLastPaymentYear(''); // Clear payment year when invoice year is selected
+                    }
+                  }}
+                  className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 text-gray-900 dark:text-gray-100 dark:text-gray-100 text-xs sm:text-sm"
+                >
+                  <option value="">جميع السنوات</option>
+                  {Array.from({ length: 11 }, (_, i) => 2025 - i).map((year) => (
+                    <option key={year} value={year.toString()}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Last Payment Year Filter */}
+              <div className="flex items-center gap-2 flex-1 sm:flex-none">
+                <label className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400 whitespace-nowrap">آخر دفعة:</label>
+                <select
+                  value={lastPaymentYear}
+                  onChange={(e) => {
+                    setLastPaymentYear(e.target.value);
+                    if (e.target.value) {
+                      setLastInvoiceYear(''); // Clear invoice year when payment year is selected
+                    }
+                  }}
+                  className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-700 bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 text-gray-900 dark:text-gray-100 dark:text-gray-100 text-xs sm:text-sm"
+                >
+                  <option value="">جميع السنوات</option>
+                  {Array.from({ length: 11 }, (_, i) => 2025 - i).map((year) => (
+                    <option key={year} value={year.toString()}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Filtered Balance Total */}
+            {canViewBalances && filteredCustomers.length > 0 && (
+              <div className="bg-gray-50 dark:bg-slate-800/50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 dark:border-slate-700 rounded-lg p-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-300">
+                    مجموع أرصدة العملاء المفلترين ({filteredCustomers.length}):
+                  </span>
+                  <span className={`text-base sm:text-lg font-bold ${filteredBalanceTotal > 0
+                    ? 'text-red-600 dark:text-red-400 dark:text-red-400'
+                    : filteredBalanceTotal < 0
+                      ? 'text-green-600 dark:text-green-400 dark:text-green-400'
+                      : 'text-gray-600 dark:text-gray-400 dark:text-gray-400'
+                    }`}>
+                    {formatBalance(filteredBalanceTotal)}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -1895,208 +1452,7 @@ export default function CustomersPage() {
         onSuccess={handleCustomerSuccess}
       />
 
-      {/* Reschedule Modal */}
-      {rescheduleModal.isOpen && rescheduleModal.item && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          dir="rtl"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setRescheduleModal({ isOpen: false, item: null });
-              setRescheduleDate('');
-              setRescheduleNote('');
-            }
-          }}
-        >
-          <div
-            className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">إعادة جدولة</h3>
-              <button
-                onClick={() => {
-                  setRescheduleModal({ isOpen: false, item: null });
-                  setRescheduleDate('');
-                  setRescheduleNote('');
-                }}
-                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <X size={24} />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  تاريخ السداد الجديد <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={rescheduleDate}
-                  onChange={(e) => setRescheduleDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ملاحظات</label>
-                <textarea
-                  value={rescheduleNote}
-                  onChange={(e) => setRescheduleNote(e.target.value)}
-                  placeholder="أضف ملاحظات..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setRescheduleModal({ isOpen: false, item: null });
-                  setRescheduleDate('');
-                  setRescheduleNote('');
-                }}
-                className="flex-1 px-4 py-2 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 font-medium"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={handleRescheduleSubmit}
-                disabled={!rescheduleDate || updatingIds.has(rescheduleModal.item?.InteractionID || rescheduleModal.item?.id || '')}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {updatingIds.has(rescheduleModal.item?.InteractionID || rescheduleModal.item?.id || '') ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    جاري الحفظ...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 size={16} />
-                    حفظ
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Copy Interaction Modal */}
-      {copyModal.isOpen && copyModal.item && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          dir="rtl"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setCopyModal({ isOpen: false, item: null });
-              setCopyForm({ customerID: '', date: '', note: '', channel: 'Phone' });
-            }
-          }}
-        >
-          <div
-            className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">نسخ تفاعل</h3>
-              <button
-                onClick={() => {
-                  setCopyModal({ isOpen: false, item: null });
-                  setCopyForm({ customerID: '', date: '', note: '', channel: 'Phone' });
-                }}
-                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <X size={24} />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <CustomerSelect
-                value={copyForm.customerID}
-                onChange={(customerID) => setCopyForm({ ...copyForm, customerID })}
-                customers={customers}
-                placeholder="اختر العميل"
-                required
-              />
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">طريقة التواصل</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { value: 'Phone', label: 'اتصال', icon: Phone },
-                    { value: 'WhatsApp', label: 'واتس اب', icon: MessageSquare },
-                    { value: 'Visit', label: 'زيارة', icon: MapPin },
-                    { value: 'Email', label: 'بريد', icon: Mail },
-                  ].map((ch) => {
-                    const Icon = ch.icon;
-                    return (
-                      <button
-                        key={ch.value}
-                        type="button"
-                        onClick={() => setCopyForm({ ...copyForm, channel: ch.value })}
-                        className={`flex flex-col items-center gap-2 px-3 py-3 border-2 rounded-lg transition-colors ${copyForm.channel === ch.value
-                          ? 'border-gray-900 bg-gray-50 dark:bg-slate-800/50 text-gray-900 dark:text-gray-100'
-                          : 'border-gray-200 dark:border-slate-700 hover:border-gray-300 text-gray-600 dark:text-gray-400'
-                          }`}
-                      >
-                        <Icon size={20} />
-                        <span className="text-xs font-medium">{ch.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  تاريخ الموعد <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={copyForm.date}
-                  onChange={(e) => setCopyForm({ ...copyForm, date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ملاحظات</label>
-                <textarea
-                  value={copyForm.note}
-                  onChange={(e) => setCopyForm({ ...copyForm, note: e.target.value })}
-                  placeholder="أضف ملاحظات..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setCopyModal({ isOpen: false, item: null });
-                  setCopyForm({ customerID: '', date: '', note: '', channel: 'Phone' });
-                }}
-                className="flex-1 px-4 py-2 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 font-medium"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={handleCopySubmit}
-                disabled={!copyForm.customerID || !copyForm.date || updatingIds.has(copyModal.item?.InteractionID || copyModal.item?.id || '')}
-                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {updatingIds.has(copyModal.item?.InteractionID || copyModal.item?.id || '') ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    جاري الحفظ...
-                  </>
-                ) : (
-                  <>
-                    <Copy size={16} />
-                    نسخ التفاعل
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </AdminLayout>
   );
 }

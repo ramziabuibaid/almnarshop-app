@@ -39,7 +39,7 @@ const TRANSITIONS: TransitionAction[] = [
         icon: <Warehouse className="w-5 h-5" />,
         allowedCurrentStatuses: ['موجودة في المحل وجاهزة للتسليم', 'جاهزة للتسليم للزبون من المحل'],
         getNewStatus: (current) => current === 'جاهزة للتسليم للزبون من المحل' ? 'جاهزة للتسليم للزبون من المخزن' : 'موجودة في المخزن وجاهزة للتسليم',
-        colorClass: 'bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200'
+        colorClass: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-800 hover:bg-purple-200 dark:hover:bg-purple-900/50'
     },
     {
         id: 'receive_company_store',
@@ -47,7 +47,7 @@ const TRANSITIONS: TransitionAction[] = [
         icon: <Store className="w-5 h-5" />,
         allowedCurrentStatuses: ['موجودة في الشركة'],
         getNewStatus: () => 'جاهزة للتسليم للزبون من المحل',
-        colorClass: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-300 hover:bg-green-200'
+        colorClass: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-300 dark:border-green-800 hover:bg-green-200 dark:hover:bg-green-900/50'
     },
     {
         id: 'receive_company_warehouse',
@@ -55,7 +55,7 @@ const TRANSITIONS: TransitionAction[] = [
         icon: <Warehouse className="w-5 h-5" />,
         allowedCurrentStatuses: ['موجودة في الشركة'],
         getNewStatus: () => 'جاهزة للتسليم للزبون من المخزن',
-        colorClass: 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200'
+        colorClass: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-200 dark:hover:bg-emerald-900/50'
     },
     {
         id: 'send_to_company',
@@ -63,7 +63,7 @@ const TRANSITIONS: TransitionAction[] = [
         icon: <Building2 className="w-5 h-5" />,
         allowedCurrentStatuses: ['موجودة في المحل وجاهزة للتسليم', 'موجودة في المخزن وجاهزة للتسليم'],
         getNewStatus: () => 'موجودة في الشركة',
-        colorClass: 'bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200'
+        colorClass: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-800 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
     },
     {
         id: 'warehouse_to_store',
@@ -71,7 +71,7 @@ const TRANSITIONS: TransitionAction[] = [
         icon: <Store className="w-5 h-5" />,
         allowedCurrentStatuses: ['موجودة في المخزن وجاهزة للتسليم', 'جاهزة للتسليم للزبون من المخزن'],
         getNewStatus: (current) => current === 'جاهزة للتسليم للزبون من المخزن' ? 'جاهزة للتسليم للزبون من المحل' : 'موجودة في المحل وجاهزة للتسليم',
-        colorClass: 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200'
+        colorClass: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-900/50'
     },
     {
         id: 'deliver_to_customer',
@@ -79,7 +79,7 @@ const TRANSITIONS: TransitionAction[] = [
         icon: <CheckCircle2 className="w-5 h-5" />,
         allowedCurrentStatuses: ['جاهزة للتسليم للزبون من المحل', 'جاهزة للتسليم للزبون من المخزن'],
         getNewStatus: () => 'سلمت للزبون',
-        colorClass: 'bg-teal-100 text-teal-800 border-teal-300 hover:bg-teal-200'
+        colorClass: 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300 border-teal-300 dark:border-teal-800 hover:bg-teal-200 dark:hover:bg-teal-900/50'
     }
 ];
 
@@ -599,15 +599,15 @@ export default function MaintenanceScannerPage() {
                 </div>
 
                 {/* Inquiry Section */}
-                <div className="bg-white dark:bg-slate-800 border-2 border-indigo-100 rounded-2xl p-6 shadow-sm mb-8 relative overflow-hidden">
+                <div className="bg-white dark:bg-slate-800 border-2 border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-6 shadow-sm mb-8 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-full h-1 bg-indigo-500"></div>
                     <div className="flex flex-col md:flex-row items-center gap-6">
                         <div className="flex-1 w-full">
-                            <h2 className="text-xl font-bold text-indigo-900 mb-2 flex items-center gap-2">
+                            <h2 className="text-xl font-bold text-indigo-900 dark:text-indigo-300 mb-2 flex items-center gap-2">
                                 <ScanLine className="w-6 h-6 text-indigo-600" />
                                 الاستعلام السريع
                             </h2>
-                            <p className="text-indigo-700 text-sm mb-4">
+                            <p className="text-indigo-700 dark:text-indigo-400 text-sm mb-4 font-medium">
                                 امسح باركود القطعة هنا لمعرفة حالتها الحالية دون تغييرها.
                             </p>
                             <div className="relative">
@@ -615,7 +615,7 @@ export default function MaintenanceScannerPage() {
                                     key={`inquiry-${inquiryInputKey}`}
                                     ref={inquiryInputRef}
                                     type="text"
-                                    className="w-full px-4 py-3 text-lg font-bold border-2 border-indigo-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-100 placeholder-indigo-300 transition-all bg-indigo-50/50"
+                                    className="w-full px-4 py-3 text-lg font-bold border-2 border-indigo-200 dark:border-indigo-800 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 placeholder-indigo-300 dark:placeholder-indigo-700 transition-all bg-indigo-50/50 dark:bg-indigo-900/10 text-gray-900 dark:text-gray-100"
                                     placeholder="امسح الباركود للاستعلام..."
                                     onKeyDown={handleInquiryKeyDown}
                                     onPaste={handleInquiryPaste}
@@ -637,18 +637,18 @@ export default function MaintenanceScannerPage() {
 
                         {/* Inquiry Result Display */}
                         {inquiryResult && !isInquiring && (
-                            <div className="flex-1 w-full bg-indigo-50 border border-indigo-100 rounded-xl p-4 animate-in fade-in slide-in-from-bottom-4">
+                            <div className="flex-1 w-full bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4 animate-in fade-in slide-in-from-bottom-4 shadow-sm">
                                 <div className="flex justify-between items-start mb-3">
-                                    <span className="bg-indigo-600 text-white text-sm font-bold px-3 py-1 rounded-full px-4">
+                                    <span className="bg-indigo-600 text-white text-sm font-bold px-4 py-1 rounded-full">
                                         رقم {inquiryResult.MaintenanceNo}
                                     </span>
                                     <CheckCircle2 className="w-6 h-6 text-indigo-600" />
                                 </div>
                                 <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg mb-1">{inquiryResult.ItemName}</h3>
                                 <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 font-medium">العميل: {inquiryResult.CustomerName}</p>
-                                <div className="bg-white dark:bg-slate-800 px-4 py-3 rounded-lg border border-indigo-100">
-                                    <span className="text-gray-500 dark:text-gray-400 text-xs block mb-1">الحالة الحالية:</span>
-                                    <span className="font-bold text-lg text-indigo-900 block">{inquiryResult.Status}</span>
+                                <div className="bg-white dark:bg-slate-900 px-4 py-3 rounded-lg border border-indigo-100 dark:border-indigo-800">
+                                    <span className="text-gray-500 dark:text-gray-500 text-xs block mb-1">الحالة الحالية:</span>
+                                    <span className="font-bold text-lg text-indigo-900 dark:text-indigo-300 block">{inquiryResult.Status}</span>
                                 </div>
                             </div>
                         )}
@@ -687,25 +687,27 @@ export default function MaintenanceScannerPage() {
                     {/* Scanner Area & Logs Column */}
                     <div className="lg:col-span-2 space-y-6">
                         {!activeTransition ? (
-                            <div className="bg-gray-50 dark:bg-slate-800/50 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-2xl h-full min-h-[400px] flex flex-col items-center justify-center p-8 text-center text-gray-500 dark:text-gray-400">
-                                <ArrowRightLeft className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
-                                <h3 className="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">يرجى اختيار إجراء للبدء</h3>
-                                <p>اختر أحد الأزرار الجانبية لتحديد مسار نقل القطع قبل المسح</p>
+                            <div className="bg-gray-50 dark:bg-slate-800/30 border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-3xl h-full min-h-[440px] flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
+                                <div className="bg-white dark:bg-slate-800 p-6 rounded-full shadow-sm mb-6 border border-gray-100 dark:border-slate-700">
+                                    <ArrowRightLeft className="w-12 h-12 text-blue-500 dark:text-blue-400 opacity-80" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">يرجى اختيار إجراء للبدء</h3>
+                                <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto">اختر أحد الأزرار الجانبية لتحديد مسار نقل القطع قبل المسح للحصول على تجربة سلسة</p>
                             </div>
                         ) : (
                             <>
                                 {/* Scanner Interface */}
-                                <div className="bg-blue-50 border border-blue-200 p-8 rounded-2xl text-center relative overflow-hidden">
+                                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 p-8 rounded-2xl text-center relative overflow-hidden">
                                     <div className="absolute top-0 right-0 w-full h-1 bg-blue-500 animate-pulse"></div>
 
                                     <ScanLine className={`w-20 h-20 mx-auto text-blue-600 mb-4 ${isScanning ? 'animate-bounce' : 'opacity-70'}`} />
 
-                                    <h2 className="text-2xl font-bold text-blue-900 mb-2">النظام جاهز للمسح</h2>
-                                    <p className="text-blue-700 font-medium mb-4">
-                                        الإجراء الحالي: <span className="font-bold bg-white dark:bg-slate-800 px-2 py-1 rounded inline-block mx-1 shadow-sm">{activeTransition.label}</span>
+                                    <h2 className="text-2xl font-bold text-blue-900 dark:text-blue-300 mb-2">النظام جاهز للمسح</h2>
+                                    <p className="text-blue-700 dark:text-blue-400 font-medium mb-4">
+                                        الإجراء الحالي: <span className="font-bold bg-white dark:bg-slate-900 px-2 py-1 rounded inline-block mx-1 shadow-sm">{activeTransition.label}</span>
                                     </p>
 
-                                    <p className="text-sm border-2 border-blue-200 border-dashed rounded-lg p-3 inline-block bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400">
+                                    <p className="text-sm border-2 border-blue-200 dark:border-blue-800 border-dashed rounded-lg p-3 inline-block bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
                                         ضع مؤشر الماوس هنا واستخدم الماسح
                                         <br />
                                         أو اكتب رقم الصيانة واضغط مسافة/Enter
@@ -717,7 +719,7 @@ export default function MaintenanceScannerPage() {
                                                 key={barcodeInputKey}
                                                 ref={inputRef}
                                                 type="text"
-                                                className="w-full px-4 py-3 text-center text-xl font-bold border-2 border-blue-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 shadow-sm transition-all"
+                                                className="w-full px-4 py-3 text-center text-xl font-bold border-2 border-blue-300 dark:border-blue-700 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/30 shadow-sm transition-all bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600"
                                                 placeholder="امسح الباركود هنا..."
                                                 onKeyDown={handleBarcodeKeyDown}
                                                 onPaste={handleBarcodePaste}
@@ -757,7 +759,7 @@ export default function MaintenanceScannerPage() {
                                             )}
                                             <button
                                                 onClick={() => setLogs([])}
-                                                className="text-sm text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50"
+                                                className="text-sm text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                                             >
                                                 مسح السجل
                                             </button>
@@ -773,7 +775,9 @@ export default function MaintenanceScannerPage() {
                                             {logs.map((log) => (
                                                 <div
                                                     key={log.id}
-                                                    className={`flex items-start gap-3 p-3 rounded-xl border ${log.success ? 'bg-green-50 dark:bg-green-900/20/50 border-green-200' : 'bg-red-50 dark:bg-red-900/20/50 border-red-200'
+                                                    className={`flex items-start gap-3 p-3 rounded-xl border ${log.success 
+                                                        ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-900/50' 
+                                                        : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/50'
                                                         }`}
                                                 >
                                                     <div className="mt-1 flex-shrink-0">
@@ -819,7 +823,7 @@ export default function MaintenanceScannerPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-white text-lg font-bold mb-1">امسح الباركود</p>
-                                    <p className="text-gray-300 dark:text-gray-600 text-sm">وجه الكاميرا نحو الباركود</p>
+                                    <p className="text-gray-400 text-sm">وجه الكاميرا نحو الباركود بمكان مضيء</p>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {/* Switch Camera Button */}

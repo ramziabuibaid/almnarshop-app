@@ -12,9 +12,10 @@ interface PromissoryNoteModalProps {
     onClose: () => void;
     onSuccess: () => void;
     initialData?: PromissoryNote | null;
+    defaultCustomerId?: string;
 }
 
-export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initialData }: PromissoryNoteModalProps) {
+export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initialData, defaultCustomerId }: PromissoryNoteModalProps) {
     const { admin } = useAdminAuth();
     const [customers, setCustomers] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -86,7 +87,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                 }
             } else {
                 // Create Mode: Reset form
-                setCustomerId('');
+                setCustomerId(defaultCustomerId || '');
                 setAmount('');
                 setStartDate(new Date().toISOString().split('T')[0]);
                 setNotes('');

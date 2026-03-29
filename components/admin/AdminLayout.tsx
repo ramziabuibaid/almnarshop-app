@@ -22,7 +22,8 @@ import {
   Shield,
   Tag,
   Megaphone,
-  Settings
+  Settings,
+  Plus
 } from 'lucide-react';
 import NotificationCenter from './NotificationCenter';
 import { ThemeToggle } from './ThemeToggle';
@@ -477,23 +478,42 @@ export default function AdminLayout({ children, headerAction }: AdminLayoutProps
                           {filteredInvoicesSubmenu.map((sub) => {
                             const SubIcon = sub.icon;
                             const subActive = pathname === sub.href || pathname?.startsWith(sub.href + '/');
+                            const hasNewButton = ['/admin/shop-sales', '/admin/warehouse-sales', '/admin/quotations'].includes(sub.href);
+
                             return (
-                              <a
-                                key={sub.href}
-                                href={sub.href}
-                                onClick={(e) => {
-                                  if (e.ctrlKey || e.metaKey) return;
-                                  e.preventDefault();
-                                  router.push(sub.href);
-                                  setSidebarOpen(false);
-                                  setInvoicesSubmenuOpen(false);
-                                }}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${subActive ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'
-                                  }`}
-                              >
-                                <SubIcon size={14} className="shrink-0" />
-                                <span className="font-cairo truncate">{sub.label}</span>
-                              </a>
+                              <div key={sub.href} className="flex items-center gap-1 group/subitem">
+                                <a
+                                  href={sub.href}
+                                  onClick={(e) => {
+                                    if (e.ctrlKey || e.metaKey) return;
+                                    e.preventDefault();
+                                    router.push(sub.href);
+                                    setSidebarOpen(false);
+                                    setInvoicesSubmenuOpen(false);
+                                  }}
+                                  className={`flex-1 flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors ${subActive ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'
+                                    }`}
+                                >
+                                  <SubIcon size={14} className="shrink-0" />
+                                  <span className="font-cairo truncate">{sub.label}</span>
+                                </a>
+                                {hasNewButton && (
+                                  <a
+                                    href={`${sub.href}/new`}
+                                    onClick={(e) => {
+                                      if (e.ctrlKey || e.metaKey) return;
+                                      e.preventDefault();
+                                      router.push(`${sub.href}/new`);
+                                      setSidebarOpen(false);
+                                      setInvoicesSubmenuOpen(false);
+                                    }}
+                                    className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded transition-colors"
+                                    title="إضافة جديد"
+                                  >
+                                    <Plus size={14} />
+                                  </a>
+                                )}
+                              </div>
                             );
                           })}
                         </div>

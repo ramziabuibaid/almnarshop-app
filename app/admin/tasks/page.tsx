@@ -6,7 +6,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import CustomerSelect from '@/components/admin/CustomerSelect';
 import PhoneActions from '@/components/admin/PhoneActions';
-import { getDashboardData, logActivity, updatePTPStatus, getAllCustomers, deleteActivity, updateActivity } from '@/lib/api';
+import { getDashboardData, logActivity, updatePTPStatus, getAllCustomers, deleteActivity, updateActivity, updateInstallmentStatus, updateInstallmentDate } from '@/lib/api';
 import {
   Loader2,
   Phone,
@@ -26,6 +26,7 @@ import {
   Edit,
   Trash2,
   Save,
+  Search,
 } from 'lucide-react';
 
 
@@ -33,6 +34,9 @@ import {
 // Backend returns PascalCase keys from CRM_Activity table
 interface Task {
   InteractionID: string; // Maps to ActivityID in CRM_Activity
+  InstallmentID?: string; // Linked installment ID from crm_activities
+  isInstallment?: boolean; // True if this task represents a raw promissory installment
+  installmentId?: string; // The pure ID of the promissory installment if isInstallment=true
   CustomerID: string;
   CustomerName: string;
   Notes: string;
@@ -46,6 +50,7 @@ export default function TasksPage() {
   const router = useRouter();
   const { admin } = useAdminAuth();
   const currentAdminId = admin?.id || undefined;
+  const [activeTab, setActiveTab] = useState<'overdue' | 'today' | 'upcoming'>('overdue');
   const [tasks, setTasks] = useState<{
     overdue: Task[];
     today: Task[];
@@ -85,6 +90,7 @@ export default function TasksPage() {
     note: '',
     channel: 'Phone',
   });
+  const [searchQuery, setSearchQuery] = useState('');
   const [allCustomers, setAllCustomers] = useState<any[]>([]);
 
   // Check if user has permission to view tasks
@@ -255,6 +261,27 @@ export default function TasksPage() {
     }, 3000); // Hide after 3 seconds
   };
 
+  const handleDeleteTask = async (task: Task) => {
+    if (!admin?.is_super_admin) return;
+    if (!window.confirm('هل أنت متأكد من حذف هذا الموعد؟ لا يمكن التراجع عن هذه العملية.')) return;
+    
+    setUpdatingIds(prev => new Set(prev).add(task.InteractionID));
+    try {
+      await deleteActivity(task.InteractionID);
+      showToast('تم حذف الموعد بنجاح', 'success');
+      loadTasks(); // Refresh the list
+    } catch (error: any) {
+      console.error('[Tasks] Delete error:', error);
+      showToast('فشل الحذف: ' + (error.message || 'خطأ غير معروف'), 'error');
+    } finally {
+      setUpdatingIds(prev => {
+        const next = new Set(prev);
+        next.delete(task.InteractionID);
+        return next;
+      });
+    }
+  };
+
   // Handle Resolved/Paid button
   const handleResolved = async (task: Task) => {
     if (!task.InteractionID) {
@@ -264,8 +291,25 @@ export default function TasksPage() {
 
     setUpdatingIds((prev) => new Set(prev).add(task.InteractionID));
     try {
-      console.log('[TasksPage] Marking task as resolved:', task.InteractionID);
-      await updatePTPStatus(task.InteractionID, 'Fulfilled', currentAdminId);
+      if (task.isInstallment && task.installmentId) {
+        // It's a pure raw installment row
+        console.log('[TasksPage] Marking raw installment as Paid:', task.installmentId);
+        await updateInstallmentStatus(task.installmentId, 'Paid');
+      } else {
+        // It's a standard CRM activity task
+        console.log('[TasksPage] Marking task as resolved:', task.InteractionID);
+        await updatePTPStatus(task.InteractionID, 'Fulfilled', currentAdminId);
+
+        // If linked to an installment, mark the installment as Paid
+        if (task.InstallmentID) {
+          console.log('[TasksPage] Marking linked installment as Paid:', task.InstallmentID);
+          try {
+            await updateInstallmentStatus(task.InstallmentID, 'Paid');
+          } catch (instError) {
+            console.error('[TasksPage] Error updating installment:', instError);
+          }
+        }
+      }
 
       // Optimistically remove from list
       setTasks((prev) => ({
@@ -320,7 +364,8 @@ export default function TasksPage() {
       });
 
       // First, hide the old appointment by updating its status
-      if (task.InteractionID) {
+      // We DO NOT archive actual promissory note installments, only CRM activities
+      if (task.InteractionID && !task.isInstallment) {
         try {
           await updatePTPStatus(task.InteractionID, 'Archived', currentAdminId);
           console.log('[TasksPage] Old appointment archived successfully');
@@ -331,15 +376,32 @@ export default function TasksPage() {
       }
 
       // Create new appointment for 2 days later with original amount
-      await logActivity({
-        CustomerID: task.CustomerID,
-        ActionType: 'Call',
-        Outcome: 'No Answer',
-        Notes: 'لم يجب',
-        PromiseDate: twoDaysLaterStr, // Schedule for 2 days later
-        PromiseAmount: originalAmount, // الحفاظ على المبلغ الأصلي
-        created_by: currentAdminId,
-      });
+      if (task.isInstallment && task.installmentId) {
+        // Because this is an installment, update its actual due date
+        await updateInstallmentDate(task.installmentId, twoDaysLaterStr);
+        // And optionally log a CRM note that it was delayed due to no answer
+        await logActivity({
+          CustomerID: task.CustomerID,
+          ActionType: 'Call',
+          Outcome: 'No Answer',
+          Notes: `تم تأجيل الكمبيالة تلقائياً بسبب عدم الرد (إلى تاريخ ${twoDaysLaterStr})`,
+          // Omit PromiseDate/Amount to prevent duplicate CRM follow-up task
+          InstallmentID: task.installmentId,
+          created_by: currentAdminId,
+        });
+        console.log('[TasksPage] Installment due date updated successfully');
+      } else {
+        await logActivity({
+          CustomerID: task.CustomerID,
+          ActionType: 'Call',
+          Outcome: 'No Answer',
+          Notes: 'لم يجب',
+          PromiseDate: twoDaysLaterStr, // Schedule for 2 days later
+          PromiseAmount: originalAmount, // الحفاظ على المبلغ الأصلي
+          InstallmentID: task.InstallmentID,
+          created_by: currentAdminId,
+        });
+      }
 
       showToast('تم تسجيل الإجراء بنجاح', 'success');
       await loadTasks(); // Refresh data
@@ -389,7 +451,7 @@ export default function TasksPage() {
       });
 
       // أولاً، إخفاء الموعد القديم بتحديث حالته إلى Archived
-      if (rescheduleModal.task.InteractionID) {
+      if (rescheduleModal.task.InteractionID && !rescheduleModal.task.isInstallment) {
         try {
           await updatePTPStatus(rescheduleModal.task.InteractionID, 'Archived', currentAdminId);
           console.log('[TasksPage] Old appointment archived successfully');
@@ -400,15 +462,32 @@ export default function TasksPage() {
       }
 
       // إنشاء الموعد الجديد
-      await logActivity({
-        CustomerID: rescheduleModal.task.CustomerID,
-        ActionType: 'Call',
-        Outcome: 'Promised',
-        Notes: rescheduleNote || 'تم إعادة الجدولة',
-        PromiseDate: formattedDate,
-        PromiseAmount: originalAmount, // استخدام المبلغ الأصلي
-        created_by: currentAdminId,
-      });
+      if (rescheduleModal.task.isInstallment && rescheduleModal.task.installmentId) {
+        // Because this is an installment, update its actual due date
+        await updateInstallmentDate(rescheduleModal.task.installmentId, formattedDate);
+        // And log a CRM note that it was rescheduled
+        await logActivity({
+          CustomerID: rescheduleModal.task.CustomerID,
+          ActionType: 'Call',
+          Outcome: 'Rescheduled', // Change outcome to not trigger open promise state specifically
+          Notes: (rescheduleNote || 'تمت إعادة جدولة استحقاق الكمبيالة بطلب الزبون') + ` (إلى تاريخ ${formattedDate})`,
+          // Omit PromiseDate/Amount to prevent duplicate CRM follow-up task
+          InstallmentID: rescheduleModal.task.installmentId,
+          created_by: currentAdminId,
+        });
+        console.log('[TasksPage] Installment due date updated to', formattedDate);
+      } else {
+        await logActivity({
+          CustomerID: rescheduleModal.task.CustomerID,
+          ActionType: 'Call',
+          Outcome: 'Promised',
+          Notes: rescheduleNote || 'تم إعادة الجدولة',
+          PromiseDate: formattedDate,
+          PromiseAmount: originalAmount, // استخدام المبلغ الأصلي
+          InstallmentID: rescheduleModal.task.InstallmentID,
+          created_by: currentAdminId,
+        });
+      }
 
       showToast('تم إعادة الجدولة بنجاح', 'success');
       setRescheduleModal({ isOpen: false, task: null });
@@ -482,6 +561,7 @@ export default function TasksPage() {
         Notes: copyForm.note || 'تم نسخ التفاعل',
         PromiseDate: formattedDate,
         PromiseAmount: originalAmount,
+        InstallmentID: copyModal.task!.isInstallment ? copyModal.task!.installmentId : copyModal.task!.InstallmentID,
         created_by: currentAdminId,
       });
 
@@ -506,12 +586,18 @@ export default function TasksPage() {
     }
   };
 
-  // Calculate statistics
-  const statistics = {
-    brokenPromises: tasks.overdue.length,
-    expectedToday: tasks.today.reduce((sum, t) => sum + (t.PromiseAmount || 0), 0),
-    totalDebt: 0, // This would need to come from a separate API call
-  };
+  const filteredTasks = (tasks[activeTab] || []).filter(task => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    const customerName = (task.CustomerName || '').toLowerCase();
+    
+    // Find phone number from task or allCustomers
+    const customerPhone = (task.CustomerPhone || task.Customerphone || 
+      allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.Phone || 
+      allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.phone || '').toLowerCase();
+      
+    return customerName.includes(query) || customerPhone.includes(query);
+  });
 
   // Check permissions
   if (!canViewTasks) {
@@ -597,351 +683,220 @@ export default function TasksPage() {
           </button>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Broken Promises */}
-          <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-300 rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-red-600 dark:text-red-400 mb-1">وعود مكسورة</p>
-                <p className="text-3xl font-bold text-red-700 dark:text-red-400">{statistics.brokenPromises}</p>
-              </div>
-              <AlertCircle size={40} className="text-red-400" />
-            </div>
-          </div>
-
-          {/* Expected Today */}
-          <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-600 mb-1">المتوقع تحصيله اليوم</p>
-                <p className="text-3xl font-bold text-blue-700">{formatCurrency(statistics.expectedToday)}</p>
-              </div>
-              <DollarSign size={40} className="text-blue-400" />
-            </div>
-          </div>
-
-          {/* Total Tasks */}
-          <div className="bg-gray-50 dark:bg-slate-800/50 border-2 border-gray-300 dark:border-slate-600 rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">إجمالي المهام</p>
-                <p className="text-3xl font-bold text-gray-700 dark:text-gray-300">
-                  {tasks.overdue.length + tasks.today.length + tasks.upcoming.length}
-                </p>
-              </div>
-              <TrendingDown size={40} className="text-gray-400 dark:text-gray-500" />
-            </div>
+        {/* Search Banner */}
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
+          <div className="relative">
+            <Search
+              size={20}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
+            />
+            <input
+              type="text"
+              placeholder="بحث عن اسم الزبون أو رقم الهاتف..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pr-10 pl-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-all text-sm font-cairo"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Kanban Columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Column 1: Overdue */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <AlertCircle size={24} className="text-red-600 dark:text-red-400" />
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">وعود فائتة/متأخرة</h2>
-              <span className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-sm font-semibold">
-                {tasks.overdue.length}
-              </span>
-            </div>
+        {/* Tabs Navigation */}
+        <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-xl mb-6">
+          <button
+            onClick={() => setActiveTab('overdue')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all ${
+              activeTab === 'overdue'
+                ? 'bg-white dark:bg-slate-700 text-red-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            }`}
+          >
+            <AlertCircle size={18} />
+            متأخرة ({tasks.overdue.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('today')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all ${
+              activeTab === 'today'
+                ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            }`}
+          >
+            <Calendar size={18} />
+            اليوم ({tasks.today.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('upcoming')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all ${
+              activeTab === 'upcoming'
+                ? 'bg-white dark:bg-slate-700 text-green-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            }`}
+          >
+            <Clock size={18} />
+            قادمة ({tasks.upcoming.length})
+          </button>
+        </div>
 
-            <div className="space-y-3 max-h-[600px] overflow-y-auto">
-              {tasks.overdue.length === 0 ? (
-                <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-lg p-8 text-center">
-                  <CheckCircle2 size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                  <p className="text-gray-500 dark:text-gray-400">لا توجد وعود فائتة</p>
-                </div>
-              ) : (
-                tasks.overdue.map((task) => {
-                  const customerPhone = task.CustomerPhone || task.Customerphone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.Phone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.phone || '';
-                  return (
-                    <div
-                      key={task.InteractionID}
-                      className="bg-white dark:bg-slate-800 rounded-lg border-2 border-red-400 p-4 shadow-sm hover:shadow-md transition-shadow"
-                    >
+        {/* Tab Content */}
+        <div className="space-y-4 max-h-[700px] overflow-y-auto pb-10 pr-2">
+          {filteredTasks.length === 0 ? (
+            <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-lg p-16 text-center">
+              <CheckCircle2 size={64} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400 text-lg font-bold">
+                {searchQuery ? 'لا توجد مهام مطابقة للبحث' : 'لا توجد مهام في هذا القسم'}
+              </p>
+            </div>
+          ) : (
+            filteredTasks.map((task) => {
+              const customerPhone = task.CustomerPhone || task.Customerphone || 
+                allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.Phone || 
+                allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.phone || '';
+              
+              const isOverdue = activeTab === 'overdue';
+              const isToday = activeTab === 'today';
+              
+              const themeColorClasses = {
+                badge: isOverdue ? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 
+                       isToday ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 
+                                 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                btn: isOverdue ? 'bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-700 dark:text-red-400' :
+                     isToday ? 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-400' :
+                               'bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 text-green-700 dark:text-green-400',
+                border: isOverdue ? 'border-r-red-400' : isToday ? 'border-r-blue-400' : 'border-r-green-400',
+              };
+
+              return (
+                <div
+                  key={task.InteractionID}
+                  className={`bg-white dark:bg-slate-800 rounded-xl border-r-4 ${themeColorClasses.border} border-t border-b border-l border-gray-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition-all animate-in fade-in slide-in-from-bottom-2 duration-300`}
+                >
+                  <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                    {/* Customer Info Column */}
+                    <div className="flex-1 w-full md:w-1/4">
                       <a
                         href={`/admin/customers/${task.CustomerID}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
+                        className="text-lg font-bold text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors block mb-1 truncate"
                       >
                         {task.CustomerName}
                       </a>
                       {customerPhone && (
-                        <div className="mb-2">
-                          <PhoneActions phone={customerPhone} />
+                        <div className="mb-2 w-max max-w-full">
+                           <PhoneActions phone={customerPhone} />
                         </div>
                       )}
-                      {task.PromiseAmount && (
-                        <p className="text-sm font-semibold text-red-600 dark:text-red-400 mb-1">
-                          المبلغ: {formatCurrency(task.PromiseAmount)}
+                    </div>
+                    
+                    {/* Task Info Column */}
+                    <div className="flex-2 w-full md:w-2/4 flex flex-col gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold leading-none ${themeColorClasses.badge}`}>
+                          <Calendar size={12} className="ml-1" />
+                          {formatDate(task.NextDate)}
+                        </span>
+                        
+                        {(task.PromiseAmount || 0) > 0 && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold leading-none bg-gray-100 text-gray-800 dark:bg-slate-700 dark:text-gray-300">
+                            <DollarSign size={12} className="ml-1" />
+                            {formatCurrency(task.PromiseAmount)}
+                          </span>
+                        )}
+
+                        {task.InstallmentID && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold leading-none bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                            قسط مرتبط
+                          </span>
+                        )}
+                        
+                        {task.isInstallment && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold leading-none bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300">
+                            قسط مباشر
+                          </span>
+                        )}
+                      </div>
+                      
+                      {task.Notes && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 border-r-2 border-gray-200 dark:border-gray-600 pr-3 my-1 overflow-hidden text-ellipsis md:line-clamp-2">
+                          {task.Notes}
                         </p>
                       )}
-                      <p className="text-xs text-red-500 mb-2">تاريخ فائت: {formatDate(task.NextDate)}</p>
-                      {task.Notes && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{task.Notes}</p>
-                      )}
+                      
                       {(task.CreatedByUsername || task.UpdatedByUsername) && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
                           {task.CreatedByUsername && <span>أنشأه: {task.CreatedByUsername}</span>}
                           {task.CreatedByUsername && task.UpdatedByUsername && ' · '}
                           {task.UpdatedByUsername && <span>آخر تحديث: {task.UpdatedByUsername}</span>}
                         </p>
                       )}
-                      <div className="flex gap-2 mt-3 flex-wrap">
-                        <button
-                          onClick={() => handleResolved(task)}
-                          disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                        >
-                          {updatingIds.has(task.InteractionID) ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <CheckCircle2 size={14} />
-                          )}
-                          تم الدفع
-                        </button>
-                        <button
-                          onClick={() => handleNoAnswer(task)}
-                          disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                        >
-                          {updatingIds.has(task.InteractionID) ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Phone size={14} />
-                          )}
-                          لم يجب
-                        </button>
-                        <button
-                          onClick={() => handleRescheduleClick(task)}
-                          disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                        >
-                          <Calendar size={14} />
-                          إعادة جدولة
-                        </button>
-                        <button
-                          onClick={() => handleCopyClick(task)}
-                          disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                        >
-                          <Copy size={14} />
-                          نسخ تفاعل
-                        </button>
-                      </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
 
-          {/* Column 2: Today */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar size={24} className="text-blue-600" />
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">وعود اليوم</h2>
-              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-                {tasks.today.length}
-              </span>
-            </div>
-
-            <div className="space-y-3 max-h-[600px] overflow-y-auto">
-              {tasks.today.length === 0 ? (
-                <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-lg p-8 text-center">
-                  <CheckCircle2 size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                  <p className="text-gray-500 dark:text-gray-400">لا توجد مهام اليوم</p>
-                </div>
-              ) : (
-                tasks.today.map((task) => {
-                  const customerPhone = task.CustomerPhone || task.Customerphone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.Phone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.phone || '';
-                  return (
-                    <div
-                      key={task.InteractionID}
-                      className="bg-white dark:bg-slate-800 rounded-lg border-2 border-blue-200 p-4 shadow-sm hover:shadow-md transition-shadow"
-                    >
-                      <a
-                        href={`/admin/customers/${task.CustomerID}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
+                    {/* Actions Column */}
+                    <div className="flex gap-2 w-full md:w-1/4 mt-4 md:mt-0 flex-wrap justify-end">
+                      <button
+                        onClick={() => handleResolved(task)}
+                        disabled={updatingIds.has(task.InteractionID)}
+                        className={`flex-1 md:flex-none px-4 py-2 ${themeColorClasses.btn} rounded-lg transition-colors text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-1.5`}
                       >
-                        {task.CustomerName}
-                      </a>
-                      {customerPhone && (
-                        <div className="mb-2">
-                          <PhoneActions phone={customerPhone} />
-                        </div>
-                      )}
-                      {task.PromiseAmount && (
-                        <p className="text-sm font-semibold text-blue-600 mb-1">
-                          المبلغ: {formatCurrency(task.PromiseAmount)}
-                        </p>
-                      )}
-                      <p className="text-xs text-blue-500 mb-2">تاريخ: {formatDate(task.NextDate)}</p>
-                      {task.Notes && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{task.Notes}</p>
-                      )}
-                      {(task.CreatedByUsername || task.UpdatedByUsername) && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                          {task.CreatedByUsername && <span>أنشأه: {task.CreatedByUsername}</span>}
-                          {task.CreatedByUsername && task.UpdatedByUsername && ' · '}
-                          {task.UpdatedByUsername && <span>آخر تحديث: {task.UpdatedByUsername}</span>}
-                        </p>
-                      )}
-                      <div className="flex gap-2 mt-3 flex-wrap">
-                        <button
-                          onClick={() => handleResolved(task)}
-                          disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                        >
-                          {updatingIds.has(task.InteractionID) ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <CheckCircle2 size={14} />
-                          )}
-                          تم الدفع
-                        </button>
-                        <button
-                          onClick={() => handleNoAnswer(task)}
-                          disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                        >
-                          {updatingIds.has(task.InteractionID) ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Phone size={14} />
-                          )}
-                          لم يجب
-                        </button>
-                        <button
-                          onClick={() => handleRescheduleClick(task)}
-                          disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                        >
-                          <Calendar size={14} />
-                          إعادة جدولة
-                        </button>
-                        <button
-                          onClick={() => handleCopyClick(task)}
-                          disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                        >
-                          <Copy size={14} />
-                          نسخ تفاعل
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* Column 3: Upcoming */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Clock size={24} className="text-green-600 dark:text-green-400" />
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">وعود قادمة</h2>
-              <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-sm font-semibold">
-                {tasks.upcoming.length}
-              </span>
-            </div>
-
-            <div className="space-y-3 max-h-[600px] overflow-y-auto">
-              {tasks.upcoming.length === 0 ? (
-                <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-lg p-8 text-center">
-                  <CheckCircle2 size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                  <p className="text-gray-500 dark:text-gray-400">لا توجد وعود قادمة</p>
-                </div>
-              ) : (
-                tasks.upcoming.map((task) => {
-                  const customerPhone = task.CustomerPhone || task.Customerphone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.Phone || allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.phone || '';
-                  return (
-                    <div
-                      key={task.InteractionID}
-                      className="bg-white dark:bg-slate-800 rounded-lg border-2 border-green-200 p-4 shadow-sm hover:shadow-md transition-shadow"
-                    >
-                      <a
-                        href={`/admin/customers/${task.CustomerID}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1 hover:text-blue-600 hover:underline transition-colors text-right w-full block"
+                        {updatingIds.has(task.InteractionID) ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <CheckCircle2 size={16} />
+                        )}
+                        تم الدفع
+                      </button>
+                      <button
+                        onClick={() => handleNoAnswer(task)}
+                        disabled={updatingIds.has(task.InteractionID)}
+                        className="flex-1 md:flex-none px-4 py-2 bg-gray-100 dark:bg-slate-700/80 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm"
                       >
-                        {task.CustomerName}
-                      </a>
-                      {customerPhone && (
-                        <div className="mb-2">
-                          <PhoneActions phone={customerPhone} />
-                        </div>
-                      )}
-                      {task.PromiseAmount && (
-                        <p className="text-sm font-semibold text-green-600 dark:text-green-400 mb-1">
-                          المبلغ: {formatCurrency(task.PromiseAmount)}
-                        </p>
-                      )}
-                      <p className="text-xs text-green-500 mb-2">تاريخ: {formatDate(task.NextDate)}</p>
-                      {task.Notes && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{task.Notes}</p>
-                      )}
-                      {(task.CreatedByUsername || task.UpdatedByUsername) && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                          {task.CreatedByUsername && <span>أنشأه: {task.CreatedByUsername}</span>}
-                          {task.CreatedByUsername && task.UpdatedByUsername && ' · '}
-                          {task.UpdatedByUsername && <span>آخر تحديث: {task.UpdatedByUsername}</span>}
-                        </p>
-                      )}
-                      <div className="flex gap-2 mt-3 flex-wrap">
-                        <button
-                          onClick={() => handleResolved(task)}
-                          disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                        >
-                          {updatingIds.has(task.InteractionID) ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <CheckCircle2 size={14} />
-                          )}
-                          تم الدفع
-                        </button>
-                        <button
-                          onClick={() => handleNoAnswer(task)}
-                          disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                        >
-                          {updatingIds.has(task.InteractionID) ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Phone size={14} />
-                          )}
-                          لم يجب
-                        </button>
-                        <button
-                          onClick={() => handleRescheduleClick(task)}
-                          disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                        >
-                          <Calendar size={14} />
-                          إعادة جدولة
-                        </button>
-                        <button
-                          onClick={() => handleCopyClick(task)}
-                          disabled={updatingIds.has(task.InteractionID)}
-                          className="flex-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1 min-w-[100px]"
-                        >
-                          <Copy size={14} />
-                          نسخ تفاعل
-                        </button>
-                      </div>
+                        {updatingIds.has(task.InteractionID) ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <Phone size={16} />
+                        )}
+                        <span className="hidden sm:inline">لم يجب</span>
+                      </button>
+                      <button
+                        onClick={() => handleRescheduleClick(task)}
+                        disabled={updatingIds.has(task.InteractionID)}
+                        className="flex-1 md:flex-none px-4 py-2 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm bg-white dark:bg-slate-800"
+                      >
+                        <Calendar size={16} />
+                        <span className="hidden sm:inline">تأجيل</span>
+                      </button>
+                         <button
+                           onClick={() => handleCopyClick(task)}
+                           disabled={updatingIds.has(task.InteractionID)}
+                           className="flex-none p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center border border-transparent hover:border-purple-200 dark:hover:border-purple-800"
+                           title="نسخ تفاعل"
+                         >
+                           <Copy size={16} />
+                         </button>
+                         {admin?.is_super_admin && !task.isInstallment && (
+                           <button
+                             onClick={() => handleDeleteTask(task)}
+                             disabled={updatingIds.has(task.InteractionID)}
+                             className="flex-none p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center border border-transparent hover:border-red-200 dark:hover:border-red-800"
+                             title="حذف الموعد"
+                           >
+                             <Trash2 size={16} />
+                           </button>
+                         )}
+                       </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+                  </div>
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -1020,10 +975,10 @@ export default function TasksPage() {
               </button>
               <button
                 onClick={handleRescheduleSubmit}
-                disabled={!rescheduleDate || updatingIds.has(rescheduleModal.task.InteractionID)}
+                disabled={!rescheduleDate || updatingIds.has(rescheduleModal.task!.InteractionID)}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {updatingIds.has(rescheduleModal.task.InteractionID) ? (
+                {updatingIds.has(rescheduleModal.task!.InteractionID) ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
                     جاري الحفظ...
@@ -1169,10 +1124,10 @@ export default function TasksPage() {
               </button>
               <button
                 onClick={handleCopySubmit}
-                disabled={!copyForm.customerID || !copyForm.date || updatingIds.has(copyModal.task.InteractionID)}
+                disabled={!copyForm.customerID || !copyForm.date || updatingIds.has(copyModal.task!.InteractionID)}
                 className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {updatingIds.has(copyModal.task.InteractionID) ? (
+                {updatingIds.has(copyModal.task!.InteractionID) ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
                     جاري الحفظ...

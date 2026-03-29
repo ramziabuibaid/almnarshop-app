@@ -8,8 +8,24 @@ import CustomerFormModal from '@/components/admin/CustomerFormModal';
 import AddInteractionModal from '@/components/admin/AddInteractionModal';
 import ReceiptPaymentModal from '@/components/admin/ReceiptPaymentModal';
 import PhoneActions from '@/components/admin/PhoneActions';
-import { getCustomerData, getAllCustomers, getCustomerChecks, saveCheck, deleteCustomer, updateCustomerLoginCredentials } from '@/lib/api';
+import { 
+  getCustomerData, 
+  getAllCustomers, 
+  getCustomerChecks, 
+  saveCheck, 
+  deleteCustomer, 
+  updateCustomerLoginCredentials, 
+  deleteActivity,
+  getPromissoryNotes,
+  updateInstallmentStatus,
+  deletePromissoryNote,
+  updateCheckStatus,
+  deleteCheck,
+  updateCheck,
+  uploadCheckImage
+} from '@/lib/api';
 import { fixPhoneNumber } from '@/lib/utils';
+import PromissoryNoteModal from '../../promissory-notes/PromissoryNoteModal';
 import {
   Loader2,
   User,
@@ -32,10 +48,13 @@ import {
   Lock,
   Eye,
   EyeOff,
+  Calculator,
+  CheckCircle2,
+  Clock,
 } from 'lucide-react';
 
 interface TimelineItem {
-  type: 'invoice' | 'receipt' | 'payment' | 'interaction';
+  type: 'invoice' | 'receipt' | 'payment' | 'interaction' | 'installment';
   id: string;
   date: string;
   amount?: number;
@@ -68,11 +87,13 @@ export default function CustomerProfilePage() {
     receipts: any[];
     interactions: any[];
     quotations: any[];
+    installments?: any[];
   }>({
     invoices: [],
     receipts: [],
     interactions: [],
     quotations: [],
+    installments: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +123,13 @@ export default function CustomerProfilePage() {
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [savingLoginCredentials, setSavingLoginCredentials] = useState(false);
+  const [promissoryNotes, setPromissoryNotes] = useState<any[]>([]);
+  const [isPromissoryNoteModalOpen, setIsPromissoryNoteModalOpen] = useState(false);
+  const [selectedPromissoryNote, setSelectedPromissoryNote] = useState<any | null>(null);
+  const [updatingInstallment, setUpdatingInstallment] = useState<string | null>(null);
+  const [selectedCheck, setSelectedCheck] = useState<any | null>(null);
+  const [updatingCheckStatus, setUpdatingCheckStatus] = useState<string | null>(null);
+  const [uploadingCheckImage, setUploadingCheckImage] = useState<{ front: boolean, back: boolean }>({ front: false, back: false });
 
   useEffect(() => {
     if (customerId) {
@@ -234,11 +262,16 @@ export default function CustomerProfilePage() {
         receipts: data.receipts || [],
         interactions: data.interactions || [],
         quotations: data.quotations || [],
+        installments: data.installments || [],
       });
 
       // Load checks in parallel
-      const checksData = await getCustomerChecks(idString);
+      const [checksData, notesData] = await Promise.all([
+        getCustomerChecks(idString),
+        getPromissoryNotes({ customerId: idString })
+      ]);
       setChecks(checksData || []);
+      setPromissoryNotes(notesData || []);
     } catch (error: any) {
       console.error('[CustomerProfile] Error loading heavy data:', error);
       // Don't show error to user for background loading, just log it
@@ -347,11 +380,28 @@ export default function CustomerProfilePage() {
       });
     });
 
-    // Sort by date (newest first)
+    (customerData.installments || []).forEach((inst: any) => {
+      const interactionId = inst.InstallmentID || inst.id;
+      if (!interactionId) return;
+      
+      items.push({
+        type: 'installment',
+        id: String(interactionId),
+        date: inst.DueDate || inst.due_date || inst.CreatedAt || '',
+        notes: `كمبيالة ${inst.NoteReference ? `- ${inst.NoteReference}` : ''} ${inst.Notes ? `- ${inst.Notes}` : ''}`.trim(),
+        channel: 'قسط كمبيالة',
+        status: inst.Status || inst.status || '',
+        promiseAmount: inst.Amount || inst.amount || 0,
+        ptpStatus: inst.Status || inst.status || '',
+        ...inst,
+      });
+    });
+
+    // Sort by date (ascending - closest/earliest first)
     items.sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
-      return dateB - dateA;
+      return dateA - dateB;
     });
 
     return items;
@@ -396,6 +446,8 @@ export default function CustomerProfilePage() {
         return Banknote;
       case 'interaction':
         return Phone;
+      case 'installment':
+        return Calendar;
       default:
         return FileText;
     }
@@ -431,6 +483,13 @@ export default function CustomerProfilePage() {
           border: 'border-orange-300 dark:border-orange-800',
           iconBg: 'bg-orange-100 dark:bg-orange-900/40',
         };
+      case 'installment':
+        return {
+          bg: 'bg-purple-50 dark:bg-purple-900/20',
+          text: 'text-purple-700 dark:text-purple-400',
+          border: 'border-purple-300 dark:border-purple-800',
+          iconBg: 'bg-purple-100 dark:bg-purple-900/40',
+        };
       default:
         return {
           bg: 'bg-gray-50 dark:bg-slate-800/50',
@@ -446,6 +505,7 @@ export default function CustomerProfilePage() {
     const status = (ptpStatus || '').toLowerCase();
     switch (status) {
       case 'active':
+      case 'pending':
         return {
           bg: 'bg-blue-50 dark:bg-blue-900/20',
           text: 'text-blue-700 dark:text-blue-400',
@@ -459,6 +519,13 @@ export default function CustomerProfilePage() {
           text: 'text-green-700 dark:text-green-400',
           border: 'border-green-400 dark:border-green-800',
           iconBg: 'bg-green-100 dark:bg-green-900/40',
+        };
+      case 'late':
+        return {
+          bg: 'bg-red-50 dark:bg-red-900/20',
+          text: 'text-red-700 dark:text-red-400',
+          border: 'border-red-400 dark:border-red-800',
+          iconBg: 'bg-red-100 dark:bg-red-900/40',
         };
       case 'archived':
       case 'closed':
@@ -562,38 +629,112 @@ export default function CustomerProfilePage() {
   };
 
   const handleSaveCheck = async () => {
-    if (!customerId) return;
-    if (!checkForm.amount.trim()) {
-      alert('المبلغ مطلوب');
+    if (!checkForm.amount) {
+      alert('الرجاء إدخال المبلغ');
       return;
     }
+
     setCheckSaving(true);
     try {
-      await saveCheck({
-        customerID: customerId,
-        amount: parseFloat(checkForm.amount) || 0,
-        imageFront: checkForm.imageFront || null,
-        imageBack: checkForm.imageBack || null,
-        returnDate: checkForm.returnDate || null,
-        status: checkForm.status as any,
-        notes: checkForm.notes || null,
-      });
-      // refresh
-      const checksData = await getCustomerChecks(customerId);
-      setChecks(checksData || []);
+      if (selectedCheck) {
+        // Edit existing check
+        await updateCheck(selectedCheck.check_id, {
+          amount: parseFloat(checkForm.amount),
+          imageFront: checkForm.imageFront,
+          imageBack: checkForm.imageBack,
+          returnDate: checkForm.returnDate,
+          status: checkForm.status as any,
+          notes: checkForm.notes,
+        });
+        alert('تم تحديث الشيك بنجاح');
+      } else {
+        // Create new check
+        await saveCheck({
+          customerID: customerId as string,
+          amount: parseFloat(checkForm.amount),
+          imageFront: checkForm.imageFront,
+          imageBack: checkForm.imageBack,
+          returnDate: checkForm.returnDate,
+          status: checkForm.status as any,
+          notes: checkForm.notes,
+        });
+        alert('تم حفظ الشيك بنجاح');
+      }
       setIsCheckModalOpen(false);
       setCheckForm({
         amount: '',
         imageFront: '',
         imageBack: '',
-        returnDate: '',
+        returnDate: new Date().toISOString().split('T')[0],
         status: 'مع الشركة',
         notes: '',
       });
-    } catch (err: any) {
-      alert(err?.message || 'فشل حفظ الشيك');
+      setSelectedCheck(null);
+      loadCustomerHeavyData();
+    } catch (error: any) {
+      alert('فشل حفظ الشيك: ' + error.message);
     } finally {
       setCheckSaving(false);
+    }
+  };
+
+  const handleStatusCheckUpdate = async (checkId: string, currentStatus: string) => {
+    if (updatingCheckStatus === checkId) return;
+    
+    // Toggle logic: If not 'سلم للزبون وتم تسديد القيمة', make it so. 
+    // Or if it's already settled, move back to 'مع الشركة'
+    const settledStatus = 'سلم للزبون وتم تسديد القيمة';
+    const newStatus = currentStatus === settledStatus ? 'مع الشركة' : settledStatus;
+
+    setUpdatingCheckStatus(checkId);
+    try {
+      await updateCheckStatus(checkId, newStatus as any);
+      setTimeout(() => {
+        loadCustomerHeavyData();
+      }, 500);
+    } catch (err: any) {
+      console.error('[CustomerProfile] Error updating check status:', err);
+      alert('فشل تحديث حالة الشيك: ' + (err?.message || 'خطأ غير معروف'));
+    } finally {
+      setUpdatingCheckStatus(null);
+    }
+  };
+
+  const handleDeleteCheck = async (checkId: string) => {
+    if (!admin?.is_super_admin) {
+      alert('فقط المشرف العام يمكنه حذف الشيكات');
+      return;
+    }
+    
+    if (!confirm('هل أنت متأكد من حذف هذا الشيك؟\n\nهذا الإجراء لا يمكن التراجع عنه.')) {
+      return;
+    }
+    
+    try {
+      await deleteCheck(checkId);
+      alert('تم حذف الشيك بنجاح');
+      loadCustomerHeavyData();
+    } catch (err: any) {
+      console.error('[CustomerProfile] Error deleting check:', err);
+      alert('فشل حذف الشيك: ' + (err?.message || 'خطأ غير معروف'));
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingCheckImage(prev => ({ ...prev, [side]: true }));
+    try {
+      const url = await uploadCheckImage(file);
+      setCheckForm(prev => ({ 
+        ...prev, 
+        [side === 'front' ? 'imageFront' : 'imageBack']: url 
+      }));
+    } catch (err: any) {
+      alert('فشل رفع الصورة: ' + err.message);
+    } finally {
+      setUploadingCheckImage(prev => ({ ...prev, [side]: false }));
     }
   };
 
@@ -622,6 +763,47 @@ export default function CustomerProfilePage() {
       alert(err?.message || 'فشل حفظ بيانات الدخول');
     } finally {
       setSavingLoginCredentials(false);
+    }
+  };
+
+  const handlePromissoryStatusUpdate = async (instId: string, currentStatus: string) => {
+    if (updatingInstallment === instId) return;
+    
+    // Toggle logic: Pending -> Paid -> Pending
+    const newStatus = currentStatus === 'Pending' || currentStatus === 'Late' ? 'Paid' : 'Pending';
+
+    setUpdatingInstallment(instId);
+    try {
+      await updateInstallmentStatus(instId, newStatus as any);
+      // Wait a bit to ensure database update is processed before refresh
+      setTimeout(() => {
+        loadCustomerHeavyData();
+      }, 500);
+    } catch (err: any) {
+      console.error('[CustomerProfile] Error updating installment status:', err);
+      alert('فشل تحديث حالة القسط: ' + (err?.message || 'خطأ غير معروف'));
+    } finally {
+      setUpdatingInstallment(instId === updatingInstallment ? null : updatingInstallment);
+    }
+  };
+
+  const handleDeletePromissoryNote = async (noteId: string) => {
+    if (!admin?.is_super_admin) {
+      alert('فقط المشرف العام يمكنه حذف الكمبيالات');
+      return;
+    }
+    
+    if (!confirm('هل أنت متأكد من حذف هذه الكمبيالة وجميع أقساطها؟\n\nهذا الإجراء لا يمكن التراجع عنه.')) {
+      return;
+    }
+    
+    try {
+      await deletePromissoryNote(noteId);
+      alert('تم حذف الكمبيالة بنجاح');
+      loadCustomerHeavyData();
+    } catch (err: any) {
+      console.error('[CustomerProfile] Error deleting promissory note:', err);
+      alert('فشل حذف الكمبيالة: ' + (err?.message || 'خطأ غير معروف'));
     }
   };
 
@@ -817,6 +999,13 @@ export default function CustomerProfilePage() {
               <span className="sm:hidden">عرض</span>
             </button>
             <button
+              title="إضافة كمبيالة"
+            >
+              <Calculator size={16} />
+              <span className="hidden sm:inline">إضافة كمبيالة</span>
+              <span className="sm:hidden">كمبيالة</span>
+            </button>
+            <button
               onClick={() => setIsReceiptModalOpen(true)}
               className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-1.5 flex-shrink-0"
               title="سند قبض المحل"
@@ -971,162 +1160,147 @@ export default function CustomerProfilePage() {
                 )}
               </button>
             )}
-
-            {/* Checks Section (Compact summary) */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ImageIcon size={18} className="text-gray-600 dark:text-gray-400" />
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">الشيكات الراجعة</h3>
-                  {loadingHeavyData && (
-                    <Loader2 size={16} className="animate-spin text-gray-400 dark:text-gray-500" />
-                  )}
-                </div>
-                <button
-                  onClick={() => setIsCheckModalOpen(true)}
-                  className="px-3 py-1.5 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors text-sm flex items-center gap-1"
-                >
-                  <Plus size={14} />
-                  إضافة
-                </button>
-              </div>
-              {loadingHeavyData ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 size={20} className="animate-spin text-gray-400 dark:text-gray-500" />
-                  <span className="text-sm text-gray-500 dark:text-gray-400 mr-2">جاري التحميل...</span>
-                </div>
-              ) : checks.length === 0 ? (
-                <p className="text-sm text-gray-600 dark:text-gray-400">لا يوجد شيكات مسجلة</p>
-              ) : (
-                <div className="space-y-2">
-                  {checks.slice(0, 3).map((chk) => (
-                    <div key={chk.check_id} className="p-2 bg-gray-50 dark:bg-slate-800/50 rounded border border-gray-200 dark:border-slate-700">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-semibold text-gray-900 dark:text-gray-100">₪{(chk.amount || 0).toFixed(2)}</span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">{chk.return_date || '—'}</span>
-                      </div>
-                      <div className="text-xs text-gray-700 dark:text-gray-300 mt-1">{chk.status}</div>
-                    </div>
-                  ))}
-                  {checks.length > 3 && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">و {checks.length - 3} أخرى...</p>
-                  )}
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Right Area - Activity Timeline */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Interactions Section - First */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">التفاعلات والمواعيد</h2>
-                {loadingHeavyData && (
-                  <Loader2 size={18} className="animate-spin text-gray-400 dark:text-gray-500" />
-                )}
-              </div>
+            {/* Interactions Section - Collapsible */}
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+              <details className="group">
+                <summary className="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">التفاعلات والمواعيد ({loadingHeavyData ? '...' : (interactionItems?.length || 0)})</h2>
+                    {loadingHeavyData && (
+                      <Loader2 size={18} className="animate-spin text-gray-400 dark:text-gray-500" />
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    اضغط للعرض
+                  </div>
+                </summary>
+                <div className="px-6 pb-6 pt-2">
+                  {loadingHeavyData ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 size={24} className="animate-spin text-gray-400 dark:text-gray-500" />
+                      <span className="text-gray-600 dark:text-gray-400 text-lg mr-3">جاري تحميل التفاعلات...</span>
+                    </div>
+                  ) : interactionItems.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Phone size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                      <p className="text-gray-600 dark:text-gray-400 text-lg">لا توجد تفاعلات</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {interactionItems.map((item, index) => {
+                        const Icon = getTimelineIcon(item.type);
+                        const colors = getInteractionColor(item.ptpStatus || '');
+                        const uniqueKey = `interaction-${item.id || `fallback-${index}`}`;
 
-              {loadingHeavyData ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 size={24} className="animate-spin text-gray-400 dark:text-gray-500" />
-                  <span className="text-gray-600 dark:text-gray-400 text-lg mr-3">جاري تحميل التفاعلات...</span>
-                </div>
-              ) : interactionItems.length === 0 ? (
-                <div className="text-center py-12">
-                  <Phone size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400 text-lg">لا توجد تفاعلات</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {interactionItems.map((item, index) => {
-                    const Icon = getTimelineIcon(item.type);
-                    const colors = getInteractionColor(item.ptpStatus || '');
-                    const uniqueKey = `interaction-${item.id || `fallback-${index}`}`;
+                        return (
+                          <div
+                            key={uniqueKey}
+                            className={`border-l-4 ${colors.border} pl-4 py-4 rounded-r-lg ${colors.bg} border ${colors.border} hover:shadow-sm transition-shadow`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`p-2 rounded-lg ${colors.iconBg} flex-shrink-0`}>
+                                <Icon size={20} className={colors.text} />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                                      {item.channel || 'تفاعل'}
+                                    </h3>
+                                    {item.ptpStatus && (
+                                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                        (item.ptpStatus || '').toLowerCase() === 'active' ? 'bg-blue-100 text-blue-700' :
+                                        (item.ptpStatus || '').toLowerCase() === 'fulfilled' || (item.ptpStatus || '').toLowerCase() === 'paid' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                                        'bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300'
+                                      }`}>
+                                        {item.ptpStatus}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {formatDate(item.date)}
+                                    </span>
+                                    <button
+                                      onClick={() => handleOpenInteractionModal(item)}
+                                      className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                                      title="تعديل"
+                                    >
+                                      <Edit size={16} />
+                                    </button>
+                                    {admin?.is_super_admin && item.type === 'interaction' && (
+                                       <button
+                                         onClick={async () => {
+                                           if (window.confirm('هل أنت متأكد من حذف هذا الموعد؟ لا يمكن التراجع عن هذه العملية.')) {
+                                             try {
+                                               await deleteActivity(item.id);
+                                               alert('تم حذف الموعد بنجاح');
+                                               // Refresh data using internal function for better UX
+                                               loadCustomerHeavyData();
+                                             } catch (err: any) {
+                                               alert('فشل الحذف: ' + (err.message || 'خطأ غير معروف'));
+                                             }
+                                           }
+                                         }}
+                                         className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                                         title="حذف الموعد"
+                                       >
+                                         <Trash2 size={16} />
+                                       </button>
+                                    )}
+                                  </div>
+                                </div>
 
-                    return (
-                      <div
-                        key={uniqueKey}
-                        className={`border-l-4 ${colors.border} pl-4 py-4 rounded-r-lg ${colors.bg} border ${colors.border} hover:shadow-sm transition-shadow`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className={`p-2 rounded-lg ${colors.iconBg} flex-shrink-0`}>
-                            <Icon size={20} className={colors.text} />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                                  {item.channel || 'تفاعل'}
-                                </h3>
-                                {item.ptpStatus && (
-                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                    (item.ptpStatus || '').toLowerCase() === 'active' ? 'bg-blue-100 text-blue-700' :
-                                    (item.ptpStatus || '').toLowerCase() === 'fulfilled' || (item.ptpStatus || '').toLowerCase() === 'paid' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
-                                    'bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300'
-                                  }`}>
-                                    {item.ptpStatus}
+                                {/* Notes */}
+                                {item.notes && (
+                                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                    {item.notes}
+                                  </p>
+                                )}
+
+                                {/* Status/Outcome */}
+                                {item.status && (
+                                  <span className="inline-block px-2 py-1 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded text-xs font-medium mb-2">
+                                    {item.status}
                                   </span>
                                 )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  {formatDate(item.date)}
-                                </span>
-                                <button
-                                  onClick={() => handleOpenInteractionModal(item)}
-                                  className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
-                                  title="تعديل"
-                                >
-                                  <Edit size={16} />
-                                </button>
+
+                                {/* Promise Amount */}
+                                {item.promiseAmount && item.promiseAmount > 0 && (
+                                  <p className="text-sm font-semibold text-blue-600 mb-2">
+                                    المبلغ المتوقع: {formatBalance(item.promiseAmount)}
+                                  </p>
+                                )}
+
+                                {/* Next Follow-up Date */}
+                                {item.nextFollowUpDate && (
+                                  <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                    <Calendar size={12} />
+                                    <span>موعد المتابعة: {formatDate(item.nextFollowUpDate)}</span>
+                                  </div>
+                                )}
+
+                                {/* Audit: who created / last updated */}
+                                {(item.CreatedByUsername || item.UpdatedByUsername) && (
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                    {item.CreatedByUsername && <span>أنشأه: {item.CreatedByUsername}</span>}
+                                    {item.CreatedByUsername && item.UpdatedByUsername && ' · '}
+                                    {item.UpdatedByUsername && <span>آخر تحديث: {item.UpdatedByUsername}</span>}
+                                  </p>
+                                )}
                               </div>
                             </div>
-
-                            {/* Notes */}
-                            {item.notes && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                                {item.notes}
-                              </p>
-                            )}
-
-                            {/* Status/Outcome */}
-                            {item.status && (
-                              <span className="inline-block px-2 py-1 bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 rounded text-xs font-medium mb-2">
-                                {item.status}
-                              </span>
-                            )}
-
-                            {/* Promise Amount */}
-                            {item.promiseAmount && item.promiseAmount > 0 && (
-                              <p className="text-sm font-semibold text-blue-600 mb-2">
-                                المبلغ المتوقع: {formatBalance(item.promiseAmount)}
-                              </p>
-                            )}
-
-                            {/* Next Follow-up Date */}
-                            {item.nextFollowUpDate && (
-                              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                <Calendar size={12} />
-                                <span>موعد المتابعة: {formatDate(item.nextFollowUpDate)}</span>
-                              </div>
-                            )}
-
-                            {/* Audit: who created / last updated */}
-                            {(item.CreatedByUsername || item.UpdatedByUsername) && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                {item.CreatedByUsername && <span>أنشأه: {item.CreatedByUsername}</span>}
-                                {item.CreatedByUsername && item.UpdatedByUsername && ' · '}
-                                {item.UpdatedByUsername && <span>آخر تحديث: {item.UpdatedByUsername}</span>}
-                              </p>
-                            )}
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
+              </details>
             </div>
 
             {/* Financial Transactions (Invoices, Receipts & Payments) - Second */}
@@ -1491,6 +1665,377 @@ export default function CustomerProfilePage() {
                 </div>
               </details>
             </div>
+
+            {/* Returned Checks Section - High Detail */}
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+              <details className="group" open={checks && checks.length > 0}>
+                <summary className="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 font-cairo">الشيكات الراجعة ({loadingHeavyData ? '...' : (checks?.length || 0)})</h2>
+                    <div className="p-1 px-2 bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400 rounded-full text-[10px] font-bold">جديد</div>
+                    {loadingHeavyData && (
+                      <Loader2 size={18} className="animate-spin text-gray-400 dark:text-gray-500" />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedCheck(null);
+                        setCheckForm({
+                            amount: '',
+                            imageFront: '',
+                            imageBack: '',
+                            returnDate: new Date().toISOString().split('T')[0],
+                            status: 'مع الشركة',
+                            notes: '',
+                        });
+                        setIsCheckModalOpen(true);
+                      }}
+                      className="px-2 py-1 bg-pink-600 text-white rounded-md text-xs font-bold flex items-center gap-1 hover:bg-pink-700 transition-colors"
+                    >
+                      <Plus size={14} /> إضافة شيك راجع
+                    </button>
+                    <div className="text-sm text-gray-500 dark:text-gray-400 font-cairo">
+                      اضغط للعرض
+                    </div>
+                  </div>
+                </summary>
+                <div className="px-6 pb-6 pt-2 font-cairo" dir="rtl">
+                  {loadingHeavyData ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 size={24} className="animate-spin text-gray-400 dark:text-gray-500" />
+                      <span className="text-gray-600 dark:text-gray-400 text-lg mr-3">جاري تحميل الشيكات...</span>
+                    </div>
+                  ) : checks && checks.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Banknote size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                      <p className="text-gray-600 dark:text-gray-400 text-lg font-cairo">لا توجد شيكات راجعة</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {checks.map((chk, index) => {
+                        const uniqueKey = `check-full-${chk.check_id || `fallback-${index}`}`;
+                        const isSettled = chk.status === 'سلم للزبون وتم تسديد القيمة';
+                        const statusColor = isSettled ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
+                                           'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300';
+                        
+                        return (
+                          <div
+                            key={uniqueKey}
+                            className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                          >
+                            {/* Check Header */}
+                            <div className="p-4 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-gray-900 dark:text-gray-100 text-lg">شيك راجع #{chk.check_id}</span>
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${statusColor}`}>
+                                    {chk.status}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                  <span className="flex items-center gap-1"><Calendar size={12} /> {chk.return_date || 'تاريخ غير محدد'}</span>
+                                  <span className="flex items-center gap-1"><Banknote size={12} /> {chk.amount.toLocaleString()} ₪</span>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    setSelectedCheck(chk);
+                                    setCheckForm({
+                                      amount: chk.amount.toString(),
+                                      imageFront: chk.image_front || '',
+                                      imageBack: chk.image_back || '',
+                                      returnDate: chk.return_date || '',
+                                      status: chk.status || 'مع الشركة',
+                                      notes: chk.notes || '',
+                                    });
+                                    setIsCheckModalOpen(true);
+                                  }}
+                                  className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors border border-gray-200 dark:border-slate-700"
+                                  title="تعديل"
+                                >
+                                  <Edit size={18} />
+                                </button>
+                                {admin?.is_super_admin && (
+                                  <button
+                                    onClick={() => handleDeleteCheck(chk.check_id)}
+                                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors border border-gray-200 dark:border-slate-700"
+                                    title="حذف"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Images and Details */}
+                            <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              {/* Quick Stats */}
+                              <div className="flex flex-col gap-4">
+                                <div className="p-3 bg-gray-50 dark:bg-slate-900/30 rounded-lg border border-gray-100 dark:border-slate-800">
+                                   <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">المبلغ الإجمالي</div>
+                                   <div className="text-2xl font-black text-gray-900 dark:text-gray-100">₪{chk.amount.toLocaleString()}</div>
+                                </div>
+                                
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    onClick={() => handleStatusCheckUpdate(chk.check_id, chk.status)}
+                                    disabled={updatingCheckStatus === chk.check_id}
+                                    className={`flex-1 px-4 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                                      isSettled ? 'bg-green-600 text-white shadow-lg shadow-green-600/20' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/30'
+                                    }`}
+                                  >
+                                    {updatingCheckStatus === chk.check_id ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                                    {isSettled ? 'تم التسديد' : 'تعيين كمدفوع'}
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Image Preview Front */}
+                              <div className="space-y-2">
+                                <div className="text-[10px] text-gray-500 uppercase tracking-widest px-1">صورة الوجه</div>
+                                {chk.image_front ? (
+                                  <div className="relative aspect-[16/9] rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden group">
+                                     <img src={chk.image_front} alt="Front" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                                     <a href={chk.image_front} target="_blank" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity font-bold">
+                                       <ImageIcon size={24} className="ml-2" /> معاينة
+                                     </a>
+                                  </div>
+                                ) : (
+                                  <div className="aspect-[16/9] bg-gray-50 dark:bg-slate-900/30 rounded-lg border border-dashed border-gray-300 dark:border-slate-700 flex flex-col items-center justify-center text-gray-300">
+                                     <ImageIcon size={32} className="mb-1" />
+                                     <span className="text-xs">لا توجد صورة</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Image Preview Back */}
+                              <div className="space-y-2">
+                                <div className="text-[10px] text-gray-500 uppercase tracking-widest px-1">صورة الخلف</div>
+                                {chk.image_back ? (
+                                  <div className="relative aspect-[16/9] rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden group">
+                                     <img src={chk.image_back} alt="Back" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                                     <a href={chk.image_back} target="_blank" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity font-bold">
+                                       <ImageIcon size={24} className="ml-2" /> معاينة
+                                     </a>
+                                  </div>
+                                ) : (
+                                  <div className="aspect-[16/9] bg-gray-50 dark:bg-slate-900/30 rounded-lg border border-dashed border-gray-300 dark:border-slate-700 flex flex-col items-center justify-center text-gray-300">
+                                     <ImageIcon size={32} className="mb-1" />
+                                     <span className="text-xs">لا توجد صورة</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Notes Footer */}
+                            {chk.notes && (
+                              <div className="p-3 px-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700">
+                                <div className="text-[10px] font-bold text-gray-400 dark:text-gray-600 mb-1 uppercase">ملاحظات</div>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 italic">"{chk.notes}"</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </details>
+            </div>
+
+            {/* Promissory Notes Section */}
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+              <details className="group" open={promissoryNotes && promissoryNotes.length > 0}>
+                <summary className="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 font-cairo">الكمبيالات ({loadingHeavyData ? '...' : (promissoryNotes?.length || 0)})</h2>
+                    <div className="p-1 px-2 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full text-[10px] font-bold">جديد</div>
+                    {loadingHeavyData && (
+                      <Loader2 size={18} className="animate-spin text-gray-400 dark:text-gray-500" />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedPromissoryNote(null);
+                        setIsPromissoryNoteModalOpen(true);
+                      }}
+                      className="px-2 py-1 bg-orange-600 text-white rounded-md text-xs font-bold flex items-center gap-1 hover:bg-orange-700 transition-colors"
+                    >
+                      <Plus size={14} /> إضافة كمبيالة
+                    </button>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      اضغط للعرض
+                    </div>
+                  </div>
+                </summary>
+                <div className="px-6 pb-6 pt-2 font-cairo" dir="rtl">
+                  {loadingHeavyData ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 size={24} className="animate-spin text-gray-400 dark:text-gray-500" />
+                      <span className="text-gray-600 dark:text-gray-400 text-lg mr-3">جاري تحميل الكمبيالات...</span>
+                    </div>
+                  ) : promissoryNotes && promissoryNotes.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Calculator size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                      <p className="text-gray-600 dark:text-gray-400 text-lg">لا توجد كمبيالات مسجلة</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {promissoryNotes.map((note, index) => {
+                        const uniqueKey = `note-${note.id || `fallback-${index}`}`;
+                        const statusColor = note.status === 'Active' ? 'bg-blue-100 text-blue-800' :
+                                           note.status === 'Completed' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
+                                           'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300';
+                        
+                        return (
+                          <div
+                            key={uniqueKey}
+                            className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                          >
+                            {/* Note Header */}
+                            <div className="p-4 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-gray-900 dark:text-gray-100 text-lg">كمبيالة #{note.id}</span>
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${statusColor}`}>
+                                    {note.status === 'Active' ? 'نشطة' : note.status === 'Completed' ? 'مكتملة' : 'متعثرة'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                  <span className="flex items-center gap-1"><Calendar size={12} /> {note.issue_date}</span>
+                                  {note.is_legacy && <span className="text-orange-600 font-bold">كمبيالة سابقة</span>}
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    window.open(`/admin/promissory-notes/print/${note.id}`, '_blank');
+                                  }}
+                                  className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors border border-gray-200 dark:border-slate-700"
+                                  title="طباعة"
+                                >
+                                  <Printer size={18} />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedPromissoryNote(note);
+                                    setIsPromissoryNoteModalOpen(true);
+                                  }}
+                                  className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors border border-gray-200 dark:border-slate-700"
+                                  title="تعديل"
+                                >
+                                  <Edit size={18} />
+                                </button>
+                                {admin?.is_super_admin && (
+                                  <button
+                                    onClick={() => handleDeletePromissoryNote(note.id)}
+                                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors border border-gray-200 dark:border-slate-700"
+                                    title="حذف"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Summary Totals */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-gray-200 dark:border-slate-700 divide-x divide-x-reverse divide-gray-200 dark:divide-slate-700">
+                              <div className="p-3 text-center">
+                                <span className="block text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">الإجمالي</span>
+                                <span className="font-bold text-gray-900 dark:text-gray-100">₪{note.total_amount.toLocaleString()}</span>
+                              </div>
+                              {note.is_legacy ? (
+                                <>
+                                  <div className="p-3 text-center">
+                                    <span className="block text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">المدفوع مسبقاً</span>
+                                    <span className="font-bold text-green-600">₪{(note.paid_amount || 0).toLocaleString()}</span>
+                                  </div>
+                                  <div className="p-3 text-center">
+                                    <span className="block text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">المبلغ المجدول</span>
+                                    <span className="font-bold text-blue-600">₪{(note.remaining_amount || 0).toLocaleString()}</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="p-3 text-center col-span-2">
+                                  <span className="block text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">المبلغ المجدول</span>
+                                  <span className="font-bold text-blue-600">₪{note.total_amount.toLocaleString()}</span>
+                                </div>
+                              )}
+                              <div className="p-3 text-center">
+                                <span className="block text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">عدد الأقساط</span>
+                                <span className="font-bold text-gray-900 dark:text-gray-100">{note.installments?.length || 0}</span>
+                              </div>
+                            </div>
+
+                            {/* Installments List */}
+                            <div className="p-4 bg-gray-50/30 dark:bg-slate-900/20">
+                              <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-widest">جدول الأقساط</h4>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {note.installments?.map((inst: any, idx: number) => {
+                                  const isPaid = inst.status === 'Paid';
+                                  const isLate = inst.status === 'Late';
+                                  const isUpdating = updatingInstallment === inst.id;
+                                  
+                                  return (
+                                    <div
+                                      key={inst.id}
+                                      className={`p-3 rounded-lg border-2 flex items-center justify-between transition-all ${
+                                        isPaid ? 'bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800/30' :
+                                        isLate ? 'bg-red-50/50 dark:bg-red-900/10 border-red-200 dark:border-red-800/30' :
+                                        'bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700'
+                                      }`}
+                                    >
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                          <span className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase">#{idx + 1}</span>
+                                          <span className={`font-bold text-sm ${isPaid ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                                            ₪{inst.amount.toLocaleString()}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                          <Clock size={12} className={isLate ? 'text-red-500' : ''} />
+                                          <span className={isLate ? 'text-red-600 font-bold' : ''}>{inst.due_date}</span>
+                                        </div>
+                                      </div>
+                                      
+                                      <button
+                                        onClick={() => handlePromissoryStatusUpdate(inst.id, inst.status)}
+                                        disabled={isUpdating}
+                                        className={`ml-1 flex-shrink-0 p-1.5 rounded-lg transition-all ${
+                                          isPaid ? 'bg-green-600 text-white shadow-sm' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600'
+                                        }`}
+                                        title={isPaid ? 'تغيير لغير مدفوع' : 'تحديد كمدفوع'}
+                                      >
+                                        {isUpdating ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Note Comments */}
+                            {note.notes && (
+                              <div className="p-3 px-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700">
+                                <div className="text-[10px] font-bold text-gray-400 dark:text-gray-600 mb-1 uppercase">ملاحظات</div>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 italic">"{note.notes}"</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </details>
+            </div>
           </div>
         </div>
       </div>
@@ -1630,130 +2175,199 @@ export default function CustomerProfilePage() {
         type="payment"
       />
 
-      {/* Add Check Modal */}
+      {/* Add/Edit Check Modal */}
       {isCheckModalOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-          onClick={() => setIsCheckModalOpen(false)}
+          className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => { setIsCheckModalOpen(false); setSelectedCheck(null); }}
         >
           <div
-            className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col font-cairo shadow-pink-500/10"
+            dir="rtl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">إضافة شيك راجع</h3>
+            <div className="px-6 py-4 bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Banknote className="text-pink-600" size={24} />
+                {selectedCheck ? 'تعديل بيانات الشيك الراجع' : 'إضافة شيك راجع جديد'}
+              </h3>
               <button
-                onClick={() => setIsCheckModalOpen(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+                onClick={() => { setIsCheckModalOpen(false); setSelectedCheck(null); }}
+                className="p-1.5 hover:bg-gray-200 dark:hover:bg-slate-800 rounded-full transition-colors"
                 disabled={checkSaving}
               >
-                <X size={18} className="text-gray-600 dark:text-gray-400" />
+                <X size={24} className="text-gray-500" />
               </button>
             </div>
 
-            <div className="p-4 space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">المبلغ</label>
-                <input
-                  type="number"
-                  value={checkForm.amount}
-                  onChange={(e) => setCheckForm({ ...checkForm, amount: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                />
-              </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">المبلغ (₪)</label>
+                  <div className="relative">
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-pink-600 font-bold">₪</span>
+                    <input
+                      type="number"
+                      value={checkForm.amount}
+                      onChange={(e) => setCheckForm({ ...checkForm, amount: e.target.value })}
+                      className="w-full pr-8 pl-3 py-2.5 border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-pink-500 font-bold"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">صورة الوجه (رابط)</label>
-                  <input
-                    type="text"
-                    value={checkForm.imageFront}
-                    onChange={(e) => setCheckForm({ ...checkForm, imageFront: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
-                    placeholder="https://..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">صورة الخلف (رابط)</label>
-                  <input
-                    type="text"
-                    value={checkForm.imageBack}
-                    onChange={(e) => setCheckForm({ ...checkForm, imageBack: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
-                    placeholder="https://..."
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تاريخ الإرجاع</label>
-                  <input
-                    type="date"
-                    value={checkForm.returnDate}
-                    onChange={(e) => setCheckForm({ ...checkForm, returnDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الحالة</label>
-                  <select
-                    value={checkForm.status}
-                    onChange={(e) => setCheckForm({ ...checkForm, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
-                  >
-                    <option value="مع الشركة">مع الشركة</option>
-                    <option value="في البنك">في البنك</option>
-                    <option value="في المحل">في المحل</option>
-                    <option value="سلم للزبون ولد يدفع">سلم للزبون ولد يدفع</option>
-                    <option value="سلم للزبون وتم تسديد القيمة">سلم للزبون وتم تسديد القيمة</option>
-                  </select>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">تاريخ الإرجاع</label>
+                  <div className="relative">
+                    <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                      type="date"
+                      value={checkForm.returnDate}
+                      onChange={(e) => setCheckForm({ ...checkForm, returnDate: e.target.value })}
+                      className="w-full pr-10 pl-3 py-2.5 border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-pink-500"
+                    />
+                  </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ملاحظات</label>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">الحالة</label>
+                <select
+                  value={checkForm.status}
+                  onChange={(e) => setCheckForm({ ...checkForm, status: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-pink-500 font-medium"
+                >
+                  <option value="مع الشركة">مع الشركة</option>
+                  <option value="في البنك">في البنك</option>
+                  <option value="في المحل">في المحل</option>
+                  <option value="سلم للزبون ولد يدفع">سلم للزبون ولد يدفع</option>
+                  <option value="سلم للزبون وتم تسديد القيمة">سلم للزبون وتم تسديد القيمة</option>
+                </select>
+              </div>
+
+              {/* Enhanced File Upload Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">صورة الوجه</label>
+                  <div className="flex flex-col gap-3">
+                    {checkForm.imageFront ? (
+                      <div className="relative aspect-video rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden shadow-inner bg-gray-50">
+                        <img src={checkForm.imageFront} alt="Front View" className="w-full h-full object-cover" />
+                        <button 
+                         onClick={() => setCheckForm(p => ({ ...p, imageFront: '' }))}
+                         className="absolute top-2 left-2 p-1 bg-red-600 text-white rounded-full shadow-lg"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="relative aspect-video rounded-lg border-2 border-dashed border-gray-300 dark:border-slate-700 flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-800/50 group hover:border-pink-400 transition-colors">
+                        {uploadingCheckImage.front ? (
+                            <Loader2 size={32} className="animate-spin text-pink-600" />
+                        ) : (
+                            <>
+                                <ImageIcon size={32} className="text-gray-300 group-hover:text-pink-400 mb-1" />
+                                <span className="text-xs text-gray-500">اختر صورة الوجه</span>
+                            </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileUpload(e, 'front')}
+                          disabled={uploadingCheckImage.front}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">صورة الخلف</label>
+                  <div className="flex flex-col gap-3">
+                    {checkForm.imageBack ? (
+                      <div className="relative aspect-video rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden shadow-inner bg-gray-50">
+                        <img src={checkForm.imageBack} alt="Back View" className="w-full h-full object-cover" />
+                        <button 
+                         onClick={() => setCheckForm(p => ({ ...p, imageBack: '' }))}
+                         className="absolute top-2 left-2 p-1 bg-red-600 text-white rounded-full shadow-lg"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="relative aspect-video rounded-lg border-2 border-dashed border-gray-300 dark:border-slate-700 flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-800/50 group hover:border-pink-400 transition-colors">
+                        {uploadingCheckImage.back ? (
+                            <Loader2 size={32} className="animate-spin text-pink-600" />
+                        ) : (
+                            <>
+                                <ImageIcon size={32} className="text-gray-300 group-hover:text-pink-400 mb-1" />
+                                <span className="text-xs text-gray-500">اختر صورة الخلف</span>
+                            </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileUpload(e, 'back')}
+                          disabled={uploadingCheckImage.back}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">ملاحظات إضافية</label>
                 <textarea
                   value={checkForm.notes}
                   onChange={(e) => setCheckForm({ ...checkForm, notes: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100"
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-pink-500"
+                  placeholder="أي ملاحظات حول سبب الإرجاع أو متابعة السداد..."
                 />
               </div>
+            </div>
 
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  onClick={() => setIsCheckModalOpen(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
-                  disabled={checkSaving}
-                >
-                  إلغاء
-                </button>
-                <button
-                  onClick={handleSaveCheck}
-                  disabled={checkSaving}
-                  className="flex-1 px-4 py-2 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {checkSaving ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      جاري الحفظ...
-                    </>
-                  ) : (
-                    <>
-                      <Save size={16} />
-                      حفظ الشيك
-                    </>
-                  )}
-                </button>
-              </div>
+            <div className="p-4 px-6 bg-gray-50 dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 flex items-center gap-4">
+              <button
+                onClick={() => { setIsCheckModalOpen(false); setSelectedCheck(null); }}
+                className="flex-1 px-4 py-3 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-800 transition-all font-bold"
+                disabled={checkSaving}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleSaveCheck}
+                disabled={checkSaving || uploadingCheckImage.front || uploadingCheckImage.back}
+                className="flex-[2] px-4 py-3 bg-pink-600 text-white rounded-xl hover:bg-pink-700 transition-all shadow-lg shadow-pink-600/20 flex items-center justify-center gap-2 font-black text-lg disabled:opacity-50"
+              >
+                {checkSaving ? (
+                  <>
+                    <Loader2 size={24} className="animate-spin" />
+                    جاري الحفظ...
+                  </>
+                ) : (
+                  <>
+                    <Save size={24} />
+                    {selectedCheck ? 'تحديث بيانات الشيك' : 'حفظ الشيك الراجع'}
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
       )}
+      <PromissoryNoteModal
+        isOpen={isPromissoryNoteModalOpen}
+        onClose={() => setIsPromissoryNoteModalOpen(false)}
+        onSuccess={() => {
+          loadCustomerHeavyData();
+        }}
+        initialData={selectedPromissoryNote}
+        defaultCustomerId={customerId as string}
+      />
     </AdminLayout>
   );
 }

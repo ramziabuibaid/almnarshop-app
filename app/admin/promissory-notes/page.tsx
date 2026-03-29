@@ -8,6 +8,7 @@ import {
     getPromissoryNotes,
     updateInstallmentStatus,
     deletePromissoryNote,
+    logActivity,
     type PromissoryNote,
     type InstallmentStatus
 } from '@/lib/api';
@@ -25,7 +26,8 @@ import {
     Trash2,
     Calendar,
     Printer,
-    X
+    X,
+    MessageCircle
 } from 'lucide-react';
 
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -41,6 +43,12 @@ export default function PromissoryNotesPage() {
     const [selectedNote, setSelectedNote] = useState<PromissoryNote | null>(null);
     const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
     const [updatingInstallment, setUpdatingInstallment] = useState<string | null>(null);
+
+    // Follow-up state
+    const [followUpModal, setFollowUpModal] = useState<{ isOpen: boolean; installmentId: string; customerId: string; amount: number; dueDate: string } | null>(null);
+    const [followUpNote, setFollowUpNote] = useState('');
+    const [followUpDate, setFollowUpDate] = useState('');
+    const [isSubmittingFollowUp, setIsSubmittingFollowUp] = useState(false);
 
     const [printOverlayNoteId, setPrintOverlayNoteId] = useState<string | null>(null);
     const printIframeRef = useRef<HTMLIFrameElement>(null);
@@ -155,6 +163,29 @@ export default function PromissoryNotesPage() {
             await loadNotes();
         } catch (err) {
             alert('فشل الحذف');
+        }
+    };
+
+    const handleFollowUpSubmit = async () => {
+        if (!followUpModal || !followUpDate) return;
+        setIsSubmittingFollowUp(true);
+        try {
+            await logActivity({
+                CustomerID: followUpModal.customerId,
+                ActionType: 'Call',
+                Outcome: 'Promised',
+                Notes: followUpNote || 'متابعة قسط مستحق',
+                PromiseDate: followUpDate,
+                PromiseAmount: followUpModal.amount,
+                InstallmentID: followUpModal.installmentId,
+                created_by: admin?.id
+            });
+            alert('تم تسجيل المهمة بنجاح، يمكنك متابعتها من صفحة المهام');
+            setFollowUpModal(null);
+        } catch (err) {
+            alert('حدث خطأ أثناء تسجيل المهمة');
+        } finally {
+            setIsSubmittingFollowUp(false);
         }
     };
 
@@ -403,6 +434,24 @@ export default function PromissoryNotesPage() {
                                                                             <button
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
+                                                                                    setFollowUpNote(`متابعة القسط رقم ${idx + 1}`);
+                                                                                    setFollowUpDate(inst.due_date);
+                                                                                    setFollowUpModal({
+                                                                                        isOpen: true,
+                                                                                        installmentId: inst.id,
+                                                                                        customerId: note.customer_id,
+                                                                                        amount: inst.amount,
+                                                                                        dueDate: inst.due_date
+                                                                                    });
+                                                                                }}
+                                                                                className="flex items-center justify-center gap-1 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded text-[11px] font-bold transition-colors w-full"
+                                                                            >
+                                                                                <MessageCircle size={12} />
+                                                                                إضافة مهمة
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
                                                                                     handleInstallmentStatus(inst.id, inst.status);
                                                                                 }}
                                                                                 disabled={updatingInstallment === inst.id}
@@ -447,6 +496,51 @@ export default function PromissoryNotesPage() {
                 }}
                 initialData={selectedNote}
             />
+
+            {/* Follow-up Modal */}
+            {followUpModal?.isOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" dir="rtl" onClick={() => setFollowUpModal(null)}>
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-sm border border-gray-200 dark:border-slate-700" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                <MessageCircle size={20} className="text-blue-500" />
+                                إضافة مهمة متابعة
+                            </h3>
+                            <button onClick={() => setFollowUpModal(null)} className="p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ملاحظات والتفاصيل</label>
+                                <textarea
+                                    value={followUpNote}
+                                    onChange={(e) => setFollowUpNote(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:outline-none dark:bg-slate-700/50 dark:text-white resize-none transition-colors"
+                                    rows={3}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">موعد المهمة</label>
+                                <input
+                                    type="date"
+                                    value={followUpDate}
+                                    onChange={(e) => setFollowUpDate(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:outline-none dark:bg-slate-700/50 dark:text-white transition-colors"
+                                />
+                            </div>
+                            <button
+                                onClick={handleFollowUpSubmit}
+                                disabled={isSubmittingFollowUp || !followUpDate}
+                                className="w-full py-2.5 bg-gray-900 dark:bg-slate-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 font-bold shadow-sm"
+                            >
+                                {isSubmittingFollowUp ? <Loader2 size={18} className="animate-spin" /> : <MessageCircle size={18} />}
+                                حفظ وإنشاء المهمة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Print Overlay */}
             {printOverlayNoteId && (
