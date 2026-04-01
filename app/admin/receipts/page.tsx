@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Suspense, useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -67,7 +67,7 @@ interface PendingInstallment {
 
 type LinkMode = 'none' | 'invoice' | 'installment';
 
-export default function ReceiptsPage() {
+function ReceiptsPageContent() {
   const { admin } = useAdminAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -781,5 +781,24 @@ export default function ReceiptsPage() {
         </>
       )}
     </AdminLayout>
+  );
+}
+
+export default function ReceiptsPage() {
+  return (
+    <Suspense
+      fallback={
+        <AdminLayout>
+          <div className="flex items-center justify-center min-h-[60vh]" dir="rtl">
+            <div className="text-center">
+              <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400">جاري تحميل سندات القبض...</p>
+            </div>
+          </div>
+        </AdminLayout>
+      }
+    >
+      <ReceiptsPageContent />
+    </Suspense>
   );
 }
