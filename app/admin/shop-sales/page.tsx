@@ -3,10 +3,11 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
+import PromissoryNoteModal from '@/app/admin/promissory-notes/PromissoryNoteModal';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import { getShopSalesInvoices, getShopSalesInvoice, searchShopSalesInvoiceById, updateShopSalesInvoiceSign, updateShopSalesInvoiceStatus } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
-import { Lock } from 'lucide-react';
+import { Lock, FileSignature } from 'lucide-react';
 import {
   Loader2,
   FileText,
@@ -28,6 +29,7 @@ interface ShopSalesInvoice {
   CustomerID: string;
   CustomerName: string;
   CustomerShamelNo?: string;
+  CustomerType?: string;
   Date: string;
   AccountantSign: string;
   Notes?: string;
@@ -38,11 +40,15 @@ interface ShopSalesInvoice {
   created_by?: string;
   createdBy?: string;
   user_id?: string;
+  TotalPaid?: number;
+  RemainingAmount?: number;
 }
 
 export default function ShopSalesPage() {
   const { admin } = useAdminAuth();
   const router = useRouter();
+  const [isPromissoryNoteModalOpen, setIsPromissoryNoteModalOpen] = useState(false);
+  const [selectedPromissoryNoteInvoice, setSelectedPromissoryNoteInvoice] = useState<ShopSalesInvoice | null>(null);
   const [allInvoices, setAllInvoices] = useState<ShopSalesInvoice[]>([]); // Store all loaded invoices
   const [loading, setLoading] = useState(true); // Start with loading true
 
@@ -73,6 +79,20 @@ export default function ShopSalesPage() {
   const canAccessShopInvoices = admin?.is_super_admin || admin?.permissions?.accessShopInvoices === true;
   // Check if user has accountant permission (for posting and status changes)
   const canAccountant = admin?.is_super_admin || admin?.permissions?.accountant === true;
+
+  const isStrictCustomerType = (customerType?: string) => {
+    const normalized = (customerType || '').trim().toLowerCase();
+    // Only "زبون / Customer" must be settled before posting.
+    if (!normalized) return true;
+    return normalized === 'زبون' || normalized === 'customer';
+  };
+
+  const shouldBlockPosting = (invoiceLike: any) => {
+    const status = invoiceLike?.Status || invoiceLike?.status;
+    const customerType = invoiceLike?.CustomerType || invoiceLike?.customer_type;
+    const requiresSettlement = isStrictCustomerType(customerType);
+    return requiresSettlement && (status === 'غير مدفوع' || status === 'مدفوع جزئي');
+  };
 
   useEffect(() => {
     document.title = 'مبيعات المحل - Shop Sales';
@@ -210,16 +230,25 @@ export default function ShopSalesPage() {
     const invoiceId = viewing.invoice.InvoiceID || viewing.invoice.invoice_id;
     if (!invoiceId) return;
 
+    // منع الترحيل للفواتير غير المدفوعة أو جزئية
+    const invoiceStatus = viewing.invoice.Status || viewing.invoice.status;
+    if (shouldBlockPosting(viewing.invoice) && invoiceStatus === 'غير مدفوع') {
+      alert('⚠️ لا يمكن ترحيل فاتورة غير مدفوعة.\nيجب أولاً: إنشاء سند قبض أو إنشاء كمبيالة للمبلغ المستحق.');
+      return;
+    }
+    if (shouldBlockPosting(viewing.invoice) && invoiceStatus === 'مدفوع جزئي') {
+      alert('⚠️ الفاتورة مدفوعة جزئياً.\nيجب إنشاء كمبيالة بالمبلغ المتبقي قبل الترحيل.');
+      return;
+    }
+
     setUpdatingSettlement(true);
     try {
       await updateShopSalesInvoiceSign(invoiceId, 'مرحلة');
-      // Reload invoice data
       const fullInvoice = await getShopSalesInvoice(invoiceId);
       setViewing({
         invoice: fullInvoice,
         details: fullInvoice?.Items || [],
       });
-      // Update local state immediately (optimistic update like maintenance page)
       setAllInvoices(prev => prev.map(inv =>
         inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'مرحلة' } : inv
       ));
@@ -235,11 +264,20 @@ export default function ShopSalesPage() {
     const invoiceId = invoice.InvoiceID;
     if (!invoiceId) return;
 
+    // منع الترحيل للفواتير غير المدفوعة أو جزئية
+    if (shouldBlockPosting(invoice) && invoice.Status === 'غير مدفوع') {
+      alert('⚠️ لا يمكن ترحيل فاتورة غير مدفوعة.\nيجب أولاً: إنشاء سند قبض أو إنشاء كمبيالة للمبلغ المستحق.');
+      return;
+    }
+    if (shouldBlockPosting(invoice) && invoice.Status === 'مدفوع جزئي') {
+      alert('⚠️ الفاتورة مدفوعة جزئياً.\nيجب إنشاء كمبيالة بالمبلغ المتبقي قبل الترحيل.');
+      return;
+    }
+
     setUpdatingSettlement(true);
     setUpdatingInvoiceId(invoiceId);
     try {
       await updateShopSalesInvoiceSign(invoiceId, 'مرحلة');
-      // Update local state immediately
       setAllInvoices(prev => prev.map(inv =>
         inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'مرحلة' } : inv
       ));
@@ -260,7 +298,6 @@ export default function ShopSalesPage() {
     setUpdatingInvoiceId(invoiceId);
     try {
       await updateShopSalesInvoiceSign(invoiceId, 'غير مرحلة');
-      // Update local state immediately
       setAllInvoices(prev => prev.map(inv =>
         inv.InvoiceID === invoiceId ? { ...inv, AccountantSign: 'غير مرحلة' } : inv
       ));
@@ -273,16 +310,13 @@ export default function ShopSalesPage() {
     }
   };
 
-  const handleStatusChange = async (invoice: ShopSalesInvoice, newStatus: 'غير مدفوع' | 'تقسيط شهري' | 'دفعت بالكامل' | 'مدفوع جزئي') => {
-    // Check permission
+  const handleStatusChange = async (invoice: ShopSalesInvoice, newStatus: 'غير مدفوع' | 'مجدول بكمبيالة' | 'دفعت بالكامل' | 'مدفوع جزئي') => {
     if (!canAccountant) {
       alert('ليس لديك صلاحية لتغيير حالة الفاتورة');
       return;
     }
-
     try {
       await updateShopSalesInvoiceStatus(invoice.InvoiceID, newStatus);
-      // Update local state immediately (optimistic update like maintenance page)
       setAllInvoices(prev => prev.map(inv =>
         inv.InvoiceID === invoice.InvoiceID ? { ...inv, Status: newStatus } : inv
       ));
@@ -290,6 +324,22 @@ export default function ShopSalesPage() {
       console.error('[ShopSalesPage] Failed to update status:', err);
       alert('فشل تحديث الحالة: ' + (err?.message || 'خطأ غير معروف'));
     }
+  };
+
+  // شارة ملونة لحالة الدفع
+  const PaymentStatusBadge = ({ status }: { status: string }) => {
+    const configs: Record<string, { label: string; className: string }> = {
+      'غير مدفوع': { label: 'غير مدفوع', className: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' },
+      'مدفوع جزئي': { label: 'مدفوع جزئي', className: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' },
+      'مجدول بكمبيالة': { label: 'مجدول', className: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' },
+      'دفعت بالكامل': { label: 'مدفوع', className: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' },
+    };
+    const config = configs[status] || { label: status || '—', className: 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300' };
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-cairo ${config.className}`}>
+        {config.label}
+      </span>
+    );
   };
 
   const formatDate = (dateString: string) => {
@@ -475,6 +525,22 @@ export default function ShopSalesPage() {
               </select>
               <ChevronDown size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
             </div>
+
+            {/* Payment Status Filter */}
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 appearance-none pr-8"
+              >
+                <option value="all">جميع حالات الدفع</option>
+                <option value="غير مدفوع">🔴 غير مدفوع</option>
+                <option value="مدفوع جزئي">🟡 مدفوع جزئي</option>
+                <option value="مجدول بكمبيالة">🔵 مجدول بكمبيالة</option>
+                <option value="دفعت بالكامل">🟢 دفعت بالكامل</option>
+              </select>
+              <ChevronDown size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
+            </div>
           </div>
         </div>
 
@@ -503,6 +569,9 @@ export default function ShopSalesPage() {
                       </th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         الترحيل
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
+                        حالة الدفع
                       </th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider font-cairo">
                         الإجمالي
@@ -577,8 +646,16 @@ export default function ShopSalesPage() {
                             {invoice.AccountantSign === 'مرحلة' ? 'مرحلة' : 'غير مرحلة'}
                           </span>
                         </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          <PaymentStatusBadge status={invoice.Status} />
+                        </td>
                         <td className="px-4 py-3 text-right">
                           <div className="font-semibold text-gray-900 dark:text-gray-100 font-cairo">{formatCurrency(invoice.TotalAmount)}</div>
+                          {(invoice.RemainingAmount ?? 0) > 0 && invoice.Status !== 'دفعت بالكامل' && (
+                            <div className="text-xs font-bold text-red-600 dark:text-red-400 mt-1 font-cairo">
+                              متبقي: {formatCurrency(invoice.RemainingAmount ?? 0)}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center gap-2 justify-end">
@@ -604,14 +681,32 @@ export default function ShopSalesPage() {
                               <button
                                 onClick={() => handleMarkAsSettledFromTable(invoice)}
                                 disabled={updatingSettlement && updatingInvoiceId === invoice.InvoiceID}
-                                className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="تغيير إلى مرحلة"
+                                className={`p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                  shouldBlockPosting(invoice)
+                                    ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                                    : 'text-green-600 dark:text-green-400 hover:bg-green-50'
+                                }`}
+                                title={shouldBlockPosting(invoice)
+                                  ? (invoice.Status === 'غير مدفوع' ? 'لا يمكن الترحيل: الفاتورة غير مدفوعة' : 'لا يمكن الترحيل: مدفوعة جزئياً')
+                                  : 'تغيير إلى مرحلة'}
                               >
                                 {updatingSettlement && updatingInvoiceId === invoice.InvoiceID ? (
                                   <Loader2 size={18} className="animate-spin" />
                                 ) : (
                                   <CheckCircle size={18} />
                                 )}
+                              </button>
+                            )}
+                            {canAccountant && invoice.AccountantSign !== 'مرحلة' && shouldBlockPosting(invoice) && (
+                              <button
+                                onClick={() => {
+                                  setSelectedPromissoryNoteInvoice(invoice);
+                                  setIsPromissoryNoteModalOpen(true);
+                                }}
+                                className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                title="إنشاء كمبيالة للمبلغ المستحق"
+                              >
+                                <FileSignature size={18} />
                               </button>
                             )}
                             {canAccountant && invoice.AccountantSign === 'مرحلة' && (
@@ -679,6 +774,11 @@ export default function ShopSalesPage() {
                       <div className="text-lg font-bold text-gray-900 dark:text-gray-100 font-cairo mb-1">
                         {formatCurrency(invoice.TotalAmount)}
                       </div>
+                      {(invoice.RemainingAmount ?? 0) > 0 && invoice.Status !== 'دفعت بالكامل' && (
+                        <div className="text-sm font-bold text-red-600 dark:text-red-400 font-cairo">
+                          متبقي: {formatCurrency(invoice.RemainingAmount ?? 0)}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1126,6 +1226,23 @@ export default function ShopSalesPage() {
           </div>
         )}
       </div>
+
+      <PromissoryNoteModal
+        isOpen={isPromissoryNoteModalOpen}
+        onClose={() => {
+          setIsPromissoryNoteModalOpen(false);
+          setSelectedPromissoryNoteInvoice(null);
+        }}
+        onSuccess={() => {
+          setIsPromissoryNoteModalOpen(false);
+          setSelectedPromissoryNoteInvoice(null);
+          loadFirstPage(); // Refresh data after note creation
+        }}
+        defaultCustomerId={selectedPromissoryNoteInvoice?.CustomerID}
+        defaultAmount={(selectedPromissoryNoteInvoice?.RemainingAmount ?? selectedPromissoryNoteInvoice?.TotalAmount ?? 0).toString()}
+        linkedInvoiceId={selectedPromissoryNoteInvoice?.InvoiceID}
+        linkedInvoiceType="shop"
+      />
     </AdminLayout>
   );
 }

@@ -13,9 +13,20 @@ interface PromissoryNoteModalProps {
     onSuccess: () => void;
     initialData?: PromissoryNote | null;
     defaultCustomerId?: string;
+    defaultAmount?: string;
+    linkedInvoiceId?: string;
+    linkedInvoiceType?: 'shop' | 'warehouse';
 }
 
-export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initialData, defaultCustomerId }: PromissoryNoteModalProps) {
+function getDefaultStartDateOneMonthAhead(): string {
+    const date = new Date();
+    date.setMonth(date.getMonth() + 1);
+    return date.toISOString().split('T')[0];
+}
+
+export default function PromissoryNoteModal({ 
+  isOpen, onClose, onSuccess, initialData, defaultCustomerId, defaultAmount, linkedInvoiceId, linkedInvoiceType 
+}: PromissoryNoteModalProps) {
     const { admin } = useAdminAuth();
     const [customers, setCustomers] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -25,7 +36,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
     // Form State
     const [customerId, setCustomerId] = useState('');
     const [amount, setAmount] = useState<string>('');
-    const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [startDate, setStartDate] = useState<string>(getDefaultStartDateOneMonthAhead());
     const [notes, setNotes] = useState('');
     const [debtorIdNumber, setDebtorIdNumber] = useState('');
     const [debtorAddress, setDebtorAddress] = useState('');
@@ -88,8 +99,8 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
             } else {
                 // Create Mode: Reset form
                 setCustomerId(defaultCustomerId || '');
-                setAmount('');
-                setStartDate(new Date().toISOString().split('T')[0]);
+                setAmount(defaultAmount || '');
+                setStartDate(getDefaultStartDateOneMonthAhead());
                 setNotes('');
                 setDebtorAddress('');
                 setImageUrl('');
@@ -103,7 +114,7 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
             }
             setError(null);
         }
-    }, [isOpen, initialData]);
+    }, [isOpen, initialData, defaultCustomerId, defaultAmount]);
 
     useEffect(() => {
         if (customerId && customers.length > 0) {
@@ -268,6 +279,8 @@ export default function PromissoryNoteModal({ isOpen, onClose, onSuccess, initia
                 paidAmount: isLegacy ? paid : 0,
                 remainingAmount: isLegacy ? remainingAmount : total,
                 createdBy: admin?.id, // Added createdBy to payload
+                linkedInvoiceId,
+                linkedInvoiceType,
                 installments: previewInstallments.map(inst => ({
                     amount: inst.amount,
                     dueDate: inst.dueDate,

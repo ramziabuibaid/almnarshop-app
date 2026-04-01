@@ -23,7 +23,8 @@ import {
   Tag,
   Megaphone,
   Settings,
-  Plus
+  Plus,
+  Archive
 } from 'lucide-react';
 import NotificationCenter from './NotificationCenter';
 import { ThemeToggle } from './ThemeToggle';
@@ -90,6 +91,7 @@ const sidebarLinks = [
   { href: '/admin/warehouse-finance/cash-box', label: 'صندوق المستودع', icon: Wallet, accent: 'teal' as const, section: 'finance' as const },
   { href: '/admin/maintenance', label: 'الصيانة', icon: Wrench, accent: 'amber' as const, section: 'admin' as const },
   { href: '/admin/customers', label: 'الزبائن', icon: Users, accent: 'indigo' as const, hasSubmenu: true as const, section: 'admin' as const },
+  { href: '/admin/archive', label: 'الأرشيف', icon: Archive, accent: 'amber' as const, section: 'admin' as const },
   { href: '/admin/articles', label: 'المقالات', icon: FileText, accent: 'fuchsia' as const, section: 'admin' as const },
   { href: '/admin/settings', label: 'الإعدادات', icon: Settings, accent: 'neutral' as const, section: 'admin' as const },
 ];

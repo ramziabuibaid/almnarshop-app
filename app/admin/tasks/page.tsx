@@ -41,6 +41,9 @@ interface Task {
   CustomerName: string;
   Notes: string;
   PromiseAmount?: number;
+  InstallmentAmount?: number;
+  PaidAmount?: number;
+  RemainingAmount?: number;
   NextDate: string; // PromiseDate from CRM_Activity (ISO format or DD-MM-YYYY)
   Type: 'Overdue' | 'Today' | 'Upcoming';
   [key: string]: any;
@@ -586,17 +589,35 @@ export default function TasksPage() {
     }
   };
 
+  const normalizeSearchText = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[أإآ]/g, 'ا')
+      .replace(/ة/g, 'ه')
+      .replace(/ى/g, 'ي')
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
   const filteredTasks = (tasks[activeTab] || []).filter(task => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    const customerName = (task.CustomerName || '').toLowerCase();
-    
-    // Find phone number from task or allCustomers
-    const customerPhone = (task.CustomerPhone || task.Customerphone || 
-      allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.Phone || 
-      allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.phone || '').toLowerCase();
-      
-    return customerName.includes(query) || customerPhone.includes(query);
+    if (!searchQuery.trim()) return true;
+
+    const searchWords = normalizeSearchText(searchQuery)
+      .split(/\s+/)
+      .filter(word => word.length > 0);
+
+    const customerPhoneRaw =
+      task.CustomerPhone ||
+      task.Customerphone ||
+      allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.Phone ||
+      allCustomers.find((c) => (c.CustomerID || c.id) === task.CustomerID)?.phone ||
+      '';
+
+    const searchableText = normalizeSearchText(
+      `${task.CustomerName || ''} ${customerPhoneRaw}`
+    );
+
+    return searchWords.every(word => searchableText.includes(word));
   });
 
   // Check permissions
@@ -810,6 +831,12 @@ export default function TasksPage() {
                             {formatCurrency(task.PromiseAmount)}
                           </span>
                         )}
+
+                      {task.isInstallment && typeof task.RemainingAmount === 'number' && typeof task.PaidAmount === 'number' && task.PaidAmount > 0 && task.RemainingAmount > 0 && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold leading-none bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                          متبقي القسط: {formatCurrency(task.RemainingAmount)}
+                        </span>
+                      )}
 
                         {task.InstallmentID && (
                           <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold leading-none bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">

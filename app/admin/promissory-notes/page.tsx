@@ -201,6 +201,7 @@ export default function PromissoryNotesPage() {
     const getInstallmentStatusColor = (status: string) => {
         switch (status) {
             case 'Paid': return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200';
+            case 'Partially Paid': return 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border-amber-200';
             case 'Late': return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200';
             case 'Pending': return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700';
             default: return 'text-gray-600 dark:text-gray-400';
@@ -413,9 +414,16 @@ export default function PromissoryNotesPage() {
                                                         <div className="p-4 border-b border-gray-200 dark:border-slate-700 animate-in slide-in-from-top-2 duration-200">
                                                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                                                                 {note.installments?.map((inst, idx) => (
+                                                                    (() => {
+                                                                        const paid = Number((inst as any).paid_amount || 0);
+                                                                        const amount = Number(inst.amount || 0);
+                                                                        const remaining = Math.max(0, amount - paid);
+                                                                        const showRemainingBadge = paid > 0 && remaining > 0;
+                                                                        return (
                                                                     <div
                                                                         key={inst.id}
                                                                         className={`p-3 rounded-lg border flex items-center justify-between ${inst.status === 'Paid' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/30' :
+                                                                            inst.status === 'Partially Paid' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-800/50 shadow-sm' :
                                                                             inst.status === 'Late' ? 'bg-white dark:bg-slate-800 border-red-300 dark:border-red-800/50 shadow-sm' :
                                                                                 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700'
                                                                             }`}
@@ -431,6 +439,11 @@ export default function PromissoryNotesPage() {
 
                                                                         <div className="flex flex-col items-end gap-2 shrink-0">
                                                                             <span className="font-bold text-gray-900 dark:text-gray-100">₪{inst.amount}</span>
+                                                                            {showRemainingBadge && (
+                                                                                <span className="text-[11px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded">
+                                                                                    متبقي: ₪{remaining.toLocaleString()}
+                                                                                </span>
+                                                                            )}
                                                                             <button
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
@@ -473,6 +486,8 @@ export default function PromissoryNotesPage() {
                                                                             </button>
                                                                         </div>
                                                                     </div>
+                                                                        );
+                                                                    })()
                                                                 ))}
                                                             </div>
                                                         </div>

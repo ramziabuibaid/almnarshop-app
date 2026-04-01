@@ -18,6 +18,7 @@ interface CustomerSelectProps {
   value: string;
   onChange: (customerID: string) => void;
   customers: Customer[];
+  label?: string;
   placeholder?: string;
   required?: boolean;
   disabled?: boolean;
@@ -27,6 +28,7 @@ export default function CustomerSelect({
   value,
   onChange,
   customers,
+  label = 'العميل',
   placeholder = 'اختر العميل',
   required = false,
   disabled = false,
@@ -105,7 +107,7 @@ export default function CustomerSelect({
   return (
     <div className="relative" ref={containerRef}>
       <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-        العميل {required && <span className="text-red-500">*</span>}
+        {label} {required && <span className="text-red-500">*</span>}
       </label>
       <div className="relative">
         <button

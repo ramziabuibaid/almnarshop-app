@@ -2147,6 +2147,9 @@ export async function getDashboardData(): Promise<any> {
     const installmentTasks = installments.map((inst: any) => {
       const note = inst.promissory_notes;
       const customer = note?.customers;
+      const amount = Number(inst.amount || 0);
+      const paidAmount = Number(inst.paid_amount || 0);
+      const remainingAmount = Math.max(0, amount - paidAmount);
 
       return {
         InteractionID: `INST-${inst.id}`, // Unique ID prefixed to distinguish
@@ -2157,7 +2160,10 @@ export async function getDashboardData(): Promise<any> {
         Outcome: inst.status, // Pending, Late, etc.
         Notes: `كمبيالة: ${note?.notes || ''} - قسط: ${inst.notes || ''}`.trim(),
         PromiseDate: inst.due_date,
-        PromiseAmount: inst.amount,
+        PromiseAmount: remainingAmount, // show actionable remaining amount in tasks UI
+        InstallmentAmount: amount,
+        PaidAmount: paidAmount,
+        RemainingAmount: remainingAmount,
         NextDate: inst.due_date,
         created_at: inst.created_at,
         isInstallment: true, // Flag to identify in UI if needed
@@ -4466,6 +4472,21 @@ export async function saveShopReceipt(payload: {
   chequeAmount?: number;
   notes?: string;
   created_by?: string; // Admin user ID
+  // -------- ربط بالفاتورة أو القسط (اختياري) --------
+  linkedInvoiceId?: string;        // ربط بفاتورة محددة
+  linkedInvoiceType?: 'shop' | 'warehouse'; // نوع الفاتورة
+  linkedInstallmentId?: string;    // ربط بقسط كمبيالة محدد
+  installmentAllocations?: {
+    installmentId: string;
+    amount: number;
+  }[];
+  invoiceTotalAmount?: number;     // قيمة الفاتورة (لاحتساب الحالة)
+  allocations?: {
+    invoiceId: string;
+    invoiceType: 'shop' | 'warehouse';
+    amount: number;
+    invoiceTotal: number;
+  }[];
 }, userName?: string): Promise<any> {
   try {
     console.log('[API] Saving shop receipt to Supabase:', payload);
@@ -4492,7 +4513,10 @@ export async function saveShopReceipt(payload: {
       cash_amount: payload.cashAmount || 0,
       cheque_amount: payload.chequeAmount || 0,
       notes: payload.notes || null,
-      created_by: payload.created_by || null, // Admin user ID
+      created_by: payload.created_by || null,
+      linked_invoice_id: payload.linkedInvoiceId || null,
+      linked_invoice_type: payload.linkedInvoiceType || null,
+      linked_installment_id: payload.linkedInstallmentId || null,
     };
 
     const { data, error } = await supabase
@@ -4507,6 +4531,96 @@ export async function saveShopReceipt(payload: {
     }
 
     console.log('[API] Receipt saved successfully');
+
+    const totalPaymentAmount = (payload.cashAmount || 0) + (payload.chequeAmount || 0);
+
+    // Save allocations if provided
+    if (payload.allocations && payload.allocations.length > 0) {
+      const allocationRecords = payload.allocations.map(alloc => ({
+        receipt_id: receiptID,
+        receipt_type: 'shop',
+        invoice_id: alloc.invoiceId,
+        invoice_type: alloc.invoiceType,
+        allocated_amount: alloc.amount
+      }));
+      
+      const { error: allocError } = await supabase
+        .from('receipt_invoice_allocations')
+        .insert(allocationRecords);
+        
+      if (allocError) {
+        console.error('[API] Failed to save allocations:', allocError);
+      } else {
+        // Update statuses for all affected invoices
+        for (const alloc of payload.allocations) {
+          try {
+            await updateInvoiceStatusFromPayment(
+              alloc.invoiceId,
+              alloc.invoiceType,
+              alloc.invoiceTotal
+            );
+          } catch (e) {
+            console.error('[API] Failed to update status for', alloc.invoiceId, e);
+          }
+        }
+      }
+    } else if (payload.linkedInvoiceId && payload.linkedInvoiceType) {
+      // Legacy single invoice logic
+      try {
+        await supabase
+          .from('receipt_invoice_allocations')
+          .insert({
+            receipt_id: receiptID,
+            receipt_type: 'shop',
+            invoice_id: payload.linkedInvoiceId,
+            invoice_type: payload.linkedInvoiceType,
+            allocated_amount: totalPaymentAmount
+          });
+          
+        const invoiceTotal = payload.invoiceTotalAmount || 0;
+        await updateInvoiceStatusFromPayment(
+          payload.linkedInvoiceId,
+          payload.linkedInvoiceType,
+          invoiceTotal
+        );
+      } catch (statusError) {
+        console.error('[API] Failed to update invoice status:', statusError);
+        // Non-critical
+      }
+    }
+
+    // Apply installment allocations (oldest -> newest) when provided
+    if (payload.installmentAllocations && payload.installmentAllocations.length > 0) {
+      const records = payload.installmentAllocations
+        .filter((a) => a.amount > 0)
+        .map((a) => ({
+          receipt_id: receiptID,
+          receipt_type: 'shop',
+          installment_id: a.installmentId,
+          allocated_amount: a.amount,
+        }));
+      if (records.length > 0) {
+        await supabase.from('receipt_installment_allocations').insert(records);
+      }
+
+      for (const alloc of payload.installmentAllocations) {
+        try {
+          if (alloc.amount > 0) {
+            await recalculateInstallmentFromReceiptAllocations(alloc.installmentId);
+          }
+        } catch (instError) {
+          console.error('[API] Failed to apply payment allocation to installment:', alloc.installmentId, instError);
+        }
+      }
+    } else if (payload.linkedInstallmentId && totalPaymentAmount > 0) {
+      // Legacy single-installment flow
+      try {
+        await applyPaymentToInstallment(payload.linkedInstallmentId, totalPaymentAmount);
+      } catch (instError) {
+        console.error('[API] Failed to apply payment to installment:', instError);
+        // Non-critical
+      }
+    }
 
     // Create notification for receipt creation
     try {
@@ -4550,6 +4664,7 @@ export async function saveShopReceipt(payload: {
 /**
  * Get all shop receipts from Supabase
  */
+
 export async function getShopReceipts(page: number = 1, pageSize: number = 20): Promise<{ receipts: any[]; total: number }> {
   try {
     console.log('[API] Fetching shop receipts from Supabase...', { page, pageSize });
@@ -4701,9 +4816,31 @@ export async function updateShopReceipt(receiptId: string, payload: {
   chequeAmount?: number;
   notes?: string;
   created_by?: string; // Admin user ID
+  allocations?: {
+    invoiceId: string;
+    invoiceType: 'shop' | 'warehouse';
+    amount: number;
+    invoiceTotal: number;
+  }[];
+  installmentAllocations?: {
+    installmentId: string;
+    amount: number;
+  }[];
 }, userName?: string): Promise<any> {
   try {
     console.log('[API] Updating shop receipt in Supabase:', receiptId, payload);
+
+    // 1. Fetch old allocations to know which invoices might need status update later
+    const { data: oldAllocations } = await supabase
+      .from('receipt_invoice_allocations')
+      .select('invoice_id, invoice_type, allocated_amount')
+      .eq('receipt_id', receiptId)
+      .eq('receipt_type', 'shop');
+    const { data: oldInstallmentAllocations } = await supabase
+      .from('receipt_installment_allocations')
+      .select('installment_id')
+      .eq('receipt_id', receiptId)
+      .eq('receipt_type', 'shop');
 
     const receiptData: any = {
       customer_id: payload.customerID,
@@ -4730,6 +4867,77 @@ export async function updateShopReceipt(receiptId: string, payload: {
       throw new Error(`Failed to update receipt: ${error.message}`);
     }
 
+    // 2. Handle allocations if provided
+    if (payload.allocations) {
+      // Delete old allocations
+      await supabase
+        .from('receipt_invoice_allocations')
+        .delete()
+        .eq('receipt_id', receiptId)
+        .eq('receipt_type', 'shop');
+
+      if (payload.allocations.length > 0) {
+        const newAllocRecords = payload.allocations.map(alloc => ({
+          receipt_id: receiptId,
+          receipt_type: 'shop',
+          invoice_id: alloc.invoiceId,
+          invoice_type: alloc.invoiceType,
+          allocated_amount: alloc.amount
+        }));
+
+        const { error: allocError } = await supabase
+          .from('receipt_invoice_allocations')
+          .insert(newAllocRecords);
+
+        if (allocError) {
+          console.error('[API] Failed to insert new allocations:', allocError);
+        }
+      }
+
+      // 3. Update statuses for ALL affected invoices (old and new)
+      const affectedInvoices = new Set<string>();
+      if (oldAllocations) oldAllocations.forEach(a => affectedInvoices.add(`${a.invoice_type}:${a.invoice_id}`));
+      if (payload.allocations) payload.allocations.forEach(a => affectedInvoices.add(`${a.invoiceType}:${a.invoiceId}`));
+
+      for (const invKey of affectedInvoices) {
+        const [type, id] = invKey.split(':');
+        try {
+          await updateInvoiceStatusFromPayment(id, type as any);
+        } catch (e) {
+          console.error('[API] Failed to update status for affected invoice:', id, e);
+        }
+      }
+    }
+
+    if (payload.installmentAllocations) {
+      await supabase
+        .from('receipt_installment_allocations')
+        .delete()
+        .eq('receipt_id', receiptId)
+        .eq('receipt_type', 'shop');
+
+      if (payload.installmentAllocations.length > 0) {
+        const records = payload.installmentAllocations
+          .filter((a) => a.amount > 0)
+          .map((a) => ({
+            receipt_id: receiptId,
+            receipt_type: 'shop',
+            installment_id: a.installmentId,
+            allocated_amount: a.amount,
+          }));
+        if (records.length > 0) {
+          await supabase.from('receipt_installment_allocations').insert(records);
+        }
+      }
+
+      const affectedInstallments = new Set<string>();
+      (oldInstallmentAllocations || []).forEach((a: any) => affectedInstallments.add(a.installment_id));
+      payload.installmentAllocations.forEach((a) => affectedInstallments.add(a.installmentId));
+      for (const installmentId of affectedInstallments) {
+        await recalculateInstallmentFromReceiptAllocations(installmentId);
+      }
+    }
+
     console.log('[API] Receipt updated successfully');
 
     // Create notification for receipt update
@@ -4745,7 +4953,6 @@ export async function updateShopReceipt(receiptId: string, payload: {
       });
     } catch (notifError) {
       console.error('[API] Failed to create notification for shop receipt update:', notifError);
-      // Don't throw - notification is non-critical
     }
 
     return { status: 'success', receiptID: receiptId, data };
@@ -4762,6 +4969,31 @@ export async function deleteShopReceipt(receiptId: string): Promise<any> {
   try {
     console.log('[API] Deleting shop receipt from Supabase:', receiptId);
 
+    // 1. Fetch affected invoices before deleting allocations
+    const { data: allocations } = await supabase
+      .from('receipt_invoice_allocations')
+      .select('invoice_id, invoice_type')
+      .eq('receipt_id', receiptId)
+      .eq('receipt_type', 'shop');
+    const { data: installmentAllocations } = await supabase
+      .from('receipt_installment_allocations')
+      .select('installment_id')
+      .eq('receipt_id', receiptId)
+      .eq('receipt_type', 'shop');
+
+    // 2. Delete the receipt (cascading delete should handle allocations if set, 
+    // but we'll delete them manually just in case or if no FK exists)
+    await supabase
+      .from('receipt_invoice_allocations')
+      .delete()
+      .eq('receipt_id', receiptId)
+      .eq('receipt_type', 'shop');
+    await supabase
+      .from('receipt_installment_allocations')
+      .delete()
+      .eq('receipt_id', receiptId)
+      .eq('receipt_type', 'shop');
+
     const { error } = await supabase
       .from('shop_receipts')
       .delete()
@@ -4770,6 +5002,22 @@ export async function deleteShopReceipt(receiptId: string): Promise<any> {
     if (error) {
       console.error('[API] Failed to delete receipt:', error);
       throw new Error(`Failed to delete receipt: ${error.message}`);
+    }
+
+    // 3. Update statuses for all affected invoices
+    if (allocations && allocations.length > 0) {
+      for (const alloc of allocations) {
+        try {
+          await updateInvoiceStatusFromPayment(alloc.invoice_id, alloc.invoice_type as any);
+        } catch (e) {
+          console.error('[API] Failed to update status for invoice after receipt delete:', alloc.invoice_id, e);
+        }
+      }
+    }
+    if (installmentAllocations && installmentAllocations.length > 0) {
+      for (const alloc of installmentAllocations) {
+        await recalculateInstallmentFromReceiptAllocations(alloc.installment_id);
+      }
     }
 
     console.log('[API] Receipt deleted successfully');
@@ -5516,18 +5764,19 @@ export async function getShopSalesInvoices(page: number = 1, pageSize: number = 
     const customerIds = [...new Set(invoices.map(i => i.customer_id).filter(Boolean))];
 
     // Fetch all customer names and shamel_no in one query
-    let customerMap = new Map<string, { name: string; shamelNo: string }>();
+    let customerMap = new Map<string, { name: string; shamelNo: string; customerType: string }>();
     if (customerIds.length > 0) {
       const { data: customers } = await supabase
         .from('customers')
-        .select('customer_id, name, shamel_no')
+        .select('customer_id, name, shamel_no, type')
         .in('customer_id', customerIds);
 
       if (customers) {
         customers.forEach((c: any) => {
           customerMap.set(c.customer_id, {
             name: c.name || '',
-            shamelNo: c.shamel_no || ''
+            shamelNo: c.shamel_no || '',
+            customerType: c.type || '',
           });
         });
       }
@@ -5557,13 +5806,14 @@ export async function getShopSalesInvoices(page: number = 1, pageSize: number = 
       const discount = parseFloat(String(invoice.discount || 0));
       const total = Math.max(0, subtotal - discount);
 
-      const customer = customerMap.get(invoice.customer_id) || { name: '', shamelNo: '' };
+      const customer = customerMap.get(invoice.customer_id) || { name: '', shamelNo: '', customerType: '' };
 
       return {
         InvoiceID: invoice.invoice_id,
         CustomerID: invoice.customer_id,
         CustomerName: customer.name,
         CustomerShamelNo: customer.shamelNo,
+        CustomerType: customer.customerType,
         Date: invoice.date,
         AccountantSign: invoice.accountant_sign,
         Notes: invoice.notes || '',
@@ -5574,8 +5824,32 @@ export async function getShopSalesInvoices(page: number = 1, pageSize: number = 
         created_by: invoice.created_by || null,
         createdBy: invoice.created_by || null,
         user_id: invoice.created_by || null,
+        TotalPaid: 0,
+        RemainingAmount: total,
       };
     }));
+
+    // Fetch allocations for all invoices in current view to calculate remaining
+    const invoiceIds = mappedInvoices.map(i => i.InvoiceID);
+    const { data: allAllocations } = await supabase
+      .from('receipt_invoice_allocations')
+      .select('invoice_id, allocated_amount')
+      .in('invoice_id', invoiceIds)
+      .eq('invoice_type', 'shop');
+
+    const allocationsByInvoice = new Map<string, number>();
+    if (allAllocations) {
+      allAllocations.forEach((a: any) => {
+        const current = allocationsByInvoice.get(a.invoice_id) || 0;
+        allocationsByInvoice.set(a.invoice_id, current + parseFloat(String(a.allocated_amount || 0)));
+      });
+    }
+
+    // Update mappedInvoices with TotalPaid and RemainingAmount
+    mappedInvoices.forEach(inv => {
+      inv.TotalPaid = allocationsByInvoice.get(inv.InvoiceID) || 0;
+      inv.RemainingAmount = Math.max(0, inv.TotalAmount - inv.TotalPaid);
+    });
 
     console.log(`[API] Shop sales invoices loaded: ${mappedInvoices.length} of ${total}`);
     return { invoices: mappedInvoices, total };
@@ -5605,16 +5879,18 @@ export async function getShopSalesInvoice(invoiceId: string): Promise<any> {
     let customerShamelNo = '';
     let customerPhone = '';
     let customerAddress = '';
+    let customerType = '';
     if (invoice.customer_id) {
       const { data: customer } = await supabase
         .from('customers')
-        .select('name, phone, email, address, shamel_no')
+        .select('name, phone, email, address, shamel_no, type')
         .eq('customer_id', invoice.customer_id)
         .single();
       customerName = customer?.name || '';
       customerShamelNo = customer?.shamel_no || '';
       customerPhone = customer?.phone || '';
       customerAddress = customer?.address || '';
+      customerType = customer?.type || '';
     }
 
     // Fetch invoice details
@@ -5668,6 +5944,7 @@ export async function getShopSalesInvoice(invoiceId: string): Promise<any> {
       CustomerID: invoice.customer_id,
       CustomerName: customerName,
       CustomerShamelNo: customerShamelNo,
+      CustomerType: customerType,
       CustomerPhone: customerPhone,
       CustomerAddress: customerAddress,
       Date: invoice.date,
@@ -5714,7 +5991,7 @@ export async function updateShopSalesInvoiceSign(invoiceId: string, accountantSi
  */
 export async function updateShopSalesInvoiceStatus(
   invoiceId: string,
-  status: 'غير مدفوع' | 'تقسيط شهري' | 'دفعت بالكامل' | 'مدفوع جزئي'
+  status: 'غير مدفوع' | 'مجدول بكمبيالة' | 'دفعت بالكامل' | 'مدفوع جزئي'
 ): Promise<any> {
   try {
     const { data, error } = await supabase
@@ -5732,6 +6009,449 @@ export async function updateShopSalesInvoiceStatus(
   } catch (error: any) {
     console.error('[API] updateShopSalesInvoiceStatus error:', error);
     throw error;
+  }
+}
+
+// =========================================================
+// INVOICE PAYMENT TRACKING - دوال إدارة حالة الفواتير
+// =========================================================
+
+/**
+ * جلب فواتير زبون غير المدفوعة أو المدفوعة جزئياً مع المبالغ المدفوعة حتى الآن
+ * يُستخدم في نموذج سند القبض لإتاحة اختيار الفاتورة
+ */
+export async function getCustomerUnpaidInvoices(
+  customerId: string,
+  source: 'shop' | 'warehouse'
+): Promise<{
+  invoiceId: string;
+  date: string;
+  totalAmount: number;
+  totalPaid: number;
+  remaining: number;
+  status: string;
+}[]> {
+  try {
+    const table = source === 'shop' ? 'shop_sales_invoices' : 'warehouse_sales_invoices';
+    const detailsTable = source === 'shop' ? 'shop_sales_details' : 'warehouse_sales_details';
+    const receiptTable = source === 'shop' ? 'shop_receipts' : 'warehouse_receipts';
+
+    // جلب الفواتير غير المدفوعة أو جزئية
+    const { data: invoices, error } = await supabase
+      .from(table)
+      .select('invoice_id, date, discount, status')
+      .eq('customer_id', customerId)
+      .in('status', ['غير مدفوع', 'مدفوع جزئي'])
+      .order('date', { ascending: false });
+
+    if (error) throw error;
+    if (!invoices || invoices.length === 0) return [];
+
+    const result = await Promise.all(invoices.map(async (inv: any) => {
+      // احتساب إجمالي الفاتورة من التفاصيل
+      const { data: details } = await supabase
+        .from(detailsTable)
+        .select('quantity, unit_price')
+        .eq('invoice_id', inv.invoice_id);
+
+      const subtotal = (details || []).reduce((sum: number, d: any) =>
+        sum + parseFloat(String(d.quantity || 0)) * parseFloat(String(d.unit_price || 0)), 0
+      );
+      const discount = parseFloat(String(inv.discount || 0));
+      const totalAmount = Math.max(0, subtotal - discount);
+
+      // احتساب إجمالي ما دُفع في سندات القبض عبر التوزيعات
+      const { data: allocations } = await supabase
+        .from('receipt_invoice_allocations')
+        .select('allocated_amount')
+        .eq('invoice_id', inv.invoice_id)
+        .eq('invoice_type', source);
+
+      const totalPaid = (allocations || []).reduce((sum: number, a: any) => 
+        sum + parseFloat(String(a.allocated_amount || 0)), 0
+      );
+
+      return {
+        invoiceId: inv.invoice_id,
+        date: inv.date,
+        totalAmount,
+        totalPaid,
+        remaining: Math.max(0, totalAmount - totalPaid),
+        status: inv.status,
+      };
+    }));
+
+    return result.filter(r => r.remaining > 0);
+  } catch (error: any) {
+    console.error('[API] getCustomerUnpaidInvoices error:', error);
+    return [];
+  }
+}
+
+/**
+ * جلب الأقساط المستحقة من الكمبيالات للزبون مع تفاصيل ما تم دفعه
+ */
+export async function getCustomerPendingInstallments(customerId: string): Promise<{
+  installmentId: string;
+  noteId: string;
+  dueDate: string;
+  amount: number;
+  paidAmount: number;
+  remaining: number;
+  noteTotal: number;
+  linkedInvoiceId?: string;
+  linkedInvoiceType?: string;
+}[]> {
+  try {
+    const { data: notes, error } = await supabase
+      .from('promissory_notes')
+      .select(`
+        id, 
+        total_amount, 
+        status,
+        linked_invoice_id,
+        linked_invoice_type,
+        installments:promissory_note_installments(*)
+      `)
+      .eq('customer_id', customerId);
+
+    if (error) throw error;
+    if (!notes) return [];
+
+    const result: any[] = [];
+    for (const note of notes) {
+      const noteStatus = String(note.status || '').toLowerCase();
+      if (noteStatus === 'cancelled' || noteStatus === 'canceled') continue;
+
+      const pendingInst = (note.installments || [])
+        .filter((inst: any) => {
+          const instStatus = String(inst.status || '').toLowerCase();
+          // Show all non-paid installments, even if not due yet.
+          if (instStatus === 'paid' || instStatus === 'cancelled' || instStatus === 'canceled' || instStatus === 'completed') {
+            return false;
+          }
+          const paidAmount = parseFloat(String(inst.paid_amount || 0));
+          const instAmount = parseFloat(String(inst.amount || 0));
+          return instAmount - paidAmount > 0;
+        })
+        .sort((a: any, b: any) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+
+      for (const inst of pendingInst) {
+        const paidAmount = parseFloat(String(inst.paid_amount || 0));
+        const instAmount = parseFloat(String(inst.amount || 0));
+        const remaining = Math.max(0, instAmount - paidAmount);
+        if (remaining > 0) {
+          result.push({
+            installmentId: inst.id,
+            noteId: note.id,
+            dueDate: inst.due_date,
+            amount: instAmount,
+            paidAmount,
+            remaining,
+            noteTotal: parseFloat(String(note.total_amount || 0)),
+            linkedInvoiceId: note.linked_invoice_id || undefined,
+            linkedInvoiceType: note.linked_invoice_type || undefined,
+          });
+        }
+      }
+    }
+
+    return result.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  } catch (error: any) {
+    console.error('[API] getCustomerPendingInstallments error:', error);
+    return [];
+  }
+}
+
+/**
+ * تطبيق دفعة على قسط كمبيالة مع توزيع الفائض على الأقساط التالية
+ * Payment < remaining → خفّض القسط
+ * Payment >= remaining → أغلق القسط، وزّع الفائض على التالي
+ */
+export async function applyPaymentToInstallment(
+  installmentId: string,
+  paymentAmount: number
+): Promise<{ applied: number; excess: number }> {
+  try {
+    // جلب القسط الحالي
+    const { data: inst, error: instError } = await supabase
+      .from('promissory_note_installments')
+      .select('*, promissory_note_id')
+      .eq('id', installmentId)
+      .single();
+
+    if (instError || !inst) throw new Error('Installment not found');
+
+    const instAmount = parseFloat(String(inst.amount || 0));
+    const alreadyPaid = parseFloat(String(inst.paid_amount || 0));
+    const remaining = Math.max(0, instAmount - alreadyPaid);
+
+    if (paymentAmount <= 0 || remaining <= 0) {
+      return { applied: 0, excess: paymentAmount };
+    }
+
+    if (paymentAmount >= remaining) {
+      // إغلاق القسط كاملاً
+      await supabase
+        .from('promissory_note_installments')
+        .update({ status: 'Paid', paid_amount: instAmount })
+        .eq('id', installmentId);
+
+      const excess = paymentAmount - remaining;
+
+      // إذا كان هناك فائض، نطبّقه على القسط التالي
+      if (excess > 0) {
+        // جلب القسط التالي للكمبيالة نفسها
+        const { data: nextInst } = await supabase
+          .from('promissory_note_installments')
+          .select('id')
+          .eq('promissory_note_id', inst.promissory_note_id)
+          .in('status', ['Pending', 'Late'])
+          .neq('id', installmentId)
+          .order('due_date', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (nextInst) {
+          await applyPaymentToInstallment(nextInst.id, excess);
+        }
+      }
+
+      // تحقّق إذا انتهت جميع الأقساط → أغلق الكمبيالة
+      const { data: remaining_installments } = await supabase
+        .from('promissory_note_installments')
+        .select('id')
+        .eq('promissory_note_id', inst.promissory_note_id)
+        .in('status', ['Pending', 'Late']);
+
+      if (!remaining_installments || remaining_installments.length === 0) {
+        await supabase
+          .from('promissory_notes')
+          .update({ status: 'Completed' })
+          .eq('id', inst.promissory_note_id);
+      }
+
+      return { applied: remaining, excess };
+    } else {
+      // دفع جزئي - خفّض القسط
+      const newPaidAmount = alreadyPaid + paymentAmount;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dueDate = new Date(inst.due_date);
+      dueDate.setHours(0, 0, 0, 0);
+      const partialStatus: any = dueDate < today ? 'Late' : 'Partially Paid';
+      await supabase
+        .from('promissory_note_installments')
+        .update({ paid_amount: newPaidAmount, status: partialStatus })
+        .eq('id', installmentId);
+
+      return { applied: paymentAmount, excess: 0 };
+    }
+  } catch (error: any) {
+    console.error('[API] applyPaymentToInstallment error:', error);
+    throw error;
+  }
+}
+
+async function recalculateInstallmentFromReceiptAllocations(installmentId: string): Promise<void> {
+  const { data: inst } = await supabase
+    .from('promissory_note_installments')
+    .select('id, amount, due_date, promissory_note_id')
+    .eq('id', installmentId)
+    .maybeSingle();
+  if (!inst) return;
+
+  const { data: allocRows } = await supabase
+    .from('receipt_installment_allocations')
+    .select('allocated_amount')
+    .eq('installment_id', installmentId);
+
+  const totalAllocated = (allocRows || []).reduce((sum: number, r: any) => sum + Number(r.allocated_amount || 0), 0);
+  const amount = Number(inst.amount || 0);
+  const paidAmount = Math.max(0, Math.min(amount, totalAllocated));
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dueDate = new Date(inst.due_date);
+  dueDate.setHours(0, 0, 0, 0);
+
+  let newStatus: any;
+  if (paidAmount >= amount && amount > 0) {
+    newStatus = 'Paid';
+  } else if (paidAmount > 0) {
+    // Show partial payment explicitly in UI
+    newStatus = dueDate < today ? 'Late' : 'Partially Paid';
+  } else {
+    newStatus = dueDate < today ? 'Late' : 'Pending';
+  }
+  await supabase
+    .from('promissory_note_installments')
+    .update({ paid_amount: paidAmount, status: newStatus })
+    .eq('id', installmentId);
+
+  const { data: openRows } = await supabase
+    .from('promissory_note_installments')
+    .select('id')
+    .eq('promissory_note_id', inst.promissory_note_id)
+    .in('status', ['Pending', 'Late']);
+
+  await supabase
+    .from('promissory_notes')
+    .update({ status: !openRows || openRows.length === 0 ? 'Completed' : 'Active' })
+    .eq('id', inst.promissory_note_id);
+}
+
+/**
+ * تحديث حالة الفاتورة بناءً على إجمالي المدفوعات
+ * يُستدعى تلقائياً بعد حفظ سند قبض
+ */
+export async function updateInvoiceStatusFromPayment(
+  invoiceId: string,
+  source: 'shop' | 'warehouse',
+  totalAmount?: number
+): Promise<void> {
+  try {
+    const invoiceTable = source === 'shop' ? 'shop_sales_invoices' : 'warehouse_sales_invoices';
+    const detailTable = source === 'shop' ? 'shop_sales_details' : 'warehouse_sales_details';
+
+    // 1. If totalAmount not provided, calculate it
+    let finalTotalAmount = totalAmount;
+    if (finalTotalAmount === undefined) {
+      const { data: inv } = await supabase
+        .from(invoiceTable)
+        .select('discount')
+        .eq('invoice_id', invoiceId)
+        .single();
+      
+      const { data: details } = await supabase
+        .from(detailTable)
+        .select('quantity, unit_price')
+        .eq('invoice_id', invoiceId);
+      
+      const subtotal = (details || []).reduce((sum: number, d: any) => 
+        sum + (parseFloat(String(d.quantity || 0)) * parseFloat(String(d.unit_price || 0))), 0
+      );
+      const discount = parseFloat(String(inv?.discount || 0));
+      finalTotalAmount = Math.max(0, subtotal - discount);
+    }
+
+    // 2. احتساب إجمالي سندات القبض المرتبطة عبر جدول التوزيع
+    const { data: allocations } = await supabase
+      .from('receipt_invoice_allocations')
+      .select('allocated_amount')
+      .eq('invoice_id', invoiceId)
+      .eq('invoice_type', source);
+
+    const totalPaid = (allocations || []).reduce((sum: number, a: any) => 
+      sum + parseFloat(String(a.allocated_amount || 0)), 0
+    );
+
+    let newStatus: string;
+    if (totalPaid >= finalTotalAmount && finalTotalAmount > 0) {
+      newStatus = 'دفعت بالكامل';
+    } else if (totalPaid > 0) {
+      newStatus = 'مدفوع جزئي';
+    } else {
+      newStatus = 'غير مدفوع';
+    }
+
+    // تحديث الحالة فقط إذا كانت الفاتورة غير مرحّلة بعد أو مدفوعة جزئياً
+    // لا نُغيّر "مجدول بكمبيالة" إلى "غير مدفوع" عن طريق الخطأ
+    const { data: invoice } = await supabase
+      .from(invoiceTable)
+      .select('status')
+      .eq('invoice_id', invoiceId)
+      .single();
+
+    // إذا كانت الحالة "مجدول بكمبيالة" ودُفعت كاملاً → تصبح "دفعت بالكامل"
+    // إذا كانت "مجدول بكمبيالة" ودُفع جزء → تبقى "مجدول بكمبيالة" (الكمبيالة تتابع الباقي)
+    if (invoice?.status === 'مجدول بكمبيالة' && newStatus !== 'دفعت بالكامل') {
+      return; // لا تغيير إذا مجدولة وليست مدفوعة كاملاً
+    }
+
+    await supabase
+      .from(invoiceTable)
+      .update({ status: newStatus })
+      .eq('invoice_id', invoiceId);
+
+  } catch (error: any) {
+    console.error('[API] updateInvoiceStatusFromPayment error:', error);
+    // Non-critical: don't throw, just log
+  }
+}
+
+/**
+ * جلب توزيعات المبالغ لسند قبض معين
+ */
+export async function getReceiptAllocations(
+  receiptId: string,
+  receiptType: 'shop' | 'warehouse'
+): Promise<{ invoice_id: string; invoice_type: 'shop' | 'warehouse'; allocated_amount: number }[]> {
+  try {
+    const { data, error } = await supabase
+      .from('receipt_invoice_allocations')
+      .select('invoice_id, invoice_type, allocated_amount')
+      .eq('receipt_id', receiptId)
+      .eq('receipt_type', receiptType);
+
+    if (error) throw error;
+    return (data as any[]) || [];
+  } catch (error: any) {
+    console.error('[API] getReceiptAllocations error:', error);
+    throw error;
+  }
+}
+
+/**
+ * جلب توزيعات الأقساط لسند قبض معين
+ */
+export async function getReceiptInstallmentAllocations(
+  receiptId: string,
+  receiptType: 'shop' | 'warehouse'
+): Promise<{ installment_id: string; allocated_amount: number; due_date?: string; amount?: number; paid_amount?: number }[]> {
+  try {
+    const { data, error } = await supabase
+      .from('receipt_installment_allocations')
+      .select('installment_id, allocated_amount')
+      .eq('receipt_id', receiptId)
+      .eq('receipt_type', receiptType);
+
+    if (error) throw error;
+
+    const rows = (data as any[]) || [];
+    if (rows.length === 0) return [];
+
+    const installmentIds = [...new Set(rows.map((r) => r.installment_id).filter(Boolean))];
+    const { data: installmentsData, error: instError } = await supabase
+      .from('promissory_note_installments')
+      .select('id, due_date, amount, paid_amount')
+      .in('id', installmentIds);
+
+    if (instError) {
+      // Non-fatal fallback: return allocation rows without installment metadata.
+      return rows.map((row: any) => ({
+        installment_id: row.installment_id,
+        allocated_amount: Number(row.allocated_amount || 0),
+      }));
+    }
+
+    const installmentsMap = new Map<string, any>();
+    (installmentsData || []).forEach((inst: any) => installmentsMap.set(inst.id, inst));
+
+    return rows.map((row: any) => {
+      const inst = installmentsMap.get(row.installment_id);
+      return {
+        installment_id: row.installment_id,
+        allocated_amount: Number(row.allocated_amount || 0),
+        due_date: inst?.due_date,
+        amount: Number(inst?.amount || 0),
+        paid_amount: Number(inst?.paid_amount || 0),
+      };
+    });
+  } catch (error: any) {
+    console.error('[API] getReceiptInstallmentAllocations error:', error);
+    // Keep edit screen usable even if allocations table is missing/not migrated yet.
+    return [];
   }
 }
 
@@ -6328,18 +7048,19 @@ export async function getWarehouseSalesInvoices(page: number = 1, pageSize: numb
     const customerIds = [...new Set(invoices.map(i => i.customer_id).filter(Boolean))];
 
     // Fetch all customer names and shamel_no in one query
-    let customerMap = new Map<string, { name: string; shamelNo: string }>();
+    let customerMap = new Map<string, { name: string; shamelNo: string; customerType: string }>();
     if (customerIds.length > 0) {
       const { data: customers } = await supabase
         .from('customers')
-        .select('customer_id, name, shamel_no')
+        .select('customer_id, name, shamel_no, type')
         .in('customer_id', customerIds);
 
       if (customers) {
         customers.forEach((c: any) => {
           customerMap.set(c.customer_id, {
             name: c.name || '',
-            shamelNo: c.shamel_no || ''
+            shamelNo: c.shamel_no || '',
+            customerType: c.type || '',
           });
         });
       }
@@ -6369,13 +7090,14 @@ export async function getWarehouseSalesInvoices(page: number = 1, pageSize: numb
       const discount = parseFloat(String(invoice.discount || 0));
       const total = Math.max(0, subtotal - discount);
 
-      const customer = customerMap.get(invoice.customer_id) || { name: '', shamelNo: '' };
+      const customer = customerMap.get(invoice.customer_id) || { name: '', shamelNo: '', customerType: '' };
 
       return {
         InvoiceID: invoice.invoice_id,
         CustomerID: invoice.customer_id,
         CustomerName: customer.name,
         CustomerShamelNo: customer.shamelNo,
+        CustomerType: customer.customerType,
         Date: invoice.date,
         AccountantSign: invoice.accountant_sign,
         Notes: invoice.notes || '',
@@ -6386,8 +7108,32 @@ export async function getWarehouseSalesInvoices(page: number = 1, pageSize: numb
         created_by: invoice.created_by || null,
         createdBy: invoice.created_by || null,
         user_id: invoice.created_by || null,
+        TotalPaid: 0,
+        RemainingAmount: total,
       };
     }));
+
+    // Fetch allocations for all invoices in current view to calculate remaining
+    const invoiceIds = mappedInvoices.map(i => i.InvoiceID);
+    const { data: allAllocations } = await supabase
+      .from('receipt_invoice_allocations')
+      .select('invoice_id, allocated_amount')
+      .in('invoice_id', invoiceIds)
+      .eq('invoice_type', 'warehouse');
+
+    const allocationsByInvoice = new Map<string, number>();
+    if (allAllocations) {
+      allAllocations.forEach((a: any) => {
+        const current = allocationsByInvoice.get(a.invoice_id) || 0;
+        allocationsByInvoice.set(a.invoice_id, current + parseFloat(String(a.allocated_amount || 0)));
+      });
+    }
+
+    // Update mappedInvoices with TotalPaid and RemainingAmount
+    mappedInvoices.forEach(inv => {
+      inv.TotalPaid = allocationsByInvoice.get(inv.InvoiceID) || 0;
+      inv.RemainingAmount = Math.max(0, inv.TotalAmount - inv.TotalPaid);
+    });
 
     console.log(`[API] Warehouse sales invoices loaded: ${mappedInvoices.length} of ${total}`);
     return { invoices: mappedInvoices, total };
@@ -6417,16 +7163,18 @@ export async function getWarehouseSalesInvoice(invoiceId: string): Promise<any> 
     let customerShamelNo = '';
     let customerPhone = '';
     let customerAddress = '';
+    let customerType = '';
     if (invoice.customer_id) {
       const { data: customer } = await supabase
         .from('customers')
-        .select('name, phone, email, address, shamel_no')
+        .select('name, phone, email, address, shamel_no, type')
         .eq('customer_id', invoice.customer_id)
         .single();
       customerName = customer?.name || '';
       customerShamelNo = customer?.shamel_no || '';
       customerPhone = customer?.phone || '';
       customerAddress = customer?.address || '';
+      customerType = customer?.type || '';
     }
 
     // Fetch invoice details
@@ -6480,6 +7228,7 @@ export async function getWarehouseSalesInvoice(invoiceId: string): Promise<any> 
       CustomerID: invoice.customer_id,
       CustomerName: customerName,
       CustomerShamelNo: customerShamelNo,
+      CustomerType: customerType,
       CustomerPhone: customerPhone,
       CustomerAddress: customerAddress,
       Date: invoice.date,
@@ -6526,7 +7275,7 @@ export async function updateWarehouseSalesInvoiceSign(invoiceId: string, account
  */
 export async function updateWarehouseSalesInvoiceStatus(
   invoiceId: string,
-  status: 'غير مدفوع' | 'تقسيط شهري' | 'دفعت بالكامل' | 'مدفوع جزئي'
+  status: 'غير مدفوع' | 'تقسيط شهري' | 'دفعت بالكامل' | 'مدفوع جزئي' | 'مجدول بكمبيالة'
 ): Promise<any> {
   try {
     const { data, error } = await supabase
@@ -9282,6 +10031,21 @@ export async function createWarehouseReceipt(data: {
   related_party?: string; // Customer ID or name
   notes?: string;
   created_by?: string; // Admin user ID
+  // -------- ربط بالفاتورة أو القسط (اختياري) --------
+  linkedInvoiceId?: string;
+  linkedInvoiceType?: 'shop' | 'warehouse';
+  linkedInstallmentId?: string;
+  installmentAllocations?: {
+    installmentId: string;
+    amount: number;
+  }[];
+  invoiceTotalAmount?: number;
+  allocations?: {
+    invoiceId: string;
+    invoiceType: 'shop' | 'warehouse';
+    amount: number;
+    invoiceTotal: number;
+  }[];
 }, userName?: string): Promise<any> {
   try {
     console.log('[API] Creating warehouse receipt:', data);
@@ -9305,9 +10069,12 @@ export async function createWarehouseReceipt(data: {
       date: data.date,
       cash_amount: data.cash_amount || 0,
       check_amount: data.check_amount || 0,
-      customer_id: data.related_party || null, // Use customer_id column
+      customer_id: data.related_party || null,
       notes: data.notes || null,
-      created_by: data.created_by || null, // Admin user ID
+      created_by: data.created_by || null,
+      linked_invoice_id: data.linkedInvoiceId || null,
+      linked_invoice_type: data.linkedInvoiceType || null,
+      linked_installment_id: data.linkedInstallmentId || null,
     };
 
     const { data: result, error } = await supabase
@@ -9322,6 +10089,91 @@ export async function createWarehouseReceipt(data: {
     }
 
     console.log('[API] Warehouse receipt created successfully:', receiptId);
+
+    const totalPaymentAmount = (data.cash_amount || 0) + (data.check_amount || 0);
+
+    // Save allocations if provided
+    if (data.allocations && data.allocations.length > 0) {
+      const allocationRecords = data.allocations.map((alloc) => ({
+        receipt_id: receiptId,
+        receipt_type: 'warehouse',
+        invoice_id: alloc.invoiceId,
+        invoice_type: alloc.invoiceType,
+        allocated_amount: alloc.amount,
+      }));
+
+      const { error: allocError } = await supabase
+        .from('receipt_invoice_allocations')
+        .insert(allocationRecords);
+
+      if (allocError) {
+        console.error('[API] Failed to save warehouse allocations:', allocError);
+      } else {
+        for (const alloc of data.allocations) {
+          try {
+            await updateInvoiceStatusFromPayment(
+              alloc.invoiceId,
+              alloc.invoiceType,
+              alloc.invoiceTotal
+            );
+          } catch (e) {
+            console.error('[API] Failed to update status for', alloc.invoiceId, e);
+          }
+        }
+      }
+    } else if (data.linkedInvoiceId && data.linkedInvoiceType) {
+      // Legacy single-invoice flow
+      try {
+        await supabase
+          .from('receipt_invoice_allocations')
+          .insert({
+            receipt_id: receiptId,
+            receipt_type: 'warehouse',
+            invoice_id: data.linkedInvoiceId,
+            invoice_type: data.linkedInvoiceType,
+            allocated_amount: totalPaymentAmount,
+          });
+
+        await updateInvoiceStatusFromPayment(
+          data.linkedInvoiceId,
+          data.linkedInvoiceType,
+          data.invoiceTotalAmount || 0
+        );
+      } catch (statusError) {
+        console.error('[API] Failed to update invoice status:', statusError);
+      }
+    }
+
+    // Apply installment allocations (oldest -> newest) when provided
+    if (data.installmentAllocations && data.installmentAllocations.length > 0) {
+      const rows = data.installmentAllocations
+        .filter((a) => a.amount > 0)
+        .map((a) => ({
+          receipt_id: receiptId,
+          receipt_type: 'warehouse',
+          installment_id: a.installmentId,
+          allocated_amount: a.amount,
+        }));
+      if (rows.length > 0) {
+        await supabase.from('receipt_installment_allocations').insert(rows);
+      }
+      for (const alloc of data.installmentAllocations) {
+        try {
+          if (alloc.amount > 0) {
+            await recalculateInstallmentFromReceiptAllocations(alloc.installmentId);
+          }
+        } catch (instError) {
+          console.error('[API] Failed to apply payment allocation to warehouse installment:', alloc.installmentId, instError);
+        }
+      }
+    } else if (data.linkedInstallmentId && totalPaymentAmount > 0) {
+      // Legacy single-installment flow
+      try {
+        await applyPaymentToInstallment(data.linkedInstallmentId, totalPaymentAmount);
+      } catch (instError) {
+        console.error('[API] Failed to apply payment to installment:', instError);
+      }
+    }
 
     // Create notification for receipt creation
     try {
@@ -9342,7 +10194,7 @@ export async function createWarehouseReceipt(data: {
         }
       }
       const { getCustomerName } = await import('./notifications');
-      const customerId = data.related_party || data.customer_id;
+      const customerId = data.related_party || '';
       const customerName = await getCustomerName(customerId);
       await createNotification({
         type: 'create',
@@ -9367,6 +10219,7 @@ export async function createWarehouseReceipt(data: {
  * Create warehouse payment
  * ID format: wapayXXXX-YYY
  */
+
 export async function createWarehousePayment(data: {
   date: string; // Format: YYYY-MM-DD
   cash_amount: number;
@@ -9513,8 +10366,30 @@ export async function updateWarehouseReceipt(receiptId: string, data: {
   check_amount: number;
   related_party?: string;
   notes?: string;
+  allocations?: {
+    invoiceId: string;
+    invoiceType: 'shop' | 'warehouse';
+    amount: number;
+    invoiceTotal: number;
+  }[];
+  installmentAllocations?: {
+    installmentId: string;
+    amount: number;
+  }[];
 }, userName?: string): Promise<any> {
   try {
+    // Fetch old allocations so we can recalculate all affected invoices
+    const { data: oldAllocations } = await supabase
+      .from('receipt_invoice_allocations')
+      .select('invoice_id, invoice_type')
+      .eq('receipt_id', receiptId)
+      .eq('receipt_type', 'warehouse');
+    const { data: oldInstallmentAllocations } = await supabase
+      .from('receipt_installment_allocations')
+      .select('installment_id')
+      .eq('receipt_id', receiptId)
+      .eq('receipt_type', 'warehouse');
+
     const updateData: any = {
       date: data.date,
       cash_amount: data.cash_amount || 0,
@@ -9536,6 +10411,75 @@ export async function updateWarehouseReceipt(receiptId: string, data: {
 
     if (error) {
       throw new Error(`Failed to update receipt: ${error.message}`);
+    }
+
+    // Replace allocations on edit (if provided)
+    if (data.allocations) {
+      await supabase
+        .from('receipt_invoice_allocations')
+        .delete()
+        .eq('receipt_id', receiptId)
+        .eq('receipt_type', 'warehouse');
+
+      if (data.allocations.length > 0) {
+        const records = data.allocations.map((alloc) => ({
+          receipt_id: receiptId,
+          receipt_type: 'warehouse',
+          invoice_id: alloc.invoiceId,
+          invoice_type: alloc.invoiceType,
+          allocated_amount: alloc.amount,
+        }));
+
+        const { error: insertAllocError } = await supabase
+          .from('receipt_invoice_allocations')
+          .insert(records);
+
+        if (insertAllocError) {
+          console.error('[API] Failed to update warehouse allocations:', insertAllocError);
+        }
+      }
+
+      const affectedInvoices = new Set<string>();
+      if (oldAllocations) oldAllocations.forEach((a: any) => affectedInvoices.add(`${a.invoice_type}:${a.invoice_id}`));
+      data.allocations.forEach((a) => affectedInvoices.add(`${a.invoiceType}:${a.invoiceId}`));
+
+      for (const invKey of affectedInvoices) {
+        const [type, id] = invKey.split(':');
+        try {
+          await updateInvoiceStatusFromPayment(id, type as 'shop' | 'warehouse');
+        } catch (statusError) {
+          console.error('[API] Failed to recalculate invoice status after warehouse receipt update:', id, statusError);
+        }
+      }
+    }
+
+    if (data.installmentAllocations) {
+      await supabase
+        .from('receipt_installment_allocations')
+        .delete()
+        .eq('receipt_id', receiptId)
+        .eq('receipt_type', 'warehouse');
+
+      if (data.installmentAllocations.length > 0) {
+        const rows = data.installmentAllocations
+          .filter((a) => a.amount > 0)
+          .map((a) => ({
+            receipt_id: receiptId,
+            receipt_type: 'warehouse',
+            installment_id: a.installmentId,
+            allocated_amount: a.amount,
+          }));
+        if (rows.length > 0) {
+          await supabase.from('receipt_installment_allocations').insert(rows);
+        }
+      }
+
+      const affectedInstallments = new Set<string>();
+      (oldInstallmentAllocations || []).forEach((a: any) => affectedInstallments.add(a.installment_id));
+      data.installmentAllocations.forEach((a) => affectedInstallments.add(a.installmentId));
+      for (const installmentId of affectedInstallments) {
+        await recalculateInstallmentFromReceiptAllocations(installmentId);
+      }
     }
 
     // Create notification for receipt update
@@ -9567,6 +10511,29 @@ export async function updateWarehouseReceipt(receiptId: string, data: {
  */
 export async function deleteWarehouseReceipt(receiptId: string): Promise<any> {
   try {
+    // Fetch affected invoices before removing allocation rows
+    const { data: allocations } = await supabase
+      .from('receipt_invoice_allocations')
+      .select('invoice_id, invoice_type')
+      .eq('receipt_id', receiptId)
+      .eq('receipt_type', 'warehouse');
+    const { data: installmentAllocations } = await supabase
+      .from('receipt_installment_allocations')
+      .select('installment_id')
+      .eq('receipt_id', receiptId)
+      .eq('receipt_type', 'warehouse');
+
+    await supabase
+      .from('receipt_invoice_allocations')
+      .delete()
+      .eq('receipt_id', receiptId)
+      .eq('receipt_type', 'warehouse');
+    await supabase
+      .from('receipt_installment_allocations')
+      .delete()
+      .eq('receipt_id', receiptId)
+      .eq('receipt_type', 'warehouse');
+
     const { error } = await supabase
       .from('warehouse_receipts')
       .delete()
@@ -9574,6 +10541,21 @@ export async function deleteWarehouseReceipt(receiptId: string): Promise<any> {
 
     if (error) {
       throw new Error(`Failed to delete receipt: ${error.message}`);
+    }
+
+    if (allocations && allocations.length > 0) {
+      for (const alloc of allocations) {
+        try {
+          await updateInvoiceStatusFromPayment(alloc.invoice_id, alloc.invoice_type as 'shop' | 'warehouse');
+        } catch (statusError) {
+          console.error('[API] Failed to update invoice status after warehouse receipt delete:', alloc.invoice_id, statusError);
+        }
+      }
+    }
+    if (installmentAllocations && installmentAllocations.length > 0) {
+      for (const alloc of installmentAllocations) {
+        await recalculateInstallmentFromReceiptAllocations(alloc.installment_id);
+      }
     }
 
     return { status: 'success' };
@@ -11216,6 +12198,15 @@ function generatePromissoryNoteID(existingCount: number): string {
   return `PN-${padded}`;
 }
 
+function toReadableError(err: any, fallback: string): Error {
+  if (err instanceof Error) return err;
+  if (typeof err?.message === 'string' && err.message.trim()) return new Error(err.message);
+  const details = (() => {
+    try { return JSON.stringify(err); } catch { return String(err); }
+  })();
+  return new Error(`${fallback}${details && details !== '{}' ? `: ${details}` : ''}`);
+}
+
 /**
  * Create a new promissory note with installments
  */
@@ -11231,60 +12222,101 @@ export async function createPromissoryNote(payload: {
   paidAmount?: number;
   remainingAmount?: number;
   createdBy?: string;
+  linkedInvoiceId?: string;
+  linkedInvoiceType?: 'shop' | 'warehouse';
   installments: {
     amount: number;
     dueDate: string;
     notes?: string;
   }[];
 }): Promise<void> {
-  // Use provided createdBy (from AdminAuthContext on the client)
-  // or default to an empty string/null if not available, rather than failing the whole request
-  const createdBy = payload.createdBy || null;
+  try {
+    // Use provided createdBy (from AdminAuthContext on the client)
+    const createdBy = payload.createdBy || null;
 
-  // Get current count for ID generation
-  const { count, error: countError } = await supabase
-    .from('promissory_notes')
-    .select('*', { count: 'exact', head: true });
+    // Build a safer sequential ID: last PN + 1, with fallback to count-based.
+    let newId = '';
+    const { data: lastNote, error: lastErr } = await supabase
+      .from('promissory_notes')
+      .select('id')
+      .ilike('id', 'PN-%')
+      .order('id', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  if (countError) throw countError;
-  const newId = generatePromissoryNoteID(count || 0);
+    if (lastErr) {
+      const { count, error: countError } = await supabase
+        .from('promissory_notes')
+        .select('*', { count: 'exact', head: true });
+      if (countError) throw countError;
+      newId = generatePromissoryNoteID(count || 0);
+    } else {
+      const currentNumber = parseInt(String(lastNote?.id || '').replace(/^PN-/, ''), 10);
+      if (Number.isFinite(currentNumber) && currentNumber > 0) {
+        newId = `PN-${String(currentNumber + 1).padStart(4, '0')}`;
+      } else {
+        const { count, error: countError } = await supabase
+          .from('promissory_notes')
+          .select('*', { count: 'exact', head: true });
+        if (countError) throw countError;
+        newId = generatePromissoryNoteID(count || 0);
+      }
+    }
 
-  // Insert Note
-  const { data: note, error: noteError } = await supabase
-    .from('promissory_notes')
-    .insert({
-      id: newId,
-      customer_id: payload.customerId,
-      total_amount: payload.totalAmount,
-      issue_date: payload.issueDate,
-      status: 'Active',
-      notes: payload.notes,
-      image_url: payload.imageUrl,
-      created_by: createdBy,
-      debtor_id_number: payload.debtorIdNumber,
-      debtor_address: payload.debtorAddress,
-      is_legacy: payload.isLegacy,
-      paid_amount: payload.paidAmount
-    })
-    .select('id')
-    .single();
+    // Insert Note
+    const { data: note, error: noteError } = await supabase
+      .from('promissory_notes')
+      .insert({
+        id: newId,
+        customer_id: payload.customerId,
+        total_amount: payload.totalAmount,
+        issue_date: payload.issueDate,
+        status: 'Active',
+        notes: payload.notes,
+        image_url: payload.imageUrl,
+        created_by: createdBy,
+        debtor_id_number: payload.debtorIdNumber,
+        debtor_address: payload.debtorAddress,
+        is_legacy: payload.isLegacy,
+        paid_amount: payload.paidAmount,
+        linked_invoice_id: payload.linkedInvoiceId,
+        linked_invoice_type: payload.linkedInvoiceType
+      })
+      .select('id')
+      .single();
 
-  if (noteError) throw noteError;
+    if (noteError || !note?.id) throw noteError || new Error('Failed to create promissory note record');
 
-  // Insert Installments
-  const installments = payload.installments.map(inst => ({
-    promissory_note_id: note.id,
-    amount: inst.amount,
-    due_date: inst.dueDate,
-    status: 'Pending',
-    notes: inst.notes
-  }));
+    // Insert Installments
+    const installments = payload.installments.map(inst => ({
+      promissory_note_id: note.id,
+      amount: inst.amount,
+      due_date: inst.dueDate,
+      status: 'Pending',
+      notes: inst.notes
+    }));
 
-  const { error: instError } = await supabase
-    .from('promissory_note_installments')
-    .insert(installments);
+    const { error: instError } = await supabase
+      .from('promissory_note_installments')
+      .insert(installments);
 
-  if (instError) throw instError;
+    if (instError) throw instError;
+
+    // Update invoice status to "مجدول بكمبيالة" if linked
+    if (payload.linkedInvoiceId && payload.linkedInvoiceType) {
+      const table = payload.linkedInvoiceType === 'shop' ? 'shop_sales_invoices' : 'warehouse_sales_invoices';
+      const { error: updateInvoiceError } = await supabase
+        .from(table)
+        .update({ status: 'مجدول بكمبيالة' })
+        .eq('invoice_id', payload.linkedInvoiceId);
+      if (updateInvoiceError) {
+        console.error('[API] Failed to update linked invoice status after promissory note creation:', updateInvoiceError);
+      }
+    }
+  } catch (error: any) {
+    console.error('[API] createPromissoryNote error:', error);
+    throw toReadableError(error, 'Failed to create promissory note');
+  }
 }
 
 /**
@@ -11981,4 +13013,198 @@ export async function guestSaveArticle(guestLinkId: string, authorName: string, 
     if (error) throw error;
     return data;
   }
+}
+
+// ==========================================
+// ARCHIVE API
+// ==========================================
+
+export type ArchiveDocumentType =
+  | 'purchase_invoice'
+  | 'sales_invoice'
+  | 'receipt'
+  | 'payment'
+  | 'bank_statement'
+  | 'journal_voucher'
+  | 'company_document';
+
+export type ArchiveDocumentStatus = 'original' | 'copy' | 'cancelled';
+
+export interface ArchiveDocumentInput {
+  documentType: ArchiveDocumentType;
+  title: string;
+  documentDate: string;
+  referenceNo?: string;
+  supplierName?: string;
+  customerId?: string;
+  linkedTable?: string;
+  linkedRecordId?: string;
+  documentStatus?: ArchiveDocumentStatus;
+  tags?: string[];
+  notes?: string;
+  createdBy?: string;
+  driveFileId: string;
+  driveWebViewLink: string;
+  driveDownloadLink?: string | null;
+  mimeType?: string;
+  fileSize?: number;
+}
+
+export interface ArchiveSearchFilters {
+  query?: string;
+  documentType?: ArchiveDocumentType | '';
+  dateFrom?: string;
+  dateTo?: string;
+  supplierName?: string;
+  customerId?: string;
+  linkedTable?: string;
+  linkedRecordId?: string;
+  limit?: number;
+}
+
+export function buildArchiveFileName(input: {
+  documentType: ArchiveDocumentType;
+  referenceNo?: string;
+  entityName?: string;
+  documentDate: string;
+  originalFileName: string;
+}) {
+  const ext = input.originalFileName.split('.').pop()?.toLowerCase() || 'pdf';
+  const shortId = Math.random().toString(36).slice(2, 6);
+  const clean = (value: string) =>
+    value
+      .trim()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-zA-Z0-9_\-]/g, '')
+      .slice(0, 48);
+
+  const typePart = clean(input.documentType);
+  const refPart = clean(input.referenceNo || 'NOREF');
+  const entityPart = clean(input.entityName || 'General');
+  const datePart = clean(input.documentDate || new Date().toISOString().slice(0, 10));
+
+  return `${typePart}_${refPart}_${entityPart}_${datePart}_${shortId}.${ext}`;
+}
+
+export async function uploadArchiveFileToGoogleDrive(input: {
+  file: File;
+  folderKey: ArchiveDocumentType;
+  fileName: string;
+}) {
+  const form = new FormData();
+  form.append('file', input.file);
+  form.append('folderKey', input.folderKey);
+  form.append('fileName', input.fileName);
+
+  const response = await fetch('/api/archive/upload', {
+    method: 'POST',
+    body: form,
+  });
+
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload?.error || 'Failed to upload archive file');
+  }
+  return payload as {
+    success: true;
+    driveFileId: string;
+    driveWebViewLink: string;
+    driveDownloadLink: string | null;
+    mimeType: string;
+    fileSize: number;
+    folderName: string;
+  };
+}
+
+export async function createArchiveDocument(input: ArchiveDocumentInput) {
+  if (!input.title?.trim()) throw new Error('العنوان مطلوب');
+  if (!input.documentDate) throw new Error('تاريخ المستند مطلوب');
+  if (!input.driveFileId || !input.driveWebViewLink) {
+    throw new Error('بيانات ملف Google Drive غير مكتملة');
+  }
+  if (input.documentType === 'purchase_invoice' && !input.supplierName?.trim()) {
+    throw new Error('اسم المورد مطلوب لفاتورة المشتريات');
+  }
+
+  const row: any = {
+    document_type: input.documentType,
+    title: input.title.trim(),
+    document_date: input.documentDate,
+    reference_no: input.referenceNo?.trim() || null,
+    supplier_name: input.supplierName?.trim() || null,
+    customer_id: input.customerId || null,
+    linked_table: input.linkedTable || null,
+    linked_record_id: input.linkedRecordId || null,
+    document_status: input.documentStatus || 'original',
+    tags: (input.tags || []).map((t) => t.trim()).filter(Boolean),
+    notes: input.notes?.trim() || null,
+    created_by: input.createdBy || null,
+    drive_file_id: input.driveFileId,
+    drive_web_view_link: input.driveWebViewLink,
+    drive_download_link: input.driveDownloadLink || null,
+    mime_type: input.mimeType || null,
+    file_size: input.fileSize || null,
+    drive_folder_key: input.documentType,
+  };
+
+  const { data, error } = await supabase
+    .from('archive_documents')
+    .insert(row)
+    .select('*')
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message || 'فشل حفظ سجل الأرشيف');
+  }
+
+  await supabase.from('archive_document_events').insert({
+    archive_document_id: data.id,
+    event_type: 'created',
+    event_payload: {
+      title: row.title,
+      documentType: row.document_type,
+      driveFileId: row.drive_file_id,
+    },
+    created_by: input.createdBy || null,
+  });
+
+  return data;
+}
+
+export async function searchArchiveDocuments(filters: ArchiveSearchFilters = {}) {
+  let query = supabase
+    .from('archive_documents')
+    .select('*')
+    .order('document_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(filters.limit || 100);
+
+  if (filters.documentType) query = query.eq('document_type', filters.documentType);
+  if (filters.dateFrom) query = query.gte('document_date', filters.dateFrom);
+  if (filters.dateTo) query = query.lte('document_date', filters.dateTo);
+  if (filters.supplierName) query = query.ilike('supplier_name', `%${filters.supplierName.trim()}%`);
+  if (filters.customerId) query = query.eq('customer_id', filters.customerId);
+  if (filters.linkedTable) query = query.eq('linked_table', filters.linkedTable);
+  if (filters.linkedRecordId) query = query.eq('linked_record_id', filters.linkedRecordId);
+
+  const q = (filters.query || '').trim();
+  if (q) {
+    query = query.or(
+      `title.ilike.%${q}%,reference_no.ilike.%${q}%,supplier_name.ilike.%${q}%,notes.ilike.%${q}%`
+    );
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message || 'فشل تحميل الأرشيف');
+  return data || [];
+}
+
+export async function trackArchiveOpen(documentId: string, openedBy?: string) {
+  if (!documentId) return;
+  await supabase.from('archive_document_events').insert({
+    archive_document_id: documentId,
+    event_type: 'opened',
+    event_payload: { source: 'archive_page' },
+    created_by: openedBy || null,
+  });
 }
