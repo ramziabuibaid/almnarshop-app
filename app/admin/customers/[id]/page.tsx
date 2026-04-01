@@ -28,7 +28,9 @@ import {
   updateCheckStatus,
   deleteCheck,
   updateCheck,
-  uploadCheckImage
+  uploadCheckImage,
+  updateShopSalesInvoiceSign,
+  updateWarehouseSalesInvoiceSign,
 } from '@/lib/api';
 import { fixPhoneNumber } from '@/lib/utils';
 import PromissoryNoteModal from '../../promissory-notes/PromissoryNoteModal';
@@ -57,6 +59,7 @@ import {
   Calculator,
   CheckCircle2,
   Clock,
+  XCircle,
 } from 'lucide-react';
 
 interface TimelineItem {
@@ -176,6 +179,7 @@ export default function CustomerProfilePage() {
   const [selectedCheck, setSelectedCheck] = useState<any | null>(null);
   const [updatingCheckStatus, setUpdatingCheckStatus] = useState<string | null>(null);
   const [uploadingCheckImage, setUploadingCheckImage] = useState<{ front: boolean, back: boolean }>({ front: false, back: false });
+  const [updatingInvoicePostId, setUpdatingInvoicePostId] = useState<string | null>(null);
 
   useEffect(() => {
     if (customerId) {
@@ -479,6 +483,40 @@ export default function CustomerProfilePage() {
     } catch (error) {
       console.error('[CustomerProfile] Error formatting date:', dateString, error);
       return '—';
+    }
+  };
+
+  const getInvoiceAccountantSign = (item: TimelineItem) =>
+    String(item.AccountantSign || item.accountant_sign || 'غير مرحلة');
+
+  const handleUnpostInvoiceFromProfile = async (item: TimelineItem) => {
+    if (!canAccountant || item.type !== 'invoice') return;
+    const src = item.source;
+    if (src !== 'Shop' && src !== 'Warehouse') return;
+    if (getInvoiceAccountantSign(item) !== 'مرحلة') return;
+    const id = String(item.id || '').trim();
+    if (!id) return;
+
+    setUpdatingInvoicePostId(id);
+    try {
+      if (src === 'Shop') {
+        await updateShopSalesInvoiceSign(id, 'غير مرحلة');
+      } else {
+        await updateWarehouseSalesInvoiceSign(id, 'غير مرحلة');
+      }
+      setCustomerData((prev) => ({
+        ...prev,
+        invoices: (prev.invoices || []).map((inv: any) => {
+          const invId = String(inv.InvoiceID || inv.id || inv.invoiceID || '').trim();
+          if (invId !== id) return inv;
+          return { ...inv, AccountantSign: 'غير مرحلة', accountant_sign: 'غير مرحلة' };
+        }),
+      }));
+    } catch (err: any) {
+      console.error('[CustomerProfile] unpost invoice:', err);
+      alert(err?.message || 'فشل تحديث حالة الترحيل');
+    } finally {
+      setUpdatingInvoicePostId(null);
     }
   };
 
@@ -1766,9 +1804,9 @@ export default function CustomerProfilePage() {
                           <div className={`p-2 rounded-lg ${colors.iconBg} flex-shrink-0`}>
                             <Icon size={20} className={colors.text} />
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-2">
+                              <div className="min-w-0 flex-1">
                                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                                   {item.type === 'invoice' && item.source === 'Shop' && `فاتورة المحل #${item.invoiceNumber || item.id}`}
                                   {item.type === 'invoice' && item.source === 'Warehouse' && `فاتورة المخزن #${item.invoiceNumber || item.id}`}
@@ -1777,101 +1815,171 @@ export default function CustomerProfilePage() {
                                   {item.type === 'payment' && item.source === 'Shop' && `سند صرف المحل #${item.paymentNumber || item.id}`}
                                   {item.type === 'payment' && item.source === 'Warehouse' && `سند صرف المستودع #${item.paymentNumber || item.id}`}
                                 </h3>
-                                {item.status && (
-                                  <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300">
+                                {item.type === 'invoice' && (
+                                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                    {item.status && (
+                                      <span
+                                        className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-700/60 text-gray-800 dark:text-gray-200"
+                                        title="حالة الدفع"
+                                      >
+                                        دفع: {item.status}
+                                      </span>
+                                    )}
+                                    <span
+                                      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium font-cairo ${
+                                        getInvoiceAccountantSign(item) === 'مرحلة'
+                                          ? 'bg-emerald-100 dark:bg-emerald-900/35 text-emerald-800 dark:text-emerald-300'
+                                          : 'bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300'
+                                      }`}
+                                      title="حالة الترحيل (المحاسبة)"
+                                    >
+                                      {getInvoiceAccountantSign(item) === 'مرحلة' ? 'مرحلة' : 'غير مرحلة'}
+                                    </span>
+                                  </div>
+                                )}
+                                {item.type !== 'invoice' && item.status && (
+                                  <span className="inline-flex mt-1.5 px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300">
                                     {item.status}
                                   </span>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                              <div className="flex flex-col items-stretch sm:items-end gap-2 flex-shrink-0">
+                                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                                   {formatDate(item.date)}
                                 </span>
-                                {/* Print Button */}
-                                <button
-                                  onClick={() => {
-                                    if (item.type === 'invoice' && item.source === 'Shop') {
-                                      window.open(`/admin/shop-sales/print/${item.id}`, `print-shop-${item.id}`, 'noopener,noreferrer');
-                                    } else if (item.type === 'invoice' && item.source === 'Warehouse') {
-                                      window.open(`/admin/warehouse-sales/print/${item.id}`, `print-warehouse-${item.id}`, 'noopener,noreferrer');
-                                    } else if (item.type === 'receipt' && item.source === 'Shop') {
-                                      window.open(`/admin/receipts/print/${item.id}`, `print-receipt-${item.id}`, 'noopener,noreferrer');
-                                    } else if (item.type === 'receipt' && item.source === 'Warehouse') {
-                                      window.open(`/admin/warehouse-finance/receipts/print/${item.id}`, `print-warehouse-receipt-${item.id}`, 'noopener,noreferrer');
-                                    } else if (item.type === 'payment' && item.source === 'Shop') {
-                                      window.open(`/admin/payments/print/${item.id}`, `print-payment-${item.id}`, 'noopener,noreferrer');
-                                    } else if (item.type === 'payment' && item.source === 'Warehouse') {
-                                      window.open(`/admin/warehouse-finance/payments/print/${item.id}`, `print-warehouse-payment-${item.id}`, 'noopener,noreferrer');
+                                <div className="flex items-center gap-1 flex-wrap justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (item.type === 'invoice' && item.source === 'Shop') {
+                                        window.open(`/admin/shop-sales/print/${item.id}`, `print-shop-${item.id}`, 'noopener,noreferrer');
+                                      } else if (item.type === 'invoice' && item.source === 'Warehouse') {
+                                        window.open(`/admin/warehouse-sales/print/${item.id}`, `print-warehouse-${item.id}`, 'noopener,noreferrer');
+                                      } else if (item.type === 'receipt' && item.source === 'Shop') {
+                                        window.open(`/admin/receipts/print/${item.id}`, `print-receipt-${item.id}`, 'noopener,noreferrer');
+                                      } else if (item.type === 'receipt' && item.source === 'Warehouse') {
+                                        window.open(`/admin/warehouse-finance/receipts/print/${item.id}`, `print-warehouse-receipt-${item.id}`, 'noopener,noreferrer');
+                                      } else if (item.type === 'payment' && item.source === 'Shop') {
+                                        window.open(`/admin/payments/print/${item.id}`, `print-payment-${item.id}`, 'noopener,noreferrer');
+                                      } else if (item.type === 'payment' && item.source === 'Warehouse') {
+                                        window.open(`/admin/warehouse-finance/payments/print/${item.id}`, `print-warehouse-payment-${item.id}`, 'noopener,noreferrer');
+                                      }
+                                    }}
+                                    className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                                    title="طباعة"
+                                  >
+                                    <Printer size={16} />
+                                  </button>
+                                  {item.type === 'invoice' && (() => {
+                                    const isShopSettled = item.source === 'Shop' && (item.AccountantSign === 'مرحلة' || item.accountant_sign === 'مرحلة');
+                                    const isWarehouseSettled = item.source === 'Warehouse' && (item.AccountantSign === 'مرحلة' || item.accountant_sign === 'مرحلة');
+                                    const isCashSettled = item.source === 'Cash' && (item.isSettled === true || item.is_settled === true);
+                                    const isSettled = isShopSettled || isWarehouseSettled || isCashSettled;
+
+                                    if (isSettled) {
+                                      return (
+                                        <button
+                                          type="button"
+                                          disabled
+                                          className="p-1.5 text-gray-400 dark:text-gray-500 cursor-not-allowed rounded-lg transition-colors opacity-50"
+                                          title="لا يمكن تعديل فاتورة مرحلة"
+                                        >
+                                          <Edit size={16} />
+                                        </button>
+                                      );
                                     }
-                                  }}
-                                  className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
-                                  title="طباعة"
-                                >
-                                  <Printer size={16} />
-                                </button>
-                                {/* Edit Button (only for invoices) */}
-                                {item.type === 'invoice' && (() => {
-                                  // Check if invoice is settled (cannot be edited)
-                                  const isShopSettled = item.source === 'Shop' && (item.AccountantSign === 'مرحلة' || item.accountant_sign === 'مرحلة');
-                                  const isWarehouseSettled = item.source === 'Warehouse' && (item.AccountantSign === 'مرحلة' || item.accountant_sign === 'مرحلة');
-                                  const isCashSettled = item.source === 'Cash' && (item.isSettled === true || item.is_settled === true);
-                                  const isSettled = isShopSettled || isWarehouseSettled || isCashSettled;
-                                  
-                                  if (isSettled) {
+
                                     return (
                                       <button
-                                        disabled
-                                        className="p-1.5 text-gray-400 dark:text-gray-500 cursor-not-allowed rounded-lg transition-colors opacity-50"
-                                        title="لا يمكن تعديل فاتورة مرحلة"
+                                        type="button"
+                                        onClick={(e) => {
+                                          let editUrl = '';
+                                          if (item.source === 'Shop') {
+                                            editUrl = `/admin/shop-sales/edit/${item.id}`;
+                                          } else if (item.source === 'Warehouse') {
+                                            editUrl = `/admin/warehouse-sales/edit/${item.id}`;
+                                          } else if (item.source === 'Cash') {
+                                            editUrl = `/admin/invoices/edit/${item.id}`;
+                                          }
+
+                                          if (editUrl) {
+                                            if (e.metaKey || e.ctrlKey) {
+                                              window.open(editUrl, '_blank');
+                                            } else {
+                                              router.push(editUrl);
+                                            }
+                                          }
+                                        }}
+                                        className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                                        title="تعديل (اضغط Command/Ctrl لفتح في نافذة جديدة)"
                                       >
                                         <Edit size={16} />
                                       </button>
                                     );
-                                  }
-                                  
-                                  return (
-                                    <button
-                                      onClick={(e) => {
-                                        let editUrl = '';
-                                        if (item.source === 'Shop') {
-                                          editUrl = `/admin/shop-sales/edit/${item.id}`;
-                                        } else if (item.source === 'Warehouse') {
-                                          editUrl = `/admin/warehouse-sales/edit/${item.id}`;
-                                        } else if (item.source === 'Cash') {
-                                          editUrl = `/admin/invoices/edit/${item.id}`;
-                                        }
-                                        
-                                        if (editUrl) {
-                                          if (e.metaKey || e.ctrlKey) {
-                                            // Open in new tab when Command/Ctrl is pressed
-                                            window.open(editUrl, '_blank');
-                                          } else {
-                                            // Navigate in same tab
-                                            router.push(editUrl);
-                                          }
-                                        }
-                                      }}
-                                      className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
-                                      title="تعديل (اضغط Command/Ctrl لفتح في نافذة جديدة)"
-                                    >
-                                      <Edit size={16} />
-                                    </button>
-                                  );
-                                })()}
+                                  })()}
+                                  {item.type === 'invoice' &&
+                                    canAccountant &&
+                                    (item.source === 'Shop' || item.source === 'Warehouse') &&
+                                    getInvoiceAccountantSign(item) === 'مرحلة' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUnpostInvoiceFromProfile(item)}
+                                        disabled={updatingInvoicePostId === String(item.id)}
+                                        className="p-1.5 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="إعادة إلى غير مرحلة"
+                                      >
+                                        {updatingInvoicePostId === String(item.id) ? (
+                                          <Loader2 size={16} className="animate-spin" />
+                                        ) : (
+                                          <XCircle size={16} />
+                                        )}
+                                      </button>
+                                    )}
+                                </div>
                               </div>
                             </div>
 
-                            {/* Amount for invoices, receipts and payments */}
-                            {item.amount && (
-                              <p className={`text-sm font-medium mb-2 ${
-                                item.type === 'payment' ? 'text-red-700 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'
-                              }`}>
+                            {item.type === 'invoice' && item.amount != null && (
+                              <div className="rounded-lg border border-gray-200/80 dark:border-slate-600 bg-white/60 dark:bg-slate-800/40 px-3 py-2 mb-2 space-y-1">
+                                {(() => {
+                                  const disc = Number((item as any).Discount ?? (item as any).discount ?? 0);
+                                  const sub = (item as any).Subtotal ?? (item as any).subtotal;
+                                  const showBreakdown = disc > 0 && sub != null && !Number.isNaN(Number(sub));
+                                  return (
+                                    <>
+                                      {showBreakdown && (
+                                        <>
+                                          <div className="flex justify-between gap-3 text-xs text-gray-600 dark:text-gray-400">
+                                            <span>المجموع قبل الخصم</span>
+                                            <span className="font-mono tabular-nums">{formatBalance(Number(sub))}</span>
+                                          </div>
+                                          <div className="flex justify-between gap-3 text-xs text-amber-700 dark:text-amber-400">
+                                            <span>الخصم</span>
+                                            <span className="font-mono tabular-nums">−{formatBalance(disc)}</span>
+                                          </div>
+                                        </>
+                                      )}
+                                      <div className="flex justify-between gap-3 text-sm font-semibold text-gray-900 dark:text-gray-100 pt-0.5 border-t border-gray-100 dark:border-slate-600/80">
+                                        <span>إجمالي الفاتورة</span>
+                                        <span className="font-mono tabular-nums">{formatBalance(item.amount)}</span>
+                                      </div>
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            )}
+
+                            {item.type !== 'invoice' && item.amount != null && (
+                              <p
+                                className={`text-sm font-medium mb-2 ${
+                                  item.type === 'payment' ? 'text-red-700 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'
+                                }`}
+                              >
                                 {item.type === 'payment' ? 'المبلغ المدفوع: ' : 'المبلغ: '}
                                 {formatBalance(item.amount)}
                               </p>
                             )}
 
-                            {/* Cash/Cheque breakdown for receipts and payments */}
                             {(item.type === 'receipt' || item.type === 'payment') && (item.cashAmount || item.chequeAmount) && (
                               <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                                 {item.cashAmount > 0 && <span>نقد: {formatBalance(item.cashAmount)}</span>}
@@ -1880,37 +1988,65 @@ export default function CustomerProfilePage() {
                               </div>
                             )}
 
-                            {/* Notes */}
-                            {item.notes && (
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                                {item.notes}
+                            {(item.Notes || item.notes) && (
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 whitespace-pre-wrap break-words">
+                                {(item as any).Notes || item.notes}
                               </p>
                             )}
 
-                            {/* Invoice Items (expandable) */}
                             {item.type === 'invoice' && item.items && item.items.length > 0 && (
-                              <details className="mt-2">
-                                <summary className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700">
-                                  عرض {item.items.length} منتج
+                              <details className="mt-2 rounded-lg border border-gray-200 dark:border-slate-600 overflow-hidden group">
+                                <summary className="px-3 py-2 text-xs font-medium cursor-pointer list-none flex items-center justify-between bg-gray-50/90 dark:bg-slate-800/80 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors [&::-webkit-details-marker]:hidden">
+                                  <span>بنود الفاتورة ({item.items.length})</span>
+                                  <ChevronDown className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-180" />
                                 </summary>
-                                <div className="mt-2 pl-4 border-l-2 border-gray-200 dark:border-slate-700 space-y-2">
-                                  {item.items
-                                    .filter((invoiceItem: any) => invoiceItem)
-                                    .map((invoiceItem: any, idx: number) => {
-                                      const itemKey = invoiceItem.ID || invoiceItem.id || invoiceItem.Name || invoiceItem.name || invoiceItem.product_id || `item-${idx}`;
-                                      const itemName = invoiceItem.Name || invoiceItem.name || invoiceItem.product_name || 'منتج';
-                                      const itemPrice = invoiceItem.Price ?? invoiceItem.price ?? invoiceItem.unit_price ?? 0;
-                                      const itemQty = invoiceItem.Quantity ?? invoiceItem.quantity ?? 1;
-                                      const itemTotal = itemPrice * itemQty;
-                                      return (
-                                        <div key={`${uniqueKey}-item-${itemKey}-${idx}`} className="text-sm text-gray-700 dark:text-gray-300">
-                                          <div className="font-medium text-gray-900 dark:text-gray-100">{itemName}</div>
-                                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                            الكمية: {itemQty} × {formatBalance(itemPrice)} = {formatBalance(itemTotal)}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
+                                <div className="overflow-x-auto border-t border-gray-200 dark:border-slate-600">
+                                  <table className="w-full text-xs text-right min-w-[280px]">
+                                    <thead>
+                                      <tr className="bg-gray-50/50 dark:bg-slate-800/50 text-gray-600 dark:text-gray-400">
+                                        <th className="px-2 py-1.5 font-medium">الصنف</th>
+                                        <th className="px-2 py-1.5 font-medium w-14">الكمية</th>
+                                        <th className="px-2 py-1.5 font-medium w-24">السعر</th>
+                                        <th className="px-2 py-1.5 font-medium w-24">الإجمالي</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                                      {item.items
+                                        .filter((invoiceItem: any) => invoiceItem)
+                                        .map((invoiceItem: any, idx: number) => {
+                                          const itemKey =
+                                            invoiceItem.ID ||
+                                            invoiceItem.id ||
+                                            invoiceItem.Name ||
+                                            invoiceItem.name ||
+                                            invoiceItem.product_id ||
+                                            `item-${idx}`;
+                                          const itemName =
+                                            invoiceItem.Name || invoiceItem.name || invoiceItem.product_name || 'منتج';
+                                          const itemPrice = Number(
+                                            invoiceItem.Price ?? invoiceItem.price ?? invoiceItem.unit_price ?? 0
+                                          );
+                                          const itemQty = Number(invoiceItem.Quantity ?? invoiceItem.quantity ?? 1);
+                                          const itemTotal = itemPrice * itemQty;
+                                          return (
+                                            <tr key={`${uniqueKey}-item-${itemKey}-${idx}`}>
+                                              <td className="px-2 py-1.5 text-gray-900 dark:text-gray-100 align-top">
+                                                {itemName}
+                                              </td>
+                                              <td className="px-2 py-1.5 font-mono tabular-nums text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                                {itemQty}
+                                              </td>
+                                              <td className="px-2 py-1.5 font-mono tabular-nums text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                                {formatBalance(itemPrice)}
+                                              </td>
+                                              <td className="px-2 py-1.5 font-mono tabular-nums font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                                                {formatBalance(itemTotal)}
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                    </tbody>
+                                  </table>
                                 </div>
                               </details>
                             )}
