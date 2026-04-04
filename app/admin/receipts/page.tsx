@@ -11,6 +11,7 @@ import {
   getAllCustomers,
   getCustomerUnpaidInvoices,
   getCustomerPendingInstallments,
+  VISA_MIRROR_CUSTOMER_ID,
 } from '@/lib/api';
 import { fixPhoneNumber } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
@@ -101,6 +102,7 @@ function ReceiptsPageContent() {
   const [selectedInstallmentIds, setSelectedInstallmentIds] = useState<Record<string, boolean>>({});
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [initializedFromQuery, setInitializedFromQuery] = useState(false);
+  const [receiptVisaMirror, setReceiptVisaMirror] = useState(false);
 
   useEffect(() => {
     document.title = 'سندات القبض - Receipts';
@@ -132,6 +134,7 @@ function ReceiptsPageContent() {
     setSelectedInstallmentIds({});
     setUnpaidInvoices([]);
     setPendingInstallments([]);
+    setReceiptVisaMirror(false);
     if (queryCustomerId) {
       setCustomerID(queryCustomerId);
     }
@@ -242,6 +245,7 @@ function ReceiptsPageContent() {
     setSelectedInstallmentIds({});
     setUnpaidInvoices([]);
     setPendingInstallments([]);
+    setReceiptVisaMirror(false);
   };
 
   const handleAddNew = () => {
@@ -251,6 +255,7 @@ function ReceiptsPageContent() {
 
   const handleCustomerChange = (id: string) => {
     setCustomerID(id);
+    if (id === VISA_MIRROR_CUSTOMER_ID) setReceiptVisaMirror(false);
     setSelectedInvoice(null);
     setSelectedInstallmentIds({});
     setCashAmount('');
@@ -312,6 +317,8 @@ function ReceiptsPageContent() {
             })()
           : undefined,
         invoiceTotalAmount: linkMode === 'invoice' && selectedInvoice ? selectedInvoice.totalAmount : undefined,
+        visaMirror: receiptVisaMirror,
+        created_by: admin?.id || undefined,
       };
 
       await saveShopReceipt(payload, admin?.username);
@@ -740,6 +747,24 @@ function ReceiptsPageContent() {
                     <span className="text-base font-bold text-gray-900 dark:text-gray-100 font-cairo">{formatCurrency(totalAmount)}</span>
                   </div>
                 )}
+
+                <label className={`flex items-start gap-3 p-3 rounded-lg border text-sm font-cairo cursor-pointer ${customerID === VISA_MIRROR_CUSTOMER_ID ? 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-900/20' : 'border-gray-200 dark:border-slate-600 bg-gray-50/80 dark:bg-slate-700/30'}`}>
+                  <input
+                    type="checkbox"
+                    checked={receiptVisaMirror}
+                    onChange={(e) => setReceiptVisaMirror(e.target.checked)}
+                    disabled={customerID === VISA_MIRROR_CUSTOMER_ID}
+                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-50"
+                  />
+                  <span className="text-gray-800 dark:text-gray-200 leading-relaxed">
+                    <span className="font-semibold">فيزا</span>
+                    {customerID === VISA_MIRROR_CUSTOMER_ID ? (
+                      <> — غير متاح للزبون {VISA_MIRROR_CUSTOMER_ID}</>
+                    ) : (
+                      <> — إنشاء سند صرف للمحل لزبون فيزا ({VISA_MIRROR_CUSTOMER_ID}) بنفس المبلغ والتاريخ</>
+                    )}
+                  </span>
+                </label>
 
                 {/* Notes */}
                 <div>

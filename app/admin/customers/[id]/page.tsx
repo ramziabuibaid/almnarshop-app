@@ -31,6 +31,7 @@ import {
   uploadCheckImage,
   updateShopSalesInvoiceSign,
   updateWarehouseSalesInvoiceSign,
+  VISA_MIRROR_CUSTOMER_ID,
 } from '@/lib/api';
 import { fixPhoneNumber } from '@/lib/utils';
 import PromissoryNoteModal from '../../promissory-notes/PromissoryNoteModal';
@@ -142,6 +143,7 @@ export default function CustomerProfilePage() {
   const [pendingInstallments, setPendingInstallments] = useState<any[]>([]);
   const [selectedInvoices, setSelectedInvoices] = useState<Record<string, boolean>>({});
   const [selectedInstallments, setSelectedInstallments] = useState<Record<string, boolean>>({});
+  const [receiptVisaMirror, setReceiptVisaMirror] = useState(false);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentFormData, setPaymentFormData] = useState({
@@ -489,6 +491,67 @@ export default function CustomerProfilePage() {
   const getInvoiceAccountantSign = (item: TimelineItem) =>
     String(item.AccountantSign || item.accountant_sign || 'غير مرحلة');
 
+  /** مطابقة لصفحات مبيعات المحل/المخزن: زبون/Customer يحتاج تسوية قبل الترحيل */
+  const isStrictCustomerType = (customerType?: string) => {
+    const normalized = (customerType || '').trim().toLowerCase();
+    if (!normalized) return true;
+    return normalized === 'زبون' || normalized === 'customer';
+  };
+
+  const shouldBlockPostingInvoice = (invoiceLike: TimelineItem) => {
+    if (invoiceLike.type !== 'invoice') return false;
+    const status = invoiceLike.status ?? (invoiceLike as any).Status;
+    const customerType =
+      (invoiceLike as any).CustomerType ??
+      (invoiceLike as any).customer_type ??
+      (customer as any)?.Type ??
+      (customer as any)?.type ??
+      (customer as any)?.customer_type;
+    const requiresSettlement = isStrictCustomerType(customerType);
+    return requiresSettlement && (status === 'غير مدفوع' || status === 'مدفوع جزئي');
+  };
+
+  const handlePostInvoiceFromProfile = async (item: TimelineItem) => {
+    if (!canAccountant || item.type !== 'invoice') return;
+    const src = item.source;
+    if (src !== 'Shop' && src !== 'Warehouse') return;
+    if (getInvoiceAccountantSign(item) === 'مرحلة') return;
+    const id = String(item.id || '').trim();
+    if (!id) return;
+
+    const status = item.status ?? (item as any).Status;
+    if (shouldBlockPostingInvoice(item) && status === 'غير مدفوع') {
+      alert('⚠️ لا يمكن ترحيل فاتورة غير مدفوعة.\nيجب أولاً: إنشاء سند قبض أو إنشاء كمبيالة للمبلغ المستحق.');
+      return;
+    }
+    if (shouldBlockPostingInvoice(item) && status === 'مدفوع جزئي') {
+      alert('⚠️ الفاتورة مدفوعة جزئياً.\nيجب إنشاء كمبيالة بالمبلغ المتبقي قبل الترحيل.');
+      return;
+    }
+
+    setUpdatingInvoicePostId(id);
+    try {
+      if (src === 'Shop') {
+        await updateShopSalesInvoiceSign(id, 'مرحلة');
+      } else {
+        await updateWarehouseSalesInvoiceSign(id, 'مرحلة');
+      }
+      setCustomerData((prev) => ({
+        ...prev,
+        invoices: (prev.invoices || []).map((inv: any) => {
+          const invId = String(inv.InvoiceID || inv.id || inv.invoiceID || '').trim();
+          if (invId !== id) return inv;
+          return { ...inv, AccountantSign: 'مرحلة', accountant_sign: 'مرحلة' };
+        }),
+      }));
+    } catch (err: any) {
+      console.error('[CustomerProfile] post invoice:', err);
+      alert(err?.message || 'فشل تحديث حالة الترحيل');
+    } finally {
+      setUpdatingInvoicePostId(null);
+    }
+  };
+
   const handleUnpostInvoiceFromProfile = async (item: TimelineItem) => {
     if (!canAccountant || item.type !== 'invoice') return;
     const src = item.source;
@@ -663,6 +726,7 @@ export default function CustomerProfilePage() {
     setPendingInstallments([]);
     setSelectedInvoices({});
     setSelectedInstallments({});
+    setReceiptVisaMirror(false);
   };
 
   const handleOpenReceiptModal = () => {
@@ -929,6 +993,7 @@ export default function CustomerProfilePage() {
         allocations: allocations.length > 0 ? allocations : undefined,
         installmentAllocations: installmentAllocations.length > 0 ? installmentAllocations : undefined,
         created_by: admin?.id || undefined,
+        visaMirror: receiptVisaMirror,
       }, admin?.username);
 
       handleCloseReceiptModal();
@@ -1009,6 +1074,7 @@ export default function CustomerProfilePage() {
         allocations: allocations.length > 0 ? allocations : undefined,
         installmentAllocations: installmentAllocations.length > 0 ? installmentAllocations : undefined,
         created_by: admin?.id || undefined,
+        visaMirror: receiptVisaMirror,
       }, admin?.username);
 
       handleCloseWarehouseReceiptModal();
@@ -1920,6 +1986,36 @@ export default function CustomerProfilePage() {
                                   {item.type === 'invoice' &&
                                     canAccountant &&
                                     (item.source === 'Shop' || item.source === 'Warehouse') &&
+                                    getInvoiceAccountantSign(item) !== 'مرحلة' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePostInvoiceFromProfile(item)}
+                                        disabled={
+                                          updatingInvoicePostId === String(item.id) || shouldBlockPostingInvoice(item)
+                                        }
+                                        className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                          shouldBlockPostingInvoice(item)
+                                            ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                                            : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
+                                        }`}
+                                        title={
+                                          shouldBlockPostingInvoice(item)
+                                            ? (item.status === 'غير مدفوع'
+                                                ? 'لا يمكن الترحيل: الفاتورة غير مدفوعة'
+                                                : 'لا يمكن الترحيل: مدفوعة جزئياً')
+                                            : 'تغيير إلى مرحلة'
+                                        }
+                                      >
+                                        {updatingInvoicePostId === String(item.id) ? (
+                                          <Loader2 size={16} className="animate-spin" />
+                                        ) : (
+                                          <CheckCircle2 size={16} />
+                                        )}
+                                      </button>
+                                    )}
+                                  {item.type === 'invoice' &&
+                                    canAccountant &&
+                                    (item.source === 'Shop' || item.source === 'Warehouse') &&
                                     getInvoiceAccountantSign(item) === 'مرحلة' && (
                                       <button
                                         type="button"
@@ -2726,7 +2822,10 @@ export default function CustomerProfilePage() {
 
                 <CustomerSelect
                   value={receiptFormData.customerID}
-                  onChange={(customerID) => setReceiptFormData((prev) => ({ ...prev, customerID }))}
+                  onChange={(customerID) => {
+                    setReceiptFormData((prev) => ({ ...prev, customerID }));
+                    if (customerID === VISA_MIRROR_CUSTOMER_ID) setReceiptVisaMirror(false);
+                  }}
                   customers={allCustomers}
                   placeholder="اختر العميل"
                   required
@@ -2801,6 +2900,23 @@ export default function CustomerProfilePage() {
                     <input type="number" step="0.01" min="0" value={receiptFormData.check_amount} onChange={(e) => setReceiptFormData((prev) => ({ ...prev, check_amount: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 text-sm sm:text-base font-cairo" placeholder="0.00" />
                   </div>
                 </div>
+                <label className={`flex items-start gap-3 p-3 rounded-lg border text-sm font-cairo cursor-pointer ${receiptFormData.customerID === VISA_MIRROR_CUSTOMER_ID ? 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-900/20' : 'border-gray-200 dark:border-slate-600 bg-gray-50/80 dark:bg-slate-700/30'}`}>
+                  <input
+                    type="checkbox"
+                    checked={receiptVisaMirror}
+                    onChange={(e) => setReceiptVisaMirror(e.target.checked)}
+                    disabled={receiptFormData.customerID === VISA_MIRROR_CUSTOMER_ID}
+                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-50"
+                  />
+                  <span className="text-gray-800 dark:text-gray-200 leading-relaxed">
+                    <span className="font-semibold">فيزا</span>
+                    {receiptFormData.customerID === VISA_MIRROR_CUSTOMER_ID ? (
+                      <> — غير متاح للزبون {VISA_MIRROR_CUSTOMER_ID}</>
+                    ) : (
+                      <> — إنشاء سند صرف للمحل لزبون فيزا ({VISA_MIRROR_CUSTOMER_ID}) بنفس المبلغ والتاريخ</>
+                    )}
+                  </span>
+                </label>
                 <div>
                   <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 font-cairo">ملاحظات</label>
                   <textarea value={receiptFormData.notes} onChange={(e) => setReceiptFormData((prev) => ({ ...prev, notes: e.target.value }))} rows={3} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 resize-none text-sm sm:text-base font-cairo" />
@@ -2837,7 +2953,10 @@ export default function CustomerProfilePage() {
 
                 <CustomerSelect
                   value={receiptFormData.customerID}
-                  onChange={(customerID) => setReceiptFormData((prev) => ({ ...prev, customerID }))}
+                  onChange={(customerID) => {
+                    setReceiptFormData((prev) => ({ ...prev, customerID }));
+                    if (customerID === VISA_MIRROR_CUSTOMER_ID) setReceiptVisaMirror(false);
+                  }}
                   customers={allCustomers}
                   placeholder="اختر العميل"
                   required
@@ -2912,6 +3031,23 @@ export default function CustomerProfilePage() {
                     <input type="number" step="0.01" min="0" value={receiptFormData.check_amount} onChange={(e) => setReceiptFormData((prev) => ({ ...prev, check_amount: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 text-sm sm:text-base font-cairo" placeholder="0.00" />
                   </div>
                 </div>
+                <label className={`flex items-start gap-3 p-3 rounded-lg border text-sm font-cairo cursor-pointer ${receiptFormData.customerID === VISA_MIRROR_CUSTOMER_ID ? 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-900/20' : 'border-gray-200 dark:border-slate-600 bg-gray-50/80 dark:bg-slate-700/30'}`}>
+                  <input
+                    type="checkbox"
+                    checked={receiptVisaMirror}
+                    onChange={(e) => setReceiptVisaMirror(e.target.checked)}
+                    disabled={receiptFormData.customerID === VISA_MIRROR_CUSTOMER_ID}
+                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-50"
+                  />
+                  <span className="text-gray-800 dark:text-gray-200 leading-relaxed">
+                    <span className="font-semibold">فيزا</span>
+                    {receiptFormData.customerID === VISA_MIRROR_CUSTOMER_ID ? (
+                      <> — غير متاح للزبون {VISA_MIRROR_CUSTOMER_ID}</>
+                    ) : (
+                      <> — إنشاء سند صرف للمستودع لزبون فيزا ({VISA_MIRROR_CUSTOMER_ID}) بنفس المبلغ والتاريخ</>
+                    )}
+                  </span>
+                </label>
                 <div>
                   <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 font-cairo">ملاحظات</label>
                   <textarea value={receiptFormData.notes} onChange={(e) => setReceiptFormData((prev) => ({ ...prev, notes: e.target.value }))} rows={3} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 text-gray-900 dark:text-gray-100 resize-none text-sm sm:text-base font-cairo" />

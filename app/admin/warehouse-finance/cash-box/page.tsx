@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import CustomerSelect from '@/components/admin/CustomerSelect';
-import { getCustomerUnpaidInvoices, getCustomerPendingInstallments, getWarehouseCashFlow, getAllCustomers, deleteWarehouseReceipt, deleteWarehousePayment, createWarehouseReceipt, createWarehousePayment, getWarehouseReceipt, getWarehousePayment, updateWarehouseReceipt, updateWarehousePayment, updateWarehouseReceiptSettlementStatus, updateWarehousePaymentSettlementStatus, getReceiptAllocations, getReceiptInstallmentAllocations } from '@/lib/api';
+import { getCustomerUnpaidInvoices, getCustomerPendingInstallments, getWarehouseCashFlow, getAllCustomers, deleteWarehouseReceipt, deleteWarehousePayment, createWarehouseReceipt, createWarehousePayment, getWarehouseReceipt, getWarehousePayment, updateWarehouseReceipt, updateWarehousePayment, updateWarehouseReceiptSettlementStatus, updateWarehousePaymentSettlementStatus, getReceiptAllocations, getReceiptInstallmentAllocations, VISA_MIRROR_CUSTOMER_ID } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import {
   Loader2,
@@ -108,6 +108,7 @@ export default function WarehouseCashBoxPage() {
   const [pendingInstallments, setPendingInstallments] = useState<any[]>([]);
   const [selectedInstallments, setSelectedInstallments] = useState<Record<string, boolean>>({});
   const [receiptLinkMode, setReceiptLinkMode] = useState<'invoices' | 'installments'>('invoices');
+  const [receiptVisaMirror, setReceiptVisaMirror] = useState(false);
 
   // Search and pagination
   const [searchQuery, setSearchQuery] = useState('');
@@ -967,11 +968,15 @@ export default function WarehouseCashBoxPage() {
         await updateWarehouseReceipt(editingTransaction.receipt_id!, payload, admin?.username);
         setToast({ message: 'تم تحديث سند القبض بنجاح', type: 'success' });
       } else {
-        await createWarehouseReceipt(payload, admin?.username);
+        await createWarehouseReceipt(
+          { ...payload, visaMirror: receiptVisaMirror },
+          admin?.username
+        );
         setToast({ message: 'تم إنشاء سند القبض بنجاح', type: 'success' });
       }
 
       setReceiptModalOpen(false);
+      setReceiptVisaMirror(false);
       setFormData({
         customerID: '',
         date: new Date().toISOString().split('T')[0],
@@ -1089,6 +1094,7 @@ export default function WarehouseCashBoxPage() {
             <button
               onClick={() => {
                 setEditingTransaction(null);
+                setReceiptVisaMirror(false);
                 setFormData({
                   customerID: '',
                   date: new Date().toISOString().split('T')[0],
@@ -1388,6 +1394,7 @@ export default function WarehouseCashBoxPage() {
                                 notes: transactionData.notes || '',
                               });
                               setEditingTransaction(tx);
+                              setReceiptVisaMirror(false);
                               setReceiptModalOpen(true);
                             } else if (tx.payment_id) {
                               transactionData = await getWarehousePayment(tx.payment_id);
@@ -1680,6 +1687,7 @@ export default function WarehouseCashBoxPage() {
                                               notes: transactionData.notes || '',
                                             });
                                             setEditingTransaction(tx);
+                                            setReceiptVisaMirror(false);
                                             setReceiptModalOpen(true);
                                           } else if (tx.payment_id) {
                                             transactionData = await getWarehousePayment(tx.payment_id);
@@ -1791,6 +1799,7 @@ export default function WarehouseCashBoxPage() {
                                             notes: transactionData.notes || '',
                                           });
                                           setEditingTransaction(tx);
+                                          setReceiptVisaMirror(false);
                                           setReceiptModalOpen(true);
                                         } else if (tx.payment_id) {
                                           transactionData = await getWarehousePayment(tx.payment_id);
@@ -1939,6 +1948,7 @@ export default function WarehouseCashBoxPage() {
               onClick={() => {
                 if (!isSubmitting) {
                   setReceiptModalOpen(false);
+                  setReceiptVisaMirror(false);
                   setFormError(null);
                   setFormData({
                     customerID: '',
@@ -1961,6 +1971,7 @@ export default function WarehouseCashBoxPage() {
                     onClick={() => {
                       if (!isSubmitting) {
                         setReceiptModalOpen(false);
+                        setReceiptVisaMirror(false);
                         setFormError(null);
                         setFormData({
                           customerID: '',
@@ -1986,7 +1997,10 @@ export default function WarehouseCashBoxPage() {
                   )}
                   <CustomerSelect
                     value={formData.customerID}
-                    onChange={(customerID) => setFormData({ ...formData, customerID })}
+                    onChange={(customerID) => {
+                      setFormData({ ...formData, customerID });
+                      if (customerID === VISA_MIRROR_CUSTOMER_ID) setReceiptVisaMirror(false);
+                    }}
                     customers={customers}
                     placeholder="اختر العميل"
                     required
@@ -2141,6 +2155,25 @@ export default function WarehouseCashBoxPage() {
                       />
                     </div>
                   </div>
+                  {!editingTransaction && (
+                    <label className={`flex items-start gap-3 p-3 rounded-lg border text-sm font-cairo cursor-pointer ${formData.customerID === VISA_MIRROR_CUSTOMER_ID ? 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-900/20' : 'border-gray-200 dark:border-slate-600 bg-gray-50/80 dark:bg-slate-700/30'}`}>
+                      <input
+                        type="checkbox"
+                        checked={receiptVisaMirror}
+                        onChange={(e) => setReceiptVisaMirror(e.target.checked)}
+                        disabled={formData.customerID === VISA_MIRROR_CUSTOMER_ID}
+                        className="mt-0.5 w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-50"
+                      />
+                      <span className="text-gray-800 dark:text-gray-200 leading-relaxed">
+                        <span className="font-semibold">فيزا</span>
+                        {formData.customerID === VISA_MIRROR_CUSTOMER_ID ? (
+                          <> — غير متاح للزبون {VISA_MIRROR_CUSTOMER_ID}</>
+                        ) : (
+                          <> — إنشاء سند صرف للمستودع لزبون فيزا ({VISA_MIRROR_CUSTOMER_ID}) بنفس المبلغ النقدي والشيك وتاريخ السند</>
+                        )}
+                      </span>
+                    </label>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 font-cairo">
                       ملاحظات
@@ -2158,6 +2191,7 @@ export default function WarehouseCashBoxPage() {
                       onClick={() => {
                         if (!isSubmitting) {
                           setReceiptModalOpen(false);
+                          setReceiptVisaMirror(false);
                           setFormError(null);
                           setFormData({
                             customerID: '',

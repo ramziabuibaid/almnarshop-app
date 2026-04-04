@@ -1,6 +1,9 @@
 // Import Supabase client
 import { supabase } from './supabase';
 
+/** زبون «فيزا» — يُنشأ له سند صرف بنفس قيمة سند القبض عند تفعيل خيار فيزا في الواجهة */
+export const VISA_MIRROR_CUSTOMER_ID = 'CUS-0778';
+
 /**
  * Converts Google Drive image links to direct viewable links
  * Handles multiple formats: full URLs, open?id=, file/d/ID, and plain IDs
@@ -4491,6 +4494,8 @@ export async function saveShopReceipt(payload: {
     amount: number;
     invoiceTotal: number;
   }[];
+  /** عند true يُنشأ سند صرف للمحل لزبون فيزا بنفس المبالغ والتاريخ */
+  visaMirror?: boolean;
 }, userName?: string): Promise<any> {
   try {
     console.log('[API] Saving shop receipt to Supabase:', payload);
@@ -4656,6 +4661,41 @@ export async function saveShopReceipt(payload: {
     } catch (notifError) {
       console.error('[API] Failed to create notification for shop receipt creation:', notifError);
       // Don't throw - notification is non-critical
+    }
+
+    if (
+      payload.visaMirror &&
+      totalPaymentAmount > 0 &&
+      payload.customerID !== VISA_MIRROR_CUSTOMER_ID
+    ) {
+      const visaNotes = [
+        `مقابل دفع فيزا — سند قبض ${receiptID} للزبون ${payload.customerID}`,
+        payload.notes?.trim() || '',
+      ].filter(Boolean);
+      try {
+        await saveShopPayment(
+          {
+            customerID: VISA_MIRROR_CUSTOMER_ID,
+            date: payload.date,
+            cashAmount: payload.cashAmount || 0,
+            chequeAmount: payload.chequeAmount || 0,
+            notes: visaNotes.join('\n'),
+            created_by: payload.created_by,
+          },
+          userName
+        );
+      } catch (visaErr: any) {
+        try {
+          await deleteShopReceipt(receiptID);
+        } catch (rollbackErr) {
+          console.error('[API] saveShopReceipt visa mirror rollback failed:', rollbackErr);
+        }
+        throw new Error(
+          visaErr?.message
+            ? `فشل إنشاء سند الصرف (فيزا ${VISA_MIRROR_CUSTOMER_ID}): ${visaErr.message}`
+            : `فشل إنشاء سند الصرف (فيزا). تم إلغاء سند القبض.`
+        );
+      }
     }
 
     return { status: 'success', receiptID, data };
@@ -10050,6 +10090,8 @@ export async function createWarehouseReceipt(data: {
     amount: number;
     invoiceTotal: number;
   }[];
+  /** عند true يُنشأ سند صرف للمستودع لزبون فيزا بنفس المبالغ والتاريخ */
+  visaMirror?: boolean;
 }, userName?: string): Promise<any> {
   try {
     console.log('[API] Creating warehouse receipt:', data);
@@ -10210,6 +10252,38 @@ export async function createWarehouseReceipt(data: {
     } catch (notifError) {
       console.error('[API] Failed to create notification for warehouse receipt creation:', notifError);
       // Don't throw - notification is non-critical
+    }
+
+    const payerId = data.related_party || '';
+    if (data.visaMirror && totalPaymentAmount > 0 && payerId !== VISA_MIRROR_CUSTOMER_ID) {
+      const visaNotes = [
+        `مقابل دفع فيزا — سند قبض مستودع ${receiptId} للزبون ${payerId}`,
+        data.notes?.trim() || '',
+      ].filter(Boolean);
+      try {
+        await createWarehousePayment(
+          {
+            date: data.date,
+            cash_amount: data.cash_amount || 0,
+            check_amount: data.check_amount || 0,
+            customer_id: VISA_MIRROR_CUSTOMER_ID,
+            notes: visaNotes.join('\n'),
+            created_by: data.created_by,
+          },
+          userName
+        );
+      } catch (visaErr: any) {
+        try {
+          await deleteWarehouseReceipt(receiptId);
+        } catch (rollbackErr) {
+          console.error('[API] createWarehouseReceipt visa mirror rollback failed:', rollbackErr);
+        }
+        throw new Error(
+          visaErr?.message
+            ? `فشل إنشاء سند الصرف (فيزا ${VISA_MIRROR_CUSTOMER_ID}): ${visaErr.message}`
+            : `فشل إنشاء سند الصرف (فيزا). تم إلغاء سند القبض.`
+        );
+      }
     }
 
     return { status: 'success', receiptId, data: result };

@@ -4,9 +4,10 @@ import { useState, useEffect, useLayoutEffect, useMemo, useRef, useTransition, u
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ProductFormModal from '@/components/admin/ProductFormModal';
+import ProductAttributePillFilters, { type ProductAttributeFilters } from '@/components/admin/ProductAttributePillFilters';
 import MarketingCardGenerator from '@/components/admin/MarketingCardGenerator';
 import { DataTable } from '@/components/ui/data-table';
-import { Plus, Edit, Edit2, Image as ImageIcon, Loader2, Package, Sparkles, CheckCircle2, Trash, Eye, EyeOff, X, Check, Search, Filter, DollarSign, Warehouse, Store, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { Plus, Edit, Edit2, Image as ImageIcon, Loader2, Package, Sparkles, CheckCircle2, Trash, Eye, EyeOff, X, Check, Search, DollarSign, Warehouse, Store, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Product } from '@/types';
 import { getDirectImageUrl } from '@/lib/utils';
@@ -15,6 +16,8 @@ import { ColumnDef } from '@tanstack/react-table';
 import ScannerLatinInput from '@/components/admin/ScannerLatinInput';
 import React from 'react';
 import Image from 'next/image';
+
+const PRODUCTS_ATTRIBUTE_FILTERS_STORAGE_KEY = 'products-table-attribute-filters';
 
 // Optimized Mobile Product Card Component
 const MobileProductCard = React.memo(({
@@ -287,6 +290,12 @@ export default function ProductsManagerPage() {
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState(''); // For input field - updates immediately
   const [searchQuery, setSearchQuery] = useState(''); // For actual filtering - updates in background
+  const [attributeFilters, setAttributeFilters] = useState<ProductAttributeFilters>({
+    type: null,
+    size: null,
+    brand: null,
+    color: null,
+  });
   const [isPending, startTransition] = useTransition();
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -301,6 +310,9 @@ export default function ProductsManagerPage() {
   const headerRef = useRef<HTMLDivElement>(null);
   const lastScrollY = useRef(0);
   const tableRef = useRef<any>(null);
+  const skipAttributeFiltersPersist = useRef(true);
+  /** بعد إعادة تحميل المنتجات (حفظ/حذف) نستعيد رقم صفحة الجدول بدل العودة للصفحة 1 */
+  const pendingTablePageIndexRef = useRef<number | null>(null);
 
   const lightboxProductImages = useMemo(() => {
     if (!lightboxProduct) return [];
@@ -342,6 +354,52 @@ export default function ProductsManagerPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [lightboxProduct, lightboxProductImages.length, closeImageLightbox]);
+
+  // استرجاع تصفيات النوع / العلامة / الحجم / اللون من التخزين المحلي
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem(PRODUCTS_ATTRIBUTE_FILTERS_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      setAttributeFilters({
+        type: typeof parsed.type === 'string' ? parsed.type : null,
+        brand: typeof parsed.brand === 'string' ? parsed.brand : null,
+        size: typeof parsed.size === 'string' ? parsed.size : null,
+        color: typeof parsed.color === 'string' ? parsed.color : null,
+      });
+    } catch (error) {
+      console.error('[ProductsPage] Error loading attribute filters:', error);
+    }
+  }, []);
+
+  // حفظ التصفيات عند تغييرها (تجاهل أول تشغيل حتى لا يُمسح ما في التخزين قبل الاسترجاع)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (skipAttributeFiltersPersist.current) {
+      skipAttributeFiltersPersist.current = false;
+      return;
+    }
+    try {
+      localStorage.setItem(PRODUCTS_ATTRIBUTE_FILTERS_STORAGE_KEY, JSON.stringify(attributeFilters));
+    } catch (error) {
+      console.error('[ProductsPage] Error saving attribute filters:', error);
+    }
+  }, [attributeFilters]);
+
+  // استعادة صفحة جدول سطح المكتب بعد تحديث قائمة المنتجات (يُشغَّل بعد تحديث ref الجدول)
+  useEffect(() => {
+    if (pendingTablePageIndexRef.current === null) return;
+    const idx = pendingTablePageIndexRef.current;
+    pendingTablePageIndexRef.current = null;
+    queueMicrotask(() => {
+      try {
+        tableRef.current?.setPageIndex(idx);
+      } catch {
+        /* ignore */
+      }
+    });
+  }, [products]);
 
   // Check if user has permission to view cost
   const canViewCost = admin?.is_super_admin || admin?.permissions?.viewCost === true;
@@ -444,6 +502,21 @@ export default function ProductsManagerPage() {
         ...prev,
         CostPrice: false,
       }));
+    }
+  }, [canViewCost, columnVisibility.CostPrice]);
+
+  const toggleCostColumnVisibility = useCallback(() => {
+    if (!canViewCost) return;
+    const nextShown = columnVisibility.CostPrice === false;
+    setColumnVisibility((prev) => ({
+      ...prev,
+      CostPrice: nextShown,
+    }));
+    if (tableRef.current) {
+      const tableColumn = tableRef.current.getAllColumns().find((c: any) => c.id === 'CostPrice');
+      if (tableColumn) {
+        tableColumn.toggleVisibility(nextShown);
+      }
     }
   }, [canViewCost, columnVisibility.CostPrice]);
 
@@ -572,7 +645,7 @@ export default function ProductsManagerPage() {
   }, []);
 
   // Reload products (from cache if available)
-  const reloadProducts = async () => {
+  const reloadProducts = async (): Promise<boolean> => {
     try {
       const [data, campaign, reserved] = await Promise.all([
         getProducts(),
@@ -581,8 +654,10 @@ export default function ProductsManagerPage() {
       ]);
       setProducts(mergeCampaigns(data || [], campaign));
       setReservedQuantities(reserved || {});
+      return true;
     } catch (error) {
       console.error('[ProductsPage] Error reloading products:', error);
+      return false;
     }
   };
 
@@ -623,8 +698,10 @@ export default function ProductsManagerPage() {
   };
 
   const handleSaveSuccess = async () => {
+    const pageIdx = tableRef.current?.getState?.()?.pagination?.pageIndex ?? 0;
     setToast({ message: 'Product Saved Successfully', type: 'success' });
-    await reloadProducts();
+    const ok = await reloadProducts();
+    if (ok) pendingTablePageIndexRef.current = pageIdx;
     setTimeout(() => {
       setToast({ message: '', type: null });
     }, 3000);
@@ -677,7 +754,9 @@ export default function ProductsManagerPage() {
         status: 'deleted',
         references: null,
       });
-      await reloadProducts();
+      const pageIdx = tableRef.current?.getState?.()?.pagination?.pageIndex ?? 0;
+      const reloadOk = await reloadProducts();
+      if (reloadOk) pendingTablePageIndexRef.current = pageIdx;
       setTimeout(() => {
         setDeleteTarget(null);
         setDeleteState({
@@ -1211,6 +1290,7 @@ export default function ProductsManagerPage() {
         accessorKey: 'Type',
         header: 'النوع',
         enableSorting: true,
+        enableColumnFilter: false,
         minSize: 120,
         cell: ({ row }) => {
           const product = row.original;
@@ -1227,6 +1307,7 @@ export default function ProductsManagerPage() {
         accessorKey: 'Brand',
         header: 'العلامة التجارية',
         enableSorting: true,
+        enableColumnFilter: false,
         minSize: 150,
         cell: ({ row }) => {
           const product = row.original;
@@ -1275,6 +1356,7 @@ export default function ProductsManagerPage() {
         accessorKey: 'Size',
         header: 'الحجم',
         enableSorting: true,
+        enableColumnFilter: false,
         minSize: 100,
         cell: ({ row }) => {
           const product = row.original;
@@ -1291,6 +1373,7 @@ export default function ProductsManagerPage() {
         accessorKey: 'Color',
         header: 'اللون',
         enableSorting: true,
+        enableColumnFilter: false,
         minSize: 100,
         cell: ({ row }) => {
           const product = row.original;
@@ -1408,7 +1491,7 @@ export default function ProductsManagerPage() {
         .split(/\s+/)
         .filter((word) => word.length > 0);
       if (searchWords.length > 0) {
-        list = products.filter((p) => {
+        list = list.filter((p) => {
           const name = String(p.name || p.Name || '').toLowerCase();
           const id = String(p.id || p.ProductID || '').toLowerCase();
           const barcode = String(p.barcode || p.Barcode || '').toLowerCase();
@@ -1418,13 +1501,33 @@ export default function ProductsManagerPage() {
         });
       }
     }
+    if (attributeFilters.type) {
+      const v = attributeFilters.type;
+      list = list.filter((p) => String(p.type || p.Type || '').trim() === v);
+    }
+    if (attributeFilters.brand) {
+      const v = attributeFilters.brand;
+      list = list.filter((p) => String(p.brand || p.Brand || '').trim() === v);
+    }
+    if (attributeFilters.size) {
+      const v = attributeFilters.size;
+      list = list.filter((p) => String(p.size || p.Size || '').trim() === v);
+    }
+    if (attributeFilters.color) {
+      const v = attributeFilters.color;
+      list = list.filter((p) => String(p.color || p.Color || '').trim() === v);
+    }
     // Sort by آخر تجديد descending (newest first)
     return [...list].sort((a, b) => {
       const aTime = (a.last_restocked_at || a.LastRestockedAt || a.created_at) ? new Date(String(a.last_restocked_at || a.LastRestockedAt || a.created_at)).getTime() : 0;
       const bTime = (b.last_restocked_at || b.LastRestockedAt || b.created_at) ? new Date(String(b.last_restocked_at || b.LastRestockedAt || b.created_at)).getTime() : 0;
       return bTime - aTime;
     });
-  }, [products, searchQuery]);
+  }, [products, searchQuery, attributeFilters]);
+
+  const hasActiveListingFilters =
+    Boolean(searchQuery.trim()) ||
+    Boolean(attributeFilters.type || attributeFilters.brand || attributeFilters.size || attributeFilters.color);
 
   // Paginated products for mobile view
   const paginatedMobileProducts = useMemo(() => {
@@ -1450,7 +1553,7 @@ export default function ProductsManagerPage() {
           ref={headerRef}
           className="relative"
           style={{
-            maxHeight: isHeaderHidden ? '0' : '300px',
+            maxHeight: isHeaderHidden ? '0' : '1200px',
             marginBottom: isHeaderHidden ? '0' : '1.5rem',
             overflow: isHeaderHidden ? 'hidden' : 'visible',
             transitionProperty: 'max-height, margin-bottom',
@@ -1489,11 +1592,14 @@ export default function ProductsManagerPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Global Search and Column Visibility */}
-            {enableGlobalSearch && (
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <div className="flex-1 relative">
+        {/* البحث والتصفية خارج الرأس المطوي — تبقى قابلة للنقر عند التمرير */}
+        {enableGlobalSearch && (
+          <div className="flex w-full min-w-0 flex-col gap-3">
+            <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative w-full min-w-0 flex-1">
                   <Search
                     size={18}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400"
@@ -1503,7 +1609,7 @@ export default function ProductsManagerPage() {
                     placeholder="البحث بالاسم، الرمز، الباركود، أو العلامة التجارية..."
                     value={searchInput}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="w-full pr-10 pl-3 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white dark:focus:ring-gray-100 dark:focus:ring-gray-100 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 dark:text-gray-400 dark:placeholder:text-gray-400 dark:placeholder:text-gray-400 text-sm sm:text-base"
+                    className="w-full min-w-0 pr-10 pl-3 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white dark:focus:ring-gray-100 dark:focus:ring-gray-100 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 dark:text-gray-400 dark:placeholder:text-gray-400 dark:placeholder:text-gray-400 text-sm sm:text-base"
                     dir="rtl"
                   />
                   {searchInput && (
@@ -1516,9 +1622,9 @@ export default function ProductsManagerPage() {
                   )}
                 </div>
 
-                {/* Column Visibility Toggle - Desktop Only */}
+                {/* Column Visibility Toggle - Desktop Only (بجانب البحث، لا يأخذ من عرض الحقل) */}
                 {!loading && filteredProducts.length > 0 && (
-                  <div className="relative hidden md:block">
+                  <div className="relative hidden shrink-0 md:block">
                     <button
                       ref={columnVisibilityButtonRef}
                       type="button"
@@ -1607,10 +1713,28 @@ export default function ProductsManagerPage() {
                     )}
                   </div>
                 )}
+            </div>
+
+            {!loading && products.length > 0 && (
+              <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <ProductAttributePillFilters products={products} filters={attributeFilters} onChange={setAttributeFilters} />
+                </div>
+                {canViewCost ? (
+                  <button
+                    type="button"
+                    onClick={toggleCostColumnVisibility}
+                    className="hidden shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white p-2.5 text-gray-700 transition-colors hover:bg-gray-50 md:flex dark:border-slate-600 dark:bg-slate-800 dark:text-gray-200 dark:hover:bg-slate-700"
+                    title={columnVisibility.CostPrice !== false ? 'إخفاء عمود التكلفة في الجدول' : 'إظهار عمود التكلفة في الجدول'}
+                    aria-label={columnVisibility.CostPrice !== false ? 'إخفاء عمود التكلفة' : 'إظهار عمود التكلفة'}
+                  >
+                    {columnVisibility.CostPrice !== false ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                ) : null}
               </div>
             )}
           </div>
-        </div>
+        )}
 
         {/* Desktop Table View */}
         <div className="hidden md:block">
@@ -1619,7 +1743,7 @@ export default function ProductsManagerPage() {
               <Loader2 size={48} className="animate-spin text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">جاري التحميل...</p>
             </div>
-          ) : filteredProducts.length === 0 && !searchQuery ? (
+          ) : products.length === 0 ? (
             <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700 p-12 text-center">
               <Package size={48} className="text-gray-300 dark:text-gray-600 dark:text-gray-400 dark:text-gray-600 dark:text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400 text-lg">لا توجد منتجات</p>
@@ -1653,9 +1777,13 @@ export default function ProductsManagerPage() {
                 <span>جاري التحميل...</span>
               </div>
             </div>
+          ) : products.length === 0 ? (
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700 rounded-lg p-8 text-center text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">
+              لا توجد منتجات
+            </div>
           ) : filteredProducts.length === 0 ? (
             <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700 rounded-lg p-8 text-center text-gray-500 dark:text-gray-400 dark:text-gray-400 dark:text-gray-400">
-              {searchQuery ? 'لا توجد نتائج للبحث' : 'لا توجد منتجات'}
+              {hasActiveListingFilters ? 'لا توجد نتائج مطابقة للبحث أو التصفية' : 'لا توجد منتجات'}
             </div>
           ) : isPending ? (
             <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700 rounded-lg p-8 text-center">

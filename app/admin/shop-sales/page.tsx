@@ -697,7 +697,7 @@ export default function ShopSalesPage() {
                                 )}
                               </button>
                             )}
-                            {canAccountant && invoice.AccountantSign !== 'مرحلة' && shouldBlockPosting(invoice) && (
+                            {invoice.AccountantSign !== 'مرحلة' && shouldBlockPosting(invoice) && (
                               <button
                                 onClick={() => {
                                   setSelectedPromissoryNoteInvoice(invoice);

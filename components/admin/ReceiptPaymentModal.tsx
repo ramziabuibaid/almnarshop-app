@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Save, Loader2, Banknote } from 'lucide-react';
-import { saveShopReceipt, saveShopPayment } from '@/lib/api';
+import { saveShopReceipt, saveShopPayment, VISA_MIRROR_CUSTOMER_ID } from '@/lib/api';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 
 interface ReceiptPaymentModalProps {
@@ -30,6 +30,7 @@ export default function ReceiptPaymentModal({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [receiptVisaMirror, setReceiptVisaMirror] = useState(false);
 
   const formatBalance = (balance: number | undefined | null) => {
     const value = balance || 0;
@@ -49,6 +50,7 @@ export default function ReceiptPaymentModal({
         chequeAmount: '',
         notes: '',
       });
+      setReceiptVisaMirror(false);
       setError('');
     }
   }, [isOpen, customer]);
@@ -82,16 +84,21 @@ export default function ReceiptPaymentModal({
         return;
       }
 
+      const customerID = customer.CustomerID || customer.id || customer.customerID;
       const payload = {
-        customerID: customer.CustomerID || customer.id || customer.customerID,
+        customerID,
         date: formData.date,
         cashAmount: cashAmount > 0 ? cashAmount : undefined,
         chequeAmount: chequeAmount > 0 ? chequeAmount : undefined,
         notes: formData.notes.trim() || undefined,
+        created_by: admin?.id || undefined,
       };
 
       if (type === 'receipt') {
-        await saveShopReceipt(payload);
+        await saveShopReceipt({
+          ...payload,
+          visaMirror: receiptVisaMirror && customerID !== VISA_MIRROR_CUSTOMER_ID,
+        });
       } else {
         await saveShopPayment(payload);
       }
@@ -110,6 +117,9 @@ export default function ReceiptPaymentModal({
 
   const title = type === 'receipt' ? 'إضافة سند قبض' : 'إضافة سند صرف';
   const customerName = customer?.Name || customer?.name || 'غير محدد';
+  const profileCustomerId =
+    customer?.CustomerID || customer?.id || customer?.customerID || '';
+  const visaMirrorDisabled = profileCustomerId === VISA_MIRROR_CUSTOMER_ID;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -198,6 +208,30 @@ export default function ReceiptPaymentModal({
               placeholder="0.00"
             />
           </div>
+
+          {type === 'receipt' && (
+            <label
+              className={`flex items-start gap-3 p-3 rounded-lg border text-sm cursor-pointer ${
+                visaMirrorDisabled ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={receiptVisaMirror}
+                onChange={(e) => setReceiptVisaMirror(e.target.checked)}
+                disabled={visaMirrorDisabled}
+                className="mt-0.5 w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-50"
+              />
+              <span className="text-gray-800 leading-relaxed">
+                <span className="font-semibold">فيزا</span>
+                {visaMirrorDisabled ? (
+                  <> — غير متاح للزبون {VISA_MIRROR_CUSTOMER_ID}</>
+                ) : (
+                  <> — سند صرف للمحل لزبون فيزا ({VISA_MIRROR_CUSTOMER_ID}) بنفس المبلغ والتاريخ</>
+                )}
+              </span>
+            </label>
+          )}
 
           {/* Notes */}
           <div>
